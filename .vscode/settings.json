@@ -1,0 +1,26 @@
+{
+  	//"cmake.sourceDirectory": "${workspaceFolder}",
+	//cmake.buildDirectory": "${workspaceFolder}/build",
+	//"cmake.generator": "Ninja",
+	//"cmake.configureSettings": {
+	//	"CMAKE_CXX_COMPILER": "/usr/bin/clang++-20"
+	//},
+	"cmake.configureArgs": [
+    "-DCMAKE_TOOLCHAIN_FILE=$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+    "-DVCPKG_APPLOCAL_DEPS=ON",
+    "-DX_VCPKG_APPLOCAL_DEPS_INSTALL=ON",
+    "-DVCPKG_MANIFEST_MODE=ON",
+    "-DVCPKG_TARGET_TRIPLET=x64-linux"
+  ],
+	"vcpkg.general.enable": true,
+	"vcpkg.target.hostTriplet": "x64-linux",
+	"vcpkg.target.defaultTriplet": "x64-linux",
+	"vcpkg.target.useStaticLib": false,
+	"cmake.configureSettings": {
+		"CMAKE_TOOLCHAIN_FILE": "/home/hash/proj/vcpkg/scripts/buildsystems/vcpkg.cmake"
+	},
+	"vcpkg.target.installDependencies": true,
+	"vcpkg.target.preferSystemLibs": false,
+	"vcpkg.target.useManifest": true,
+	//"C_Cpp.default.compilerPath": "/usr/bin/clang++-20"
+}

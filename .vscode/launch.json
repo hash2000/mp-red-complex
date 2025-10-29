@@ -1,0 +1,34 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+	{
+		"name": "Launch Launcher (Debug)",
+		"type": "cppdbg",
+		"request": "launch",
+		"program": "${workspaceFolder}/build/src/Launcher/Launcher",
+		"args": [],
+		"stopAtEntry": false,
+		"cwd": "${workspaceFolder}",
+		"environment": [],
+		"externalConsole": false,
+		"MIMode": "gdb",
+		"setupCommands": [
+			{
+				"description": "Enable pretty-printing for gdb",
+				"text": "-enable-pretty-printing",
+				"ignoreFailures": true
+			}
+		],
+		"preLaunchTask": "build",
+		"miDebuggerPath": "/usr/bin/gdb"
+	},
+	{
+		"type": "cmake",
+		"request": "launch",
+		"name": "Debug portfile(s)",
+		"cmakeDebugType": "external",
+		"pipeName": "/tmp/vcpkg_ext_portfile_dbg",
+		"preLaunchTask": "Debug vcpkg commands"
+	}
+]
+}

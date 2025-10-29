@@ -1,3 +1,20 @@
+*.vcxproj*
+*.sln
+*.suo
+*.sdf
+*.opensdf
+*.opendb
+*.VC.db
+*.aps
+*.xcodeproj
+ipch/
+.vs/
+.cache/
+/out/
+Debug/
+Release/
+/build/
+
 # Prerequisites
 *.d
 
