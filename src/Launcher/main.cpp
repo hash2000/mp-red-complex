@@ -1,9 +1,6 @@
-#include <QApplication>
-#include <QLabel>
+#include "application.h"
 
 int main(int argc, char *argv[]) {
-    QApplication app(argc, argv);
-    QLabel label("Hello from RedComplex Launcher!");
-    label.show();
-    return app.exec();
+	const auto application = Application::create();
+	return application->run(argc, argv);
 }
