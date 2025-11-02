@@ -14,11 +14,13 @@ target_link_libraries(Launcher
 		Qt6::Core
 		Qt6::Gui
 		Qt6::Widgets
+
+		Base
 )
 
 message(STATUS ${SRCS})
 
-target_include_directories(Launcher
-	PUBLIC
-		${Launcher-Sources}
-)
+# target_include_directories(Launcher
+# 	PUBLIC
+# 		${Launcher-Sources}
+# )

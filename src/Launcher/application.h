@@ -1,7 +1,7 @@
 #pragma once
+#include "Launcher/config.h"
 #include <QApplication>
 #include <memory>
-#include "config.h"
 
 class Application {
 public:
@@ -12,7 +12,9 @@ public:
 	int run(int &argc, char **argv);
 
 private:
-	void init();
+	int tryRun(int &argc, char **argv);
+
+	void installMessageHandler();
 
 private:
 	std::unique_ptr<Config> _config;

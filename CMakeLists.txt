@@ -13,7 +13,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include("cmake/modules.cmake")
 
 include_directories(
-	${RedComplex_SOURCE_DIR}
+	${RedComplex_SOURCE_DIR}/src
 )
+
+message(STATUS ${RedComplex_SOURCE_DIR})
 
 add_subdirectory(src)

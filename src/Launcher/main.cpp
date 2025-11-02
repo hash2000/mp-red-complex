@@ -1,4 +1,4 @@
-#include "application.h"
+#include "Launcher/application.h"
 
 int main(int argc, char *argv[]) {
 	const auto application = Application::create();
