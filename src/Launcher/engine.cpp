@@ -1,4 +1,5 @@
 #include "Launcher/engine.h"
+#include "engine.h"
 
 Engine::Engine(int &argc, char **argv)
 	: QApplication(argc, argv) {
@@ -10,10 +11,12 @@ void Engine::configure(const Config &config) {
 	styleHints()->setColorScheme(config.color_scheme);
 }
 
-void Engine::configSetup(Config &config)
-{
+void Engine::setup(Config &config, Resources& resources) {
 	config.setupPath();
 	config.loadSettings();
+	resources.configure(config);
+	resources.loadDatFile("master.dat");
+
 }
 
 void Engine::setupMainFrame(std::unique_ptr<MainFrame> &&mainFrame) {

@@ -8,7 +8,7 @@ enum AppSession {
 };
 
 template <> struct Format<AppSession> {
-  static QString format(AppSession value) {
+  static QString format(const AppSession &value) {
     switch (value) {
     case AppSession::Test:
       return QStringLiteral("Test");
@@ -28,6 +28,7 @@ template <> struct From<AppSession> {
     else if (value == QStringLiteral("ResourcesView")) {
       return AppSession::ResourcesView;
     }
+
     return std::nullopt;
   }
 };

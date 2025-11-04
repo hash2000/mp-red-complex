@@ -1,5 +1,6 @@
 #pragma once
 #include "Launcher/config.h"
+#include "Launcher/resources.h"
 #include "Launcher/main_frame.h"
 #include <QApplication>
 #include <qabstractnativeeventfilter.h>
@@ -8,7 +9,7 @@
 class Engine
 	: public QApplication
 	, private QAbstractNativeEventFilter
-	, public Configured
+	, public Configurable
 {
 public:
 	Engine(int &argc, char **argv);
@@ -17,7 +18,7 @@ public:
 
 	void configure(const Config& config) override;
 
-	void configSetup(Config& config);
+	void setup(Config& config, Resources& resources);
 
 	void setupMainFrame(std::unique_ptr<MainFrame> &&mainFrame);
 

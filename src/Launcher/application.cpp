@@ -13,7 +13,7 @@ int Application::run(int &argc, char **argv) {
 		return tryRun(argc, argv);
 	}
 	catch(std::exception &ex) {
-
+		qFatal() << "Application fatal exception: " << ex.what();
 	}
 
 	return 0;
@@ -21,10 +21,11 @@ int Application::run(int &argc, char **argv) {
 
 int Application::tryRun(int &argc, char **argv) {
 	_config = std::make_unique<Config>(Config::getDefult());
+	_resources = std::make_unique<Resources>();
 
 	Engine engine(argc, argv);
 	engine.configure(*_config);
-	engine.configSetup(*_config);
+	engine.setup(*_config, *_resources);
 
 	installMessageHandler();
 

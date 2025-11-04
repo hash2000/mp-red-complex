@@ -28,11 +28,13 @@ public:
 	QDir cwd;
 	QDir config_path;
 	AppSession app_session;
+	QString resources_path;
+	QString resources_language;
 };
 
-class Configured {
+class Configurable {
 public:
-	virtual ~Configured() = default;
+	virtual ~Configurable() = default;
 
 	virtual void configure(const Config& config) = 0;
 };

@@ -4,7 +4,7 @@
 
 class MainFrame
 	: public QMainWindow
-	, public Configured
+	, public Configurable
 {
   Q_OBJECT
 

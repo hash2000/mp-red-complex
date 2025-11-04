@@ -1,5 +1,6 @@
 #pragma once
 #include "Launcher/config.h"
+#include "Launcher/resources.h"
 #include <QApplication>
 #include <memory>
 
@@ -18,4 +19,5 @@ private:
 
 private:
 	std::unique_ptr<Config> _config;
+	std::unique_ptr<Resources> _resources;
 };

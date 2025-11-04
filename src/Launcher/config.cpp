@@ -48,6 +48,8 @@ void Config::loadSettings() {
 	QSettings settings(configFilePath, QSettings::Format::IniFormat);
 	app_session = From<AppSession>::from(settings.value("session/view").toString())
 		.value_or(AppSession::Test);
+	resources_path = settings.value("resources/path").toString();
+	resources_language = settings.value("resources/language", "english").toString();
 }
 
 void Config::installDefaultConfigFile(const QString& path) {

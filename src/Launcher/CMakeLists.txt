@@ -15,12 +15,12 @@ target_link_libraries(Launcher
 		Qt6::Gui
 		Qt6::Widgets
 
+		${ZLIB_LIBRARIES}
+
 		Base
 )
 
-message(STATUS ${SRCS})
-
 # target_include_directories(Launcher
 # 	PUBLIC
-# 		${Launcher-Sources}
+# 		${ZLIB_INCLUDE_DIRS}
 # )
