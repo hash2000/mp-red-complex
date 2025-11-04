@@ -7,11 +7,12 @@
 
 class DatFile : public DataStreamContainer {
 public:
-	std::list<std::unique_ptr<DataStream>> loadFromFile(const QString &path);
+	void loadFromFile(const QString &path);
 
 private:
 	std::unique_ptr<DataStream> loadStream();
 
 private:
 	std::ifstream _stream;
+	std::list<std::unique_ptr<DataStream>> _streams;
 };

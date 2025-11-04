@@ -3,10 +3,8 @@
 #include "Launcher/resources/data_stream/data_stream_buffer.h"
 #include <string.h>
 
-std::list<std::unique_ptr<DataStream>> DatFile::loadFromFile(const QString &path)
+void DatFile::loadFromFile(const QString &path)
 {
-	std::list<std::unique_ptr<DataStream>> result;
-
 	_stream.open(path.toStdString(), std::ios_base::binary);
 	if (!_stream.is_open()) {
 		throw DatFileException(path, "can't open");
@@ -32,13 +30,8 @@ std::list<std::unique_ptr<DataStream>> DatFile::loadFromFile(const QString &path
 
 	for (uint32_t i = 0; i < fileTotalCount; i++) {
 		auto buffer = loadStream();
-		result.push_back(std::move(buffer));
+		_streams.push_back(std::move(buffer));
 	}
-
-	// auto buffer = std::make_unique<DataStreamBuffer>();
-
-  // auto result = std::make_unique<DataStream>(std::move(buffer));
-	return result;
 }
 
 std::unique_ptr<DataStream> DatFile::loadStream() {
