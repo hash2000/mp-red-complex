@@ -10,9 +10,8 @@ public:
 	void loadFromFile(const QString &path);
 
 private:
-	std::unique_ptr<DataStream> loadStream();
+	std::unique_ptr<DataStream> loadStream(std::shared_ptr<std::ifstream> &stream);
 
 private:
-	std::ifstream _stream;
 	std::list<std::unique_ptr<DataStream>> _streams;
 };
