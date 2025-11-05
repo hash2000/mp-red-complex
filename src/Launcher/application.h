@@ -18,6 +18,6 @@ private:
 	void installMessageHandler();
 
 private:
-	std::unique_ptr<Config> _config;
-	std::unique_ptr<Resources> _resources;
+	std::shared_ptr<Config> _config;
+	std::shared_ptr<Resources> _resources;
 };

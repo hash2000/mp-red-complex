@@ -6,13 +6,16 @@
 #include <QInputDialog>
 #include <QPushButton>
 
-ResourcesViewerFrame::ResourcesViewerFrame() {
+ResourcesViewerFrame::ResourcesViewerFrame(std::shared_ptr<Resources> &resources)
+	: _resources(resources) {
 	setupAssetsTree();
 	setupCentralWidget();
 	setupActionPanel();
+	setupView();
+	populateAssetsView();
+}
 
-
-
+void ResourcesViewerFrame::setupView() {
 	QSplitter *splitter = new QSplitter(Qt::Horizontal);
   splitter->addWidget(_assetsView);
   splitter->addWidget(_centerStack);
@@ -23,7 +26,10 @@ ResourcesViewerFrame::ResourcesViewerFrame() {
 
   setCentralWidget(splitter);
   setWindowTitle("Asset Manager");
-	populateAssetsView();
+}
+
+void ResourcesViewerFrame::populateAssetsView() {
+	_assetsModel->clear();
 }
 
 void ResourcesViewerFrame::setupCentralWidget() {
@@ -37,10 +43,6 @@ void ResourcesViewerFrame::setupCentralWidget() {
 	_centerStack->addWidget(_emptyWidget);
   _centerStack->addWidget(_textEditor);
   _centerStack->addWidget(_imageLabel);
-}
-
-void ResourcesViewerFrame::populateAssetsView() {
-
 }
 
 void ResourcesViewerFrame::setupAssetsTree() {

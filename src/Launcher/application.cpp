@@ -20,12 +20,12 @@ int Application::run(int &argc, char **argv) {
 }
 
 int Application::tryRun(int &argc, char **argv) {
-	_config = std::make_unique<Config>(Config::getDefult());
-	_resources = std::make_unique<Resources>();
+	_config = std::make_shared<Config>(Config::getDefult());
+	_resources = std::make_shared<Resources>();
 
 	Engine engine(argc, argv);
-	engine.configure(*_config);
-	engine.setup(*_config, *_resources);
+	engine.configure(_config);
+	engine.setup(_config, _resources);
 
 	installMessageHandler();
 
@@ -35,13 +35,13 @@ int Application::tryRun(int &argc, char **argv) {
 			mainFrame = std::make_unique<MainFrameTest>();
 			break;
 		case AppSession::ResourcesView:
-			mainFrame = std::make_unique<ResourcesViewerFrame>();
+			mainFrame = std::make_unique<ResourcesViewerFrame>(_resources);
 			break;
 		default:
 			throw ApplicationExceptionUndefinedMainFrame();
 	}
 
-	mainFrame->configure(*_config);
+	mainFrame->configure(_config);
 	engine.setupMainFrame(std::move(mainFrame));
 
 	return engine.exec();

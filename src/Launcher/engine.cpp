@@ -5,17 +5,17 @@ Engine::Engine(int &argc, char **argv)
 	: QApplication(argc, argv) {
 }
 
-void Engine::configure(const Config &config) {
-	setApplicationName(config.application_path_name);
-	setOrganizationName(config.organization_name);
-	styleHints()->setColorScheme(config.color_scheme);
+void Engine::configure(const std::shared_ptr<Config> &config) {
+	setApplicationName(config->application_path_name);
+	setOrganizationName(config->organization_name);
+	styleHints()->setColorScheme(config->color_scheme);
 }
 
-void Engine::setup(Config &config, Resources& resources) {
-	config.setupPath();
-	config.loadSettings();
-	resources.configure(config);
-	resources.loadDatFile("master.dat");
+void Engine::setup(std::shared_ptr<Config> &config, std::shared_ptr<Resources> &resources) {
+	config->setupPath();
+	config->loadSettings();
+	resources->configure(config);
+	resources->loadDatFile(config->resources_entry_point);
 
 }
 

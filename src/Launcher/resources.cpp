@@ -5,9 +5,9 @@
 Resources::Resources() {
 }
 
-void Resources::configure(const Config &config) {
-	_resources_path = QDir(config.resources_path);
-	_language = config.resources_language;
+void Resources::configure(const std::shared_ptr<Config> &config) {
+	_resources_path = QDir(config->resources_path);
+	_language = config->resources_language;
 }
 
 void Resources::loadDatFile(const QString& path) {

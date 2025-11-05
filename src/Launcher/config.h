@@ -30,12 +30,13 @@ public:
 	AppSession app_session;
 	QString resources_path;
 	QString resources_language;
+	QString resources_entry_point;
 };
 
 class Configurable {
 public:
 	virtual ~Configurable() = default;
 
-	virtual void configure(const Config& config) = 0;
+	virtual void configure(const std::shared_ptr<Config> &config) = 0;
 };
 

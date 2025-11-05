@@ -1,5 +1,6 @@
 #pragma once
 #include "Launcher/main_frame.h"
+#include "Launcher/resources.h"
 #include <QMainWindow>
 #include <QTreeView>
 #include <QStandardItemModel>
@@ -12,18 +13,24 @@
 
 class ResourcesViewerFrame : public MainFrame {
 public:
-	ResourcesViewerFrame();
+	ResourcesViewerFrame(std::shared_ptr<Resources> &resources);
 
 	virtual ~ResourcesViewerFrame() = default;
 
 private:
 	void setupActionPanel();
+
 	void setupAssetsTree();
+
 	void setupCentralWidget();
+
+	void setupView();
 
 	void populateAssetsView();
 
 private:
+	std::shared_ptr<Resources> _resources;
+
 	QTreeView *_assetsView;
 	QStandardItemModel *_assetsModel;
 
