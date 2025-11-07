@@ -10,6 +10,7 @@
 #include <QMenu>
 #include <QVBoxLayout>
 #include <QListWidget>
+#include <memory>
 
 class ResourcesViewerFrame : public MainFrame {
 public:

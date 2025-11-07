@@ -31,7 +31,7 @@ void DatFile::loadFromFile(const QString &path)
 
 	for (uint32_t i = 0; i < fileTotalCount; i++) {
 		auto buffer = loadStream(stream);
-		_streams.push_back(std::move(buffer));
+		add(std::move(buffer));
 	}
 }
 
@@ -57,7 +57,7 @@ std::unique_ptr<DataStream> DatFile::loadStream(std::shared_ptr<std::ifstream> &
 	buffer->decompressedSize(decompressedSize);
 	buffer->compressedSize(compressedSize);
 	buffer->dataOffset(dataOffset);
-	buffer->name(QString::fromStdString(name));
+	buffer->name(QString::fromStdString(name).toLower());
 
 	return std::move(buffer);
 }

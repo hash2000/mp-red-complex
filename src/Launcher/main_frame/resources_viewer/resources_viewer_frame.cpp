@@ -5,6 +5,7 @@
 #include <QMessageBox>
 #include <QInputDialog>
 #include <QPushButton>
+#include <qnamespace.h>
 
 ResourcesViewerFrame::ResourcesViewerFrame(std::shared_ptr<Resources> &resources)
 	: _resources(resources) {
@@ -30,6 +31,21 @@ void ResourcesViewerFrame::setupView() {
 
 void ResourcesViewerFrame::populateAssetsView() {
 	_assetsModel->clear();
+	_assetsModel->setHorizontalHeaderLabels({"Assets"});
+	auto root = _assetsModel->invisibleRootItem();
+
+	for(const auto &res : _resources->items()) {
+		auto folder = new QStandardItem(res.name());
+		folder->setData("folder", Qt::UserRole);
+
+		for(const auto &item : res.items()) {
+			auto file = new QStandardItem(item.name());
+			file->setData("file", Qt::UserRole);
+			folder->appendRow(file);
+		}
+
+		root->appendRow(folder);
+	}
 }
 
 void ResourcesViewerFrame::setupCentralWidget() {

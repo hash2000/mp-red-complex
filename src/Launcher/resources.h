@@ -1,6 +1,7 @@
 #pragma once
 #include "Launcher/config.h"
 #include "Launcher/resources/data_stream/data_stream_container.h"
+#include "Base/container_view.h"
 #include <list>
 #include <memory>
 
@@ -14,6 +15,10 @@ public:
 	void configure(const std::shared_ptr<Config>& config) override;
 
 	void loadDatFile(const QString& path);
+
+	auto items() const {
+    return make_unique_ptr_view(_resources);
+	}
 
 private:
 	QString _language;

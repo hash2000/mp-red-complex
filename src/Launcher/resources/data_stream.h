@@ -2,7 +2,7 @@
 #include "Launcher/resources/game/endianness.h"
 #include <QString>
 #include <type_traits>
-#include <iostream>
+#include <streambuf>
 #include <cstdint>
 
 class DataStream : public std::streambuf {

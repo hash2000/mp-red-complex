@@ -1,5 +1,6 @@
 #pragma once
 #include "Launcher/resources/data_stream.h"
+#include "Base/container_view.h"
 #include <QString>
 #include <map>
 #include <memory>
@@ -12,8 +13,12 @@ public:
 
 	void name(const QString &name);
 
+	auto items() const {
+    return make_unique_ptr_view(_streams);
+	}
+
 protected:
-	void add(const QString &name, std::unique_ptr<DataStream> &&stream);
+	void add(std::unique_ptr<DataStream> &&stream);
 
 	void remove(const QString &name);
 

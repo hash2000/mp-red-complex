@@ -1,6 +1,7 @@
 #include "Launcher/resources/data_stream/data_stream_container.h"
 
-void DataStreamContainer::add(const QString &name, std::unique_ptr<DataStream> &&stream) {
+void DataStreamContainer::add(std::unique_ptr<DataStream> &&stream) {
+	const auto name = stream->name();
 	remove(name);
 	_streams.emplace(name, std::move(stream));
 }

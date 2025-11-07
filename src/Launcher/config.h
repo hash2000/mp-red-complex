@@ -1,7 +1,9 @@
 #pragma once
 #include "Launcher/application/application_session.h"
 #include <QStyleHints>
-#include <qdir.h>
+#include <QString>
+#include <QDir>
+#include <memory>
 
 class Config {
 public:

@@ -2,19 +2,6 @@
 	"$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
 	"dependencies": [
 		{
-			"name": "poco",
-			"features": [
-				"xml",
-				"json",
-				"net",
-				"netssl",
-				"crypto",
-				"jwt",
-				"util",
-				"encodings"
-			]
-		},
-		{
 			"name": "qtbase"
 		},
 		{
