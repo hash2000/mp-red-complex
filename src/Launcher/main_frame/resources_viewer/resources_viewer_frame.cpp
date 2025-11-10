@@ -1,5 +1,5 @@
 #include "Launcher/main_frame/resources_viewer/resources_viewer_frame.h"
-#include "resources_viewer_frame.h"
+#include "Launcher/resources/model/assets_model_builder.h"
 #include <QSplitter>
 #include <QFileInfo>
 #include <QMessageBox>
@@ -13,7 +13,8 @@ ResourcesViewerFrame::ResourcesViewerFrame(std::shared_ptr<Resources> &resources
 	setupCentralWidget();
 	setupActionPanel();
 	setupView();
-	populateAssetsView();
+	populateAssetsTree();
+	configureAssetsTree();
 }
 
 void ResourcesViewerFrame::setupView() {
@@ -29,23 +30,17 @@ void ResourcesViewerFrame::setupView() {
   setWindowTitle("Asset Manager");
 }
 
-void ResourcesViewerFrame::populateAssetsView() {
+void ResourcesViewerFrame::populateAssetsTree() {
 	_assetsModel->clear();
 	_assetsModel->setHorizontalHeaderLabels({"Assets"});
+
+	AssetsModelBuilder(_assetsModel->invisibleRootItem(), _resources)
+		.build();
+}
+
+void ResourcesViewerFrame::configureAssetsTree() {
 	auto root = _assetsModel->invisibleRootItem();
-
-	for(const auto &res : _resources->items()) {
-		auto folder = new QStandardItem(res.name());
-		folder->setData("folder", Qt::UserRole);
-
-		for(const auto &item : res.items()) {
-			auto file = new QStandardItem(item.name());
-			file->setData("file", Qt::UserRole);
-			folder->appendRow(file);
-		}
-
-		root->appendRow(folder);
-	}
+	_assetsView->expand(root->index());
 }
 
 void ResourcesViewerFrame::setupCentralWidget() {

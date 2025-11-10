@@ -27,7 +27,9 @@ private:
 
 	void setupView();
 
-	void populateAssetsView();
+	void populateAssetsTree();
+
+	void configureAssetsTree();
 
 private:
 	std::shared_ptr<Resources> _resources;
