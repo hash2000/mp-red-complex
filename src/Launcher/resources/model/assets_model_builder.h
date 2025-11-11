@@ -11,11 +11,11 @@ public:
 	void build();
 
 private:
-	QStandardItem* createFolder(const QString &name);
+	QStandardItem* createItemPart(QStandardItem *parent, const QString &name, const QString &fullPath);
 
 	void buildFromContainer(const DataStreamContainer& container);
 
-	void buildItemsFromPath(const QString& fullPath);
+	void buildItemsFromPath(QStandardItem *parent, const QString& fullPath);
 
 private:
 	QStandardItem* _parent;

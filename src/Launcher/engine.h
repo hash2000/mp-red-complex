@@ -25,6 +25,8 @@ public:
 private:
 	bool nativeEventFilter(const QByteArray &eventType, void *message, qintptr *result) override;
 
+	void registerTypes();
+
 private:
 	std::unique_ptr<MainFrame> _main_frame;
 };

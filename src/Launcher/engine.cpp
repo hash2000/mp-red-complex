@@ -1,4 +1,5 @@
 #include "Launcher/engine.h"
+#include "Launcher/resources/model/assets_model.h"
 #include "engine.h"
 
 Engine::Engine(int &argc, char **argv)
@@ -17,12 +18,17 @@ void Engine::setup(std::shared_ptr<Config> &config, std::shared_ptr<Resources> &
 	resources->configure(config);
 	resources->loadDatFile(config->resources_entry_point);
 
+	registerTypes();
 }
 
 void Engine::setupMainFrame(std::unique_ptr<MainFrame> &&mainFrame) {
 	_main_frame = std::move(mainFrame);
 	_main_frame->resize(800, 600);
 	_main_frame->show();
+}
+
+void Engine::registerTypes() {
+	qRegisterMetaType<AssetsViewItemType>("AssetsViewItemType");
 }
 
 bool Engine::nativeEventFilter(
