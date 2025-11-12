@@ -16,7 +16,7 @@ void Engine::setup(std::shared_ptr<Config> &config, std::shared_ptr<Resources> &
 	config->setupPath();
 	config->loadSettings();
 	resources->configure(config);
-	resources->loadDatFile(config->resources_entry_point);
+	resources->load();
 
 	registerTypes();
 }

@@ -14,7 +14,9 @@ public:
 public:
 	void configure(const std::shared_ptr<Config>& config) override;
 
-	void loadDatFile(const QString& path);
+	void loadDatFile(const QString& fileName);
+
+	void load();
 
 	auto items() const {
     return make_unique_ptr_view(_resources);

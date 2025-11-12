@@ -10,23 +10,36 @@ void Resources::configure(const std::shared_ptr<Config> &config) {
 	_language = config->resources_language;
 }
 
-void Resources::loadDatFile(const QString& path) {
-	QFileInfo file(_resources_path.filePath(path));
+void Resources::loadDatFile(const QString& fileName) {
+	QFileInfo file(_resources_path.filePath(fileName));
 	if(!file.exists()) {
 		throw DatFileException(file.absoluteFilePath(), "not found");
 	}
 
 	for(const auto& res : _resources) {
-		if (res->name() == path) {
-			qWarning() << path << " allready loaded";
+		if (res->name() == fileName) {
+			qWarning() << fileName << " allready loaded";
 			return;
 		}
 	}
 
 	auto item = std::make_unique<DatFile>();
 	item->loadFromFile(file.absoluteFilePath());
-	item->name(path);
+	item->name(fileName);
 
 	_resources.push_back(std::move(item));
 }
 
+void Resources::load() {
+	QDir dir(_resources_path);
+	const auto entries = dir.entryInfoList(QDir::Files);
+
+	for(const auto &entry: entries) {
+		const auto fileName = entry.fileName();
+		const auto suffix = entry.suffix().toLower();
+
+		if (suffix == "dat") {
+			loadDatFile(fileName);
+		}
+	}
+}

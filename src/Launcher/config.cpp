@@ -50,7 +50,6 @@ void Config::loadSettings() {
 		.value_or(AppSession::Test);
 	resources_path = settings.value("resources/path").toString();
 	resources_language = settings.value("resources/language", "english").toString();
-	resources_entry_point = settings.value("resources/entry-point", "master.dat").toString();
 }
 
 void Config::installDefaultConfigFile(const QString& path) {
