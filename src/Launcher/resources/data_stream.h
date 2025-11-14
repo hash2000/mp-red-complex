@@ -4,6 +4,25 @@
 #include <type_traits>
 #include <streambuf>
 #include <cstdint>
+#include <concepts>
+#include <QByteArray>
+
+namespace {
+namespace detail {
+
+template <typename B>
+concept ByteBuffer = requires(B& b) {
+    { b.resize(std::size_t{}) } -> std::same_as<void>;
+    { b.data() } -> std::convertible_to<const void*>;
+} && (
+    std::is_same_v<std::remove_cv_t<typename B::value_type>, char> ||
+    std::is_same_v<std::remove_cv_t<typename B::value_type>, unsigned char> ||
+    std::is_same_v<std::remove_cv_t<typename B::value_type>, signed char> ||
+    std::is_same_v<std::remove_cv_t<typename B::value_type>, std::byte>
+);
+
+} // namespace detail
+} // anonymous namespace
 
 class DataStream : public std::streambuf {
 public:
@@ -11,15 +30,23 @@ public:
 
 	virtual size_t size() const = 0;
 
-	virtual std::streambuf::int_type underflow();
-
 	virtual void position(size_t pos) = 0;
 
 	virtual size_t position() const;
 
 	virtual void skip(size_t pos) = 0;
 
-	virtual void read(uint8_t* destination, size_t size);
+	virtual void readRaw(uint8_t *dst, size_t size);
+
+	template <typename T>
+	requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
+	void read(T& value);
+
+	template <typename Buffer>
+	requires detail::ByteBuffer<Buffer>
+	void read(Buffer& buffer);
+
+	std::unique_ptr<DataStream> makeBlockStream();
 
 	EndiannessId endianness() const;
 
@@ -50,8 +77,7 @@ public:
 public:
 	template<class T> std::enable_if_t<std::is_integral_v<T>, DataStream&> operator>>(T& value) {
     static_assert(std::is_trivially_copyable_v<T>, "Only trivially copyable types allowed");
-    uint8_t* buff = reinterpret_cast<uint8_t*>(&value);
-    read(buff, sizeof(value));
+		read(value);
     return *this;
   }
 
@@ -63,6 +89,13 @@ public:
   int8_t int8() 		{ int8_t 		v; *this >> v; return v; }
 
 private:
+  template <typename T>
+	static void applyEndianness(T& value, EndiannessId target);
+
+  template <typename T>
+	static T swapBytes(T value);
+
+private:
 	EndiannessId _endianness = EndiannessId::Big;
 	QString _name;
 	bool _isCompressed = false;
@@ -70,3 +103,4 @@ private:
 	uint32_t _compressedSize;
 	uint32_t _dataOffset;
 };
+

@@ -31,6 +31,17 @@ private:
 
 	void configureAssetsTree();
 
+private slots:
+	void onItemDoubleClicked(const QModelIndex &index);
+
+private:
+	void displayModel(const QStandardItem *item,
+		const QString &container,
+		const QString &path,
+		const QString &suffix);
+
+	QWidget* buildWidget(const QString &suffix, DataStream &stream) const;
+
 private:
 	std::shared_ptr<Resources> _resources;
 

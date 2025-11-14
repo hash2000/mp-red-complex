@@ -4,6 +4,8 @@
 #include <QString>
 #include <map>
 #include <memory>
+#include <optional>
+#include <functional>
 
 class DataStreamContainer {
 public:
@@ -16,6 +18,9 @@ public:
 	auto items() const {
     return make_unique_ptr_view(_streams);
 	}
+
+	auto find(const QString &name) const
+		-> std::optional<std::reference_wrapper<DataStream>>;
 
 protected:
 	void add(std::unique_ptr<DataStream> &&stream);

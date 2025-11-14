@@ -1,10 +1,13 @@
 #pragma once
 #include "Launcher/resources/data_stream.h"
 #include <vector>
+#include <span>
 
 class DataStreamBuffer : public DataStream {
 public:
-	DataStreamBuffer();
+	DataStreamBuffer(std::vector<char> buffer);
+
+	DataStreamBuffer(std::span<const char> view);
 
 	virtual ~DataStreamBuffer() = default;
 
@@ -13,6 +16,9 @@ public:
 	void position(size_t pos);
 
 	void skip(size_t pos);
+
+private:
+	void applyBuffer();
 
 private:
 	std::vector<char> _buffer;

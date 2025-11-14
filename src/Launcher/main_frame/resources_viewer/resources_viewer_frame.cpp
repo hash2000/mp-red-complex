@@ -1,5 +1,6 @@
 #include "Launcher/main_frame/resources_viewer/resources_viewer_frame.h"
 #include "Launcher/resources/model/assets_model_builder.h"
+#include "Launcher/resources/model/assets_model.h"
 #include <QSplitter>
 #include <QFileInfo>
 #include <QMessageBox>
@@ -64,6 +65,8 @@ void ResourcesViewerFrame::setupAssetsTree() {
   _assetsView->setModel(_assetsModel);
   _assetsView->setContextMenuPolicy(Qt::CustomContextMenu);
   _assetsView->setHeaderHidden(true);
+
+	connect(_assetsView, &QTreeView::doubleClicked, this, &ResourcesViewerFrame::onItemDoubleClicked);
 }
 
 void ResourcesViewerFrame::setupActionPanel() {
@@ -76,4 +79,43 @@ void ResourcesViewerFrame::setupActionPanel() {
   _actionsLayout->addWidget(new QPushButton("Delete"));
   _actionsLayout->addWidget(new QPushButton("Export"));
   _actionsLayout->addStretch();
+}
+
+void ResourcesViewerFrame::onItemDoubleClicked(const QModelIndex &index) {
+	const auto item = _assetsModel->itemFromIndex(index);
+	if (item) {
+		const auto container = index.data(static_cast<int>(AssetsViewItemRole::ContainerName)).toString();
+		const auto path = index.data(static_cast<int>(AssetsViewItemRole::FullPath)).toString();
+		const auto suffix = index.data(static_cast<int>(AssetsViewItemRole::Suffix)).toString();
+		const auto type = index.data(static_cast<int>(AssetsViewItemRole::Type)).value<AssetsViewItemType>();
+
+		if (type == AssetsViewItemType::File) {
+			displayModel(item, container, path, suffix);
+		}
+	}
+}
+
+void ResourcesViewerFrame::displayModel(const QStandardItem *item,
+	const QString &container,
+	const QString &path,
+	const QString &suffix) {
+	const auto stream = _resources->getStream(container, path);
+	if (!stream) {
+		return;
+	}
+
+	auto widget = buildWidget(suffix, stream.value());
+	if (!widget) {
+		return;
+	}
+
+	_centerStack->setCurrentWidget(widget);
+}
+
+QWidget* ResourcesViewerFrame::buildWidget(const QString &suffix, DataStream &stream) const {
+	auto block = stream.makeBlockStream();
+
+
+	// _textEditor->setPlainText(QString::fromStdString(buffer));
+	return _textEditor;
 }

@@ -43,3 +43,14 @@ void Resources::load() {
 		}
 	}
 }
+
+auto Resources::getStream(const QString &container, const QString &path) const
+	-> std::optional<std::reference_wrapper<DataStream>> {
+	for (const auto& res : _resources) {
+		if (res->name() == container) {
+			return res->find(path);
+		}
+	}
+
+	return std::nullopt;
+}

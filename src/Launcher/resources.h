@@ -4,6 +4,8 @@
 #include "Base/container_view.h"
 #include <list>
 #include <memory>
+#include <optional>
+#include <functional>
 
 class Resources : public Configurable {
 public:
@@ -21,6 +23,9 @@ public:
 	auto items() const {
     return make_unique_ptr_view(_resources);
 	}
+
+	auto getStream(const QString &container, const QString &path) const
+		-> std::optional<std::reference_wrapper<DataStream>>;
 
 private:
 	QString _language;

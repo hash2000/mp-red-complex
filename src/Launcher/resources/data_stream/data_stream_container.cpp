@@ -26,3 +26,13 @@ const QString DataStreamContainer::name() const {
 void DataStreamContainer::name(const QString &name) {
 	_name = name;
 }
+
+auto DataStreamContainer::find(const QString &name) const
+	-> std::optional<std::reference_wrapper<DataStream>> {
+	const auto &it = _streams.find(name);
+	if (it == _streams.end()) {
+		return std::nullopt;
+	}
+
+	return std::ref(*it->second);
+}
