@@ -1,4 +1,4 @@
-#include "Launcher/exception.h"
+#include "Base/exception.h"
 
 Exception::Exception(const QString &msg)
 	: _error(msg.toStdString())

@@ -1,7 +1,7 @@
 #pragma once
 #include "Launcher/main_frame.h"
-#include "Launcher/resources.h"
 #include "Launcher/widgets/hex_dump_widget.h"
+#include "Resources/resources.h"
 #include <QMainWindow>
 #include <QTreeView>
 #include <QStandardItemModel>

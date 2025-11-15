@@ -1,5 +1,5 @@
-#include "Launcher/resources/model/assets_model_builder.h"
-#include "Launcher/resources/model/assets_model.h"
+#include "Resources/resources/model/assets_model_builder.h"
+#include "Resources/resources/model/assets_model.h"
 
 AssetsModelBuilder::AssetsModelBuilder(QStandardItem *parent, const std::shared_ptr<Resources>& resources)
 	: _parent(parent)

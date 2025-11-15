@@ -1,4 +1,4 @@
-#include "Launcher/resources/data_stream/data_stream_buffer.h"
+#include "Resources/resources/data_stream/data_stream_buffer.h"
 
 DataStreamBuffer::DataStreamBuffer(std::vector<char> buffer)
 	: _buffer(std::move(buffer)) {

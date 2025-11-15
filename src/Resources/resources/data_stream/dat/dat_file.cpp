@@ -1,6 +1,6 @@
-#include "Launcher/resources/data_stream/dat/dat_file.h"
-#include "Launcher/resources/data_stream/dat/dat_file_exception.h"
-#include "Launcher/resources/data_stream/data_stream_file.h"
+#include "Resources/resources/data_stream/dat/dat_file.h"
+#include "Resources/resources/data_stream/dat/dat_file_exception.h"
+#include "Resources/resources/data_stream/data_stream_file.h"
 #include <string.h>
 
 void DatFile::loadFromFile(const QString &path)

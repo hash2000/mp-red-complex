@@ -1,5 +1,5 @@
 #pragma once
-#include "Launcher/exception.h"
+#include "Base/exception.h"
 
 class ConfigException : public Exception {
 public:

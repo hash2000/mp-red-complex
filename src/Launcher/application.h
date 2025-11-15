@@ -1,6 +1,6 @@
 #pragma once
 #include "Base/config.h"
-#include "Launcher/resources.h"
+#include "Resources/resources.h"
 #include <QApplication>
 #include <memory>
 

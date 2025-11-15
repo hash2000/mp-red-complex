@@ -1,5 +1,5 @@
 #include "Launcher/engine.h"
-#include "Launcher/resources/model/assets_model.h"
+#include "Resources/resources/model/assets_model.h"
 #include "engine.h"
 
 Engine::Engine(int &argc, char **argv)

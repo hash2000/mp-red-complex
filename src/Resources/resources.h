@@ -1,6 +1,6 @@
 #pragma once
 #include "Base/config.h"
-#include "Launcher/resources/data_stream/data_stream_container.h"
+#include "Resources/resources/data_stream/data_stream_container.h"
 #include "Base/container_view.h"
 #include <list>
 #include <memory>

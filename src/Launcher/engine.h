@@ -1,6 +1,6 @@
 #pragma once
 #include "Base/config.h"
-#include "Launcher/resources.h"
+#include "Resources/resources.h"
 #include "Launcher/main_frame.h"
 #include <QApplication>
 #include <qabstractnativeeventfilter.h>

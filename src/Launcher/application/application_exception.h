@@ -1,5 +1,5 @@
 #pragma once
-#include "Launcher/exception.h"
+#include "Base/exception.h"
 
 class ApplicationExceptionUndefinedMainFrame : public Exception {
 public:

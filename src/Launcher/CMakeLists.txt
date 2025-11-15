@@ -18,6 +18,7 @@ target_link_libraries(Launcher
 		${ZLIB_LIBRARIES}
 
 		Base
+		Resources
 )
 
 # target_include_directories(Launcher

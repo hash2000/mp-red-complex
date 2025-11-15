@@ -12,4 +12,8 @@ add_library(Resources
 target_link_libraries(Resources
 	PRIVATE
 		Qt6::Core
+		Qt6::Gui
+		Qt6::Widgets
+
+		Base
 )

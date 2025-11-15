@@ -1,5 +1,5 @@
 #pragma once
-#include "Launcher/resources.h"
+#include "Resources/resources.h"
 #include <QStandardItem>
 #include <QMap>
 #include <memory>

@@ -1,5 +1,5 @@
 #pragma once
-#include "Launcher/resources/data_stream.h"
+#include "Resources/resources/data_stream.h"
 #include <fstream>
 #include <memory>
 

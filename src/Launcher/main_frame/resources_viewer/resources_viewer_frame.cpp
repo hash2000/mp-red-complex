@@ -1,6 +1,6 @@
 #include "Launcher/main_frame/resources_viewer/resources_viewer_frame.h"
-#include "Launcher/resources/model/assets_model_builder.h"
-#include "Launcher/resources/model/assets_model.h"
+#include "Resources/resources/model/assets_model_builder.h"
+#include "Resources/resources/model/assets_model.h"
 #include <QSplitter>
 #include <QFileInfo>
 #include <QMessageBox>

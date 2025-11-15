@@ -1,5 +1,5 @@
 #pragma once
-#include "Launcher/resources/game/endianness.h"
+#include "Resources/resources/game/endianness.h"
 #include <QString>
 #include <qstringview.h>
 #include <type_traits>

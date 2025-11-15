@@ -1,4 +1,4 @@
-#include "Launcher/resources/data_stream/data_stream_file.h"
+#include "Resources/resources/data_stream/data_stream_file.h"
 
 DataStreamFile::DataStreamFile(std::shared_ptr<std::ifstream> stream)
 	: _stream(stream) {
