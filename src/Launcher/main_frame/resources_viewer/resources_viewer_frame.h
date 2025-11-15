@@ -1,6 +1,7 @@
 #pragma once
 #include "Launcher/main_frame.h"
 #include "Launcher/resources.h"
+#include "Launcher/widgets/hex_dump_widget.h"
 #include <QMainWindow>
 #include <QTreeView>
 #include <QStandardItemModel>
@@ -49,7 +50,7 @@ private:
 	QStandardItemModel *_assetsModel;
 
 	QStackedWidget *_centerStack;
-  QTextEdit *_textEditor;
+  HexDumpWidget *_hexView;
   QLabel *_imageLabel;
   QWidget *_emptyWidget;
 

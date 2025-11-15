@@ -46,14 +46,13 @@ void ResourcesViewerFrame::configureAssetsTree() {
 
 void ResourcesViewerFrame::setupCentralWidget() {
 	_centerStack = new QStackedWidget;
-  _textEditor = new QTextEdit;
-  _textEditor->setReadOnly(true);
+  _hexView = new HexDumpWidget;
   _imageLabel = new QLabel;
   _imageLabel->setAlignment(Qt::AlignCenter);
   _emptyWidget = new QWidget;
 
 	_centerStack->addWidget(_emptyWidget);
-  _centerStack->addWidget(_textEditor);
+  _centerStack->addWidget(_hexView);
   _centerStack->addWidget(_imageLabel);
 }
 
@@ -113,9 +112,7 @@ void ResourcesViewerFrame::displayModel(const QStandardItem *item,
 }
 
 QWidget* ResourcesViewerFrame::buildWidget(const QString &suffix, DataStream &stream) const {
-	auto block = stream.makeBlockStream();
-
-
-	// _textEditor->setPlainText(QString::fromStdString(buffer));
-	return _textEditor;
+	auto block = stream.readBlockAsQByteArray();
+	_hexView->setByteArray(block);
+	return _hexView;
 }

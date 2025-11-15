@@ -50,15 +50,11 @@ void DataStream::readRaw(uint8_t* dst, size_t size) {
   }
 }
 
-std::unique_ptr<DataStream> DataStream::makeBlockStream() {
+void DataStream::readBlock(uint8_t *output) {
 	const auto decompSize = decompressedSize();
 	const auto compSize = compressedSize();
 	auto prevpos = position();
 	position(dataOffset());
-
-	std::vector<char> buffer;
-	buffer.resize(decompSize);
-	auto output = reinterpret_cast<uint8_t*>(buffer.data());
 
 	if (compressed()) {
 		std::vector<char> compressed;
@@ -95,8 +91,22 @@ std::unique_ptr<DataStream> DataStream::makeBlockStream() {
 	}
 
 	position(prevpos);
+}
 
+std::unique_ptr<DataStream> DataStream::makeBlockAsStream() {
+	std::vector<char> buffer;
+	buffer.resize(decompressedSize());
+	auto data = reinterpret_cast<uint8_t*>(buffer.data());
+	readBlock(data);
 	return std::make_unique<DataStreamBuffer>(std::move(buffer));
+}
+
+QByteArray DataStream::readBlockAsQByteArray() {
+	QByteArray buffer;
+	buffer.resize(decompressedSize());
+	auto data = reinterpret_cast<uint8_t*>(buffer.data());
+	readBlock(data);
+	return buffer;
 }
 
 EndiannessId DataStream::endianness() const

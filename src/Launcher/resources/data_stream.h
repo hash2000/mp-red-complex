@@ -1,6 +1,7 @@
 #pragma once
 #include "Launcher/resources/game/endianness.h"
 #include <QString>
+#include <qstringview.h>
 #include <type_traits>
 #include <streambuf>
 #include <cstdint>
@@ -46,7 +47,9 @@ public:
 	requires detail::ByteBuffer<Buffer>
 	void read(Buffer& buffer);
 
-	std::unique_ptr<DataStream> makeBlockStream();
+	std::unique_ptr<DataStream> makeBlockAsStream();
+
+	QByteArray readBlockAsQByteArray();
 
 	EndiannessId endianness() const;
 
@@ -94,6 +97,8 @@ private:
 
   template <typename T>
 	static T swapBytes(T value);
+
+	void readBlock(uint8_t *output);
 
 private:
 	EndiannessId _endianness = EndiannessId::Big;
