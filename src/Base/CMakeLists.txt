@@ -12,13 +12,4 @@ add_library(Base
 target_link_libraries(Base
 	PRIVATE
 		Qt6::Core
-		Qt6::Gui
-		Qt6::Widgets
 )
-
-message(STATUS ${SRCS})
-
-# target_include_directories(Base
-# 	PUBLIC
-# 		${Base-Sources}
-# )
