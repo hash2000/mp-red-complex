@@ -1,6 +1,6 @@
 #include "Resources/resources.h"
-#include "Resources/resources/data_stream/dat/dat_file.h"
-#include "Resources/resources/data_stream/dat/dat_file_exception.h"
+#include "DataStream/data_stream/dat/dat_file.h"
+#include "DataStream/data_stream/dat/dat_file_exception.h"
 
 Resources::Resources() {
 }

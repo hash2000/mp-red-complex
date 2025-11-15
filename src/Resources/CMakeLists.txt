@@ -16,4 +16,5 @@ target_link_libraries(Resources
 		Qt6::Widgets
 
 		Base
+		DataStream
 )

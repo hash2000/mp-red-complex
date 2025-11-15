@@ -1,5 +1,5 @@
-#include "Resources/resources/data_stream.h"
-#include "Resources/resources/data_stream/data_stream_buffer.h"
+#include "DataStream/data_stream.h"
+#include "DataStream/data_stream/data_stream_buffer.h"
 #include <zlib.h>
 
 size_t DataStream::position() const {

@@ -1,4 +1,4 @@
-#include "Resources/resources/data_stream/data_stream_container.h"
+#include "DataStream/data_stream/data_stream_container.h"
 
 void DataStreamContainer::add(std::unique_ptr<DataStream> &&stream) {
 	const auto name = stream->name();

@@ -1,5 +1,5 @@
 #pragma once
-#include "Resources/resources/endianness.h"
+#include "DataStream/endianness.h"
 #include <QString>
 #include <qstringview.h>
 #include <type_traits>

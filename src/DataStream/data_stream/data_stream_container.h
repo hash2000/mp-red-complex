@@ -1,5 +1,5 @@
 #pragma once
-#include "Resources/resources/data_stream.h"
+#include "DataStream/data_stream.h"
 #include "Base/container_view.h"
 #include <QString>
 #include <map>

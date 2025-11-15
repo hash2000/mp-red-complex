@@ -1,6 +1,6 @@
 #pragma once
-#include "Resources/resources/data_stream.h"
-#include "Resources/resources/data_stream/data_stream_container.h"
+#include "DataStream/data_stream.h"
+#include "DataStream/data_stream/data_stream_container.h"
 #include <memory>
 #include <fstream>
 
