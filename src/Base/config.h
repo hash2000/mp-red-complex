@@ -1,5 +1,4 @@
 #pragma once
-#include "Launcher/application/application_session.h"
 #include <QStyleHints>
 #include <QString>
 #include <QDir>
@@ -29,7 +28,7 @@ public:
 	const QString organization_name;
 	QDir cwd;
 	QDir config_path;
-	AppSession app_session;
+	QString app_session;
 	QString resources_path;
 	QString resources_language;
 };

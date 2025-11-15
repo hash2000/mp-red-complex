@@ -1,5 +1,5 @@
 #pragma once
-#include "Launcher/config.h"
+#include "Base/config.h"
 #include <QMainWindow>
 
 class MainFrame

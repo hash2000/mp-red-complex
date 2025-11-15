@@ -1,4 +1,5 @@
 #include "Launcher/application.h"
+#include "Launcher/application/application_session.h"
 #include "Launcher/application/application_exception.h"
 #include "Launcher/engine.h"
 #include "main_frame/graphwidget/main_frame_test.h"
@@ -30,7 +31,10 @@ int Application::tryRun(int &argc, char **argv) {
 	installMessageHandler();
 
 	std::unique_ptr<MainFrame> mainFrame;
-	switch (_config->app_session) {
+	const auto session = From<AppSession>::from(_config->app_session)
+		.value_or(AppSession::Test);
+
+	switch (session) {
 		case AppSession::Test:
 			mainFrame = std::make_unique<MainFrameTest>();
 			break;

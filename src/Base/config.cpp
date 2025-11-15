@@ -1,5 +1,5 @@
-#include "Launcher/config.h"
-#include "Launcher/config/config_exception.h"
+#include "Base/config.h"
+#include "Base/config/config_exception.h"
 #include <qsettings.h>
 #include <qstandardpaths.h>
 #include <QApplication>
@@ -11,7 +11,7 @@ Config::Config()
 	, application_name("Red Complex")
 	, application_path_name("red-complex")
 	, organization_name("Hash2000")
-	, app_session(AppSession::Test)
+	, app_session("Undefined")
 {
 	cwd = QDir::current();
 }
@@ -46,8 +46,7 @@ void Config::loadSettings() {
 	}
 
 	QSettings settings(configFilePath, QSettings::Format::IniFormat);
-	app_session = From<AppSession>::from(settings.value("session/view").toString())
-		.value_or(AppSession::Test);
+	app_session = settings.value("session/view").toString();
 	resources_path = settings.value("resources/path").toString();
 	resources_language = settings.value("resources/language", "english").toString();
 }

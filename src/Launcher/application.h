@@ -1,5 +1,5 @@
 #pragma once
-#include "Launcher/config.h"
+#include "Base/config.h"
 #include "Launcher/resources.h"
 #include <QApplication>
 #include <memory>
