@@ -1,12 +1,37 @@
 #include "Launcher/widgets/hex_dump_widget.h"
 #include <QFontDatabase>
 #include <QFont>
-#include "hex_dump_widget.h"
+#include <QVBoxLayout>
+#include <QHeaderView>
 
 HexDumpWidget::HexDumpWidget(QWidget *parent)
-: QPlainTextEdit(parent) {
-  setReadOnly(true);
-  setLineWrapMode(QPlainTextEdit::NoWrap);
+: QWidget(parent)
+, _tableView(new QTableView(this))
+, _model(new HexDumpModel(this))
+{
+  QVBoxLayout *layout = new QVBoxLayout;
+  layout->setContentsMargins(0, 0, 0, 0);  // убираем отступы
+  layout->addWidget(_tableView);
+  setLayout(layout);
+
+  _tableView->setModel(_model);
+  _tableView->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+  _tableView->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+  _tableView->setShowGrid(false);
+	//_tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+  //_tableView->horizontalHeader()->hide();
+  //_tableView->verticalHeader()->hide();
+
+  for (int i = 0; i < 16; ++i) {
+      _tableView->setColumnWidth(i, 10);
+  }
+  _tableView->setColumnWidth(16, 120);
+	_tableView->setStyleSheet("QTableView::item { padding: 0px 2px; }");
+
+  connect(_tableView->selectionModel(),
+          &QItemSelectionModel::selectionChanged,
+          this,
+          &HexDumpWidget::onSelectionChanged);
 
 	QFont font = QFontDatabase::systemFont(QFontDatabase::FixedFont);
   font.setPointSize(10);
@@ -15,7 +40,7 @@ HexDumpWidget::HexDumpWidget(QWidget *parent)
 
 void HexDumpWidget::setByteArray(const QByteArray &data) {
 	_data = data;
-  setPlainText(formatHexDump(data));
+	_model->setData(_data);
 }
 
 QByteArray HexDumpWidget::byteArray() const {
@@ -31,50 +56,127 @@ void HexDumpWidget::clear() {
 	_data.squeeze();
 }
 
-QString HexDumpWidget::formatHexDump(const QByteArray &data) {
-  if (data.isEmpty()) {
-		return "(empty)\n";
-	}
-
-  QStringList lines;
-  constexpr int bytesPerLine = 16;
-
-  for (int i = 0; i < data.size(); i += bytesPerLine) {
-    QByteArray line = data.mid(i, bytesPerLine);
-    QString hexPart, asciiPart;
-
-    // Offset (8 hex digits)
-    hexPart += QString("%1: ")
-			.arg(i, 8, 16, QLatin1Char('0'));
-
-    // Hex bytes
-    for (int j = 0; j < bytesPerLine; ++j) {
-        if (j < line.size()) {
-          hexPart += QString("%1 ")
-						.arg(static_cast<uint8_t>(line[j]), 2, 16, QLatin1Char('0'))
-						.toUpper();
-        } else {
-          hexPart += "   ";
-        }
-
-        if (j == 7) {
-					// разделитель после 8-го байта
-					hexPart += " ";
-				}
-    }
-
-    // ASCII part
-    asciiPart = " ";
-    for (char c : line) {
-      if (c >= 32 && c <= 126) {
-        asciiPart += QChar::fromLatin1(c);
-      } else {
-        asciiPart += '.';
-      }
-    }
-
-    lines << (hexPart + asciiPart);
+QByteArray HexDumpWidget::selectRange(qint64 offset, qint64 length) {
+  if (_data.isEmpty() || offset < 0 || length <= 0) {
+    return {};
   }
 
-  return lines.join('\n');
+  const qint64 maxOffset = static_cast<qint64>(_data.size());
+  if (offset >= maxOffset) {
+    return {};
+  }
+
+  length = qMin(length, maxOffset - offset);
+
+  setSelectionRange(offset, length);
+
+  scrollToByte(offset);
+
+  return _data.mid(static_cast<int>(offset), static_cast<int>(length));
+}
+
+void HexDumpWidget::setSelectionRange(qint64 offset, qint64 length) {
+  if (!_tableView || !_model) {
+    return;
+  }
+
+  // Сбрасываем старое выделение
+  _tableView->selectionModel()->clearSelection();
+
+  // Рассчитываем ячейки: 16 байт на строку, 2 столбца на байт? или 1 столбец = 1 байт?
+  // Предположим: 16 байт/строка, 1 столбец = 1 байт (колонки 0..15 — hex, 16 — ASCII)
+  static constexpr int BYTES_PER_ROW = 16;
+
+  const int startRow = static_cast<int>(offset / BYTES_PER_ROW);
+  const int startCol = static_cast<int>(offset % BYTES_PER_ROW);
+
+  const qint64 endOffset = offset + length - 1;
+  const int endRow = static_cast<int>(endOffset / BYTES_PER_ROW);
+  const int endCol = static_cast<int>(endOffset % BYTES_PER_ROW);
+
+  // Создаём выделение
+  QItemSelection selection;
+  for (int row = startRow; row <= endRow; ++row) {
+    int colStart = (row == startRow) ? startCol : 0;
+    int colEnd = (row == endRow) ? endCol : (BYTES_PER_ROW - 1);
+
+    QModelIndex topLeft = _model->index(row, colStart);
+    QModelIndex bottomRight = _model->index(row, colEnd);
+
+    if (topLeft.isValid() && bottomRight.isValid()) {
+      selection.merge(QItemSelection(topLeft, bottomRight), QItemSelectionModel::Select);
+    }
+  }
+
+  _tableView->selectionModel()->select(selection, QItemSelectionModel::Select);
+  _tableView->setFocus();
+
+  // Сохраняем для selectedRange()
+  _selectionOffset = offset;
+  _selectionLength = length;
+}
+
+void HexDumpWidget::scrollToByte(qint64 offset) {
+  if (!_tableView || !_model) {
+    return;
+  }
+
+  static constexpr int BYTES_PER_ROW = 16;
+  const int row = static_cast<int>(offset / BYTES_PER_ROW);
+
+  QModelIndex index = _model->index(row, 0);
+  if (index.isValid()) {
+    _tableView->scrollTo(index, QAbstractItemView::PositionAtTop);
+  }
+}
+
+QPair<qint64, qint64> HexDumpWidget::selectedRange() const {
+  return {_selectionOffset, _selectionLength};
+}
+
+void HexDumpWidget::onSelectionChanged() {
+  if (!_tableView || !_model) {
+    return;
+  }
+
+  const QItemSelectionModel *selModel = _tableView->selectionModel();
+  const QModelIndexList indexes = selModel->selectedIndexes();
+
+  if (indexes.isEmpty()) {
+    _selectionOffset = -1;
+    _selectionLength = 0;
+    emit selectionChanged(_selectionOffset, _selectionLength);  // ← см. ниже про сигнал
+    return;
+  }
+
+  // Находим минимальный и максимальный byte-индекс в выделении
+  static constexpr int BYTES_PER_ROW = 16;
+
+  qint64 minByte = std::numeric_limits<qint64>::max();
+  qint64 maxByte = -1;
+
+  for (const QModelIndex &index : indexes) {
+    if (index.column() >= BYTES_PER_ROW) {
+      continue;  // пропускаем ASCII-колонку (если она у тебя отдельно)
+    }
+
+    const qint64 byteIndex = static_cast<qint64>(index.row()) * BYTES_PER_ROW + index.column();
+    minByte = qMin(minByte, byteIndex);
+    maxByte = qMax(maxByte, byteIndex);
+  }
+
+  if (minByte <= maxByte && minByte < _data.size()) {
+    _selectionOffset = minByte;
+    _selectionLength = maxByte - minByte + 1;
+
+    // Ограничиваем длину доступными данными
+    if (_selectionOffset + _selectionLength > _data.size()) {
+      _selectionLength = _data.size() - _selectionOffset;
+    }
+  } else {
+    _selectionOffset = -1;
+    _selectionLength = 0;
+  }
+
+  emit selectionChanged(_selectionOffset, _selectionLength);
 }

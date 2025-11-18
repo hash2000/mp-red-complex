@@ -1,7 +1,6 @@
 #pragma once
 #include "Launcher/main_frame.h"
 #include "Launcher/main_frame/resources_viewer/stream_widget_selector.h"
-#include "Resources/resources/model/assets_model.h"
 #include "Resources/resources.h"
 #include <QMainWindow>
 #include <QTreeView>
