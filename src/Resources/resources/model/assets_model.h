@@ -10,9 +10,10 @@ enum class AssetsViewItemRole : int {
 };
 
 enum class AssetsViewItemType : unsigned char {
-	Container = 1,
-	Folder = 2,
-	File = 3,
+	Undefined,
+	Container,
+	Folder,
+	File,
 };
 
 Q_DECLARE_METATYPE(AssetsViewItemType)

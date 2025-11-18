@@ -1,6 +1,7 @@
 #pragma once
 #include "Launcher/main_frame.h"
-#include "Launcher/widgets/hex_dump_widget.h"
+#include "Launcher/main_frame/resources_viewer/stream_widget_selector.h"
+#include "Resources/resources/model/assets_model.h"
 #include "Resources/resources.h"
 #include <QMainWindow>
 #include <QTreeView>
@@ -35,27 +36,16 @@ private:
 private slots:
 	void onItemDoubleClicked(const QModelIndex &index);
 
-private:
-	void displayModel(const QStandardItem *item,
-		const QString &container,
-		const QString &path,
-		const QString &suffix);
+	void onCustomContextMenuRequested(const QPoint &pos);
 
-	QWidget* buildWidget(const QString &suffix, DataStream &stream) const;
+	void onItemMenuHexView();
 
 private:
 	std::shared_ptr<Resources> _resources;
-
+	std::unique_ptr<StreamWidgetSelector> _selector;
 	QTreeView *_assetsView;
 	QStandardItemModel *_assetsModel;
-
 	QStackedWidget *_centerStack;
-  HexDumpWidget *_hexView;
-  QLabel *_imageLabel;
-  QWidget *_emptyWidget;
-
-  QStandardItem *_currentItem;
-
 	QListWidget *_actionsList;
   QVBoxLayout *_actionsLayout;
   QWidget *_actionsPanel;

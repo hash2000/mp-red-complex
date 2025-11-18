@@ -19,6 +19,7 @@ target_link_libraries(Launcher
 
 		Base
 		Resources
+		Game
 )
 
 # target_include_directories(Launcher

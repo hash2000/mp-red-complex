@@ -1,6 +1,7 @@
 #include "Launcher/widgets/hex_dump_widget.h"
 #include <QFontDatabase>
 #include <QFont>
+#include "hex_dump_widget.h"
 
 HexDumpWidget::HexDumpWidget(QWidget *parent)
 : QPlainTextEdit(parent) {
@@ -19,6 +20,15 @@ void HexDumpWidget::setByteArray(const QByteArray &data) {
 
 QByteArray HexDumpWidget::byteArray() const {
   return _data;
+}
+
+void HexDumpWidget::clear() {
+	if (_data.isEmpty()) {
+		return;
+	}
+
+	_data.clear();
+	_data.squeeze();
 }
 
 QString HexDumpWidget::formatHexDump(const QByteArray &data) {

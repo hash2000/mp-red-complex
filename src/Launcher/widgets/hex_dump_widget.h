@@ -11,6 +11,8 @@ public:
 
   QByteArray byteArray() const;
 
+	void clear();
+
 private:
 	QString formatHexDump(const QByteArray& data);
 

@@ -1,6 +1,5 @@
 #include "Launcher/main_frame/resources_viewer/resources_viewer_frame.h"
 #include "Resources/resources/model/assets_model_builder.h"
-#include "Resources/resources/model/assets_model.h"
 #include <QSplitter>
 #include <QFileInfo>
 #include <QMessageBox>
@@ -10,8 +9,8 @@
 
 ResourcesViewerFrame::ResourcesViewerFrame(std::shared_ptr<Resources> &resources)
 	: _resources(resources) {
-	setupAssetsTree();
 	setupCentralWidget();
+	setupAssetsTree();
 	setupActionPanel();
 	setupView();
 	populateAssetsTree();
@@ -45,15 +44,9 @@ void ResourcesViewerFrame::configureAssetsTree() {
 }
 
 void ResourcesViewerFrame::setupCentralWidget() {
+	_selector = std::make_unique<StreamWidgetSelector>(_resources);
 	_centerStack = new QStackedWidget;
-  _hexView = new HexDumpWidget;
-  _imageLabel = new QLabel;
-  _imageLabel->setAlignment(Qt::AlignCenter);
-  _emptyWidget = new QWidget;
-
-	_centerStack->addWidget(_emptyWidget);
-  _centerStack->addWidget(_hexView);
-  _centerStack->addWidget(_imageLabel);
+	_selector->buildStackedView(_centerStack);
 }
 
 void ResourcesViewerFrame::setupAssetsTree() {
@@ -64,7 +57,9 @@ void ResourcesViewerFrame::setupAssetsTree() {
   _assetsView->setModel(_assetsModel);
   _assetsView->setContextMenuPolicy(Qt::CustomContextMenu);
   _assetsView->setHeaderHidden(true);
+	_assetsView->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
+	connect(_assetsView, &QTreeView::customContextMenuRequested, this, &ResourcesViewerFrame::onCustomContextMenuRequested);
 	connect(_assetsView, &QTreeView::doubleClicked, this, &ResourcesViewerFrame::onItemDoubleClicked);
 }
 
@@ -82,37 +77,34 @@ void ResourcesViewerFrame::setupActionPanel() {
 
 void ResourcesViewerFrame::onItemDoubleClicked(const QModelIndex &index) {
 	const auto item = _assetsModel->itemFromIndex(index);
-	if (item) {
-		const auto container = index.data(static_cast<int>(AssetsViewItemRole::ContainerName)).toString();
-		const auto path = index.data(static_cast<int>(AssetsViewItemRole::FullPath)).toString();
-		const auto suffix = index.data(static_cast<int>(AssetsViewItemRole::Suffix)).toString();
-		const auto type = index.data(static_cast<int>(AssetsViewItemRole::Type)).value<AssetsViewItemType>();
+	_selector->setSelection(item);
+	_selector->displayModel(_centerStack);
+}
 
-		if (type == AssetsViewItemType::File) {
-			displayModel(item, container, path, suffix);
+void ResourcesViewerFrame::onCustomContextMenuRequested(const QPoint &pos) {
+  const auto index = _assetsView->indexAt(pos);
+  if (!index.isValid()) {
+		return;
+	}
+
+	const auto item = _assetsModel->itemFromIndex(index);
+	if (!item || item == _assetsModel->invisibleRootItem()) {
+		return;
+	}
+
+	_selector->setSelection(item);
+	auto menu = _selector->buildContextMenu(this);
+	if (!menu->actions().isEmpty()) {
+		for (auto *action : menu->actions()) {
+			if (action->objectName() == "action_hex_view") {
+				connect(action, &QAction::triggered, this, &ResourcesViewerFrame::onItemMenuHexView);
+			}
 		}
+
+		menu->exec(_assetsView->viewport()->mapToGlobal(pos));
 	}
 }
 
-void ResourcesViewerFrame::displayModel(const QStandardItem *item,
-	const QString &container,
-	const QString &path,
-	const QString &suffix) {
-	const auto stream = _resources->getStream(container, path);
-	if (!stream) {
-		return;
-	}
-
-	auto widget = buildWidget(suffix, stream.value());
-	if (!widget) {
-		return;
-	}
-
-	_centerStack->setCurrentWidget(widget);
-}
-
-QWidget* ResourcesViewerFrame::buildWidget(const QString &suffix, DataStream &stream) const {
-	auto block = stream.readBlockAsQByteArray();
-	_hexView->setByteArray(block);
-	return _hexView;
+void ResourcesViewerFrame::onItemMenuHexView() {
+	_selector->displayHexView(_centerStack);
 }
