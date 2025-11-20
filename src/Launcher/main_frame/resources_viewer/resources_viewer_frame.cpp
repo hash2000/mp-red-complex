@@ -8,7 +8,12 @@
 #include <qnamespace.h>
 
 ResourcesViewerFrame::ResourcesViewerFrame(std::shared_ptr<Resources> &resources)
-	: _resources(resources) {
+	: _resources(resources)
+	, _centerStack(new QStackedWidget)
+	, _assetsModel(new QStandardItemModel(this))
+	, _assetsView(new QTreeView)
+	, _actionsPanel(new QWidget)
+  , _actionsLayout(new QVBoxLayout) {
 	setupCentralWidget();
 	setupAssetsTree();
 	setupActionPanel();
@@ -44,28 +49,26 @@ void ResourcesViewerFrame::configureAssetsTree() {
 }
 
 void ResourcesViewerFrame::setupCentralWidget() {
-	_selector = std::make_unique<StreamWidgetSelector>(_resources);
-	_centerStack = new QStackedWidget;
-	_selector->buildStackedView(_centerStack);
+	_selector = std::make_unique<StreamWidgetSelector>(_resources, _centerStack, _actionsLayout);
+	_selector->buildStackedView();
 }
 
 void ResourcesViewerFrame::setupAssetsTree() {
-	_assetsModel = new QStandardItemModel(this);
   _assetsModel->setHorizontalHeaderLabels({"Assets"});
 
-	_assetsView = new QTreeView;
   _assetsView->setModel(_assetsModel);
   _assetsView->setContextMenuPolicy(Qt::CustomContextMenu);
   _assetsView->setHeaderHidden(true);
 	_assetsView->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
-	connect(_assetsView, &QTreeView::customContextMenuRequested, this, &ResourcesViewerFrame::onCustomContextMenuRequested);
-	connect(_assetsView, &QTreeView::doubleClicked, this, &ResourcesViewerFrame::onItemDoubleClicked);
+	connect(_assetsView, &QTreeView::customContextMenuRequested,
+		this, &ResourcesViewerFrame::onCustomContextMenuRequested);
+	connect(_assetsView, &QTreeView::doubleClicked,
+		this, &ResourcesViewerFrame::onItemDoubleClicked);
+
 }
 
 void ResourcesViewerFrame::setupActionPanel() {
-	_actionsPanel = new QWidget;
-  _actionsLayout = new QVBoxLayout;
   _actionsPanel->setLayout(_actionsLayout);
 
   _actionsLayout->addWidget(new QLabel("<b>Actions:</b>"));
@@ -78,7 +81,7 @@ void ResourcesViewerFrame::setupActionPanel() {
 void ResourcesViewerFrame::onItemDoubleClicked(const QModelIndex &index) {
 	const auto item = _assetsModel->itemFromIndex(index);
 	_selector->setSelection(item);
-	_selector->displayModel(_centerStack);
+	_selector->displayModel();
 }
 
 void ResourcesViewerFrame::onCustomContextMenuRequested(const QPoint &pos) {
@@ -106,5 +109,6 @@ void ResourcesViewerFrame::onCustomContextMenuRequested(const QPoint &pos) {
 }
 
 void ResourcesViewerFrame::onItemMenuHexView() {
-	_selector->displayHexView(_centerStack);
+	_selector->displayHexView();
 }
+

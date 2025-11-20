@@ -15,7 +15,7 @@ public:
 
 	void skip(size_t pos) override;
 
-	void readRaw(uint8_t *dst, size_t size) override;
+	void readRaw(void *dst, size_t size) override;
 
 private:
 	std::shared_ptr<std::ifstream> _stream;

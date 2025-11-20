@@ -1,182 +1,344 @@
 #include "Launcher/widgets/hex_dump_widget.h"
+#include <QApplication>
+#include <QClipboard>
 #include <QFontDatabase>
-#include <QFont>
-#include <QVBoxLayout>
-#include <QHeaderView>
+#include <QPainter>
+#include <QScreen>
+#include <QScrollBar>
+#include <QMouseEvent>
 
-HexDumpWidget::HexDumpWidget(QWidget *parent)
-: QWidget(parent)
-, _tableView(new QTableView(this))
-, _model(new HexDumpModel(this))
-{
-  QVBoxLayout *layout = new QVBoxLayout;
-  layout->setContentsMargins(0, 0, 0, 0);  // убираем отступы
-  layout->addWidget(_tableView);
-  setLayout(layout);
+HexDumpWidget::HexDumpWidget(QWidget *parent) : QAbstractScrollArea(parent) {
+  setFocusPolicy(Qt::StrongFocus);
+  setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
 
-  _tableView->setModel(_model);
-  _tableView->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-  _tableView->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-  _tableView->setShowGrid(false);
-	//_tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Fixed);
-  //_tableView->horizontalHeader()->hide();
-  //_tableView->verticalHeader()->hide();
+  _duplicateUpdateTimer.setSingleShot(true);
+  _duplicateUpdateTimer.setInterval(200);
+  connect(&_duplicateUpdateTimer, &QTimer::timeout, this,
+          &HexDumpWidget::updateDuplicateMap);
 
-  for (int i = 0; i < 16; ++i) {
-      _tableView->setColumnWidth(i, 10);
-  }
-  _tableView->setColumnWidth(16, 120);
-	_tableView->setStyleSheet("QTableView::item { padding: 0px 2px; }");
-
-  connect(_tableView->selectionModel(),
-          &QItemSelectionModel::selectionChanged,
-          this,
-          &HexDumpWidget::onSelectionChanged);
-
-	QFont font = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-  font.setPointSize(10);
-  setFont(font);
+  updateMetrics();
+  verticalScrollBar()->setSingleStep(_metrics.rowHeight);
+  verticalScrollBar()->setPageStep(_metrics.rowHeight * 20);
 }
 
-void HexDumpWidget::setByteArray(const QByteArray &data) {
-	_data = data;
-	_model->setData(_data);
+void HexDumpWidget::setData(const QByteArray &data) {
+  _data = data;
+  _selStart = _selEnd = -1;
+
+  const int rows =
+      (_data.size() + _metrics.bytesPerRow - 1) / _metrics.bytesPerRow;
+  const int contentHeight = rows * _metrics.rowHeight;
+
+  verticalScrollBar()->setRange(0,
+                                qMax(0, contentHeight - viewport()->height()));
+  viewport()->update();
+
+  _duplicateUpdateTimer.start();
 }
 
-QByteArray HexDumpWidget::byteArray() const {
-  return _data;
+qsizetype HexDumpWidget::getDataSize() const {
+	return _data.size();
 }
 
 void HexDumpWidget::clear() {
-	if (_data.isEmpty()) {
-		return;
-	}
-
-	_data.clear();
-	_data.squeeze();
+  _data.clear();
+  _data.squeeze();
+  _selStart = _selEnd = -1;
+  _byteFrequency.clear();
+  verticalScrollBar()->setRange(0, 0);
+  viewport()->update();
 }
 
-QByteArray HexDumpWidget::selectRange(qint64 offset, qint64 length) {
+void HexDumpWidget::selectRange(qint64 offset, qint64 length) {
   if (_data.isEmpty() || offset < 0 || length <= 0) {
-    return {};
+    _selStart = _selEnd = -1;
+  } else {
+    length = qMin(length, static_cast<qint64>(_data.size()) - offset);
+    _selStart = offset;
+    _selEnd = offset + length - 1;
   }
+  emitSelectionChange();
+  viewport()->update();
 
-  const qint64 maxOffset = static_cast<qint64>(_data.size());
-  if (offset >= maxOffset) {
-    return {};
+  if (_selStart >= 0) {
+    scrollToByte(_selStart);
   }
-
-  length = qMin(length, maxOffset - offset);
-
-  setSelectionRange(offset, length);
-
-  scrollToByte(offset);
-
-  return _data.mid(static_cast<int>(offset), static_cast<int>(length));
-}
-
-void HexDumpWidget::setSelectionRange(qint64 offset, qint64 length) {
-  if (!_tableView || !_model) {
-    return;
-  }
-
-  // Сбрасываем старое выделение
-  _tableView->selectionModel()->clearSelection();
-
-  // Рассчитываем ячейки: 16 байт на строку, 2 столбца на байт? или 1 столбец = 1 байт?
-  // Предположим: 16 байт/строка, 1 столбец = 1 байт (колонки 0..15 — hex, 16 — ASCII)
-  static constexpr int BYTES_PER_ROW = 16;
-
-  const int startRow = static_cast<int>(offset / BYTES_PER_ROW);
-  const int startCol = static_cast<int>(offset % BYTES_PER_ROW);
-
-  const qint64 endOffset = offset + length - 1;
-  const int endRow = static_cast<int>(endOffset / BYTES_PER_ROW);
-  const int endCol = static_cast<int>(endOffset % BYTES_PER_ROW);
-
-  // Создаём выделение
-  QItemSelection selection;
-  for (int row = startRow; row <= endRow; ++row) {
-    int colStart = (row == startRow) ? startCol : 0;
-    int colEnd = (row == endRow) ? endCol : (BYTES_PER_ROW - 1);
-
-    QModelIndex topLeft = _model->index(row, colStart);
-    QModelIndex bottomRight = _model->index(row, colEnd);
-
-    if (topLeft.isValid() && bottomRight.isValid()) {
-      selection.merge(QItemSelection(topLeft, bottomRight), QItemSelectionModel::Select);
-    }
-  }
-
-  _tableView->selectionModel()->select(selection, QItemSelectionModel::Select);
-  _tableView->setFocus();
-
-  // Сохраняем для selectedRange()
-  _selectionOffset = offset;
-  _selectionLength = length;
 }
 
 void HexDumpWidget::scrollToByte(qint64 offset) {
-  if (!_tableView || !_model) {
+  if (_data.isEmpty() || offset < 0) {
     return;
   }
+  const int row = static_cast<int>(offset / _metrics.bytesPerRow);
+  const int targetY = row * _metrics.rowHeight;
+  verticalScrollBar()->setValue(targetY);
+}
 
-  static constexpr int BYTES_PER_ROW = 16;
-  const int row = static_cast<int>(offset / BYTES_PER_ROW);
-
-  QModelIndex index = _model->index(row, 0);
-  if (index.isValid()) {
-    _tableView->scrollTo(index, QAbstractItemView::PositionAtTop);
+QByteArray HexDumpWidget::selectedData() const {
+  if (_selStart < 0 || _selEnd < 0) {
+    return {};
   }
+  const qint64 start = qMin(_selStart, _selEnd);
+  const qint64 end = qMax(_selStart, _selEnd);
+  const qint64 len =
+      qMin(end - start + 1, static_cast<qint64>(_data.size() - start));
+  return _data.mid(static_cast<int>(start), static_cast<int>(len));
 }
 
 QPair<qint64, qint64> HexDumpWidget::selectedRange() const {
-  return {_selectionOffset, _selectionLength};
+  if (_selStart < 0) {
+    return {-1, 0};
+  }
+  const qint64 start = qMin(_selStart, _selEnd);
+  const qint64 end = qMax(_selStart, _selEnd);
+  return {start, end - start + 1};
 }
 
-void HexDumpWidget::onSelectionChanged() {
-  if (!_tableView || !_model) {
+void HexDumpWidget::setHighlightDuplicates(bool enabled) {
+  if (_highlightDuplicates != enabled) {
+    _highlightDuplicates = enabled;
+    if (enabled) {
+      _duplicateUpdateTimer.start();
+    } else {
+      _byteFrequency.clear();
+    }
+    viewport()->update();
+  }
+}
+
+void HexDumpWidget::setBytesPerRow(int count) {
+  if (count > 0 && count <= 64) {
+    _metrics.bytesPerRow = count;
+    updateMetrics();
+    setData(_data); // пересчитать высоту и перерисовать
+  }
+}
+
+void HexDumpWidget::setFontSize(int pt) {
+  QFont f = font();
+  f.setPointSize(pt);
+  setFont(f);
+  updateMetrics();
+  setData(_data);
+}
+
+void HexDumpWidget::updateMetrics() {
+  QFont f = font();
+  // Учёт DPI/scaling (Qt6+)
+  if (QScreen *screen = QApplication::primaryScreen()) {
+    const qreal dpiRatio = screen->devicePixelRatio();
+    f.setPointSizeF(f.pointSizeF() * dpiRatio);
+  }
+
+  QFontMetrics fm(f);
+  _font = f;
+  _metrics.charWidth = fm.horizontalAdvance('0');
+  _metrics.rowHeight = fm.height() + 4; // + вертикальный отступ
+
+  // Ширины:
+  _metrics.offsetWidth = fm.horizontalAdvance("FFFFFFFF ") + 4;
+  const int hexColWidth = _metrics.charWidth * 2 + 4; // "FF "
+  _metrics.hexStartX = _metrics.offsetWidth;
+  _metrics.asciiStartX =
+      _metrics.hexStartX + _metrics.bytesPerRow * hexColWidth + 10;
+
+  viewport()->update();
+}
+
+void HexDumpWidget::updateDuplicateMap() {
+  if (!_highlightDuplicates || _data.isEmpty()) {
+    _byteFrequency.clear();
     return;
   }
 
-  const QItemSelectionModel *selModel = _tableView->selectionModel();
-  const QModelIndexList indexes = selModel->selectedIndexes();
+  _byteFrequency.clear();
+  for (char c : _data) {
+    ++_byteFrequency[static_cast<quint8>(c)];
+  }
+  viewport()->update();
+}
 
-  if (indexes.isEmpty()) {
-    _selectionOffset = -1;
-    _selectionLength = 0;
-    emit selectionChanged(_selectionOffset, _selectionLength);  // ← см. ниже про сигнал
-    return;
+qint64 HexDumpWidget::posToByte(const QPoint &pos) const {
+  const int row = (pos.y() + verticalScrollBar()->value()) / _metrics.rowHeight;
+  const int relX = pos.x() - _metrics.hexStartX;
+  const int col = relX / (_metrics.charWidth * 2 + 4);
+
+  if (row < 0 || col < 0 || col >= _metrics.bytesPerRow) {
+    return -1;
   }
 
-  // Находим минимальный и максимальный byte-индекс в выделении
-  static constexpr int BYTES_PER_ROW = 16;
+  const qint64 idx = static_cast<qint64>(row) * _metrics.bytesPerRow + col;
+  return (idx < _data.size()) ? idx : -1;
+}
 
-  qint64 minByte = std::numeric_limits<qint64>::max();
-  qint64 maxByte = -1;
-
-  for (const QModelIndex &index : indexes) {
-    if (index.column() >= BYTES_PER_ROW) {
-      continue;  // пропускаем ASCII-колонку (если она у тебя отдельно)
-    }
-
-    const qint64 byteIndex = static_cast<qint64>(index.row()) * BYTES_PER_ROW + index.column();
-    minByte = qMin(minByte, byteIndex);
-    maxByte = qMax(maxByte, byteIndex);
-  }
-
-  if (minByte <= maxByte && minByte < _data.size()) {
-    _selectionOffset = minByte;
-    _selectionLength = maxByte - minByte + 1;
-
-    // Ограничиваем длину доступными данными
-    if (_selectionOffset + _selectionLength > _data.size()) {
-      _selectionLength = _data.size() - _selectionOffset;
-    }
+void HexDumpWidget::emitSelectionChange() {
+  if (_selStart >= 0) {
+    const qint64 start = qMin(_selStart, _selEnd);
+    const qint64 end = qMax(_selStart, _selEnd);
+    const qint64 len =
+        qMin(end - start + 1, static_cast<qint64>(_data.size() - start));
+    emit selectionChanged(start, len, selectedData());
   } else {
-    _selectionOffset = -1;
-    _selectionLength = 0;
+    emit selectionChanged(-1, 0, QByteArray());
   }
+}
 
-  emit selectionChanged(_selectionOffset, _selectionLength);
+void HexDumpWidget::paintEvent(QPaintEvent *event) {
+  QPainter p(viewport());
+  p.setFont(_font);
+  p.setRenderHint(QPainter::Antialiasing, false);
+
+  const int scrollY = verticalScrollBar()->value();
+  const int firstRow = scrollY / _metrics.rowHeight;
+  const int lastRow = (scrollY + viewport()->height()) / _metrics.rowHeight + 1;
+  const int rows =
+      (_data.size() + _metrics.bytesPerRow - 1) / _metrics.bytesPerRow;
+  const int maxRow = qMin(lastRow, rows);
+
+  const QColor textCol = palette().color(QPalette::Text);
+  const QColor hlCol = palette().color(QPalette::Highlight);
+  const QColor hlTextCol = palette().color(QPalette::HighlightedText);
+  const QColor dupCol(0x55, 0x55, 0x88); // тёмно-синий для дубликатов
+
+  for (int row = firstRow; row < maxRow; ++row) {
+    const int y =
+        row * _metrics.rowHeight - scrollY + _metrics.rowHeight / 2 + 2;
+
+    // Offset
+    QString offsetStr = QString("%1")
+                            .arg(row * _metrics.bytesPerRow, 8, 16, QChar('0'))
+                            .toUpper();
+    p.setPen(textCol);
+    p.drawText(0, y, offsetStr);
+
+    // Hex-байты
+    bool isSelected = false;
+    int x = _metrics.hexStartX;
+    for (int col = 0; col < _metrics.bytesPerRow; ++col) {
+      const qint64 idx = static_cast<qint64>(row) * _metrics.bytesPerRow + col;
+      const bool inRange = idx < _data.size();
+
+      if (_selStart >= 0) {
+        const qint64 start = qMin(_selStart, _selEnd);
+        const qint64 end = qMax(_selStart, _selEnd);
+        isSelected = (idx >= start && idx <= end);
+      }
+
+      if (isSelected) {
+        p.fillRect(x - 2, y - _metrics.rowHeight / 2 - 2,
+                   _metrics.charWidth * 2 + 2, _metrics.rowHeight - 2, hlCol);
+        p.setPen(hlTextCol);
+      } else {
+        p.setPen(textCol);
+      }
+
+      if (inRange) {
+        const quint8 byte = static_cast<quint8>(_data[idx]);
+        QString hex = QString("%1").arg(byte, 2, 16, QChar('0')).toUpper();
+
+        // Подсветка дубликатов
+        if (_highlightDuplicates && _byteFrequency.value(byte, 0) > 1) {
+          if (!isSelected) {
+            p.setPen(dupCol);
+          }
+        }
+
+        p.drawText(x, y, hex);
+      } else {
+        p.drawText(x, y, "  ");
+      }
+
+      x += _metrics.charWidth * 2 + 4;
+    }
+
+    // ASCII
+    x = _metrics.asciiStartX;
+    for (int col = 0; col < _metrics.bytesPerRow; ++col) {
+      const qint64 idx = static_cast<qint64>(row) * _metrics.bytesPerRow + col;
+      if (idx < _data.size()) {
+        char c = _data[idx];
+        QChar ch = (c >= 32 && c <= 126) ? QChar(c) : '.';
+        p.setPen(isSelected ? hlTextCol : textCol);
+        p.drawText(x, y, ch);
+      }
+      x += _metrics.charWidth + 2;
+    }
+  }
+}
+
+void HexDumpWidget::resizeEvent(QResizeEvent *) {
+  const int rows =
+      (_data.size() + _metrics.bytesPerRow - 1) / _metrics.bytesPerRow;
+  const int contentHeight = rows * _metrics.rowHeight;
+  verticalScrollBar()->setRange(0,
+                                qMax(0, contentHeight - viewport()->height()));
+}
+
+void HexDumpWidget::mousePressEvent(QMouseEvent *event) {
+  if (event->button() == Qt::LeftButton) {
+    _selStart = _selEnd = posToByte(event->pos());
+    _dragging = true;
+    emitSelectionChange();
+    viewport()->update();
+  }
+}
+
+void HexDumpWidget::mouseMoveEvent(QMouseEvent *event) {
+  if (_dragging && (event->buttons() & Qt::LeftButton)) {
+    _selEnd = posToByte(event->pos());
+    emitSelectionChange();
+    viewport()->update();
+  }
+}
+
+void HexDumpWidget::mouseReleaseEvent(QMouseEvent *) { _dragging = false; }
+
+void HexDumpWidget::wheelEvent(QWheelEvent *event) {
+  // Плавная прокрутка (Qt6)
+  QPoint angleDelta = event->angleDelta();
+  int delta = angleDelta.y() ? angleDelta.y() : angleDelta.x();
+  int step = delta / 4; // стандартное сглаживание
+  verticalScrollBar()->setValue(verticalScrollBar()->value() - step);
+  event->accept();
+}
+
+void HexDumpWidget::keyPressEvent(QKeyEvent *event) {
+  if (event->modifiers() == Qt::ControlModifier) {
+    if (event->key() == Qt::Key_C) {
+      if (_selStart >= 0) {
+        QByteArray sel = selectedData();
+        if (!sel.isEmpty()) {
+          QClipboard *clipboard = QApplication::clipboard();
+
+          // Форматы:
+          QString hexStr;
+          QString asciiStr;
+          QString cArray;
+
+          for (int i = 0; i < sel.size(); ++i) {
+            quint8 b = static_cast<quint8>(sel[i]);
+            hexStr += QString("%1 ").arg(b, 2, 16, QChar('0')).toUpper();
+            asciiStr += (b >= 32 && b <= 126) ? QChar(b) : '.';
+            cArray += QString("0x%1, ").arg(b, 2, 16, QChar('0')).toUpper();
+          }
+
+          // Убираем завершающий пробел/запятую
+          if (!hexStr.isEmpty())
+            hexStr.chop(1);
+          if (!cArray.isEmpty())
+            cArray.chop(2);
+
+          QString full = QString("hex: %1\n"
+                                 "ascii: %2\n"
+                                 "c: {%3}")
+                             .arg(hexStr, asciiStr, cArray);
+
+          clipboard->setText(full);
+        }
+      }
+      event->accept();
+      return;
+    }
+  }
+  QWidget::keyPressEvent(event);
 }

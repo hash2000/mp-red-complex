@@ -7,7 +7,7 @@
 
 namespace Format::Int {
 
-	enum class ProcedureIType {
+	enum class ProcedureIType : uint32_t {
 		Timed = 0x01,
 		Conditional = 0x02,
 		Imported = 0x04,
@@ -39,4 +39,13 @@ namespace Format::Int {
     std::map<unsigned int, std::string> identifiers;
     std::map<unsigned int, std::string> strings;
 	};
+
+	[[nodiscard]] constexpr bool has_flag(std::uint32_t flags, ProcedureIType mask) noexcept {
+		using T = std::underlying_type_t<ProcedureIType>;
+		return (flags & static_cast<T>(mask)) == static_cast<T>(mask);
+	}
+
+	[[nodiscard]] constexpr bool has_flags(std::uint32_t flags, ProcedureIType required_mask) noexcept {
+		return has_flag(flags, required_mask);
+	}
 }

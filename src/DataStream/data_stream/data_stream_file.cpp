@@ -25,7 +25,7 @@ void DataStreamFile::skip(size_t pos) {
 	_stream->seekg(static_cast<std::streamoff>(pos), std::ios_base::cur);
 }
 
-void DataStreamFile::readRaw(uint8_t *dst, size_t size) {
+void DataStreamFile::readRaw(void *dst, size_t size) {
   if (size == 0) {
     return;
   }

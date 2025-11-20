@@ -21,22 +21,15 @@ public:
 
 private:
 	void setupActionPanel();
-
 	void setupAssetsTree();
-
 	void setupCentralWidget();
-
 	void setupView();
-
 	void populateAssetsTree();
-
 	void configureAssetsTree();
 
 private slots:
 	void onItemDoubleClicked(const QModelIndex &index);
-
 	void onCustomContextMenuRequested(const QPoint &pos);
-
 	void onItemMenuHexView();
 
 private:

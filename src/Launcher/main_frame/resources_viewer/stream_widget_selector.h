@@ -8,33 +8,34 @@
 #include <QStackedWidget>
 #include <QWidget>
 #include <QMenu>
+#include <QVBoxLayout>
 #include <memory>
 #include <optional>
 
-class StreamWidgetSelector {
+class StreamWidgetSelector: public QObject {
+	Q_OBJECT
+
 public:
-	StreamWidgetSelector(std::weak_ptr<Resources> resources);
+	StreamWidgetSelector(std::weak_ptr<Resources> resources,
+		QStackedWidget *centerStack,
+		QVBoxLayout *actionsLayout);
 
-	void buildStackedView(QStackedWidget *view);
-
+	void buildStackedView();
 	void setSelection(const QStandardItem *item);
-
 	bool isSelected() const;
-
 	std::unique_ptr<QMenu> buildContextMenu(QWidget *parent) const;
-
-	void displayModel(QStackedWidget *view);
-
-	void displayHexView(QStackedWidget *view);
+	void displayModel();
+	void displayHexView();
 
 private:
-	QWidget* buildWidget(const QString &suffix, DataStream &stream) const;
-
+	QWidget* buildWidget(const QString &suffix, DataStream &stream);
 	std::optional<std::reference_wrapper<DataStream>> getStream();
+	void cleanViewsData(QWidget *current = nullptr);
+	void applyEmptyView();
+	void applyHexControls();
 
-	void clenViewsData(QWidget *current = nullptr);
-
-	void applyEmptyView(QStackedWidget *view);
+private slots:
+	void onHexSelectionChanged(qint64 offset, qint64 length, const QByteArray& selected);
 
 private:
 	struct {
@@ -50,4 +51,6 @@ private:
 	} _selection;
 
 	std::weak_ptr<Resources> _resources;
+	QStackedWidget *_centerStack;
+	QVBoxLayout *_actionsLayout;
 };

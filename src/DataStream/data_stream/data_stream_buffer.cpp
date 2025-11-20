@@ -43,3 +43,4 @@ void DataStreamBuffer::skip(size_t pos) {
 
   gbump(static_cast<int>(pos));
 }
+

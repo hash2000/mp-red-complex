@@ -8,9 +8,7 @@ public:
 	HexDumpWidgetSimple(QWidget* parent = nullptr);
 
   void setByteArray(const QByteArray& data);
-
   QByteArray byteArray() const;
-
 	void clear();
 
 private:
