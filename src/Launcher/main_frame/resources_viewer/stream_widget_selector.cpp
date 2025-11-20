@@ -161,18 +161,26 @@ void StreamWidgetSelector::applyHexControls() {
   lengthSpinBox->setAccelerated(true);
 
   // --- Read-only value display ---
-  QLabel *valueLabel = new QLabel("Value:", controlWidget);
+  QLabel *valueLabel = new QLabel("Signed:", controlWidget);
   QLineEdit *valueEdit = new QLineEdit(controlWidget);
   valueEdit->setReadOnly(true);
   valueEdit->setPlaceholderText("Select bytes to view value");
 
+  // --- Read-only value display ---
+  QLabel *valueUnsignedLabel = new QLabel("Unsigned:", controlWidget);
+  QLineEdit *valueUnsignedEdit = new QLineEdit(controlWidget);
+  valueUnsignedEdit->setReadOnly(true);
+  valueUnsignedEdit->setPlaceholderText("Select bytes to view value");
+
   // Расположение в сетке
-  grid->addWidget(offsetLabel,    0, 0, Qt::AlignRight);
-  grid->addWidget(offsetSpinBox,  0, 1);
-  grid->addWidget(lengthLabel,    1, 0, Qt::AlignRight);
-  grid->addWidget(lengthSpinBox,  1, 1);
-  grid->addWidget(valueLabel,     2, 0, Qt::AlignRight);
-  grid->addWidget(valueEdit,      2, 1);
+  grid->addWidget(offsetLabel, 0, 0, Qt::AlignRight);
+  grid->addWidget(offsetSpinBox, 0, 1);
+  grid->addWidget(lengthLabel, 1, 0, Qt::AlignRight);
+  grid->addWidget(lengthSpinBox, 1, 1);
+  grid->addWidget(valueLabel, 2, 0, Qt::AlignRight);
+  grid->addWidget(valueEdit, 2, 1);
+  grid->addWidget(valueUnsignedLabel, 3, 0, Qt::AlignRight);
+  grid->addWidget(valueUnsignedEdit, 3, 1);
 
   // Обновление диапазонов при изменении размера буфера
   auto updateRanges = [hexWidget, offsetSpinBox, lengthSpinBox]() {
@@ -184,7 +192,7 @@ void StreamWidgetSelector::applyHexControls() {
   updateRanges();
 
   // Обработка изменений offset/length
-  auto updateSelection = [hexWidget, offsetSpinBox, lengthSpinBox, valueEdit, this]() {
+  auto updateSelection = [hexWidget, offsetSpinBox, lengthSpinBox, valueEdit, valueUnsignedEdit, this]() {
     const qsizetype offset = offsetSpinBox->value();
     qsizetype length = lengthSpinBox->value();
 
@@ -212,29 +220,47 @@ void StreamWidgetSelector::applyHexControls() {
 
 			switch (length) {
 			case sizeof(int8_t): {
-				const auto value = block->i8();
-				valueEdit->setText(QString("%1").arg(value));
+				const auto pos = block->position();
+				const auto sv = block->i8();
+				block->position(pos);
+				const auto uv = block->u8();
+
+				valueEdit->setText(QString("%1").arg(sv));
+				valueUnsignedEdit->setText(QString("%1").arg(uv));
 				}
 				break;
 			case sizeof(int16_t): {
-				const auto value = block->i16();
-				valueEdit->setText(QString("%1").arg(value));
+				const auto pos = block->position();
+				const auto sv = block->i16();
+				block->position(pos);
+				const auto uv = block->u16();
+
+				valueEdit->setText(QString("%1").arg(sv));
+				valueUnsignedEdit->setText(QString("%1").arg(uv));
 				}
 				break;
 			case sizeof(int32_t): {
-				const auto value = block->i32();
-				valueEdit->setText(QString("%1").arg(value));
+				const auto pos = block->position();
+				const auto sv = block->i32();
+				block->position(pos);
+				const auto uv = block->u32();
+
+				valueEdit->setText(QString("%1").arg(sv));
+				valueUnsignedEdit->setText(QString("%1").arg(uv));
 				}
 				break;
 			default: {
 				const auto selected = hexWidget->selectedData();
 				const auto value = selected.toHex(' ').toUpper();
 				valueEdit->setText(QString("%1 (%2 bytes)").arg(value).arg(selected.size()));
+				valueUnsignedEdit->setText(QString("%1 (%2 bytes)").arg(value).arg(selected.size()));
 			}
 			}
     } else {
       valueEdit->clear();
       valueEdit->setPlaceholderText("Select bytes to view value");
+			valueUnsignedEdit->clear();
+			valueUnsignedEdit->setPlaceholderText("Select bytes to view value");
     }
   };
 
