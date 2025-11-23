@@ -64,6 +64,7 @@ public:
   virtual size_t position() const;
   virtual void skip(size_t pos) = 0;
   virtual void readRaw(void *dst, size_t size);
+	virtual void clear();
 
   template <typename T>
     requires(std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
@@ -106,7 +107,7 @@ public:
   [[nodiscard]] uint64_t u64() { return get<uint64_t>(); }
   [[nodiscard]] int64_t i64() { return get<int64_t>(); }
 
-  std::unique_ptr<DataStream> makeBlockAsStream();
+  std::shared_ptr<DataStream> makeBlockAsStream();
   QByteArray readBlockAsQByteArray();
 
   EndiannessId endianness() const;

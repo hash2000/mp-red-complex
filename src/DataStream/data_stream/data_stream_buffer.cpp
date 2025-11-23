@@ -44,3 +44,8 @@ void DataStreamBuffer::skip(size_t pos) {
   gbump(static_cast<int>(pos));
 }
 
+void DataStreamBuffer::clear() {
+	_buffer.clear();
+	compressedSize(0);
+	decompressedSize(0);
+}

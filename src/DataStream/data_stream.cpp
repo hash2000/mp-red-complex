@@ -10,6 +10,10 @@ void DataStream::position(size_t pos) {
 
 }
 
+void DataStream::clear() {
+
+}
+
 void DataStream::readRaw(void *dst, size_t size) {
   if (size == 0) {
 		return;
@@ -64,12 +68,12 @@ void DataStream::readBlock(void *output) {
 	position(prevpos);
 }
 
-std::unique_ptr<DataStream> DataStream::makeBlockAsStream() {
+std::shared_ptr<DataStream> DataStream::makeBlockAsStream() {
 	std::vector<char> buffer;
 	buffer.resize(decompressedSize());
 	auto data = reinterpret_cast<uint8_t*>(buffer.data());
 	readBlock(data);
-	return std::make_unique<DataStreamBuffer>(std::move(buffer));
+	return std::make_shared<DataStreamBuffer>(std::move(buffer));
 }
 
 QByteArray DataStream::readBlockAsQByteArray() {

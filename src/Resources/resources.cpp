@@ -45,7 +45,7 @@ void Resources::load() {
 }
 
 auto Resources::getStream(const QString &container, const QString &path) const
-	-> std::optional<std::reference_wrapper<DataStream>> {
+	-> std::optional<std::shared_ptr<DataStream>> {
 	for (const auto& res : _resources) {
 		if (res->name() == container) {
 			return res->find(path);

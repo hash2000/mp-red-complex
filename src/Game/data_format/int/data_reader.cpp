@@ -10,11 +10,12 @@ namespace Format::Int {
 	{
 		readHeader();
 		readProceduresHandles(result);
-		readIdentifiers(result);
-
+		readIdentifiers(result.identifiers);
+		applyProceduresNames(result);
+		readIdentifiers(result.strings);
 	}
 
-	void DataReader::readIdentifiers(Programmability& result) {
+	void DataReader::readIdentifiers(Identifiers& identifiers) {
 		const auto tableSize = _stream.u32();
 		uint32_t j = 0;
 		while (j < tableSize) {
@@ -31,10 +32,22 @@ namespace Format::Int {
 				}
 			}
 
-			result.identifiers.emplace(nameOffset, name);
+			identifiers.emplace(nameOffset, name);
 		}
 
+		const auto pos = _stream.position();
 		const auto eol = _stream.u32();
+		if (eol != 0xffffffff) {
+			throw std::runtime_error("Format::Int::DataReader::readIdentifiers: EOF not found");
+		}
+	}
+
+	void DataReader::applyProceduresNames(Programmability& result) {
+		for (uint32_t i = 0, size = _offsets.size(); i < size ;i++) {
+			const auto offset = _offsets.at(i);
+			const auto &name = result.identifiers.at(offset);
+			result.procedures.at(i)->name = name;
+		}
 	}
 
 	void DataReader::readHeader() {

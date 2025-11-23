@@ -1,4 +1,5 @@
 #include "Launcher/main_frame/resources_viewer/stream_widget_selector.h"
+#include "Launcher/widgets/hex_control_panel.h"
 #include "Game/data_format/int/data_reader.h"
 #include <QLabel>
 #include <QSpinBox>
@@ -55,14 +56,14 @@ std::unique_ptr<QMenu> StreamWidgetSelector::buildContextMenu(QWidget *parent) c
 	return menu;
 }
 
-void StreamWidgetSelector::displayModel() {
-	const auto stream = getStream();
+void StreamWidgetSelector::displayModel(Resources& resources) {
+	const auto stream = getStream(resources);
 	if (!stream) {
 		applyEmptyView();
 		return;
 	}
 
-	auto widget = buildWidget(_selection.suffix, stream.value());
+	auto widget = buildWidget(_selection.suffix, *stream.value());
 	if (!widget) {
 		return;
 	}
@@ -70,23 +71,29 @@ void StreamWidgetSelector::displayModel() {
 	_centerStack->setCurrentWidget(widget);
 }
 
-void StreamWidgetSelector::displayHexView() {
-	const auto streamOpt = getStream();
-	if (!streamOpt) {
-		applyEmptyView();
+void StreamWidgetSelector::displayHexView(const QByteArray& data) {
+	auto resources = _resources.lock();
+	if (!resources) {
 		return;
 	}
 
-	DataStream& stream = streamOpt.value();
-	auto block = stream.readBlockAsQByteArray();
+	auto stream = getStream(*resources);
+	if (!stream) {
+		return;
+	}
 
-	_views.hex->setData(block);
+	prepareWidget(_views.hex);
+
+	_views.hex->setData(data);
 	_centerStack->setCurrentWidget(_views.hex);
-	applyHexControls();
+
+	_panels.hex = new HexControlPanel(_views.hex, stream.value());
+	_actionsLayout->addWidget(_panels.hex);
+	_actionsLayout->addStretch();
 }
 
 QWidget *StreamWidgetSelector::buildWidget(const QString &suffix, DataStream &stream) {
-	cleanViewsData();
+
 	auto block = stream.makeBlockAsStream();
 	if (suffix == "int") {
 		Format::Int::Programmability result;
@@ -94,24 +101,21 @@ QWidget *StreamWidgetSelector::buildWidget(const QString &suffix, DataStream &st
 		reader.read(result);
 	}
 
+	prepareWidget(_views.empty);
   return _views.empty;
 }
 
-std::optional<std::reference_wrapper<DataStream>> StreamWidgetSelector::getStream()
-{
-	const auto resources = _resources.lock();
+std::optional<std::shared_ptr<DataStream>> StreamWidgetSelector::getStream(Resources& resources) const {
 	if (_selection.type != AssetsViewItemType::File) {
 		return std::nullopt;
 	}
 
-	if (!resources) {
-		return std::nullopt;
-	}
-
-	return resources->getStream(_selection.container, _selection.path);
+	return resources.getStream(
+		_selection.container,
+		_selection.path);
 }
 
-void StreamWidgetSelector::cleanViewsData(QWidget *current) {
+void StreamWidgetSelector::prepareWidget(QWidget *current) {
   QLayoutItem *item;
   while ((item = _actionsLayout->takeAt(0)) != nullptr) {
     if (item->widget()) {
@@ -122,155 +126,18 @@ void StreamWidgetSelector::cleanViewsData(QWidget *current) {
   }
 
 	if (_views.hex != current) {
+		_panels.hex = nullptr;
 		_views.hex->clear();
 	}
 }
 
 void StreamWidgetSelector::applyEmptyView() {
-	cleanViewsData();
+	prepareWidget(_views.empty);
 	_centerStack->setCurrentWidget(_views.empty);
 }
 
 void StreamWidgetSelector::onHexSelectionChanged(qint64 offset, qint64 length, const QByteArray& selected) {
-	if (selected.isEmpty()) {
-		return;
-	}
-}
-
-void StreamWidgetSelector::applyHexControls() {
-	cleanViewsData(_views.hex);
-	auto hexWidget = _views.hex;
-
-	QWidget *controlWidget = new QWidget;
-  QGridLayout *grid = new QGridLayout(controlWidget);
-  grid->setContentsMargins(0, 0, 0, 0);
-  grid->setSpacing(4);
-
-  // --- Offset ---
-  QLabel *offsetLabel = new QLabel("Offset:", controlWidget);
-  QSpinBox *offsetSpinBox = new QSpinBox(controlWidget);
-  offsetSpinBox->setRange(0, hexWidget->getDataSize());
-  offsetSpinBox->setSuffix(" bytes");
-  offsetSpinBox->setAccelerated(true);
-
-  // --- Length ---
-  QLabel *lengthLabel = new QLabel("Length:", controlWidget);
-  QSpinBox *lengthSpinBox = new QSpinBox(controlWidget);
-  lengthSpinBox->setRange(0, hexWidget->getDataSize());
-  lengthSpinBox->setSuffix(" bytes");
-  lengthSpinBox->setAccelerated(true);
-
-  // --- Read-only value display ---
-  QLabel *valueLabel = new QLabel("Signed:", controlWidget);
-  QLineEdit *valueEdit = new QLineEdit(controlWidget);
-  valueEdit->setReadOnly(true);
-  valueEdit->setPlaceholderText("Select bytes to view value");
-
-  // --- Read-only value display ---
-  QLabel *valueUnsignedLabel = new QLabel("Unsigned:", controlWidget);
-  QLineEdit *valueUnsignedEdit = new QLineEdit(controlWidget);
-  valueUnsignedEdit->setReadOnly(true);
-  valueUnsignedEdit->setPlaceholderText("Select bytes to view value");
-
-  // Расположение в сетке
-  grid->addWidget(offsetLabel, 0, 0, Qt::AlignRight);
-  grid->addWidget(offsetSpinBox, 0, 1);
-  grid->addWidget(lengthLabel, 1, 0, Qt::AlignRight);
-  grid->addWidget(lengthSpinBox, 1, 1);
-  grid->addWidget(valueLabel, 2, 0, Qt::AlignRight);
-  grid->addWidget(valueEdit, 2, 1);
-  grid->addWidget(valueUnsignedLabel, 3, 0, Qt::AlignRight);
-  grid->addWidget(valueUnsignedEdit, 3, 1);
-
-  // Обновление диапазонов при изменении размера буфера
-  auto updateRanges = [hexWidget, offsetSpinBox, lengthSpinBox]() {
-    int bufSize = hexWidget->getDataSize();
-    offsetSpinBox->setMaximum(bufSize);
-    lengthSpinBox->setMaximum(bufSize);
-  };
-
-  updateRanges();
-
-  // Обработка изменений offset/length
-  auto updateSelection = [hexWidget, offsetSpinBox, lengthSpinBox, valueEdit, valueUnsignedEdit, this]() {
-    const qsizetype offset = offsetSpinBox->value();
-    qsizetype length = lengthSpinBox->value();
-
-    // Ограничение: offset + length не должен превышать размер буфера
-    const auto maxLen = hexWidget->getDataSize() - offset;
-    if (length > maxLen) {
-      length = maxLen;
-      lengthSpinBox->setValue(length);
-    }
-
-    // Прокрутка к байту и выделение
-    hexWidget->selectRange(offset, length);
-    hexWidget->scrollToByte(offset);
-
-    // Обновление отображения значения
-    if (length > 0) {
-			const auto stream = getStream();
-			if (!stream) {
-				return;
-			}
-
-			auto &pStream = stream->get();
-			auto block = pStream.makeBlockAsStream();
-			block->position(offset);
-
-			switch (length) {
-			case sizeof(int8_t): {
-				const auto pos = block->position();
-				const auto sv = block->i8();
-				block->position(pos);
-				const auto uv = block->u8();
-
-				valueEdit->setText(QString("%1").arg(sv));
-				valueUnsignedEdit->setText(QString("%1").arg(uv));
-				}
-				break;
-			case sizeof(int16_t): {
-				const auto pos = block->position();
-				const auto sv = block->i16();
-				block->position(pos);
-				const auto uv = block->u16();
-
-				valueEdit->setText(QString("%1").arg(sv));
-				valueUnsignedEdit->setText(QString("%1").arg(uv));
-				}
-				break;
-			case sizeof(int32_t): {
-				const auto pos = block->position();
-				const auto sv = block->i32();
-				block->position(pos);
-				const auto uv = block->u32();
-
-				valueEdit->setText(QString("%1").arg(sv));
-				valueUnsignedEdit->setText(QString("%1").arg(uv));
-				}
-				break;
-			default: {
-				const auto selected = hexWidget->selectedData();
-				const auto value = selected.toHex(' ').toUpper();
-				valueEdit->setText(QString("%1 (%2 bytes)").arg(value).arg(selected.size()));
-				valueUnsignedEdit->setText(QString("%1 (%2 bytes)").arg(value).arg(selected.size()));
-			}
-			}
-    } else {
-      valueEdit->clear();
-      valueEdit->setPlaceholderText("Select bytes to view value");
-			valueUnsignedEdit->clear();
-			valueUnsignedEdit->setPlaceholderText("Select bytes to view value");
-    }
-  };
-
-  connect(offsetSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
-          this, updateSelection);
-  connect(lengthSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
-          this, updateSelection);
-
-  _actionsLayout->addWidget(controlWidget);
-  _actionsLayout->addStretch();
-
-  updateSelection();
+	// if (_panels.hex) {
+	// 	_panels.hex->updateFromSelection();
+	// }
 }

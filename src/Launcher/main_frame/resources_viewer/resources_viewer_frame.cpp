@@ -70,18 +70,12 @@ void ResourcesViewerFrame::setupAssetsTree() {
 
 void ResourcesViewerFrame::setupActionPanel() {
   _actionsPanel->setLayout(_actionsLayout);
-
-  _actionsLayout->addWidget(new QLabel("<b>Actions:</b>"));
-  _actionsLayout->addWidget(new QPushButton("Edit"));
-  _actionsLayout->addWidget(new QPushButton("Delete"));
-  _actionsLayout->addWidget(new QPushButton("Export"));
-  _actionsLayout->addStretch();
 }
 
 void ResourcesViewerFrame::onItemDoubleClicked(const QModelIndex &index) {
 	const auto item = _assetsModel->itemFromIndex(index);
 	_selector->setSelection(item);
-	_selector->displayModel();
+	_selector->displayModel(*_resources);
 }
 
 void ResourcesViewerFrame::onCustomContextMenuRequested(const QPoint &pos) {
@@ -109,6 +103,13 @@ void ResourcesViewerFrame::onCustomContextMenuRequested(const QPoint &pos) {
 }
 
 void ResourcesViewerFrame::onItemMenuHexView() {
-	_selector->displayHexView();
+	auto streamOpt = _selector->getStream(*_resources);
+	if (!streamOpt) {
+		return;
+	}
+
+	auto stream = streamOpt.value();
+	auto block = stream->readBlockAsQByteArray();
+	_selector->displayHexView(block);
 }
 

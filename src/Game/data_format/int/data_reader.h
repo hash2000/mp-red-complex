@@ -1,6 +1,8 @@
 #pragma once
 #include "DataStream/data_stream.h"
 #include "Game/data_format/int/procedure.h"
+#include <map>
+#include <string>
 
 namespace Format::Int {
 
@@ -11,11 +13,15 @@ namespace Format::Int {
 		void read(Programmability& result);
 
 	private:
+		using Identifiers = std::map<unsigned int, std::string>;
+
 		void readHeader();
 
 		void readProceduresHandles(Programmability& result);
 
-		void readIdentifiers(Programmability& result);
+		void readIdentifiers(Identifiers& identifiers);
+
+		void applyProceduresNames(Programmability& result);
 
 	private:
 		DataStream &_stream;

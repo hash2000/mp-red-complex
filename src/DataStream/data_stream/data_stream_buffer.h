@@ -11,11 +11,13 @@ public:
 
 	virtual ~DataStreamBuffer() = default;
 
-	size_t size() const;
+	size_t size() const override;
 
-	void position(size_t pos);
+	void position(size_t pos) override;
 
-	void skip(size_t pos);
+	void skip(size_t pos) override;
+
+	void clear() override;
 
 private:
 	void applyBuffer();

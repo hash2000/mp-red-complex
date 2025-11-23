@@ -5,7 +5,6 @@
 #include <map>
 #include <memory>
 #include <optional>
-#include <functional>
 
 class DataStreamContainer {
 public:
@@ -20,16 +19,16 @@ public:
 	}
 
 	auto find(const QString &name) const
-		-> std::optional<std::reference_wrapper<DataStream>>;
+		-> std::optional<std::shared_ptr<DataStream>>;
 
 protected:
-	void add(std::unique_ptr<DataStream> &&stream);
+	void add(std::shared_ptr<DataStream> stream);
 
 	void remove(const QString &name);
 
 	void clear();
 
 private:
-	std::map<QString, std::unique_ptr<DataStream>> _streams;
+	std::map<QString, std::shared_ptr<DataStream>> _streams;
 	QString _name;
 };

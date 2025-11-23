@@ -25,7 +25,7 @@ public:
 	}
 
 	auto getStream(const QString &container, const QString &path) const
-		-> std::optional<std::reference_wrapper<DataStream>>;
+		-> std::optional<std::shared_ptr<DataStream>>;
 
 private:
 	QString _language;
