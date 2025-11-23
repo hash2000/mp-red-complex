@@ -1,5 +1,5 @@
 #include "Launcher/main_frame/resources_viewer/stream_widget_selector.h"
-#include "Launcher/widgets/hex_control_panel.h"
+#include "Launcher/widgets/hex/hex_control_panel.h"
 #include "Game/data_format/int/data_reader.h"
 #include <QLabel>
 #include <QSpinBox>

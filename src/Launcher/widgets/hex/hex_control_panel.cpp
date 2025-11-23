@@ -1,5 +1,5 @@
-#include "Launcher/widgets/hex_control_panel.h"
-#include "Launcher/widgets/hex_dump_widget.h"
+#include "Launcher/widgets/hex/hex_control_panel.h"
+#include "Launcher/widgets/hex/hex_dump_widget.h"
 #include <QGridLayout>
 #include <QLabel>
 #include <QLineEdit>

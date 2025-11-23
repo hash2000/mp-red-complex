@@ -1,5 +1,5 @@
 #pragma once
-#include "Launcher/widgets/hex_dump_widget.h"
+#include "Launcher/widgets/hex/hex_dump_widget.h"
 #include "Resources/resources/model/assets_model.h"
 #include "Resources/resources.h"
 #include "DataStream/data_stream.h"

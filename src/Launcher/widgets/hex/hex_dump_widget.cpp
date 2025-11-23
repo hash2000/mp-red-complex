@@ -1,4 +1,4 @@
-#include "Launcher/widgets/hex_dump_widget.h"
+#include "Launcher/widgets/hex/hex_dump_widget.h"
 #include <QApplication>
 #include <QClipboard>
 #include <QFontDatabase>
