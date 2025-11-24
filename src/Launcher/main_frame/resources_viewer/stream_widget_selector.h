@@ -11,6 +11,7 @@
 #include <QVBoxLayout>
 #include <memory>
 #include <optional>
+#include <QPlainTextEdit>
 
 class HexControlPanel;
 
@@ -42,6 +43,7 @@ private:
 	struct {
 		QWidget *empty;
 		HexDumpWidget *hex;
+		QPlainTextEdit *text;
 	} _views;
 
 	struct {

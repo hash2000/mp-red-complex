@@ -2,6 +2,7 @@
 #include "Launcher/widgets/hex/hex_control_panel.h"
 #include "Launcher/widgets/procedure/procedure_explorer_widget.h"
 #include "Game/data_format/int/data_reader.h"
+#include "Game/data_format/txt/data_reader.h"
 #include <QLabel>
 #include <QSpinBox>
 #include <QWidget>
@@ -18,9 +19,12 @@ StreamWidgetSelector::StreamWidgetSelector(std::weak_ptr<Resources> resources,
 void StreamWidgetSelector::buildStackedView() {
   _views.empty = new QWidget;
 	_views.hex = new HexDumpWidget;
+	_views.text = new QPlainTextEdit;
+	_views.text->setReadOnly(true);
 
 	_centerStack->addWidget(_views.empty);
 	_centerStack->addWidget(_views.hex);
+	_centerStack->addWidget(_views.text);
 
 	_centerStack->setCurrentWidget(_views.empty);
 
@@ -101,6 +105,15 @@ void StreamWidgetSelector::buildWidget(const QString &suffix, DataStream &stream
 		_actionsLayout->addStretch();
 		return;
 	}
+	else if (suffix == "txt") {
+		prepareWidget(_views.text);
+		QString result;
+		Format::Txt::DataReader reader( *block);
+		reader.read(result);
+		_views.text->setPlainText(result);
+		_centerStack->setCurrentWidget(_views.text);
+		return;
+	}
 
 	prepareWidget(_views.empty);
 	_centerStack->setCurrentWidget(_views.empty);
@@ -130,6 +143,9 @@ void StreamWidgetSelector::prepareWidget(QWidget *current) {
 		_views.hex->clear();
 	}
 
+	if (_views.text != current) {
+		_views.text->clear();
+	}
 }
 
 void StreamWidgetSelector::applyEmptyView() {
