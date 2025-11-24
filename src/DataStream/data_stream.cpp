@@ -1,6 +1,7 @@
 #include "DataStream/data_stream.h"
 #include "DataStream/data_stream/data_stream_buffer.h"
 #include <zlib.h>
+#include <sstream>
 
 size_t DataStream::position() const {
   return gptr() - eback();
@@ -73,7 +74,12 @@ std::shared_ptr<DataStream> DataStream::makeBlockAsStream() {
 	buffer.resize(decompressedSize());
 	auto data = reinterpret_cast<uint8_t*>(buffer.data());
 	readBlock(data);
-	return std::make_shared<DataStreamBuffer>(std::move(buffer));
+	auto block = std::make_shared<DataStreamBuffer>(std::move(buffer));
+	block->name(name());
+	block->decompressedSize(decompressedSize());
+	block->compressedSize(decompressedSize());
+	block->compressed(false);
+	return block;
 }
 
 QByteArray DataStream::readBlockAsQByteArray() {
@@ -135,4 +141,17 @@ uint32_t DataStream::dataOffset() const {
 
 void DataStream::dataOffset(uint32_t value) {
 	_dataOffset = value;
+}
+
+void DataStream::throwExceptionIsSizeIsTooLong(size_t size, const std::string& message) {
+	if (size < remains()) {
+		return;
+	}
+
+	std::stringstream s;
+	s << message << ", ";
+	s << name().toStdString();
+	s << " pos: " << position();
+
+	throw std::runtime_error(s.str());
 }

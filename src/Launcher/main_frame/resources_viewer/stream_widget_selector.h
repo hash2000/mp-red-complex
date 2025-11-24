@@ -31,7 +31,7 @@ public:
 	std::optional<std::shared_ptr<DataStream>> getStream(Resources& resources) const;
 
 private:
-	QWidget* buildWidget(const QString &suffix, DataStream &stream);
+	void buildWidget(const QString &suffix, DataStream &stream);
 	void prepareWidget(QWidget *current);
 	void applyEmptyView();
 
@@ -43,10 +43,6 @@ private:
 		QWidget *empty;
 		HexDumpWidget *hex;
 	} _views;
-
-	struct {
-		HexControlPanel *hex = nullptr;
-	} _panels;
 
 	struct {
 		QString container;

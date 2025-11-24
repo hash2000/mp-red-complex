@@ -1,5 +1,6 @@
 #include "Launcher/main_frame/resources_viewer/stream_widget_selector.h"
 #include "Launcher/widgets/hex/hex_control_panel.h"
+#include "Launcher/widgets/procedure/procedure_explorer_widget.h"
 #include "Game/data_format/int/data_reader.h"
 #include <QLabel>
 #include <QSpinBox>
@@ -63,12 +64,7 @@ void StreamWidgetSelector::displayModel(Resources& resources) {
 		return;
 	}
 
-	auto widget = buildWidget(_selection.suffix, *stream.value());
-	if (!widget) {
-		return;
-	}
-
-	_centerStack->setCurrentWidget(widget);
+	buildWidget(_selection.suffix, *stream.value());
 }
 
 void StreamWidgetSelector::displayHexView(const QByteArray& data) {
@@ -87,22 +83,27 @@ void StreamWidgetSelector::displayHexView(const QByteArray& data) {
 	_views.hex->setData(data);
 	_centerStack->setCurrentWidget(_views.hex);
 
-	_panels.hex = new HexControlPanel(_views.hex, stream.value());
-	_actionsLayout->addWidget(_panels.hex);
+	auto hexPanel = new HexControlPanel(_views.hex, stream.value());
+	_actionsLayout->addWidget(hexPanel);
 	_actionsLayout->addStretch();
 }
 
-QWidget *StreamWidgetSelector::buildWidget(const QString &suffix, DataStream &stream) {
+void StreamWidgetSelector::buildWidget(const QString &suffix, DataStream &stream) {
 
 	auto block = stream.makeBlockAsStream();
 	if (suffix == "int") {
-		Format::Int::Programmability result;
+		prepareWidget(nullptr);
+		auto result = std::make_unique<Format::Int::Programmability>();
 		Format::Int::DataReader reader(*block);
-		reader.read(result);
+		reader.read(*result);
+		auto panel = new ProcedureExplorerWidget(std::move(result));
+		_actionsLayout->addWidget(panel);
+		_actionsLayout->addStretch();
+		return;
 	}
 
 	prepareWidget(_views.empty);
-  return _views.empty;
+	_centerStack->setCurrentWidget(_views.empty);
 }
 
 std::optional<std::shared_ptr<DataStream>> StreamWidgetSelector::getStream(Resources& resources) const {
@@ -126,9 +127,9 @@ void StreamWidgetSelector::prepareWidget(QWidget *current) {
   }
 
 	if (_views.hex != current) {
-		_panels.hex = nullptr;
 		_views.hex->clear();
 	}
+
 }
 
 void StreamWidgetSelector::applyEmptyView() {

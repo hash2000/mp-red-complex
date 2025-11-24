@@ -1,4 +1,5 @@
 #include "Game/data_format/int/data_reader.h"
+#include <sstream>
 
 namespace Format::Int {
 
@@ -10,13 +11,20 @@ namespace Format::Int {
 	{
 		readHeader();
 		readProceduresHandles(result);
-		readIdentifiers(result.identifiers);
+		readIdentifiers(result.identifiers, "identifiers");
 		applyProceduresNames(result);
-		readIdentifiers(result.strings);
+		readIdentifiers(result.strings, "strings");
 	}
 
-	void DataReader::readIdentifiers(Identifiers& identifiers) {
+	void DataReader::readIdentifiers(Identifiers& identifiers, const std::string& trait) {
 		const auto tableSize = _stream.u32();
+		if (tableSize == 0xffffffff) {
+			return;
+		}
+
+		_stream.throwExceptionIsSizeIsTooLong(tableSize,
+			"Format::Int::DataReader::readIdentifiers: table size is too long, " + trait);
+
 		uint32_t j = 0;
 		while (j < tableSize) {
 			const auto nameSize = _stream.u16();
@@ -35,10 +43,13 @@ namespace Format::Int {
 			identifiers.emplace(nameOffset, name);
 		}
 
-		const auto pos = _stream.position();
 		const auto eol = _stream.u32();
 		if (eol != 0xffffffff) {
-			throw std::runtime_error("Format::Int::DataReader::readIdentifiers: EOF not found");
+			std::stringstream s;
+			s << "Format::Int::DataReader::readIdentifiers: EOF not found, ";
+			s << _stream.name().toStdString();
+			s << " : " << trait;
+			throw std::runtime_error(s.str());
 		}
 	}
 
@@ -51,6 +62,8 @@ namespace Format::Int {
 	}
 
 	void DataReader::readHeader() {
+		_stream.position(12);
+		_dataBlockOffset = _stream.u32();
 		_stream.position(42);
 		_countOfProcedures = _stream.u32();
 		_offsets.reserve(_countOfProcedures);

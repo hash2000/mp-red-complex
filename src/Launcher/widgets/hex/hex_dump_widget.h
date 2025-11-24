@@ -16,7 +16,7 @@ public:
 
   // API для внешнего управления
   void selectRange(qint64 offset, qint64 length);
-  void scrollToByte(qint64 offset);
+  void scrollToByte(qint64 offset, bool ensureVisible = true);
   QByteArray selectedData() const;
   QPair<qint64, qint64> selectedRange() const;
 

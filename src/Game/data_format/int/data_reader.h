@@ -16,16 +16,14 @@ namespace Format::Int {
 		using Identifiers = std::map<unsigned int, std::string>;
 
 		void readHeader();
-
 		void readProceduresHandles(Programmability& result);
-
-		void readIdentifiers(Identifiers& identifiers);
-
+		void readIdentifiers(Identifiers& identifiers, const std::string& trait);
 		void applyProceduresNames(Programmability& result);
 
 	private:
 		DataStream &_stream;
 		uint32_t _countOfProcedures = 0;
+		uint32_t _dataBlockOffset = 0;
 		std::vector<uint32_t> _offsets;
 	};
 

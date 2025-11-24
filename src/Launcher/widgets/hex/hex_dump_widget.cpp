@@ -65,13 +65,38 @@ void HexDumpWidget::selectRange(qint64 offset, qint64 length) {
   }
 }
 
-void HexDumpWidget::scrollToByte(qint64 offset) {
+void HexDumpWidget::scrollToByte(qint64 offset, bool ensureVisible /* = true */) {
   if (_data.isEmpty() || offset < 0) {
     return;
   }
   const int row = static_cast<int>(offset / _metrics.bytesPerRow);
   const int targetY = row * _metrics.rowHeight;
-  verticalScrollBar()->setValue(targetY);
+
+	if (!ensureVisible) {
+    verticalScrollBar()->setValue(targetY);
+    return;
+  }
+
+  const int viewTop = verticalScrollBar()->value();
+  const int viewHeight = viewport()->height();
+  const int viewBottom = viewTop + viewHeight;
+
+  // Проверяем, попадает ли targetY в [viewTop, viewBottom)
+  // Но лучше — чтобы вся *строка* была видна, не только её верхний край:
+  const int targetBottom = targetY + _metrics.rowHeight;
+
+  const bool isFullyVisible = (targetY >= viewTop) && (targetBottom <= viewBottom);
+  const bool isPartiallyVisible = (targetY < viewBottom) && (targetBottom > viewTop);
+
+  // Если хотя бы частично видна — не прокручиваем (или можно использовать isFullyVisible)
+  if (isFullyVisible) {
+      return;
+  }
+
+  int idealTop = targetY - (viewHeight - _metrics.rowHeight) / 4;
+  idealTop = qBound(0, idealTop, verticalScrollBar()->maximum());
+
+  verticalScrollBar()->setValue(idealTop);
 }
 
 QByteArray HexDumpWidget::selectedData() const {
@@ -212,11 +237,11 @@ void HexDumpWidget::paintEvent(QPaintEvent *event) {
     p.drawText(0, y, offsetStr);
 
     // Hex-байты
-    bool isSelected = false;
     int x = _metrics.hexStartX;
     for (int col = 0; col < _metrics.bytesPerRow; ++col) {
       const qint64 idx = static_cast<qint64>(row) * _metrics.bytesPerRow + col;
       const bool inRange = idx < _data.size();
+			bool isSelected = false;
 
       if (_selStart >= 0) {
         const qint64 start = qMin(_selStart, _selEnd);
@@ -256,11 +281,32 @@ void HexDumpWidget::paintEvent(QPaintEvent *event) {
     for (int col = 0; col < _metrics.bytesPerRow; ++col) {
       const qint64 idx = static_cast<qint64>(row) * _metrics.bytesPerRow + col;
       if (idx < _data.size()) {
+
+				bool isSelected = false;
+				if (_selStart >= 0) {
+					const qint64 start = qMin(_selStart, _selEnd);
+					const qint64 end = qMax(_selStart, _selEnd);
+					isSelected = (idx >= start && idx <= end);
+				}
+
         char c = _data[idx];
         QChar ch = (c >= 32 && c <= 126) ? QChar(c) : '.';
-        p.setPen(isSelected ? hlTextCol : textCol);
+        if (isSelected) {
+					p.fillRect(
+						x - 1,
+						y - _metrics.rowHeight / 2 - 2,
+						_metrics.charWidth + 2,
+						_metrics.rowHeight - 2,
+						hlCol
+					);
+					p.setPen(hlTextCol);
+				} else {
+					p.setPen(textCol);
+				}
+
         p.drawText(x, y, ch);
       }
+
       x += _metrics.charWidth + 2;
     }
   }

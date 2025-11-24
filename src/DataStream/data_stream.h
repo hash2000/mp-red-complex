@@ -130,6 +130,8 @@ public:
   uint32_t dataOffset() const;
   void dataOffset(uint32_t value);
 
+	void throwExceptionIsSizeIsTooLong(size_t size, const std::string& message);
+
 protected:
   template <typename T> void applyEndianness(T &value) const noexcept {
     if constexpr (sizeof(T) <= 1) {
@@ -154,6 +156,7 @@ protected:
 
 private:
   void readBlock(void *output);
+
 
 private:
   EndiannessId _endianness = EndiannessId::Big;
