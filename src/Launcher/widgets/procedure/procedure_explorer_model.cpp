@@ -57,7 +57,7 @@ QVariant ProcedureTableModel::data(const QModelIndex &index, int role) const {
   if (role == Qt::DisplayRole) {
     switch (index.column()) {
     case Name:
-      return QString::fromStdString(proc.name);
+      return proc.name;
     case Delay:
       return static_cast<quint32>(proc.delay);
     case ConditionOffset:

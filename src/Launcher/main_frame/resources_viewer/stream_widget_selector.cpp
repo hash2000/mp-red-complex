@@ -31,6 +31,10 @@ std::unique_ptr<QMenu> StreamWidgetSelector::buildContextMenu(QWidget *parent) c
 		menu
 			->addAction("Hex View")
 			->setObjectName("action_hex_view");
+
+		menu
+			->addAction("Text View")
+			->setObjectName("action_text_view");
 	}
 
 	return menu;

@@ -57,7 +57,7 @@ namespace DataFormat::Int {
 		for (uint32_t i = 0, size = _offsets.size(); i < size ;i++) {
 			const auto offset = _offsets.at(i);
 			const auto &name = result.identifiers.at(offset);
-			result.procedures.at(i)->name = name;
+			result.procedures.at(i)->name = QString::fromStdString(name);
 		}
 	}
 

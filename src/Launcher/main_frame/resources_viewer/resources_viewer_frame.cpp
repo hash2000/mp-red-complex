@@ -110,7 +110,12 @@ void ResourcesViewerFrame::onCustomContextMenuRequested(const QPoint &pos) {
 	if (!menu->actions().isEmpty()) {
 		for (auto *action : menu->actions()) {
 			if (action->objectName() == "action_hex_view") {
-				connect(action, &QAction::triggered, this, &ResourcesViewerFrame::onItemMenuHexView);
+				connect(action, &QAction::triggered, this,
+					&ResourcesViewerFrame::onItemMenuHexView);
+			}
+			else if (action->objectName() == "action_text_view") {
+				connect(action, &QAction::triggered, this,
+					&ResourcesViewerFrame::onItemMenuTextView);
 			}
 		}
 
@@ -124,3 +129,8 @@ void ResourcesViewerFrame::onItemMenuHexView() {
 	maker.make();
 }
 
+void ResourcesViewerFrame::onItemMenuTextView() {
+	WidgetMaker maker(*_selector, WidgetResource::Text, _resources,
+		_centerLayout, _actionsLayout);
+	maker.make();
+}

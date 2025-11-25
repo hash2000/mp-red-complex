@@ -51,7 +51,6 @@ void WidgetMaker::makeInt(std::shared_ptr<DataStream> block) {
 	reader.read(*result);
 	auto panel = new ProcedureExplorerWidget(std::move(result));
 	_actionsLayout->addWidget(panel);
-	_actionsLayout->addStretch();
 }
 
 void WidgetMaker::makeText(std::shared_ptr<DataStream> block) {

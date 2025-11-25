@@ -29,6 +29,7 @@ private slots:
 	void onItemDoubleClicked(const QModelIndex &index);
 	void onCustomContextMenuRequested(const QPoint &pos);
 	void onItemMenuHexView();
+	void onItemMenuTextView();
 	void onBeforeStreamSelection(const QString& suffix, std::optional<std::shared_ptr<DataStream>> stream);
 
 private:

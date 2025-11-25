@@ -1,5 +1,6 @@
 #include "Launcher/engine.h"
 #include "Resources/resources/model/assets_model.h"
+#include "Game/data_format/int/procedure.h"
 #include "engine.h"
 
 Engine::Engine(int &argc, char **argv)
@@ -29,6 +30,7 @@ void Engine::setupMainFrame(std::unique_ptr<MainFrame> &&mainFrame) {
 
 void Engine::registerTypes() {
 	qRegisterMetaType<AssetsViewItemType>("AssetsViewItemType");
+	qRegisterMetaType<ProgramOpCode>("OpCode");
 }
 
 bool Engine::nativeEventFilter(
