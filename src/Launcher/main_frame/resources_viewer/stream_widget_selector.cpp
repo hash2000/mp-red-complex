@@ -46,33 +46,6 @@ void StreamWidgetSelector::displayModel(Resources& resources) {
 	emit beforeStreamSelection(_selection.suffix, stream);
 }
 
-// void StreamWidgetSelector::buildWidget(const QString &suffix, DataStream &stream) {
-
-// 	auto block = stream.makeBlockAsStream();
-// 	if (suffix == "int") {
-// 		prepareWidget(nullptr);
-// 		auto result = std::make_unique<Format::Int::Programmability>();
-// 		Format::Int::DataReader reader(*block);
-// 		reader.read(*result);
-// 		auto panel = new ProcedureExplorerWidget(std::move(result));
-// 		_actionsLayout->addWidget(panel);
-// 		_actionsLayout->addStretch();
-// 		return;
-// 	}
-// 	else if (suffix == "txt") {
-// 		prepareWidget(_views.text);
-// 		QString result;
-// 		Format::Txt::DataReader reader( *block);
-// 		reader.read(result);
-// 		_views.text->setPlainText(result);
-// 		_centerStack->setCurrentWidget(_views.text);
-// 		return;
-// 	}
-
-// 	prepareWidget(_views.empty);
-// 	_centerStack->setCurrentWidget(_views.empty);
-// }
-
 std::optional<std::shared_ptr<DataStream>> StreamWidgetSelector::getStream(Resources& resources) const {
 	if (_selection.type != AssetsViewItemType::File) {
 		return std::nullopt;
@@ -82,30 +55,6 @@ std::optional<std::shared_ptr<DataStream>> StreamWidgetSelector::getStream(Resou
 		_selection.container,
 		_selection.path);
 }
-
-// void StreamWidgetSelector::prepareWidget(QWidget *current) {
-//   QLayoutItem *item;
-//   while ((item = _actionsLayout->takeAt(0)) != nullptr) {
-//     if (item->widget()) {
-//       item->widget()->setParent(nullptr);
-//       delete item->widget();
-//     }
-//     delete item;
-//   }
-
-// 	if (_views.hex != current) {
-// 		_views.hex->clear();
-// 	}
-
-// 	if (_views.text != current) {
-// 		_views.text->clear();
-// 	}
-// }
-
-// void StreamWidgetSelector::applyEmptyView() {
-// 	prepareWidget(_views.empty);
-// 	_centerStack->setCurrentWidget(_views.empty);
-// }
 
 void StreamWidgetSelector::onHexSelectionChanged(qint64 offset, qint64 length, const QByteArray& selected) {
 	// if (_panels.hex) {
