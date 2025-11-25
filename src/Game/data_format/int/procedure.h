@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <memory>
 
-namespace Format::Int {
+namespace DataFormat::Int {
 
 	enum class ProcedureIType : uint32_t {
 		Timed = 0x01,

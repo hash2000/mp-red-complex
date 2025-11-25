@@ -1,36 +1,11 @@
 #include "Launcher/main_frame/resources_viewer/stream_widget_selector.h"
-#include "Launcher/widgets/hex/hex_control_panel.h"
-#include "Launcher/widgets/procedure/procedure_explorer_widget.h"
-#include "Game/data_format/int/data_reader.h"
-#include "Game/data_format/txt/data_reader.h"
 #include <QLabel>
 #include <QSpinBox>
 #include <QWidget>
 #include <QLineEdit>
 
-StreamWidgetSelector::StreamWidgetSelector(std::weak_ptr<Resources> resources,
-		QStackedWidget *centerStack,
-		QVBoxLayout *actionsLayout)
-: _resources(resources)
-, _centerStack(centerStack)
-, _actionsLayout(actionsLayout) {
-}
-
-void StreamWidgetSelector::buildStackedView() {
-  _views.empty = new QWidget;
-	_views.hex = new HexDumpWidget;
-	_views.text = new QPlainTextEdit;
-	_views.text->setReadOnly(true);
-
-	_centerStack->addWidget(_views.empty);
-	_centerStack->addWidget(_views.hex);
-	_centerStack->addWidget(_views.text);
-
-	_centerStack->setCurrentWidget(_views.empty);
-
-
-  connect(_views.hex, &HexDumpWidget::selectionChanged,
-          this, &StreamWidgetSelector::onHexSelectionChanged);
+StreamWidgetSelector::StreamWidgetSelector(std::weak_ptr<Resources> resources)
+: _resources(resources) {
 }
 
 void StreamWidgetSelector::setSelection(const QStandardItem *item) {
@@ -64,60 +39,39 @@ std::unique_ptr<QMenu> StreamWidgetSelector::buildContextMenu(QWidget *parent) c
 void StreamWidgetSelector::displayModel(Resources& resources) {
 	const auto stream = getStream(resources);
 	if (!stream) {
-		applyEmptyView();
+		emit beforeStreamSelection("", std::nullopt);
 		return;
 	}
 
-	buildWidget(_selection.suffix, *stream.value());
+	emit beforeStreamSelection(_selection.suffix, stream);
 }
 
-void StreamWidgetSelector::displayHexView(const QByteArray& data) {
-	auto resources = _resources.lock();
-	if (!resources) {
-		return;
-	}
+// void StreamWidgetSelector::buildWidget(const QString &suffix, DataStream &stream) {
 
-	auto stream = getStream(*resources);
-	if (!stream) {
-		return;
-	}
+// 	auto block = stream.makeBlockAsStream();
+// 	if (suffix == "int") {
+// 		prepareWidget(nullptr);
+// 		auto result = std::make_unique<Format::Int::Programmability>();
+// 		Format::Int::DataReader reader(*block);
+// 		reader.read(*result);
+// 		auto panel = new ProcedureExplorerWidget(std::move(result));
+// 		_actionsLayout->addWidget(panel);
+// 		_actionsLayout->addStretch();
+// 		return;
+// 	}
+// 	else if (suffix == "txt") {
+// 		prepareWidget(_views.text);
+// 		QString result;
+// 		Format::Txt::DataReader reader( *block);
+// 		reader.read(result);
+// 		_views.text->setPlainText(result);
+// 		_centerStack->setCurrentWidget(_views.text);
+// 		return;
+// 	}
 
-	prepareWidget(_views.hex);
-
-	_views.hex->setData(data);
-	_centerStack->setCurrentWidget(_views.hex);
-
-	auto hexPanel = new HexControlPanel(_views.hex, stream.value());
-	_actionsLayout->addWidget(hexPanel);
-	_actionsLayout->addStretch();
-}
-
-void StreamWidgetSelector::buildWidget(const QString &suffix, DataStream &stream) {
-
-	auto block = stream.makeBlockAsStream();
-	if (suffix == "int") {
-		prepareWidget(nullptr);
-		auto result = std::make_unique<Format::Int::Programmability>();
-		Format::Int::DataReader reader(*block);
-		reader.read(*result);
-		auto panel = new ProcedureExplorerWidget(std::move(result));
-		_actionsLayout->addWidget(panel);
-		_actionsLayout->addStretch();
-		return;
-	}
-	else if (suffix == "txt") {
-		prepareWidget(_views.text);
-		QString result;
-		Format::Txt::DataReader reader( *block);
-		reader.read(result);
-		_views.text->setPlainText(result);
-		_centerStack->setCurrentWidget(_views.text);
-		return;
-	}
-
-	prepareWidget(_views.empty);
-	_centerStack->setCurrentWidget(_views.empty);
-}
+// 	prepareWidget(_views.empty);
+// 	_centerStack->setCurrentWidget(_views.empty);
+// }
 
 std::optional<std::shared_ptr<DataStream>> StreamWidgetSelector::getStream(Resources& resources) const {
 	if (_selection.type != AssetsViewItemType::File) {
@@ -129,29 +83,29 @@ std::optional<std::shared_ptr<DataStream>> StreamWidgetSelector::getStream(Resou
 		_selection.path);
 }
 
-void StreamWidgetSelector::prepareWidget(QWidget *current) {
-  QLayoutItem *item;
-  while ((item = _actionsLayout->takeAt(0)) != nullptr) {
-    if (item->widget()) {
-      item->widget()->setParent(nullptr);
-      delete item->widget();
-    }
-    delete item;
-  }
+// void StreamWidgetSelector::prepareWidget(QWidget *current) {
+//   QLayoutItem *item;
+//   while ((item = _actionsLayout->takeAt(0)) != nullptr) {
+//     if (item->widget()) {
+//       item->widget()->setParent(nullptr);
+//       delete item->widget();
+//     }
+//     delete item;
+//   }
 
-	if (_views.hex != current) {
-		_views.hex->clear();
-	}
+// 	if (_views.hex != current) {
+// 		_views.hex->clear();
+// 	}
 
-	if (_views.text != current) {
-		_views.text->clear();
-	}
-}
+// 	if (_views.text != current) {
+// 		_views.text->clear();
+// 	}
+// }
 
-void StreamWidgetSelector::applyEmptyView() {
-	prepareWidget(_views.empty);
-	_centerStack->setCurrentWidget(_views.empty);
-}
+// void StreamWidgetSelector::applyEmptyView() {
+// 	prepareWidget(_views.empty);
+// 	_centerStack->setCurrentWidget(_views.empty);
+// }
 
 void StreamWidgetSelector::onHexSelectionChanged(qint64 offset, qint64 length, const QByteArray& selected) {
 	// if (_panels.hex) {

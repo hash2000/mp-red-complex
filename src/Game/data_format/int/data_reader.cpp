@@ -1,7 +1,7 @@
 #include "Game/data_format/int/data_reader.h"
 #include <sstream>
 
-namespace Format::Int {
+namespace DataFormat::Int {
 
 	DataReader::DataReader(DataStream &stream)
 	: _stream(stream) {

@@ -4,7 +4,7 @@
 #include <map>
 #include <string>
 
-namespace Format::Int {
+namespace DataFormat::Int {
 
 	class DataReader {
 	public:

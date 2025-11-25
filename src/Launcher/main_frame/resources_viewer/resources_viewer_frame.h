@@ -5,7 +5,6 @@
 #include <QMainWindow>
 #include <QTreeView>
 #include <QStandardItemModel>
-#include <QStackedWidget>
 #include <QTextEdit>
 #include <QLabel>
 #include <QMenu>
@@ -20,7 +19,6 @@ public:
 	virtual ~ResourcesViewerFrame() = default;
 
 private:
-	void setupActionPanel();
 	void setupAssetsTree();
 	void setupCentralWidget();
 	void setupView();
@@ -31,15 +29,17 @@ private slots:
 	void onItemDoubleClicked(const QModelIndex &index);
 	void onCustomContextMenuRequested(const QPoint &pos);
 	void onItemMenuHexView();
+	void onBeforeStreamSelection(const QString& suffix, std::optional<std::shared_ptr<DataStream>> stream);
 
 private:
 	std::shared_ptr<Resources> _resources;
 	std::unique_ptr<StreamWidgetSelector> _selector;
 	QTreeView *_assetsView;
 	QStandardItemModel *_assetsModel;
-	QStackedWidget *_centerStack;
 	QListWidget *_actionsList;
   QVBoxLayout *_actionsLayout;
+	QVBoxLayout *_centerLayout;
   QWidget *_actionsPanel;
+	QWidget *_centerPanel;
 };
 

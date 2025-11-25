@@ -7,12 +7,15 @@
 #include <QScrollBar>
 #include <QMouseEvent>
 
-HexDumpWidget::HexDumpWidget(QWidget *parent) : QAbstractScrollArea(parent) {
+HexDumpWidget::HexDumpWidget(QWidget *parent)
+: QAbstractScrollArea(parent) {
+	setObjectName("HexDumpWidget");
   setFocusPolicy(Qt::StrongFocus);
   setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
 
   _duplicateUpdateTimer.setSingleShot(true);
   _duplicateUpdateTimer.setInterval(200);
+
   connect(&_duplicateUpdateTimer, &QTimer::timeout, this,
           &HexDumpWidget::updateDuplicateMap);
 

@@ -1,6 +1,6 @@
 #include "Game/data_format/txt/data_reader.h"
 
-namespace Format::Txt {
+namespace DataFormat::Txt {
 
 	DataReader::DataReader(DataStream &stream)
 	: _stream(stream) {

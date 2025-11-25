@@ -6,7 +6,7 @@
 #include <QVBoxLayout>
 
 
-ProcedureExplorerWidget::ProcedureExplorerWidget(std::unique_ptr<Format::Int::Programmability> data,
+ProcedureExplorerWidget::ProcedureExplorerWidget(std::unique_ptr<DataFormat::Int::Programmability> data,
 	QWidget* parent)
   : QWidget(parent)
 	, _data(std::move(data))

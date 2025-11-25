@@ -1,5 +1,4 @@
 #pragma once
-#include "Launcher/widgets/hex/hex_dump_widget.h"
 #include "Resources/resources/model/assets_model.h"
 #include "Resources/resources.h"
 #include "DataStream/data_stream.h"
@@ -19,11 +18,8 @@ class StreamWidgetSelector: public QObject {
 	Q_OBJECT
 
 public:
-	StreamWidgetSelector(std::weak_ptr<Resources> resources,
-		QStackedWidget *centerStack,
-		QVBoxLayout *actionsLayout);
+	StreamWidgetSelector(std::weak_ptr<Resources> resources);
 
-	void buildStackedView();
 	void setSelection(const QStandardItem *item);
 	bool isSelected() const;
 	std::unique_ptr<QMenu> buildContextMenu(QWidget *parent) const;
@@ -31,21 +27,13 @@ public:
 	void displayHexView(const QByteArray& data);
 	std::optional<std::shared_ptr<DataStream>> getStream(Resources& resources) const;
 
-private:
-	void buildWidget(const QString &suffix, DataStream &stream);
-	void prepareWidget(QWidget *current);
-	void applyEmptyView();
+signals:
+	void beforeStreamSelection(const QString& suffix, std::optional<std::shared_ptr<DataStream>> stream);
 
 private slots:
 	void onHexSelectionChanged(qint64 offset, qint64 length, const QByteArray& selected);
 
 private:
-	struct {
-		QWidget *empty;
-		HexDumpWidget *hex;
-		QPlainTextEdit *text;
-	} _views;
-
 	struct {
 		QString container;
 		QString path;
@@ -54,6 +42,4 @@ private:
 	} _selection;
 
 	std::weak_ptr<Resources> _resources;
-	QStackedWidget *_centerStack;
-	QVBoxLayout *_actionsLayout;
 };

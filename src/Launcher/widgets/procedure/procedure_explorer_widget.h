@@ -10,7 +10,7 @@ class ProcedureExplorerWidget : public QWidget {
   Q_OBJECT
 
 public:
-  explicit ProcedureExplorerWidget(std::unique_ptr<Format::Int::Programmability> data,
+  explicit ProcedureExplorerWidget(std::unique_ptr<DataFormat::Int::Programmability> data,
 		QWidget* parent = nullptr);
   ~ProcedureExplorerWidget() override;
 
@@ -18,5 +18,5 @@ private:
   QTableView* _tableView;
   ProcedureTableModel* _model;
   QSortFilterProxyModel* _proxyModel;
-	std::unique_ptr<Format::Int::Programmability> _data;
+	std::unique_ptr<DataFormat::Int::Programmability> _data;
 };

@@ -2,7 +2,7 @@
 #include "DataStream/data_stream.h"
 #include <QString>
 
-namespace Format::Txt {
+namespace DataFormat::Txt {
 
 class DataReader {
 public:

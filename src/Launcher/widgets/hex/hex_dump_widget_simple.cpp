@@ -4,6 +4,7 @@
 
 HexDumpWidgetSimple::HexDumpWidgetSimple(QWidget *parent)
 : QPlainTextEdit(parent) {
+	setObjectName("HexDumpWidgetSimple");
   setReadOnly(true);
   setLineWrapMode(QPlainTextEdit::NoWrap);
 

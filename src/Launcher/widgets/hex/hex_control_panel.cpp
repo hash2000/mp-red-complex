@@ -5,7 +5,7 @@
 #include <QLineEdit>
 #include <QSpinBox>
 
-HexControlPanel::HexControlPanel(HexDumpWidget *hexWidget, std::weak_ptr<DataStream> stream, QWidget *parent)
+HexControlPanel::HexControlPanel(HexDumpWidget *hexWidget, std::shared_ptr<DataStream> stream, QWidget *parent)
 : QWidget(parent)
 , _hexWidget(hexWidget)
 , _stream(stream) {
@@ -87,42 +87,40 @@ void HexControlPanel::onUpdateSelection() {
     return;
   }
 
-	auto stream = _stream.lock();
-  if (!stream) {
+  if (!_stream) {
     _valueEdit->setText("<no stream>");
     _valueUnsignedEdit->setText("<no stream>");
     return;
   }
 
-  auto block = stream->makeBlockAsStream();
-  block->position(offset);
+  _stream->position(offset);
 
   QString signedStr, unsignedStr;
 
   switch (length) {
     case sizeof(int8_t): {
-      const auto pos = block->position();
-      const auto sv = block->i8();
-      block->position(pos);
-      const auto uv = block->u8();
+      const auto pos = _stream->position();
+      const auto sv = _stream->i8();
+      _stream->position(pos);
+      const auto uv = _stream->u8();
       signedStr = QString::number(sv);
       unsignedStr = QString::number(uv);
       break;
     }
     case sizeof(int16_t): {
-      const auto pos = block->position();
-      const auto sv = block->i16();
-      block->position(pos);
-      const auto uv = block->u16();
+      const auto pos = _stream->position();
+      const auto sv = _stream->i16();
+      _stream->position(pos);
+      const auto uv = _stream->u16();
       signedStr = QString::number(sv);
       unsignedStr = QString::number(uv);
       break;
     }
     case sizeof(int32_t): {
-      const auto pos = block->position();
-      const auto sv = block->i32();
-      block->position(pos);
-      const auto uv = block->u32();
+      const auto pos = _stream->position();
+      const auto sv = _stream->i32();
+      _stream->position(pos);
+      const auto uv = _stream->u32();
       signedStr = QString::number(sv);
       unsignedStr = QString::number(uv);
       break;

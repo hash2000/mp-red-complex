@@ -1,5 +1,6 @@
 #include "Launcher/main_frame/resources_viewer/resources_viewer_frame.h"
 #include "Resources/resources/model/assets_model_builder.h"
+#include "Launcher/main_frame/resources_viewer/widget_maker.h"
 #include <QSplitter>
 #include <QFileInfo>
 #include <QMessageBox>
@@ -9,23 +10,26 @@
 
 ResourcesViewerFrame::ResourcesViewerFrame(std::shared_ptr<Resources> &resources)
 	: _resources(resources)
-	, _centerStack(new QStackedWidget)
 	, _assetsModel(new QStandardItemModel(this))
 	, _assetsView(new QTreeView)
+	, _centerPanel(new QWidget)
+	, _centerLayout(new QVBoxLayout)
 	, _actionsPanel(new QWidget)
   , _actionsLayout(new QVBoxLayout) {
 	setupCentralWidget();
 	setupAssetsTree();
-	setupActionPanel();
 	setupView();
 	populateAssetsTree();
 	configureAssetsTree();
 }
 
 void ResourcesViewerFrame::setupView() {
+	_actionsPanel->setLayout(_actionsLayout);
+	_centerPanel->setLayout(_centerLayout);
+
 	QSplitter *splitter = new QSplitter(Qt::Horizontal);
   splitter->addWidget(_assetsView);
-  splitter->addWidget(_centerStack);
+  splitter->addWidget(_centerPanel);
 	splitter->addWidget(_actionsPanel);
   splitter->setStretchFactor(0, 1);
   splitter->setStretchFactor(1, 2);
@@ -49,8 +53,10 @@ void ResourcesViewerFrame::configureAssetsTree() {
 }
 
 void ResourcesViewerFrame::setupCentralWidget() {
-	_selector = std::make_unique<StreamWidgetSelector>(_resources, _centerStack, _actionsLayout);
-	_selector->buildStackedView();
+	_selector = std::make_unique<StreamWidgetSelector>(_resources);
+
+	connect(_selector.get(), &StreamWidgetSelector::beforeStreamSelection,
+		this, &ResourcesViewerFrame::onBeforeStreamSelection);
 }
 
 void ResourcesViewerFrame::setupAssetsTree() {
@@ -65,17 +71,27 @@ void ResourcesViewerFrame::setupAssetsTree() {
 		this, &ResourcesViewerFrame::onCustomContextMenuRequested);
 	connect(_assetsView, &QTreeView::doubleClicked,
 		this, &ResourcesViewerFrame::onItemDoubleClicked);
-
-}
-
-void ResourcesViewerFrame::setupActionPanel() {
-  _actionsPanel->setLayout(_actionsLayout);
 }
 
 void ResourcesViewerFrame::onItemDoubleClicked(const QModelIndex &index) {
 	const auto item = _assetsModel->itemFromIndex(index);
 	_selector->setSelection(item);
 	_selector->displayModel(*_resources);
+}
+
+void ResourcesViewerFrame::onBeforeStreamSelection(const QString& suffix, std::optional<std::shared_ptr<DataStream>> stream) {
+	if (!stream) {
+		return;
+	}
+
+	const auto type = From<WidgetResource>::from(suffix);
+	if (!type) {
+		return;
+	}
+
+	WidgetMaker maker(*_selector, type.value(), _resources,
+		_centerLayout, _actionsLayout);
+	maker.make();
 }
 
 void ResourcesViewerFrame::onCustomContextMenuRequested(const QPoint &pos) {
@@ -103,13 +119,8 @@ void ResourcesViewerFrame::onCustomContextMenuRequested(const QPoint &pos) {
 }
 
 void ResourcesViewerFrame::onItemMenuHexView() {
-	auto streamOpt = _selector->getStream(*_resources);
-	if (!streamOpt) {
-		return;
-	}
-
-	auto stream = streamOpt.value();
-	auto block = stream->readBlockAsQByteArray();
-	_selector->displayHexView(block);
+	WidgetMaker maker(*_selector, WidgetResource::Hex, _resources,
+		_centerLayout, _actionsLayout);
+	maker.make();
 }
 
