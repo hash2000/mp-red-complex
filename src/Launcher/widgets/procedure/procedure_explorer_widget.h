@@ -1,5 +1,6 @@
 #pragma once
 #include "Game/data_format/int/procedure.h"
+#include "DataStream/data_stream.h"
 #include <QWidget>
 #include <QTableView>
 #include <QSortFilterProxyModel>
@@ -10,13 +11,25 @@ class ProcedureExplorerWidget : public QWidget {
   Q_OBJECT
 
 public:
-  explicit ProcedureExplorerWidget(std::unique_ptr<DataFormat::Int::Programmability> data,
+  explicit ProcedureExplorerWidget(
+		std::unique_ptr<DataFormat::Int::Programmability> data,
+		std::shared_ptr<DataStream> stream,
 		QWidget* parent = nullptr);
-  ~ProcedureExplorerWidget() override;
+  ~ProcedureExplorerWidget() override = default;
+
+signals:
+	void selectProcedure(
+		DataStream &stream,
+		DataFormat::Int::Programmability &prog,
+		DataFormat::Int::Procedure &proc);
+
+private slots:
+	void onProcDoubleClick(const QModelIndex &index);
 
 private:
   QTableView* _tableView;
   ProcedureTableModel* _model;
   QSortFilterProxyModel* _proxyModel;
 	std::unique_ptr<DataFormat::Int::Programmability> _data;
+	std::shared_ptr<DataStream> _stream;
 };

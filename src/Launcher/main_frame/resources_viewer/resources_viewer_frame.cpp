@@ -1,6 +1,6 @@
 #include "Launcher/main_frame/resources_viewer/resources_viewer_frame.h"
-#include "Resources/resources/model/assets_model_builder.h"
 #include "Launcher/main_frame/resources_viewer/widget_maker.h"
+#include "Resources/resources/model/assets_model_builder.h"
 #include <QSplitter>
 #include <QFileInfo>
 #include <QMessageBox>
@@ -16,11 +16,17 @@ ResourcesViewerFrame::ResourcesViewerFrame(std::shared_ptr<Resources> &resources
 	, _centerLayout(new QVBoxLayout)
 	, _actionsPanel(new QWidget)
   , _actionsLayout(new QVBoxLayout) {
-	setupCentralWidget();
+	setupSelector();
+	setupWidgetMaker();
 	setupAssetsTree();
 	setupView();
 	populateAssetsTree();
 	configureAssetsTree();
+}
+
+void ResourcesViewerFrame::setupWidgetMaker() {
+	_widgetMaker = std::make_unique<WidgetMaker>(_selector, _resources,
+		_centerLayout, _actionsLayout);
 }
 
 void ResourcesViewerFrame::setupView() {
@@ -52,8 +58,8 @@ void ResourcesViewerFrame::configureAssetsTree() {
 	_assetsView->expand(root->index());
 }
 
-void ResourcesViewerFrame::setupCentralWidget() {
-	_selector = std::make_unique<StreamWidgetSelector>(_resources);
+void ResourcesViewerFrame::setupSelector() {
+	_selector = std::make_shared<StreamWidgetSelector>(_resources);
 
 	connect(_selector.get(), &StreamWidgetSelector::beforeStreamSelection,
 		this, &ResourcesViewerFrame::onBeforeStreamSelection);
@@ -89,9 +95,7 @@ void ResourcesViewerFrame::onBeforeStreamSelection(const QString& suffix, std::o
 		return;
 	}
 
-	WidgetMaker maker(*_selector, type.value(), _resources,
-		_centerLayout, _actionsLayout);
-	maker.make();
+	_widgetMaker->make(type.value());
 }
 
 void ResourcesViewerFrame::onCustomContextMenuRequested(const QPoint &pos) {
@@ -124,13 +128,9 @@ void ResourcesViewerFrame::onCustomContextMenuRequested(const QPoint &pos) {
 }
 
 void ResourcesViewerFrame::onItemMenuHexView() {
-	WidgetMaker maker(*_selector, WidgetResource::Hex, _resources,
-		_centerLayout, _actionsLayout);
-	maker.make();
+	_widgetMaker->make(WidgetResource::Hex);
 }
 
 void ResourcesViewerFrame::onItemMenuTextView() {
-	WidgetMaker maker(*_selector, WidgetResource::Text, _resources,
-		_centerLayout, _actionsLayout);
-	maker.make();
+	_widgetMaker->make(WidgetResource::Text);
 }

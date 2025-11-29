@@ -6,13 +6,16 @@
 #include <QVBoxLayout>
 
 
-ProcedureExplorerWidget::ProcedureExplorerWidget(std::unique_ptr<DataFormat::Int::Programmability> data,
+ProcedureExplorerWidget::ProcedureExplorerWidget(
+	std::unique_ptr<DataFormat::Int::Programmability> data,
+	std::shared_ptr<DataStream> stream,
 	QWidget* parent)
   : QWidget(parent)
 	, _data(std::move(data))
+	, _stream(stream)
   , _model(new ProcedureTableModel(this))
-  , _proxyModel(new QSortFilterProxyModel(this)) {
-
+  , _proxyModel(new QSortFilterProxyModel(this))
+{
   if (!_data) {
     qWarning() << "ProcedureExplorerWidget: received nullptr Programmability";
   }
@@ -22,18 +25,12 @@ ProcedureExplorerWidget::ProcedureExplorerWidget(std::unique_ptr<DataFormat::Int
   _tableView = new QTableView(this);
   _proxyModel->setSourceModel(_model);
   _tableView->setModel(_proxyModel);
-
-  // Настройки отображения
   _tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
   _tableView->setSelectionMode(QAbstractItemView::ExtendedSelection);
   _tableView->setAlternatingRowColors(true);
   _tableView->setSortingEnabled(true);
-  // _tableView->horizontalHeader()->setStretchLastSection(true);
-  // _tableView->horizontalHeader()->setSectionResizeMode(ProcedureTableModel::Name, QHeaderView::Stretch);
 
 	auto header = _tableView->horizontalHeader();
-
-
 	header->setStretchLastSection(true);
 	header->setSectionResizeMode(ProcedureTableModel::Name, QHeaderView::Interactive);
 	for (int i = 1; i < header->count(); i++) {
@@ -41,23 +38,35 @@ ProcedureExplorerWidget::ProcedureExplorerWidget(std::unique_ptr<DataFormat::Int
 		header->resizeSection(i, 25);
 	}
 
-	// _tableView->resizeColumnsToContents();
 	_tableView->setColumnWidth(ProcedureTableModel::Name,
 			std::max(150, header->sectionSize(ProcedureTableModel::Name)));
+
+	connect(_tableView, &QTableView::doubleClicked,
+		this, &ProcedureExplorerWidget::onProcDoubleClick);
 
   auto* layout = new QVBoxLayout(this);
   layout->addWidget(_tableView);
   setLayout(layout);
 }
 
-ProcedureExplorerWidget::~ProcedureExplorerWidget() = default;
+void ProcedureExplorerWidget::onProcDoubleClick(const QModelIndex &index) {
+	if (!index.isValid()) {
+		return;
+	}
 
-// void ProcedureExplorerWidget::setProgrammability(const Format::Int::Programmability& data) {
-//   _model->setDataRef(data);
-//   _tableView->resizeColumnsToContents();
+	const auto sourceIndex = _proxyModel->mapToSource(index);
+	if (!sourceIndex.isValid()) {
+		return;
+	}
 
-// 	if (_tableView->columnWidth(ProcedureTableModel::Name) < 150) {
-//     _tableView->setColumnWidth(ProcedureTableModel::Name, 150);
-// 	}
-// }
+	const auto name = _model->data(sourceIndex, ProcedureTableModel::Column::Name);
+	for(auto &it : _data->procedures) {
+		if (it->name == name) {
+			emit selectProcedure(*_stream, *_data, *it);
+			return;
+		}
+	}
+}
+
+
 

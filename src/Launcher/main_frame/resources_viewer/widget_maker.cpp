@@ -3,25 +3,30 @@
 #include "Launcher/widgets/hex/hex_control_panel.h"
 #include "Launcher/widgets/procedure/procedure_explorer_widget.h"
 #include "Game/data_format/int/data_reader.h"
+#include "Game/data_format/int/code_reader.h"
 #include "Game/data_format/txt/data_reader.h"
 #include <QWidget>
 #include <QPlainTextEdit>
 
-WidgetMaker::WidgetMaker(StreamWidgetSelector &selector,
-	WidgetResource type,
+WidgetMaker::WidgetMaker(
+	std::weak_ptr<StreamWidgetSelector> selector,
 	std::shared_ptr<Resources> resources,
 	QVBoxLayout *centerLayout,
 	QVBoxLayout *actionsLayout)
-: _selector(selector)
-, _type(type)
+: QObject()
+, _selector(selector)
 , _resources(resources)
 , _centerLayout(centerLayout)
 , _actionsLayout(actionsLayout) {
-
 }
 
-void WidgetMaker::make() {
-	auto streamOpt = _selector.getStream(*_resources);
+void WidgetMaker::make(WidgetResource type) {
+	auto sel = _selector.lock();
+	if (!sel) {
+		return;
+	}
+
+	auto streamOpt = sel->getStream(*_resources);
 	if (!streamOpt) {
 		return;
 	}
@@ -32,7 +37,7 @@ void WidgetMaker::make() {
 	auto stream = streamOpt.value();
 	auto block = stream->makeBlockAsStream();
 
-	switch(_type) {
+	switch(type) {
 		case WidgetResource::Hex:
 			makeHex(block);
 			break;
@@ -49,8 +54,11 @@ void WidgetMaker::makeInt(std::shared_ptr<DataStream> block) {
 	auto result = std::make_unique<DataFormat::Int::Programmability>();
 	DataFormat::Int::DataReader reader(*block);
 	reader.read(*result);
-	auto panel = new ProcedureExplorerWidget(std::move(result));
+	auto panel = new ProcedureExplorerWidget(std::move(result), block);
 	_actionsLayout->addWidget(panel);
+
+	connect(panel, &ProcedureExplorerWidget::selectProcedure,
+		this, &WidgetMaker::onSelectProcedure);
 }
 
 void WidgetMaker::makeText(std::shared_ptr<DataStream> block) {
@@ -84,4 +92,14 @@ void WidgetMaker::clearLayout(QVBoxLayout *layout) {
     }
     delete item;
   }
+}
+
+void WidgetMaker::onSelectProcedure(
+	DataStream &stream,
+	DataFormat::Int::Programmability &prog,
+	DataFormat::Int::Procedure &proc)
+{
+	DataFormat::Int::CodeReader reader(stream, prog, proc);
+	DataFormat::Int::Script script;
+	reader.read(script);
 }

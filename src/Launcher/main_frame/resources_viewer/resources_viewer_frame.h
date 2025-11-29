@@ -1,6 +1,7 @@
 #pragma once
 #include "Launcher/main_frame.h"
 #include "Launcher/main_frame/resources_viewer/stream_widget_selector.h"
+#include "Launcher/main_frame/resources_viewer/widget_maker.h"
 #include "Resources/resources.h"
 #include <QMainWindow>
 #include <QTreeView>
@@ -19,8 +20,9 @@ public:
 	virtual ~ResourcesViewerFrame() = default;
 
 private:
+	void setupWidgetMaker();
 	void setupAssetsTree();
-	void setupCentralWidget();
+	void setupSelector();
 	void setupView();
 	void populateAssetsTree();
 	void configureAssetsTree();
@@ -30,11 +32,13 @@ private slots:
 	void onCustomContextMenuRequested(const QPoint &pos);
 	void onItemMenuHexView();
 	void onItemMenuTextView();
-	void onBeforeStreamSelection(const QString& suffix, std::optional<std::shared_ptr<DataStream>> stream);
+	void onBeforeStreamSelection(const QString& suffix,
+		std::optional<std::shared_ptr<DataStream>> stream);
 
 private:
 	std::shared_ptr<Resources> _resources;
-	std::unique_ptr<StreamWidgetSelector> _selector;
+	std::shared_ptr<StreamWidgetSelector> _selector;
+	std::unique_ptr<WidgetMaker> _widgetMaker;
 	QTreeView *_assetsView;
 	QStandardItemModel *_assetsModel;
 	QListWidget *_actionsList;

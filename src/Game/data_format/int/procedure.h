@@ -147,7 +147,13 @@ namespace DataFormat::Int {
 
 	};
 
+	struct Header {
+    uint32_t procBodyOffset = 0;
+    uint32_t procCount = 0;
+	};
+
 	struct Programmability {
+		Header header;
     std::vector<std::unique_ptr<Procedure>> procedures;
     std::map<unsigned int, std::string> functions;
     std::map<unsigned int, std::string> identifiers;

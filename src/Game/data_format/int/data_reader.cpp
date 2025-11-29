@@ -7,9 +7,9 @@ namespace DataFormat::Int {
 	: _stream(stream) {
 	}
 
-	void DataReader::read(Programmability& result)
+	void DataReader::read(Programmability &result)
 	{
-		readHeader();
+		readHeader(result.header);
 		readProceduresHandles(result);
 		readIdentifiers(result.identifiers, "identifiers");
 		applyProceduresNames(result);
@@ -53,7 +53,7 @@ namespace DataFormat::Int {
 		}
 	}
 
-	void DataReader::applyProceduresNames(Programmability& result) {
+	void DataReader::applyProceduresNames(Programmability &result) {
 		for (uint32_t i = 0, size = _offsets.size(); i < size ;i++) {
 			const auto offset = _offsets.at(i);
 			const auto &name = result.identifiers.at(offset);
@@ -61,16 +61,16 @@ namespace DataFormat::Int {
 		}
 	}
 
-	void DataReader::readHeader() {
+	void DataReader::readHeader(Header &header) {
 		_stream.position(12);
-		_dataBlockOffset = _stream.u32();
+		header.procBodyOffset = _stream.u32();
 		_stream.position(42);
-		_countOfProcedures = _stream.u32();
-		_offsets.reserve(_countOfProcedures);
+		header.procCount = _stream.u32();
+		_offsets.reserve(header.procCount);
 	}
 
   void DataReader::readProceduresHandles(Programmability &result) {
-		for(uint32_t i = 0; i < _countOfProcedures; i++) {
+		for(uint32_t i = 0; i < result.header.procCount; i++) {
 			_offsets.push_back(_stream.u32());
 
 			auto proc = std::make_unique<Procedure>();
