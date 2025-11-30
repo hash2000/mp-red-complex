@@ -5,12 +5,10 @@ namespace DataFormat::Int::Code {
 	void PushInt::read(DataStream &stream, ScriptContext &context) {
 		_value = stream.i32();
 		context.data.push_back(_value);
-
-		incrementProgramSize(stream, context);
 	}
 
 	QString PushInt::name() const {
-		return QString("[0xC001] [*] push_int");
+		return QString("[0xC001] [*] push_d int");
 	}
 
 	QString PushInt::dump() const {

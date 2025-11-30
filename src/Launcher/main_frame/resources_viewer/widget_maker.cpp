@@ -2,9 +2,11 @@
 #include "Launcher/widgets/hex/hex_dump_widget.h"
 #include "Launcher/widgets/hex/hex_control_panel.h"
 #include "Launcher/widgets/procedure/procedure_explorer_widget.h"
+#include "Launcher/widgets/messages/messages_explorer_widget.h"
 #include "Game/data_format/int/data_reader.h"
 #include "Game/data_format/int/code_reader.h"
 #include "Game/data_format/txt/data_reader.h"
+#include "Game/data_format/msg/data_reader.h"
 #include <QWidget>
 #include <QPlainTextEdit>
 
@@ -47,6 +49,9 @@ void WidgetMaker::make(WidgetResource type) {
     case WidgetResource::Int:
 			makeInt(block);
       break;
+    case WidgetResource::Msg:
+			makeMsg(block);
+      break;
     }
 }
 
@@ -59,6 +64,15 @@ void WidgetMaker::makeInt(std::shared_ptr<DataStream> block) {
 
 	connect(panel, &ProcedureExplorerWidget::selectProcedure,
 		this, &WidgetMaker::onSelectProcedure);
+}
+
+void WidgetMaker::makeMsg(std::shared_ptr<DataStream> block) {
+	auto result = std::make_unique<DataFormat::Msg::Messages>();
+	DataFormat::Msg::DataReader reader(*block);
+	reader.read(*result);
+
+	auto panel = new MessagesExplorerWidget(std::move(result), block);
+	_actionsLayout->addWidget(panel);
 }
 
 void WidgetMaker::makeText(std::shared_ptr<DataStream> block) {

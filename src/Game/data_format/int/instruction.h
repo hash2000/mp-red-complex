@@ -16,7 +16,6 @@ namespace DataFormat::Int {
 		virtual QString name() const = 0;
 
 	protected:
-		void incrementProgramSize(DataStream &stream, ScriptContext &context);
 		QVariant pop(DataStream &stream, ScriptContext &context);
 		void throwRuntimeError(DataStream &stream, const QString &msg);
 

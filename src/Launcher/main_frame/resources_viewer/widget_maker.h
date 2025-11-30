@@ -28,6 +28,7 @@ private:
 	void makeHex(std::shared_ptr<DataStream> block);
 	void makeText(std::shared_ptr<DataStream> block);
 	void makeInt(std::shared_ptr<DataStream> block);
+	void makeMsg(std::shared_ptr<DataStream> block);
 
 private:
 	std::weak_ptr<StreamWidgetSelector> _selector;

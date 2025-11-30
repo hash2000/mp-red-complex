@@ -29,17 +29,6 @@ namespace DataFormat::Int {
 		return value;
 	}
 
-	void Instructrion::incrementProgramSize(DataStream &stream, ScriptContext &context) {
-		const auto pos = stream.position();
-		const auto size = context.program_size + 4;
-		const auto streamSize = stream.size();
-		if (size >= streamSize) {
-			throwRuntimeError(stream, QString("Expected [%1]").arg(streamSize));
-		}
-
-		context.program_size = size;
-	}
-
 	void Instructrion::throwRuntimeError(DataStream &stream, const QString &msg) {
 		const auto pos = stream.position();
 		const auto dmp = name().toStdString();

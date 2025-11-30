@@ -8,6 +8,5 @@ namespace DataFormat::Int {
 		std::vector<QVariant> data;
 		size_t dvar_base = 0;
 		size_t svar_base = 0;
-		size_t program_size = 0;
 	};
 } // namespace DataFormat::Int

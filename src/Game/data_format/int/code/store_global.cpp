@@ -4,14 +4,14 @@ namespace DataFormat::Int::Code {
 
 	void StoreGlobal::read(DataStream &stream, ScriptContext &context) {
 		const auto num = pop(stream, context).toInt();
-		const auto jmpsize = context.svar_base + num;
+		const auto storepos = context.svar_base + num;
 		auto value = pop(stream, context);
 
-		if (context.data.size() <= jmpsize) {
-			throwRuntimeError(stream, QString("jump [%1] is too long or data context is empty").arg(jmpsize));
+		if (context.data.size() <= storepos) {
+			throwRuntimeError(stream, QString("store pos [%1] is too long or data context is empty").arg(storepos));
 		}
 
-		context.data.at(jmpsize) = value;
+		context.data.at(storepos) = value;
 	}
 
 	QString StoreGlobal::name() const {
