@@ -7,6 +7,7 @@ enum class WidgetResource {
 	Text,
 	Int,
 	Msg,
+	Sve,
 };
 
 template <> class Format<WidgetResource> {
@@ -20,6 +21,8 @@ template <> class Format<WidgetResource> {
 			return QStringLiteral("int");
     case WidgetResource::Msg:
 			return QStringLiteral("msg");
+		case WidgetResource::Sve:
+			return QStringLiteral("sve");
     }
     return QStringLiteral("Unknown ressource");
   }
@@ -35,6 +38,8 @@ template <> struct From<WidgetResource> {
       return WidgetResource::Int;
     } else if (value == QStringLiteral("msg")) {
       return WidgetResource::Msg;
+    } else if (value == QStringLiteral("sve")) {
+      return WidgetResource::Sve;
     }
     return std::nullopt;
   }

@@ -7,6 +7,7 @@
 #include "Game/data_format/int/code_reader.h"
 #include "Game/data_format/txt/data_reader.h"
 #include "Game/data_format/msg/data_reader.h"
+#include "Game/data_format/sve/data_reader.h"
 #include <QWidget>
 #include <QPlainTextEdit>
 
@@ -52,7 +53,17 @@ void WidgetMaker::make(WidgetResource type) {
     case WidgetResource::Msg:
 			makeMsg(block);
       break;
+		case WidgetResource::Sve:
+			makeSve(block);
+			break;
     }
+}
+
+void WidgetMaker::makeSve(std::shared_ptr<DataStream> block) {
+	auto result = std::make_unique<DataFormat::Sve::ScriptEntries>();
+	DataFormat::Sve::DataReader reader(*block);
+	reader.read(*result);
+
 }
 
 void WidgetMaker::makeInt(std::shared_ptr<DataStream> block) {
