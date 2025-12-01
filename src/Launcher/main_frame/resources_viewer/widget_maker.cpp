@@ -8,6 +8,7 @@
 #include "Game/data_format/txt/data_reader.h"
 #include "Game/data_format/msg/data_reader.h"
 #include "Game/data_format/sve/data_reader.h"
+#include "Game/data_format/bio/data_reader.h"
 #include <QWidget>
 #include <QPlainTextEdit>
 
@@ -41,21 +42,12 @@ void WidgetMaker::make(WidgetResource type) {
 	auto block = stream->makeBlockAsStream();
 
 	switch(type) {
-		case WidgetResource::Hex:
-			makeHex(block);
-			break;
-    case WidgetResource::Text:
-			makeText(block);
-      break;
-    case WidgetResource::Int:
-			makeInt(block);
-      break;
-    case WidgetResource::Msg:
-			makeMsg(block);
-      break;
-		case WidgetResource::Sve:
-			makeSve(block);
-			break;
+		case WidgetResource::Hex: makeHex(block); break;
+    case WidgetResource::Text: makeText(block); break;
+    case WidgetResource::Int: makeInt(block); break;
+    case WidgetResource::Msg: makeMsg(block); break;
+		case WidgetResource::Sve: makeSve(block); break;
+		case WidgetResource::Bio: makeBio(block); break;
     }
 }
 
@@ -64,6 +56,17 @@ void WidgetMaker::makeSve(std::shared_ptr<DataStream> block) {
 	DataFormat::Sve::DataReader reader(*block);
 	reader.read(*result);
 
+}
+
+void WidgetMaker::makeBio(std::shared_ptr<DataStream> block) {
+	QString result;
+	DataFormat::Bio::DataReader reader(*block);
+	reader.read(result);
+
+	auto widget = new QPlainTextEdit;
+
+	widget->setPlainText(result);
+	_centerLayout->addWidget(widget);
 }
 
 void WidgetMaker::makeInt(std::shared_ptr<DataStream> block) {

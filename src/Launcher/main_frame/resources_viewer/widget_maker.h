@@ -30,6 +30,7 @@ private:
 	void makeInt(std::shared_ptr<DataStream> block);
 	void makeMsg(std::shared_ptr<DataStream> block);
 	void makeSve(std::shared_ptr<DataStream> block);
+	void makeBio(std::shared_ptr<DataStream> block);
 
 private:
 	std::weak_ptr<StreamWidgetSelector> _selector;
