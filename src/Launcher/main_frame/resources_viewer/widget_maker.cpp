@@ -1,4 +1,6 @@
 #include "Launcher/main_frame/resources_viewer/widget_maker.h"
+#include "Game/data_format/gcd/data_reader.h"
+#include "Game/data_format/gcd/gcd.h"
 #include "Launcher/widgets/hex/hex_dump_widget.h"
 #include "Launcher/widgets/hex/hex_control_panel.h"
 #include "Launcher/widgets/procedure/procedure_explorer_widget.h"
@@ -48,7 +50,14 @@ void WidgetMaker::make(WidgetResource type) {
     case WidgetResource::Msg: makeMsg(block); break;
 		case WidgetResource::Sve: makeSve(block); break;
 		case WidgetResource::Bio: makeBio(block); break;
-    }
+		case WidgetResource::Gcd: makeGcd(block); break;
+	}
+}
+
+void WidgetMaker::makeGcd(std::shared_ptr<DataStream> block) {
+	auto result = std::make_unique<DataFormat::Gcd::Character>();
+	DataFormat::Gcd::DataReader reader(*block);
+	reader.read(*result);
 }
 
 void WidgetMaker::makeSve(std::shared_ptr<DataStream> block) {
