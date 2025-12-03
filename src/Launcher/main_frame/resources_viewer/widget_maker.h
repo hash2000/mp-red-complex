@@ -32,6 +32,7 @@ private:
 	void makeSve(std::shared_ptr<DataStream> block);
 	void makeBio(std::shared_ptr<DataStream> block);
 	void makeGcd(std::shared_ptr<DataStream> block);
+	void makeGam(std::shared_ptr<DataStream> block);
 
 private:
 	std::weak_ptr<StreamWidgetSelector> _selector;
