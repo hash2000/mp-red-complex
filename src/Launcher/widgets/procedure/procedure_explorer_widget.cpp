@@ -7,7 +7,7 @@
 
 
 ProcedureExplorerWidget::ProcedureExplorerWidget(
-	std::unique_ptr<DataFormat::Int::Programmability> data,
+	std::unique_ptr<Proto::Programmability> data,
 	std::shared_ptr<DataStream> stream,
 	QWidget* parent)
   : QWidget(parent)

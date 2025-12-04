@@ -1,5 +1,5 @@
 #pragma once
-#include "Game/data_format/gam/gam.h"
+#include "Game/proto/gam.h"
 #include "DataStream/data_stream.h"
 #include <QString>
 
@@ -16,11 +16,11 @@ public:
 public:
   DataReader(DataStream &stream);
 
-  void read(GlobalVariables &result);
+  void read(Proto::GlobalVariables &result);
 
 private:
 	bool readLine(QString &line);
-	void parseLine(const QString &line, const VarMode mode, GlobalVariables &result);
+	void parseLine(const QString &line, const VarMode mode, Proto::GlobalVariables &result);
 	void throwParseException(const QString &message);
 
 private:

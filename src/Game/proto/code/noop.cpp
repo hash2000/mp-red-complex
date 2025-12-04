@@ -1,6 +1,6 @@
-#include "Game/data_format/int/code/noop.h"
+#include "Game/proto/code/noop.h"
 
-namespace DataFormat::Int::Code {
+namespace Proto::Code {
 
 	void Noop::read(DataStream &stream, ScriptContext &context) {
 	}
@@ -12,4 +12,4 @@ namespace DataFormat::Int::Code {
 	QString Noop::dump() const {
 		return name();
 	}
-} // namespace DataFormat::Int::Code
+} // namespace Proto::Code

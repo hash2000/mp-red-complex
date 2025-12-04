@@ -7,7 +7,7 @@ namespace DataFormat::Int {
 	: _stream(stream) {
 	}
 
-	void DataReader::read(Programmability &result)
+	void DataReader::read(Proto::Programmability &result)
 	{
 		readHeader(result.header);
 		readProceduresHandles(result);
@@ -53,7 +53,7 @@ namespace DataFormat::Int {
 		}
 	}
 
-	void DataReader::applyProceduresNames(Programmability &result) {
+	void DataReader::applyProceduresNames(Proto::Programmability &result) {
 		for (uint32_t i = 0, size = _offsets.size(); i < size ;i++) {
 			const auto offset = _offsets.at(i);
 			const auto &name = result.identifiers.at(offset);
@@ -61,7 +61,7 @@ namespace DataFormat::Int {
 		}
 	}
 
-	void DataReader::readHeader(Header &header) {
+	void DataReader::readHeader(Proto::Header &header) {
 		_stream.position(12);
 		header.procBodyOffset = _stream.u32();
 		_stream.position(42);
@@ -69,7 +69,9 @@ namespace DataFormat::Int {
 		_offsets.reserve(header.procCount);
 	}
 
-  void DataReader::readProceduresHandles(Programmability &result) {
+  void DataReader::readProceduresHandles(Proto::Programmability &result) {
+		using namespace Proto;
+
 		for(uint32_t i = 0; i < result.header.procCount; i++) {
 			_offsets.push_back(_stream.u32());
 

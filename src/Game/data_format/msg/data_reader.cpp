@@ -4,10 +4,10 @@ namespace DataFormat::Msg {
 
 DataReader::DataReader(DataStream &stream) : _stream(stream) {}
 
-void DataReader::read(Messages &result) {
+void DataReader::read(Proto::Messages &result) {
   auto state = State::Outside;
 	auto expected = Expected::None;
-  Message current;
+  Proto::Message current;
   QString buffer;
 
 

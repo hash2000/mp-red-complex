@@ -1,6 +1,6 @@
-#include "Game/data_format/int/code/any.h"
+#include "Game/proto/code/any.h"
 
-namespace DataFormat::Int::Code {
+namespace Proto::Code {
 	Any::Any(uint16_t opcode)
 	: _opcode(opcode) {
 	}
@@ -20,4 +20,4 @@ namespace DataFormat::Int::Code {
 			.arg(QString::number(lo, 16).toUpper().rightJustified(2, '0'))
     	.arg(QString::number(hi, 16).toUpper().rightJustified(2, '0'));
 	}
-} // namespace DataFormat::Int::Code
+} // namespace Proto::Code

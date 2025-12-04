@@ -1,7 +1,7 @@
 #pragma once
-#include "Game/data_format/int/instruction.h"
+#include "Game/proto/instruction.h"
 
-namespace DataFormat::Int::Code {
+namespace Proto::Code {
 	class PushInt : public Instructrion {
 	public:
 		void read(DataStream &stream, ScriptContext &context) override;
@@ -10,4 +10,4 @@ namespace DataFormat::Int::Code {
 	private:
 		uint32_t _value = 0;
 	};
-} // namespace DataFormat::Int::Code
+} // namespace Proto::Code

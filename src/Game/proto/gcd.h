@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace DataFormat::Gcd {
+namespace Proto {
 
 enum class Stat : uint32_t {
   Strength,
@@ -127,7 +127,6 @@ struct Character {
 	uint32_t ageBonus;
 	Gender genderBonus;
 	Gender gender;
-
 };
 
 
@@ -271,4 +270,4 @@ template <> struct Validator<Tagged> {
 	}
 };
 
-}
+} // namespace Proto

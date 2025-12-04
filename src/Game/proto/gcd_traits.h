@@ -1,7 +1,7 @@
 #pragma once
-#include "Game/data_format/gcd/gcd.h"
+#include "Game/proto/gcd.h"
 
-namespace DataFormat::Gcd {
+namespace Proto {
 template <class Enum>
 struct EnumTraits {
     static constexpr Enum first = 0;
@@ -48,4 +48,4 @@ template <> struct EnumTraits<Tagged> {
   static constexpr Tagged last = Tagged::ThirdTrait;
 };
 
-}
+} // namespace Proto

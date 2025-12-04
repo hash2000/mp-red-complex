@@ -1,12 +1,12 @@
 #pragma once
 #include "DataStream/data_stream.h"
-#include "Game/data_format/int/procedure.h"
-#include "Game/data_format/int/script_context.h"
+#include "Game/proto/procedure.h"
+#include "Game/proto/script_context.h"
 #include <QVariant>
 #include <vector>
 #include <memory>
 
-namespace DataFormat::Int {
+namespace Proto {
 	class Instructrion {
 	public:
 		virtual ~Instructrion() = default;
@@ -25,4 +25,5 @@ namespace DataFormat::Int {
 	};
 
 	std::unique_ptr<Instructrion> read_instruction(uint16_t opcode);
-}
+
+} // namespace Proto

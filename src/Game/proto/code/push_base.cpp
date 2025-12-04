@@ -1,6 +1,6 @@
-#include "Game/data_format/int/code/push_base.h"
+#include "Game/proto/code/push_base.h"
 
-namespace DataFormat::Int::Code {
+namespace Proto::Code {
 
 	void PushBase::read(DataStream &stream, ScriptContext &context) {
 		const auto arguments = pop(stream, context).toUInt();
@@ -17,4 +17,4 @@ namespace DataFormat::Int::Code {
 			.arg(name())
 			.arg(dvar_base);
 	}
-} // namespace DataFormat::Int::Code
+} // namespace Proto::Code

@@ -7,7 +7,7 @@ namespace DataFormat::Gam {
 	: _stream(stream) {
 	}
 
-	void DataReader::read(GlobalVariables &result) {
+	void DataReader::read(Proto::GlobalVariables &result) {
 
 		auto mode = VarMode::None;
 
@@ -35,7 +35,7 @@ namespace DataFormat::Gam {
 		}
 	}
 
-	void DataReader::parseLine(const QString &line, const VarMode mode, GlobalVariables &result) {
+	void DataReader::parseLine(const QString &line, const VarMode mode, Proto::GlobalVariables &result) {
 		static const QRegularExpression rx(
       R"(^\s*(\w+)\s*:=\s*(-?\d+)\s*;\s*(?:\/\/\s*(.*))?$)"
 		);
@@ -46,7 +46,7 @@ namespace DataFormat::Gam {
 
 		const auto match = rx.match(line);
 		if (match.hasMatch()) {
-			auto item = std::make_shared<GlobalVar>();
+			auto item = std::make_shared<Proto::GlobalVar>();
 			bool ok;
 
 			item->name = match.captured(1);

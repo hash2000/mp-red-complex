@@ -1,7 +1,7 @@
 #pragma once
 #include "Launcher/main_frame/resources_viewer/widget_resources.h"
 #include "Launcher/main_frame/resources_viewer/stream_widget_selector.h"
-#include "Game/data_format/int/procedure.h"
+#include "Game/proto/procedure.h"
 #include "Resources/resources.h"
 #include <QVBoxLayout>
 #include <memory>
@@ -20,8 +20,8 @@ public:
 private slots:
 	void onSelectProcedure(
 		DataStream &stream,
-		DataFormat::Int::Programmability &prog,
-		DataFormat::Int::Procedure &proc);
+		Proto::Programmability &prog,
+		Proto::Procedure &proc);
 
 private:
 	void clearLayout(QVBoxLayout *layout);

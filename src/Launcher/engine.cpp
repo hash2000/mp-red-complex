@@ -1,6 +1,6 @@
 #include "Launcher/engine.h"
 #include "Resources/resources/model/assets_model.h"
-#include "Game/data_format/int/procedure.h"
+#include "Game/proto/procedure.h"
 #include "engine.h"
 
 Engine::Engine(int &argc, char **argv)

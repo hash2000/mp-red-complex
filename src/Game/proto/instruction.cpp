@@ -1,12 +1,12 @@
-#include "Game/data_format/int/instruction.h"
-#include "Game/data_format/int/code/any.h"
-#include "Game/data_format/int/code/noop.h"
-#include "Game/data_format/int/code/push_base.h"
-#include "Game/data_format/int/code/push_int.h"
-#include "Game/data_format/int/code/store_global.h"
+#include "Game/proto/instruction.h"
+#include "Game/proto/code/any.h"
+#include "Game/proto/code/noop.h"
+#include "Game/proto/code/push_base.h"
+#include "Game/proto/code/push_int.h"
+#include "Game/proto/code/store_global.h"
 #include <sstream>
 
-namespace DataFormat::Int {
+namespace Proto {
 	std::unique_ptr<Instructrion> read_instruction(uint16_t opcode) {
 		switch (opcode) {
 			case 0x8000: return std::make_unique<Code::Noop>(); break;
@@ -36,4 +36,4 @@ namespace DataFormat::Int {
 		text << dmp << ": position [" << pos << "]. " << msg.toStdString() << ".";
 		throw std::runtime_error(text.str());
 	}
-}
+} // namespace Proto

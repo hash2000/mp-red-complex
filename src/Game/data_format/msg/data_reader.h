@@ -1,6 +1,6 @@
 #pragma once
 #include "DataStream/data_stream.h"
-#include "Game/data_format/msg/msg.h"
+#include "Game/proto/msg.h"
 #include <QString>
 
 namespace DataFormat::Msg {
@@ -22,7 +22,7 @@ public:
 public:
   DataReader(DataStream &stream);
 
-  void read(Messages &result);
+  void read(Proto::Messages &result);
 
 private:
   DataStream &_stream;

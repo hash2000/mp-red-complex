@@ -7,7 +7,7 @@
 
 
 MessagesExplorerWidget::MessagesExplorerWidget(
-	std::unique_ptr<DataFormat::Msg::Messages> data,
+	std::unique_ptr<Proto::Messages> data,
 	std::shared_ptr<DataStream> stream,
 	QWidget* parent)
   : QWidget(parent)
@@ -19,7 +19,7 @@ MessagesExplorerWidget::MessagesExplorerWidget(
     qWarning() << "MessagesExplorerWidget: received nullptr data";
   }
 
-	_data = DataFormat::Msg::to_array(data->items);
+	_data = Proto::to_array(data->items);
 	_model->setDataRef(_data);
 
   _tableView = new QTableView(this);

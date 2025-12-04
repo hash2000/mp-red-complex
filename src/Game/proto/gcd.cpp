@@ -1,6 +1,6 @@
-#include "Game/data_format/gcd/gcd.h"
+#include "Game/proto/gcd.h"
 
-namespace DataFormat::Gcd {
+namespace Proto {
 float calculate_skill(const Skill& skill, uint32_t value, const std::vector<uint32_t>& stats) {
 	switch (skill) {
 	case Skill::None:

@@ -1,7 +1,7 @@
 #pragma once
-#include "Game/data_format/int/instruction.h"
+#include "Game/proto/instruction.h"
 
-namespace DataFormat::Int::Code {
+namespace Proto::Code {
 class Any : public Instructrion {
 public:
 	Any(uint16_t opcode);
@@ -12,4 +12,4 @@ public:
 private:
 	uint16_t _opcode;
 };
-} // namespace DataFormat::Int::Code
+} // namespace Proto::Code

@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <memory>
 
-namespace DataFormat::Int {
+namespace Proto {
 
 	enum class ProcedureIType : uint32_t {
 		Timed = 0x01,
@@ -168,8 +168,8 @@ namespace DataFormat::Int {
 	[[nodiscard]] constexpr bool has_flags(std::uint32_t flags, ProcedureIType required_mask) noexcept {
 		return has_flag(flags, required_mask);
 	}
-}
+} // namespace Proto
 
-using ProgramOpCode = DataFormat::Int::OpCode;
+using ProgramOpCode = Proto::OpCode;
 
 Q_DECLARE_METATYPE(ProgramOpCode);

@@ -1,5 +1,5 @@
 #pragma once
-#include "Game/data_format/msg/msg.h"
+#include "Game/proto/msg.h"
 #include "DataStream/data_stream.h"
 #include <QWidget>
 #include <QTableView>
@@ -12,7 +12,7 @@ class MessagesExplorerWidget : public QWidget {
 
 public:
   explicit MessagesExplorerWidget(
-		std::unique_ptr<DataFormat::Msg::Messages> data,
+		std::unique_ptr<Proto::Messages> data,
 		std::shared_ptr<DataStream> stream,
 		QWidget* parent = nullptr);
   ~MessagesExplorerWidget() override = default;
@@ -21,6 +21,6 @@ private:
   QTableView* _tableView;
   MessagesTableModel* _model;
   QSortFilterProxyModel* _proxyModel;
-	DataFormat::Msg::Messages::ItemsArray _data;
+	Proto::Messages::ItemsArray _data;
 	std::shared_ptr<DataStream> _stream;
 };

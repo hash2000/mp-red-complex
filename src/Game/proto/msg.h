@@ -5,7 +5,7 @@
 #include <cstdint>
 
 
-namespace DataFormat::Msg {
+namespace Proto {
 
 struct Message {
   uint32_t id;
@@ -22,4 +22,4 @@ struct Messages {
 
 [[nodiscard]] Messages::ItemsArray to_array(Messages::Items &items);
 
-} // namespace DataFormat::Msg
+} // namespace Proto

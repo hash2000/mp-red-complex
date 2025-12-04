@@ -1,11 +1,11 @@
 #include "Game/data_format/int/script.h"
-#include "Game/data_format/int/instruction.h"
+#include "Game/proto/instruction.h"
 
 namespace DataFormat::Int {
 
-	bool Script::read(DataStream &stream, ScriptContext &context, Instructions &code) {
+	bool Script::read(DataStream &stream, Proto::ScriptContext &context, Instructions &code) {
 		const auto opcode = stream.u16();
-		auto instruction = read_instruction(opcode);
+		auto instruction = Proto::read_instruction(opcode);
 		if (!instruction) {
 			return false;
 		}

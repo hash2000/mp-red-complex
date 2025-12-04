@@ -1,6 +1,6 @@
-#include "Game/data_format/int/code/store_global.h"
+#include "Game/proto/code/store_global.h"
 
-namespace DataFormat::Int::Code {
+namespace Proto::Code {
 
 	void StoreGlobal::read(DataStream &stream, ScriptContext &context) {
 		const auto num = pop(stream, context).toInt();
@@ -22,4 +22,4 @@ namespace DataFormat::Int::Code {
 		return QString("%1 = %2")
 			.arg(name());
 	}
-} // namespace DataFormat::Int::Code
+} // namespace Proto::Code

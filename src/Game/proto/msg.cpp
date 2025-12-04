@@ -1,6 +1,6 @@
-#include "Game/data_format/msg/msg.h"
+#include "Game/proto/msg.h"
 
-namespace DataFormat::Msg {
+namespace Proto {
 
 	Messages::ItemsArray to_array(Messages::Items &items) {
 		Messages::ItemsArray result;

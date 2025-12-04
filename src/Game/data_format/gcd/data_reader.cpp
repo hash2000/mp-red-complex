@@ -6,7 +6,9 @@ namespace DataFormat::Gcd {
 	: _stream(stream) {
 	}
 
-	void DataReader::read(Character &result) {
+	void DataReader::read(Proto::Character &result) {
+		using namespace Proto;
+
 		_stream.skip(4);
 		readValues<Stat>(result.stat, result.stat, "Stats");
 		readValues<StatSecondary>(result.statsSecondary, result.stat, "Stats secondary");
@@ -37,12 +39,14 @@ namespace DataFormat::Gcd {
 		}
 	}
 
-	void DataReader::readGender(const Character &result, Gender &gender) {
+	void DataReader::readGender(const Proto::Character &result, Proto::Gender &gender) {
+		using namespace Proto;
 		const auto value = _stream.u32();
 		gender = to_state<Gender>(value);
 	}
 
-	void DataReader::readAge(const Character &result, uint32_t &age) {
+	void DataReader::readAge(const Proto::Character &result, uint32_t &age) {
+		using namespace Proto;
 		age = _stream.u32();
 		if (!Validator<Age>::validate(Age::Current, age, result.stat)) {
 			throwReadError(to_u32(Age::Current), "Age");

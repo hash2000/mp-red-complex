@@ -1,6 +1,6 @@
 #include "Launcher/main_frame/resources_viewer/widget_maker.h"
 #include "Game/data_format/gcd/data_reader.h"
-#include "Game/data_format/gcd/gcd.h"
+#include "Game/proto/gcd.h"
 #include "Launcher/widgets/hex/hex_dump_widget.h"
 #include "Launcher/widgets/hex/hex_control_panel.h"
 #include "Launcher/widgets/procedure/procedure_explorer_widget.h"
@@ -57,13 +57,13 @@ void WidgetMaker::make(WidgetResource type) {
 }
 
 void WidgetMaker::makeGam(std::shared_ptr<DataStream> block) {
-	auto result = std::make_unique<DataFormat::Gam::GlobalVariables>();
+	auto result = std::make_unique<Proto::GlobalVariables>();
 	DataFormat::Gam::DataReader reader(*block);
 	reader.read(*result);
 }
 
 void WidgetMaker::makeGcd(std::shared_ptr<DataStream> block) {
-	auto result = std::make_unique<DataFormat::Gcd::Character>();
+	auto result = std::make_unique<Proto::Character>();
 	DataFormat::Gcd::DataReader reader(*block);
 	reader.read(*result);
 }
@@ -87,7 +87,7 @@ void WidgetMaker::makeBio(std::shared_ptr<DataStream> block) {
 }
 
 void WidgetMaker::makeInt(std::shared_ptr<DataStream> block) {
-	auto result = std::make_unique<DataFormat::Int::Programmability>();
+	auto result = std::make_unique<Proto::Programmability>();
 	DataFormat::Int::DataReader reader(*block);
 	reader.read(*result);
 	auto panel = new ProcedureExplorerWidget(std::move(result), block);
@@ -98,7 +98,7 @@ void WidgetMaker::makeInt(std::shared_ptr<DataStream> block) {
 }
 
 void WidgetMaker::makeMsg(std::shared_ptr<DataStream> block) {
-	auto result = std::make_unique<DataFormat::Msg::Messages>();
+	auto result = std::make_unique<Proto::Messages>();
 	DataFormat::Msg::DataReader reader(*block);
 	reader.read(*result);
 
@@ -141,8 +141,8 @@ void WidgetMaker::clearLayout(QVBoxLayout *layout) {
 
 void WidgetMaker::onSelectProcedure(
 	DataStream &stream,
-	DataFormat::Int::Programmability &prog,
-	DataFormat::Int::Procedure &proc)
+	Proto::Programmability &prog,
+	Proto::Procedure &proc)
 {
 	DataFormat::Int::CodeReader reader(stream, prog, proc);
 	DataFormat::Int::Script script;

@@ -5,7 +5,7 @@
 #include <memory>
 #include <cstdint>
 
-namespace DataFormat::Gam {
+namespace Proto {
 // Script global variables
 
 struct GlobalVar {
@@ -23,4 +23,4 @@ struct GlobalVariables {
 	Items mapVars;
 };
 
-}
+} // namespace Proto

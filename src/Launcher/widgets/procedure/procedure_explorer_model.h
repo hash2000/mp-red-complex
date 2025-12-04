@@ -1,5 +1,5 @@
 #pragma once
-#include "Game/data_format/int/procedure.h"
+#include "Game/proto/procedure.h"
 #include <QAbstractTableModel>
 
 
@@ -20,12 +20,12 @@ public:
   explicit ProcedureTableModel(QObject* parent = nullptr);
 
 public:
-  void setDataRef(const DataFormat::Int::Programmability& data);
+  void setDataRef(const Proto::Programmability& data);
   int rowCount(const QModelIndex& parent = QModelIndex()) const override;
 	int columnCount(const QModelIndex& parent = QModelIndex()) const override;
   QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
   QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
 
 private:
-  const DataFormat::Int::Programmability* _data = nullptr;
+  const Proto::Programmability* _data = nullptr;
 };

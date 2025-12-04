@@ -1,6 +1,6 @@
-#include "Game/data_format/int/code/push_int.h"
+#include "Game/proto/code/push_int.h"
 
-namespace DataFormat::Int::Code {
+namespace Proto::Code {
 
 	void PushInt::read(DataStream &stream, ScriptContext &context) {
 		_value = stream.i32();
@@ -16,4 +16,4 @@ namespace DataFormat::Int::Code {
 			.arg(name())
 			.arg(_value);
 	}
-} // namespace DataFormat::Int::Code
+} // namespace Proto::Code

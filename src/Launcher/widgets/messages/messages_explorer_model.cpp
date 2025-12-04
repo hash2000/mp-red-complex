@@ -4,7 +4,7 @@ MessagesTableModel::MessagesTableModel(QObject* parent)
 : QAbstractTableModel(parent) {
 }
 
-void MessagesTableModel::setDataRef(const DataFormat::Msg::Messages::ItemsArray &data) {
+void MessagesTableModel::setDataRef(const Proto::Messages::ItemsArray &data) {
   beginResetModel();
   _data = &data;
   endResetModel();

@@ -1,7 +1,7 @@
 #include "Game/data_format/int/code_reader.h"
 
 namespace DataFormat::Int {
-	CodeReader::CodeReader(DataStream &stream, const Programmability &prog, const Procedure &proc)
+	CodeReader::CodeReader(DataStream &stream, const Proto::Programmability &prog, const Proto::Procedure &proc)
 	: _stream(stream)
 	, _prog(prog)
 	, _proc(proc)
@@ -9,6 +9,7 @@ namespace DataFormat::Int {
 	}
 
 	void CodeReader::read(Script &script) {
+		using namespace Proto;
 
 		Script::Instructions code;
 		ScriptContext context;

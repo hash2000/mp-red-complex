@@ -1,6 +1,6 @@
 #pragma once
 #include "DataStream/data_stream.h"
-#include "Game/data_format/int/procedure.h"
+#include "Game/proto/procedure.h"
 #include <map>
 #include <string>
 
@@ -10,15 +10,15 @@ namespace DataFormat::Int {
 	public:
 		DataReader(DataStream &stream);
 
-		void read(Programmability &result);
+		void read(Proto::Programmability &result);
 
 	private:
 		using Identifiers = std::map<unsigned int, std::string>;
 
-		void readHeader(Header &header);
-		void readProceduresHandles(Programmability &result);
+		void readHeader(Proto::Header &header);
+		void readProceduresHandles(Proto::Programmability &result);
 		void readIdentifiers(Identifiers &identifiers, const std::string &trait);
-		void applyProceduresNames(Programmability &result);
+		void applyProceduresNames(Proto::Programmability &result);
 
 	private:
 		DataStream &_stream;

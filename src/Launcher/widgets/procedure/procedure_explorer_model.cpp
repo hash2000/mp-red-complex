@@ -4,7 +4,7 @@ ProcedureTableModel::ProcedureTableModel(QObject* parent)
 : QAbstractTableModel(parent) {
 }
 
-void ProcedureTableModel::setDataRef(const DataFormat::Int::Programmability &data) {
+void ProcedureTableModel::setDataRef(const Proto::Programmability &data) {
   beginResetModel();
   _data = &data;
   endResetModel();
