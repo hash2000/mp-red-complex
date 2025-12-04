@@ -19,6 +19,59 @@ struct HeaderProto {
   uint32_t frameId;
 };
 
+enum class ItemFlag : uint32_t {
+  Rotate = 0x00000001,
+  NoBlock = 0x00000002,
+  TransFluid = 0x00000004,
+  LightThru = 0x00000008,
+  Unused = 0x00000010,
+  WallTrans = 0x00000020,
+  Lighting = 0x00000040,
+  Outline = 0x00000080,
+  NoHighlight = 0x00000100,
+  Invisible = 0x00000200,
+  ShootThru = 0x00000400,
+  Unused2 = 0x00000800,
+  Flat = 0x00001000,
+  ScrollWall = 0x00002000,
+  TransRed = 0x00004000,
+  TransNone = 0x00008000,
+  TransGlass = 0x00010000,
+  TransEnergy = 0x00020000,
+  TransCursor = 0x00040000
+};
+
+enum class MaterialType : uint32_t {
+  None = 0,
+  Metal = 1,
+  Wood = 2,
+  Stone = 3,
+  Dirt = 4,
+  Paper = 5,
+  Plastic = 6,
+  Water = 7
+};
+
+enum class ItemType : uint32_t {
+  Armor = 0,
+  Container,
+  Drug,
+  Weapon,
+  Ammo,
+  Misc,
+  Key,
+};
+
+enum class SceneryType : uint32_t {
+  Door = 0,
+  Stairs,
+  Elevator,
+  Ladder_bottom,
+  Ladder_top,
+  Generic,
+};
+
+
 struct ItemProto {
   uint32_t lightDistance;
   uint32_t lightIntensity;
@@ -115,7 +168,7 @@ struct TileProto {
   uint32_t flags; // TILE_FLAGS_* (0x01=walk_through, 0x02=shoot_through, 0x04=damaging, ...)
 };
 
-struct MiskProto {
+struct MiscProto {
   uint32_t script_id;
   uint32_t flags; // MISC_FLAGS_* (e.g. 0x01=active, 0x02=looping, ...)
   uint32_t light_distance;
@@ -123,5 +176,7 @@ struct MiskProto {
   uint32_t elevation;
   uint32_t padding[3]; // до 32 байт
 };
+
+
 
 } // namespace Proto

@@ -1,6 +1,8 @@
 #pragma once
 
-enum class FrmTypeId : char {
+namespace Proto {
+
+enum class FrmType : char {
   Item = 0,
   Critter,
   Scenery,
@@ -10,3 +12,5 @@ enum class FrmTypeId : char {
   Interface,
   Inventory,
 };
+
+} // namespace Proto
