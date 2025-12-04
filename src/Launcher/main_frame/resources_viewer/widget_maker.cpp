@@ -69,7 +69,7 @@ void WidgetMaker::makeGcd(std::shared_ptr<DataStream> block) {
 }
 
 void WidgetMaker::makeSve(std::shared_ptr<DataStream> block) {
-	auto result = std::make_unique<DataFormat::Sve::ScriptEntries>();
+	auto result = std::make_unique<Proto::ScriptEntries>();
 	DataFormat::Sve::DataReader reader(*block);
 	reader.read(*result);
 

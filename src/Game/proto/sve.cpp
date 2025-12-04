@@ -1,6 +1,6 @@
-#include "Game/data_format/sve/sve.h"
+#include "Game/proto/sve.h"
 
-namespace DataFormat::Sve {
+namespace Proto {
 
 	ScriptEntries::ItemsArray to_array(ScriptEntries::Items &items) {
 		ScriptEntries::ItemsArray result;

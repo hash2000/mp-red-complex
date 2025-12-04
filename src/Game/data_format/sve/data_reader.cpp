@@ -6,9 +6,9 @@ DataReader::DataReader(DataStream &stream)
 : _stream(stream) {
 }
 
-void DataReader::read(ScriptEntries &result) {
+void DataReader::read(Proto::ScriptEntries &result) {
   auto state = State::InOffset;
-  ScriptEntry current;
+  Proto::ScriptEntry current;
   QString buffer;
 
   while (_stream.remains() > 0) {

@@ -1,6 +1,6 @@
 #pragma once
 #include "DataStream/data_stream.h"
-#include "Game/data_format/sve/sve.h"
+#include "Game/proto/sve.h"
 #include <QString>
 
 namespace DataFormat::Sve {
@@ -16,7 +16,7 @@ public:
 public:
   DataReader(DataStream &stream);
 
-  void read(ScriptEntries &result);
+  void read(Proto::ScriptEntries &result);
 
 private:
 	bool isNewLine(const QChar &ch) const;

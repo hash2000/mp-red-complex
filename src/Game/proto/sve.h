@@ -4,7 +4,7 @@
 #include <vector>
 #include <cstdint>
 
-namespace DataFormat::Sve {
+namespace Proto {
 // scripted variable entries
 
 struct ScriptEntry {
@@ -21,4 +21,4 @@ struct ScriptEntries {
 
 [[nodiscard]] ScriptEntries::ItemsArray to_array(ScriptEntries::Items &items);
 
-}
+} // namespace Proto
