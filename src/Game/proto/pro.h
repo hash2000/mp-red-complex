@@ -14,9 +14,9 @@ enum class ObjectType {
   Misc,
 };
 
-struct HeaderProto {
-  uint32_t type;
-  uint32_t frameId;
+struct ProtoHeader {
+  ObjectType type;
+  uint16_t frameId;
 };
 
 enum class ItemFlag : uint32_t {
@@ -71,8 +71,7 @@ enum class SceneryType : uint32_t {
   Generic,
 };
 
-
-struct ItemProto {
+struct ProtoItem {
   uint32_t lightDistance;
   uint32_t lightIntensity;
   uint32_t flags;
@@ -95,8 +94,8 @@ struct ItemProto {
                        // 4+4+4+4 + 4 + 1+31 = 112)
 };
 
-struct CritterProto {
-  uint32_t script_id;
+struct ProtoCritter {
+  uint32_t scriptId;
   uint32_t inventory[10]; // PID предметов (0 = empty)
 
   int32_t hp;
@@ -144,16 +143,16 @@ struct CritterProto {
   uint8_t unused[328]; // до 496 байт (в оригинале — нули или мусор)
 };
 
-struct ScentrayProto {
+struct ProtoScentray {
   uint32_t light_distance;
   uint32_t light_intensity;
-  uint32_t script_id;
+  uint32_t scriptId;
   uint32_t flags;     // SCENERY_* (e.g. damaged, locked)
   uint32_t elevation; // 0–2 (ground, mid, roof)
 };
 
-struct WallProto {
-	uint32_t script_id;
+struct ProtoWall {
+	uint32_t scriptId;
   uint32_t flags; // WALL_FLAGS_* (0x01=translucent, 0x02=shoot_through, ...)
   uint32_t elevation;
   uint32_t light_distance;
@@ -162,14 +161,14 @@ struct WallProto {
   uint32_t padding[3]; // до 40 байт
 };
 
-struct TileProto {
+struct ProtoTile {
   uint32_t light_distance;
   uint32_t light_intensity;
   uint32_t flags; // TILE_FLAGS_* (0x01=walk_through, 0x02=shoot_through, 0x04=damaging, ...)
 };
 
-struct MiscProto {
-  uint32_t script_id;
+struct ProtoMisc {
+  uint32_t scriptId;
   uint32_t flags; // MISC_FLAGS_* (e.g. 0x01=active, 0x02=looping, ...)
   uint32_t light_distance;
   uint32_t light_intensity;

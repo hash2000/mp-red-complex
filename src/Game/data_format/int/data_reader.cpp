@@ -61,7 +61,7 @@ namespace DataFormat::Int {
 		}
 	}
 
-	void DataReader::readHeader(Proto::Header &header) {
+	void DataReader::readHeader(Proto::ProcedureHeader &header) {
 		_stream.position(12);
 		header.procBodyOffset = _stream.u32();
 		_stream.position(42);

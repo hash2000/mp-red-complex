@@ -15,7 +15,7 @@ namespace DataFormat::Int {
 	private:
 		using Identifiers = std::map<unsigned int, std::string>;
 
-		void readHeader(Proto::Header &header);
+		void readHeader(Proto::ProcedureHeader &header);
 		void readProceduresHandles(Proto::Programmability &result);
 		void readIdentifiers(Identifiers &identifiers, const std::string &trait);
 		void applyProceduresNames(Proto::Programmability &result);

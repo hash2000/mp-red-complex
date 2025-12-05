@@ -12,6 +12,7 @@
 #include "Game/data_format/sve/data_reader.h"
 #include "Game/data_format/bio/data_reader.h"
 #include "Game/data_format/gam/data_reader.h"
+#include "Game/data_format/pro/data_reader.h"
 #include <QWidget>
 #include <QPlainTextEdit>
 
@@ -53,7 +54,13 @@ void WidgetMaker::make(WidgetResource type) {
 		case WidgetResource::Bio: makeBio(block); break;
 		case WidgetResource::Gcd: makeGcd(block); break;
 		case WidgetResource::Gam: makeGam(block); break;
+		case WidgetResource::Pro: makePro(block); break;
 	}
+}
+
+void WidgetMaker::makePro(std::shared_ptr<DataStream> block) {
+	DataFormat::Pro::DataReader reader(*block);
+	auto result = reader.read();
 }
 
 void WidgetMaker::makeGam(std::shared_ptr<DataStream> block) {
