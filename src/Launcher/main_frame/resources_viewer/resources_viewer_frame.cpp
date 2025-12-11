@@ -34,12 +34,12 @@ void ResourcesViewerFrame::setupView() {
 	_centerPanel->setLayout(_centerLayout);
 
 	QSplitter *splitter = new QSplitter(Qt::Horizontal);
-  splitter->addWidget(_assetsView);
+  splitter->addWidget(_actionsPanel);
   splitter->addWidget(_centerPanel);
-	splitter->addWidget(_actionsPanel);
-  splitter->setStretchFactor(0, 1);
-  splitter->setStretchFactor(1, 2);
-	splitter->setStretchFactor(2, 3);
+	splitter->addWidget(_assetsView);
+  splitter->setStretchFactor(0, 0);
+  splitter->setStretchFactor(1, 1);
+	splitter->setStretchFactor(2, 0);
 
   setCentralWidget(splitter);
   setWindowTitle("Asset Manager");
