@@ -121,6 +121,10 @@ void ResourcesViewerFrame::onCustomContextMenuRequested(const QPoint &pos) {
 				connect(action, &QAction::triggered, this,
 					&ResourcesViewerFrame::onItemMenuTextView);
 			}
+			else if (action->objectName() == "action_extract_container_to") {
+				connect(action, &QAction::triggered, this,
+					&ResourcesViewerFrame::onContainerExtract);
+			}
 		}
 
 		menu->exec(_assetsView->viewport()->mapToGlobal(pos));
@@ -133,4 +137,8 @@ void ResourcesViewerFrame::onItemMenuHexView() {
 
 void ResourcesViewerFrame::onItemMenuTextView() {
 	_widgetMaker->make(WidgetResource::Text);
+}
+
+void ResourcesViewerFrame::onContainerExtract() {
+
 }

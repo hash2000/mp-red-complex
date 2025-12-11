@@ -32,6 +32,7 @@ private slots:
 	void onCustomContextMenuRequested(const QPoint &pos);
 	void onItemMenuHexView();
 	void onItemMenuTextView();
+	void onContainerExtract();
 	void onBeforeStreamSelection(const QString& suffix,
 		std::optional<std::shared_ptr<DataStream>> stream);
 

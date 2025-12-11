@@ -35,6 +35,10 @@ std::unique_ptr<QMenu> StreamWidgetSelector::buildContextMenu(QWidget *parent) c
 		menu
 			->addAction("Text View")
 			->setObjectName("action_text_view");
+	} else if (_selection.type == AssetsViewItemType::Container) {
+		menu
+			->addAction("Extract ...")
+			->setObjectName("action_extract_container_to");
 	}
 
 	return menu;
