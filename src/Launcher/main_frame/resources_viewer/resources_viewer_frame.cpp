@@ -1,5 +1,6 @@
 #include "Launcher/main_frame/resources_viewer/resources_viewer_frame.h"
 #include "Launcher/main_frame/resources_viewer/widget_maker.h"
+#include "Launcher/main_frame/resources_viewer/menu_actions_builder.h"
 #include "Resources/resources/model/assets_model_builder.h"
 #include <QSplitter>
 #include <QFileInfo>
@@ -109,25 +110,24 @@ void ResourcesViewerFrame::onCustomContextMenuRequested(const QPoint &pos) {
 		return;
 	}
 
-	_selector->setSelection(item);
-	auto menu = _selector->buildContextMenu(this);
-	if (!menu->actions().isEmpty()) {
-		for (auto *action : menu->actions()) {
-			if (action->objectName() == "action_hex_view") {
-				connect(action, &QAction::triggered, this,
-					&ResourcesViewerFrame::onItemMenuHexView);
-			}
-			else if (action->objectName() == "action_text_view") {
-				connect(action, &QAction::triggered, this,
-					&ResourcesViewerFrame::onItemMenuTextView);
-			}
-			else if (action->objectName() == "action_extract_container_to") {
-				connect(action, &QAction::triggered, this,
-					&ResourcesViewerFrame::onContainerExtract);
-			}
-		}
+	MenuActionsBuilder builder(this);
 
+	_selector->setSelection(item);
+	auto menu = builder.Build(_selector->getType());
+	if (!menu->actions().isEmpty()) {
+		AttachMenuAction(*menu, "action_hex_view", &ResourcesViewerFrame::onItemMenuHexView);
+		AttachMenuAction(*menu, "action_text_view", &ResourcesViewerFrame::onItemMenuTextView);
+		AttachMenuAction(*menu, "action_extract_container_to", &ResourcesViewerFrame::onContainerExtract);
 		menu->exec(_assetsView->viewport()->mapToGlobal(pos));
+	}
+}
+
+void ResourcesViewerFrame::AttachMenuAction(QMenu &menu, const QString &name, void (ResourcesViewerFrame::*slot)()) {
+	for (QAction *action : menu.actions()) {
+	  if (action->objectName() == name) {
+	    connect(action, &QAction::triggered, this, slot);
+	    return;
+	  }
 	}
 }
 

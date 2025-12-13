@@ -22,10 +22,11 @@ public:
 
 	void setSelection(const QStandardItem *item);
 	bool isSelected() const;
-	std::unique_ptr<QMenu> buildContextMenu(QWidget *parent) const;
 	void displayModel(Resources& resources);
 	void displayHexView(const QByteArray& data);
 	std::optional<std::shared_ptr<DataStream>> getStream(Resources& resources) const;
+
+	AssetsViewItemType getType() const;
 
 signals:
 	void beforeStreamSelection(const QString& suffix, std::optional<std::shared_ptr<DataStream>> stream);

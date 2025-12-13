@@ -25,23 +25,8 @@ bool StreamWidgetSelector::isSelected() const {
   return _selection.type != AssetsViewItemType::Undefined;
 }
 
-std::unique_ptr<QMenu> StreamWidgetSelector::buildContextMenu(QWidget *parent) const {
-	auto menu = std::make_unique<QMenu>(parent);
-	if (_selection.type == AssetsViewItemType::File) {
-		menu
-			->addAction("Hex View")
-			->setObjectName("action_hex_view");
-
-		menu
-			->addAction("Text View")
-			->setObjectName("action_text_view");
-	} else if (_selection.type == AssetsViewItemType::Container) {
-		menu
-			->addAction("Extract ...")
-			->setObjectName("action_extract_container_to");
-	}
-
-	return menu;
+AssetsViewItemType StreamWidgetSelector::getType() const {
+	return _selection.type;
 }
 
 void StreamWidgetSelector::displayModel(Resources& resources) {

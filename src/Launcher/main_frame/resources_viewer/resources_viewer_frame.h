@@ -26,6 +26,7 @@ private:
 	void setupView();
 	void populateAssetsTree();
 	void configureAssetsTree();
+	void AttachMenuAction(QMenu &menu, const QString &name, void (ResourcesViewerFrame::*slot)());
 
 private slots:
 	void onItemDoubleClicked(const QModelIndex &index);

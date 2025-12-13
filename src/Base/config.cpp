@@ -20,6 +20,9 @@ Config::Config(const Config &clone) : Config() {
 	color_scheme = clone.color_scheme;
 	app_session = clone.app_session;
 	cwd = clone.cwd;
+	resources_path = clone.resources_path;
+	resources_path_raw = clone.resources_path_raw;
+	resources_language = clone.resources_language;
 }
 
 const Config &Config::getDefult() {
@@ -48,7 +51,12 @@ void Config::loadSettings() {
 	QSettings settings(configFilePath, QSettings::Format::IniFormat);
 	app_session = settings.value("session/view").toString();
 	resources_path = settings.value("resources/path").toString();
+	resources_path_raw = settings.value("resources/path-raw").toString();
 	resources_language = settings.value("resources/language", "english").toString();
+
+	if (resources_path_raw.isEmpty()) {
+		resources_path_raw = resources_path;
+	}
 }
 
 void Config::installDefaultConfigFile(const QString& path) {
