@@ -5,7 +5,6 @@
 #include <list>
 #include <memory>
 #include <optional>
-#include <functional>
 
 class Resources : public Configurable {
 public:
@@ -15,9 +14,6 @@ public:
 
 public:
 	void configure(const std::shared_ptr<Config>& config) override;
-
-	void loadDatFile(const QString& fileName);
-
 	void load();
 
 	auto items() const {
@@ -28,7 +24,13 @@ public:
 		-> std::optional<std::shared_ptr<DataStream>>;
 
 private:
+	void loadDatFile(const QString& fileName);
+	void loadDatResources();
+	void loadRawResources();
+
+private:
 	QString _language;
 	QDir _resources_path;
+	QDir _resources_path_raw;
 	std::list<std::unique_ptr<DataStreamContainer>> _resources;
 };

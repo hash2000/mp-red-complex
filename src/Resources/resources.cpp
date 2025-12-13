@@ -1,12 +1,15 @@
 #include "Resources/resources.h"
 #include "DataStream/data_stream/dat/dat_file.h"
 #include "DataStream/data_stream/dat/dat_file_exception.h"
+#include "DataStream/data_stream/raw/raw_directory.h"
+
 
 Resources::Resources() {
 }
 
 void Resources::configure(const std::shared_ptr<Config> &config) {
 	_resources_path = QDir(config->resources_path);
+	_resources_path_raw = QDir(config->resources_path_raw);
 	_language = config->resources_language;
 }
 
@@ -24,15 +27,19 @@ void Resources::loadDatFile(const QString& fileName) {
 	}
 
 	auto item = std::make_unique<DatFile>();
+	item->name(QString("%1 [pack]").arg(fileName));
 	item->loadFromFile(file.absoluteFilePath());
-	item->name(fileName);
 
 	_resources.push_back(std::move(item));
 }
 
 void Resources::load() {
-	QDir dir(_resources_path);
-	const auto entries = dir.entryInfoList(QDir::Files);
+	loadDatResources();
+	loadRawResources();
+}
+
+void Resources::loadDatResources() {
+	const auto entries = _resources_path.entryInfoList(QDir::Files);
 
 	for(const auto &entry: entries) {
 		const auto fileName = entry.fileName();
@@ -41,6 +48,19 @@ void Resources::load() {
 		if (suffix == "dat") {
 			loadDatFile(fileName);
 		}
+	}
+}
+
+void Resources::loadRawResources() {
+	const auto entries = _resources_path_raw.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
+	for(const auto &entry: entries) {
+		const auto path = entry.absoluteFilePath();
+		const auto fileName = entry.fileName();
+		auto item = std::make_unique<RawDirectory>();
+		item->name(QString("%1 [dir]").arg(fileName));
+		item->loadFromPath(path);
+
+		_resources.push_back(std::move(item));
 	}
 }
 
