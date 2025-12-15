@@ -340,7 +340,9 @@ void HexDumpWidget::mouseMoveEvent(QMouseEvent *event) {
   }
 }
 
-void HexDumpWidget::mouseReleaseEvent(QMouseEvent *) { _dragging = false; }
+void HexDumpWidget::mouseReleaseEvent(QMouseEvent *) {
+	_dragging = false;
+}
 
 void HexDumpWidget::wheelEvent(QWheelEvent *event) {
   // Плавная прокрутка (Qt6)

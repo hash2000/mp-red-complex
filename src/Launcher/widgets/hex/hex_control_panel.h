@@ -3,6 +3,7 @@
 #include <QWidget>
 #include <QSpinBox>
 #include <QLineEdit>
+#include <QPushButton>
 #include <memory>
 
 class HexDumpWidget;
@@ -20,6 +21,9 @@ signals:
 
 private slots:
   void onUpdateSelection();
+	void onNextBytesGroup();
+	void onPrevBytesGroup();
+	void onHexSelectionChanged(qint64 offset, qint64 length, const QByteArray& selected);
 
 private:
   HexDumpWidget *_hexWidget;
@@ -29,4 +33,6 @@ private:
   QSpinBox *_lengthSpinBox = nullptr;
   QLineEdit *_valueEdit = nullptr;
   QLineEdit *_valueUnsignedEdit = nullptr;
+	QPushButton *_nextButton = nullptr;
+	QPushButton *_prevButton = nullptr;
 };

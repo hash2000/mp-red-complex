@@ -4,6 +4,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QSpinBox>
+#include <qpushbutton.h>
 
 HexControlPanel::HexControlPanel(HexDumpWidget *hexWidget, std::shared_ptr<DataStream> stream, QWidget *parent)
 : QWidget(parent)
@@ -37,6 +38,9 @@ HexControlPanel::HexControlPanel(HexDumpWidget *hexWidget, std::shared_ptr<DataS
   _valueUnsignedEdit->setReadOnly(true);
   _valueUnsignedEdit->setPlaceholderText("Select bytes to view value");
 
+	_nextButton = new QPushButton(">>", this);
+	_prevButton = new QPushButton("<<", this);
+
   grid->addWidget(offsetLabel, 0, 0, Qt::AlignRight);
   grid->addWidget(_offsetSpinBox, 0, 1);
   grid->addWidget(lengthLabel, 1, 0, Qt::AlignRight);
@@ -45,20 +49,31 @@ HexControlPanel::HexControlPanel(HexDumpWidget *hexWidget, std::shared_ptr<DataS
   grid->addWidget(_valueEdit, 2, 1);
   grid->addWidget(valueUnsignedLabel, 3, 0, Qt::AlignRight);
   grid->addWidget(_valueUnsignedEdit, 3, 1);
-  grid->setRowStretch(4, 1);
+	grid->addWidget(_prevButton, 4, 0);
+	grid->addWidget(_nextButton, 4, 1);
+  grid->setRowStretch(5, 1);
 
   connect(_offsetSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
           this, &HexControlPanel::onUpdateSelection);
   connect(_lengthSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
           this, &HexControlPanel::onUpdateSelection);
 
+	connect(_nextButton, &QPushButton::pressed,
+					this, &HexControlPanel::onNextBytesGroup);
+
+	connect(_prevButton, &QPushButton::pressed,
+					this, &HexControlPanel::onPrevBytesGroup);
+
+	connect(_hexWidget, &HexDumpWidget::selectionChanged,
+					this, &HexControlPanel::onHexSelectionChanged);
+
   onUpdateSelection();
 }
 
 void HexControlPanel::updateFromSelection() {
-	const auto range = _hexWidget->selectedRange();
-  _offsetSpinBox->setValue(static_cast<int>(range.first));
-  _lengthSpinBox->setValue(static_cast<int>(range.second));
+	const auto [start, end] = _hexWidget->selectedRange();
+  _offsetSpinBox->setValue(static_cast<int>(start));
+  _lengthSpinBox->setValue(static_cast<int>(end));
   onUpdateSelection();
 }
 
@@ -137,4 +152,20 @@ void HexControlPanel::onUpdateSelection() {
 
   _valueEdit->setText(signedStr);
   _valueUnsignedEdit->setText(unsignedStr);
+}
+
+void HexControlPanel::onNextBytesGroup() {
+	const auto [start, end] = _hexWidget->selectedRange();
+	_offsetSpinBox->setValue(static_cast<int>(start + end));
+}
+
+void HexControlPanel::onPrevBytesGroup() {
+	const auto [start, end] = _hexWidget->selectedRange();
+	_offsetSpinBox->setValue(static_cast<int>(start - end));
+}
+
+void HexControlPanel::onHexSelectionChanged(qint64 offset, qint64 length, const QByteArray& selected) {
+	const auto [start, end] = _hexWidget->selectedRange();
+  _offsetSpinBox->setValue(static_cast<int>(start));
+  _lengthSpinBox->setValue(static_cast<int>(end));
 }
