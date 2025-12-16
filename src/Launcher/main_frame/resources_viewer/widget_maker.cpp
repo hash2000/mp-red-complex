@@ -13,6 +13,7 @@
 #include "Game/data_format/bio/data_reader.h"
 #include "Game/data_format/gam/data_reader.h"
 #include "Game/data_format/pro/data_reader.h"
+#include "Game/data_format/frm/data_reader.h"
 #include <QWidget>
 #include <QPlainTextEdit>
 
@@ -29,6 +30,14 @@ WidgetMaker::WidgetMaker(
 }
 
 void WidgetMaker::make(WidgetResource type) {
+	try {
+		tryMake(type);
+	} catch (std::exception &exc) {
+		qDebug() << "Exception: " << exc.what();
+	}
+}
+
+void WidgetMaker::tryMake(WidgetResource type) {
 	auto sel = _selector.lock();
 	if (!sel) {
 		return;
@@ -55,7 +64,14 @@ void WidgetMaker::make(WidgetResource type) {
 		case WidgetResource::Gcd: makeGcd(block); break;
 		case WidgetResource::Gam: makeGam(block); break;
 		case WidgetResource::Pro: makePro(block); break;
+		case WidgetResource::Frm: makeFrm(block); break;
 	}
+}
+
+void WidgetMaker::makeFrm(std::shared_ptr<DataStream> block) {
+	auto result = std::make_unique<Proto::Animation>();
+	DataFormat::Frm::DataReader reader(*block);
+	reader.read(*result);
 }
 
 void WidgetMaker::makePro(std::shared_ptr<DataStream> block) {

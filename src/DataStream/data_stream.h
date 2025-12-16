@@ -87,6 +87,12 @@ public:
     }
   }
 
+	void read(std::vector<std::byte> &buffer) {
+    if (!buffer.empty()) {
+      readRaw(buffer.data(), buffer.size());
+    }
+  }
+
   template <std::integral T> DataStream &operator>>(T &value) & {
     read(value);
     return *this;

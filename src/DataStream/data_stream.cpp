@@ -22,7 +22,10 @@ void DataStream::readRaw(void *dst, size_t size) {
 
   const auto n = sgetn(reinterpret_cast<char*>(dst), static_cast<std::streamsize>(size));
   if (static_cast<size_t>(n) != size) {
-    throw std::runtime_error("DataStream::readRaw: unexpected EOF");
+    throw std::runtime_error(QString("DataStream::readRaw: unexpected EOF. Expected %1, read %2.")
+			.arg(size)
+			.arg(n)
+			.toStdString());
   }
 }
 
