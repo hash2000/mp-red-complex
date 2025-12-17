@@ -7,7 +7,7 @@ namespace DataFormat::Pro {
 
 	DataReader::DataReader(DataStream &stream)
 	: _stream(stream) {
-		_stream.endianness(EndiannessId::Little);
+		_stream.endianness(Endianness::Little);
 	}
 
 	std::shared_ptr<Entity> DataReader::read() {

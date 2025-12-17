@@ -36,3 +36,4 @@ auto DataStreamContainer::find(const QString &name) const
 
 	return it->second;
 }
+

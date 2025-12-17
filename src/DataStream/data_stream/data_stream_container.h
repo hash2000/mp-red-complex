@@ -10,8 +10,9 @@ class DataStreamContainer {
 public:
 	virtual ~DataStreamContainer() = default;
 
-	const QString name() const;
+	virtual ContainerType type() const = 0;
 
+	const QString name() const;
 	void name(const QString &name);
 
 	auto items() const {
@@ -23,9 +24,7 @@ public:
 
 protected:
 	void add(std::shared_ptr<DataStream> stream);
-
 	void remove(const QString &name);
-
 	void clear();
 
 private:

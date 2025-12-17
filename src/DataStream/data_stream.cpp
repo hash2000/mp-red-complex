@@ -1,7 +1,6 @@
 #include "DataStream/data_stream.h"
 #include "DataStream/data_stream/data_stream_buffer.h"
 #include <zlib.h>
-#include <sstream>
 
 size_t DataStream::position() const {
   return gptr() - eback();
@@ -54,7 +53,9 @@ void DataStream::readBlock(void *output) {
 
 		auto ret = inflateInit(&zs);
 		if (ret != Z_OK) {
-			throw std::runtime_error("inflateInit failed: " + std::to_string(ret));
+			throw std::runtime_error(QString("inflateInit failed: %1")
+				.arg(ret)
+				.toStdString());
 		}
 
 		ret = inflate(&zs, Z_FINISH);
@@ -93,12 +94,11 @@ QByteArray DataStream::readBlockAsQByteArray() {
 	return buffer;
 }
 
-EndiannessId DataStream::endianness() const
-{
+Endianness DataStream::endianness() const {
     return _endianness;
 }
 
-void DataStream::endianness(EndiannessId end) {
+void DataStream::endianness(Endianness end) {
 	_endianness = end;
 }
 
@@ -146,15 +146,40 @@ void DataStream::dataOffset(uint32_t value) {
 	_dataOffset = value;
 }
 
+QString DataStream::containerName() const {
+	return _containerName;
+}
+
+void DataStream::containerName(const QString &name) {
+	_containerName = name;
+}
+
+ContainerType DataStream::type() const {
+	return _type;
+}
+
+void DataStream::type(ContainerType val) {
+	_type = val;
+}
+
+QString DataStream::fullPath() const {
+	if (_containerName.isEmpty()) {
+		return name();
+	}
+
+	return QString("%1\\%2")
+		.arg(_containerName)
+		.arg(name());
+}
+
 void DataStream::throwExceptionIsSizeIsTooLong(size_t size, const std::string& message) {
 	if (size < remains()) {
 		return;
 	}
 
-	std::stringstream s;
-	s << message << ", ";
-	s << name().toStdString();
-	s << " pos: " << position();
-
-	throw std::runtime_error(s.str());
+	throw std::runtime_error(QString("Exception in [%1], position [%2]. %3")
+		.arg(name())
+		.arg(position())
+		.arg(message)
+		.toStdString());
 }

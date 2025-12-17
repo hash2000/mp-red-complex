@@ -6,6 +6,7 @@
 class RawDirectory : public DataStreamContainer {
 public:
 	void loadFromPath(const QString &path);
+	ContainerType type() const override;
 
 private:
 	QDir _path;

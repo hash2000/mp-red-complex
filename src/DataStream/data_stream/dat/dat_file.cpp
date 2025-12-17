@@ -3,6 +3,11 @@
 #include "DataStream/data_stream/data_stream_file.h"
 #include <string.h>
 
+
+ContainerType DatFile::type() const {
+	return ContainerType::Repository_v1;
+}
+
 void DatFile::loadFromFile(const QString &path)
 {
 	auto stream = std::make_shared<std::ifstream>();
@@ -31,6 +36,8 @@ void DatFile::loadFromFile(const QString &path)
 
 	for (uint32_t i = 0; i < fileTotalCount; i++) {
 		auto buffer = loadStream(stream);
+		buffer->containerName(name());
+		buffer->type(type());
 		add(std::move(buffer));
 	}
 }

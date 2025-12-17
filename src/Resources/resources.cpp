@@ -21,16 +21,21 @@ void Resources::loadDatFile(const QString& fileName) {
 
 	for(const auto& res : _resources) {
 		if (res->name() == fileName) {
-			qWarning() << fileName << " allready loaded";
+			qWarning() << fileName << "allready loaded";
 			return;
 		}
 	}
 
-	auto item = std::make_unique<DatFile>();
-	item->name(QString("%1 [pack]").arg(fileName));
-	item->loadFromFile(file.absoluteFilePath());
-
-	_resources.push_back(std::move(item));
+	try {
+		auto item = std::make_unique<DatFile>();
+		item->name(QString("%1 *").arg(fileName));
+		item->loadFromFile(file.absoluteFilePath());
+		_resources.push_back(std::move(item));
+	}
+	catch (std::exception &ex) {
+		qWarning() << fileName << "exception:" << ex.what();
+		return;
+	}
 }
 
 void Resources::load() {
@@ -56,11 +61,17 @@ void Resources::loadRawResources() {
 	for(const auto &entry: entries) {
 		const auto path = entry.absoluteFilePath();
 		const auto fileName = entry.fileName();
-		auto item = std::make_unique<RawDirectory>();
-		item->name(QString("%1 [dir]").arg(fileName));
-		item->loadFromPath(path);
 
-		_resources.push_back(std::move(item));
+		try {
+			auto item = std::make_unique<RawDirectory>();
+			item->name(QString("%1 [_]").arg(fileName));
+			item->loadFromPath(path);
+			_resources.push_back(std::move(item));
+		}
+		catch (std::exception &ex) {
+			qWarning() << fileName << "exception:" << ex.what();
+			return;
+		}
 	}
 }
 

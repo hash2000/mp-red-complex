@@ -7,6 +7,7 @@
 class DatFile : public DataStreamContainer {
 public:
 	void loadFromFile(const QString &path);
+	ContainerType type() const override;
 
 private:
 	std::unique_ptr<DataStream> loadStream(std::shared_ptr<std::ifstream> &stream);

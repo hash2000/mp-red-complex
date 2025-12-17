@@ -1,5 +1,4 @@
 #pragma once
-#include "DataStream/endianness.h"
 #include <QByteArray>
 #include <QString>
 #include <concepts>
@@ -8,6 +7,16 @@
 #include <span>
 #include <type_traits>
 
+enum class Endianness : uint8_t {
+  Big = 0,
+  Little,
+};
+
+enum class ContainerType : uint8_t {
+	Undefined,
+	Repository_v1,
+	Directory,
+};
 
 #if __cpp_lib_byteswap >= 202110L
 #	include <bit>
@@ -116,8 +125,8 @@ public:
   std::shared_ptr<DataStream> makeBlockAsStream();
   QByteArray readBlockAsQByteArray();
 
-  EndiannessId endianness() const;
-  void endianness(EndiannessId end);
+  Endianness endianness() const;
+  void endianness(Endianness end);
 
   size_t remains() const;
 
@@ -126,6 +135,11 @@ public:
 
   bool compressed() const;
   void compressed(bool set);
+
+	QString containerName() const;
+	void containerName(const QString &name);
+
+	QString fullPath() const;
 
   uint32_t decompressedSize() const;
   void decompressedSize(uint32_t value);
@@ -136,6 +150,9 @@ public:
   uint32_t dataOffset() const;
   void dataOffset(uint32_t value);
 
+	ContainerType type() const;
+	void type(ContainerType val);
+
 	void throwExceptionIsSizeIsTooLong(size_t size, const std::string& message);
 
 protected:
@@ -144,7 +161,7 @@ protected:
       return; // 1 байт — endianness не важен
     } else {
       const bool is_little_native = std::endian::native == std::endian::little;
-      const bool need_swap =_endianness == EndiannessId::Big;
+      const bool need_swap =_endianness == Endianness::Big;
 
       if (need_swap) {
         value = swapBytes(value);
@@ -163,10 +180,11 @@ protected:
 private:
   void readBlock(void *output);
 
-
 private:
-  EndiannessId _endianness = EndiannessId::Big;
+  Endianness _endianness = Endianness::Big;
+	ContainerType _type = ContainerType::Undefined;
   QString _name;
+	QString _containerName;
   bool _isCompressed = false;
   uint32_t _decompressedSize = 0;
   uint32_t _compressedSize = 0;

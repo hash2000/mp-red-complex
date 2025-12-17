@@ -10,11 +10,8 @@ public:
 	virtual ~DataStreamFile() = default;
 
 	size_t size() const override;
-
 	void position(size_t pos) override;
-
 	void skip(size_t pos) override;
-
 	void readRaw(void *dst, size_t size) override;
 
 private:

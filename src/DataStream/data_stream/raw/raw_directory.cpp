@@ -4,6 +4,10 @@
 #include <QFileInfo>
 #include <fstream>
 
+ContainerType RawDirectory::type() const {
+	return ContainerType::Directory;
+}
+
 void RawDirectory::loadFromPath(const QString &path) {
 	_path = QDir(path);
 	QDirIterator iterator(_path.absolutePath(), QDir::Files, QDirIterator::Subdirectories);
@@ -23,6 +27,8 @@ void RawDirectory::loadFromPath(const QString &path) {
 		buffer->decompressedSize(size);
 		buffer->dataOffset(0);
 		buffer->name(relative);
+		buffer->containerName(name());
+		buffer->type(type());
 		add(std::move(buffer));
 	}
 }

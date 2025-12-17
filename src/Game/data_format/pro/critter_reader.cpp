@@ -5,7 +5,7 @@ namespace DataFormat::Pro {
 
 	CritterReader::CritterReader(DataStream &stream)
 	: _stream(stream) {
-		_stream.endianness(EndiannessId::Big);
+		_stream.endianness(Endianness::Big);
 	}
 
   void CritterReader::read(Proto::ProtoCritter &result) {
