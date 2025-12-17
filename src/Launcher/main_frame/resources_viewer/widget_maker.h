@@ -1,7 +1,7 @@
 #pragma once
 #include "Launcher/main_frame/resources_viewer/widget_resources.h"
 #include "Launcher/main_frame/resources_viewer/stream_widget_selector.h"
-#include "Game/proto/procedure.h"
+#include "DataFormat/proto/procedure.h"
 #include "Resources/resources.h"
 #include <QVBoxLayout>
 #include <memory>

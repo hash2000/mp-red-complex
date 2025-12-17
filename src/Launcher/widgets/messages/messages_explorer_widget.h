@@ -1,5 +1,5 @@
 #pragma once
-#include "Game/proto/msg.h"
+#include "DataFormat/proto/msg.h"
 #include "DataStream/data_stream.h"
 #include <QWidget>
 #include <QTableView>

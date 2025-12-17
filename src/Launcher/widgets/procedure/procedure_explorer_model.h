@@ -1,5 +1,5 @@
 #pragma once
-#include "Game/proto/procedure.h"
+#include "DataFormat/proto/procedure.h"
 #include <QAbstractTableModel>
 
 

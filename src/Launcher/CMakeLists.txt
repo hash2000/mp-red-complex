@@ -19,7 +19,7 @@ target_link_libraries(Launcher
 
 		Base
 		Resources
-		Game
+		DataFormat
 )
 
 # target_include_directories(Launcher
