@@ -96,7 +96,7 @@ void ResourcesViewerFrame::onBeforeStreamSelection(const QString& suffix, std::o
 		return;
 	}
 
-	_widgetMaker->make(type.value());
+	_widgetMaker->make(type.value(), suffix);
 }
 
 void ResourcesViewerFrame::onCustomContextMenuRequested(const QPoint &pos) {
@@ -132,11 +132,11 @@ void ResourcesViewerFrame::AttachMenuAction(QMenu &menu, const QString &name, vo
 }
 
 void ResourcesViewerFrame::onItemMenuHexView() {
-	_widgetMaker->make(WidgetResource::Hex);
+	_widgetMaker->make(WidgetResource::Hex, "");
 }
 
 void ResourcesViewerFrame::onItemMenuTextView() {
-	_widgetMaker->make(WidgetResource::Text);
+	_widgetMaker->make(WidgetResource::Text, "");
 }
 
 void ResourcesViewerFrame::onContainerExtract() {

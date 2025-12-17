@@ -1,4 +1,5 @@
 #pragma once
+#include "Game/proto/pal.h"
 #include "DataStream/data_stream.h"
 #include <QString>
 
@@ -8,7 +9,7 @@ class DataReader {
 public:
   DataReader(DataStream &stream);
 
-  void read(QString &result);
+  void read(Proto::Pallete &result);
 
 private:
   DataStream &_stream;

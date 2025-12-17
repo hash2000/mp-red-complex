@@ -15,10 +15,10 @@ public:
 		QVBoxLayout *centerLayout,
 		QVBoxLayout *actionsLayout);
 
-	void make(WidgetResource type);
+	void make(WidgetResource type, const QString &suffix);
 
 private:
-	void tryMake(WidgetResource type);
+	void tryMake(WidgetResource type, const QString &suffix);
 
 private slots:
 	void onSelectProcedure(
@@ -37,7 +37,8 @@ private:
 	void makeGcd(std::shared_ptr<DataStream> block);
 	void makeGam(std::shared_ptr<DataStream> block);
 	void makePro(std::shared_ptr<DataStream> block);
-	void makeFrm(std::shared_ptr<DataStream> block);
+	void makeFrm(std::shared_ptr<DataStream> block, const QString &suffix);
+	void makePal(std::shared_ptr<DataStream> block);
 
 private:
 	std::weak_ptr<StreamWidgetSelector> _selector;

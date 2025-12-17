@@ -9,7 +9,7 @@ class DataReader {
 public:
   DataReader(DataStream &stream);
 
-  void read(Proto::Animation &result);
+  void read(Proto::Animation &result, const QString &suffix);
 
 private:
 	void readDirectionsOffsets(std::vector<Proto::Direction> &directions);

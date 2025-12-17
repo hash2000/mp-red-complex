@@ -5,6 +5,7 @@
 #include "Launcher/widgets/hex/hex_control_panel.h"
 #include "Launcher/widgets/procedure/procedure_explorer_widget.h"
 #include "Launcher/widgets/messages/messages_explorer_widget.h"
+#include "Launcher/widgets/pallete/pallete_explorer_widget.h"
 #include "Game/data_format/int/data_reader.h"
 #include "Game/data_format/int/code_reader.h"
 #include "Game/data_format/txt/data_reader.h"
@@ -14,6 +15,7 @@
 #include "Game/data_format/gam/data_reader.h"
 #include "Game/data_format/pro/data_reader.h"
 #include "Game/data_format/frm/data_reader.h"
+#include "Game/data_format/pal/data_reader.h"
 #include <QWidget>
 #include <QPlainTextEdit>
 
@@ -29,15 +31,15 @@ WidgetMaker::WidgetMaker(
 , _actionsLayout(actionsLayout) {
 }
 
-void WidgetMaker::make(WidgetResource type) {
+void WidgetMaker::make(WidgetResource type, const QString &suffix) {
 	try {
-		tryMake(type);
+		tryMake(type, suffix);
 	} catch (std::exception &exc) {
 		qDebug() << "Exception: " << exc.what();
 	}
 }
 
-void WidgetMaker::tryMake(WidgetResource type) {
+void WidgetMaker::tryMake(WidgetResource type, const QString &suffix) {
 	auto sel = _selector.lock();
 	if (!sel) {
 		return;
@@ -64,14 +66,26 @@ void WidgetMaker::tryMake(WidgetResource type) {
 		case WidgetResource::Gcd: makeGcd(block); break;
 		case WidgetResource::Gam: makeGam(block); break;
 		case WidgetResource::Pro: makePro(block); break;
-		case WidgetResource::Frm: makeFrm(block); break;
+		case WidgetResource::Frm: makeFrm(block, suffix); break;
+		case WidgetResource::Pal: makePal(block); break;
 	}
 }
 
-void WidgetMaker::makeFrm(std::shared_ptr<DataStream> block) {
+void WidgetMaker::makePal(std::shared_ptr<DataStream> block) {
+	auto result = std::make_unique<Proto::Pallete>();
+	DataFormat::Pal::DataReader reader(*block);
+	reader.read(*result);
+
+	auto widget = new PalleteExplorerWidget();
+	widget->setPalette(result->items);
+
+	_centerLayout->addWidget(widget);
+}
+
+void WidgetMaker::makeFrm(std::shared_ptr<DataStream> block, const QString &suffix) {
 	auto result = std::make_unique<Proto::Animation>();
 	DataFormat::Frm::DataReader reader(*block);
-	reader.read(*result);
+	reader.read(*result, suffix);
 }
 
 void WidgetMaker::makePro(std::shared_ptr<DataStream> block) {

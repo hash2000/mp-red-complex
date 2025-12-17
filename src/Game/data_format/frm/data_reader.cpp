@@ -7,7 +7,19 @@ namespace DataFormat::Frm {
 	: _stream(stream) {
 	}
 
-	void DataReader::read(Proto::Animation &result) {
+	void DataReader::read(Proto::Animation &result, const QString &suffix) {
+
+		uint8_t directionId = 0xFF;
+
+		if (suffix.length() == 3 && suffix.startsWith("fr")) {
+			bool ok;
+			const auto ch = suffix.mid(2);
+			const auto selected = ch.toInt(&ok);
+			if (ok) {
+				directionId = selected;
+			}
+		}
+
 		result.version = _stream.u32();
 		result.fps = _stream.u16();
 		result.current = _stream.u16();
@@ -54,11 +66,11 @@ namespace DataFormat::Frm {
 		_bodyPos = _stream.position();
 		if (_bodyPos != 0x003E) {
 			throw std::runtime_error(QString("Load frames [%1], position [%2]. Invalid body pos %3 expected %4.")
-						.arg(_stream.name())
-						.arg(_stream.position())
-						.arg(_bodyPos)
-						.arg(0x003E)
-						.toStdString());
+				.arg(_stream.name())
+				.arg(_stream.position())
+				.arg(_bodyPos)
+				.arg(0x003E)
+				.toStdString());
 		}
 	}
 
