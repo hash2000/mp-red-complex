@@ -9,8 +9,8 @@
 #include <QTextEdit>
 #include <QLabel>
 #include <QMenu>
-#include <QVBoxLayout>
 #include <QListWidget>
+#include <QTabWidget>
 #include <memory>
 
 class ResourcesViewerFrame : public MainFrame {
@@ -44,9 +44,7 @@ private:
 	QTreeView *_assetsView;
 	QStandardItemModel *_assetsModel;
 	QListWidget *_actionsList;
-  QVBoxLayout *_actionsLayout;
-	QVBoxLayout *_centerLayout;
-  QWidget *_actionsPanel;
+	QTabWidget *_centerTabs;
 	QWidget *_centerPanel;
 };
 

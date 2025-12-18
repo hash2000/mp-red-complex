@@ -80,6 +80,8 @@ std::shared_ptr<DataStream> DataStream::makeBlockAsStream() {
 	readBlock(data);
 	auto block = std::make_shared<DataStreamBuffer>(std::move(buffer));
 	block->name(name());
+	block->containerName(containerName());
+	block->type(type());
 	block->decompressedSize(decompressedSize());
 	block->compressedSize(decompressedSize());
 	block->compressed(false);

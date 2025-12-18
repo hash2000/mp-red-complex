@@ -13,6 +13,11 @@ void Resources::configure(const std::shared_ptr<Config> &config) {
 	_language = config->resources_language;
 }
 
+void Resources::load() {
+	loadDatResources();
+	loadRawResources();
+}
+
 void Resources::loadDatFile(const QString& fileName) {
 	QFileInfo file(_resources_path.filePath(fileName));
 	if(!file.exists()) {
@@ -28,7 +33,7 @@ void Resources::loadDatFile(const QString& fileName) {
 
 	try {
 		auto item = std::make_unique<DatFile>();
-		item->name(QString("%1 *").arg(fileName));
+		item->name(fileName);
 		item->loadFromFile(file.absoluteFilePath());
 		_resources.push_back(std::move(item));
 	}
@@ -36,11 +41,6 @@ void Resources::loadDatFile(const QString& fileName) {
 		qWarning() << fileName << "exception:" << ex.what();
 		return;
 	}
-}
-
-void Resources::load() {
-	loadDatResources();
-	loadRawResources();
 }
 
 void Resources::loadDatResources() {
@@ -64,7 +64,7 @@ void Resources::loadRawResources() {
 
 		try {
 			auto item = std::make_unique<RawDirectory>();
-			item->name(QString("%1 [_]").arg(fileName));
+			item->name(fileName);
 			item->loadFromPath(path);
 			_resources.push_back(std::move(item));
 		}

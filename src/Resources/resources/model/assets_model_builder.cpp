@@ -35,7 +35,24 @@ QStandardItem *AssetsModelBuilder::createItemPart(QStandardItem *parent, const Q
 
 void AssetsModelBuilder::buildFromContainer(const DataStreamContainer &container) {
 	_treeCache.clear();
-	auto containerItem = new QStandardItem(container.name());
+
+	QString suffix = "";
+	switch (container.type()) {
+		case ContainerType::Repository_v1:
+			suffix = "*";
+			break;
+		case ContainerType::Directory:
+			suffix = "[_]";
+			break;
+		case ContainerType::Undefined:
+			break;
+	}
+
+	const auto name = QString("%1 %2")
+		.arg(container.name())
+		.arg(suffix);
+
+	auto containerItem = new QStandardItem(name);
 	containerItem->setData(container.name(), static_cast<int>(AssetsViewItemRole::ContainerName));
 	containerItem->setData((unsigned char)AssetsViewItemType::Container, static_cast<int>(AssetsViewItemRole::Type));
 	containerItem->setIcon(QIcon::fromTheme("text-x-generic"));

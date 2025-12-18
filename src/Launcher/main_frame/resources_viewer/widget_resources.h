@@ -16,7 +16,7 @@ enum class WidgetResource {
 	Pal,
 };
 
-template <> class Format<WidgetResource> {
+template <> struct Format<WidgetResource> {
   static QString format(const WidgetResource &value) {
     switch (value) {
     case WidgetResource::Hex:

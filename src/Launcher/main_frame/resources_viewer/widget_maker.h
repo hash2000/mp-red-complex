@@ -4,6 +4,7 @@
 #include "DataFormat/proto/procedure.h"
 #include "Resources/resources.h"
 #include <QVBoxLayout>
+#include <QTabWidget>
 #include <memory>
 
 class WidgetMaker: public QObject {
@@ -12,10 +13,10 @@ public:
 	WidgetMaker(
 		std::weak_ptr<StreamWidgetSelector> selector,
 		std::shared_ptr<Resources> resources,
-		QVBoxLayout *centerLayout,
-		QVBoxLayout *actionsLayout);
+		QTabWidget *centerTabs);
 
 	void make(WidgetResource type, const QString &suffix);
+	bool selectTabByName(const QString &name);
 
 private:
 	void tryMake(WidgetResource type, const QString &suffix);
@@ -28,21 +29,23 @@ private slots:
 
 private:
 	void clearLayout(QVBoxLayout *layout);
-	void makeHex(std::shared_ptr<DataStream> block);
-	void makeText(std::shared_ptr<DataStream> block);
-	void makeInt(std::shared_ptr<DataStream> block);
-	void makeMsg(std::shared_ptr<DataStream> block);
-	void makeSve(std::shared_ptr<DataStream> block);
-	void makeBio(std::shared_ptr<DataStream> block);
-	void makeGcd(std::shared_ptr<DataStream> block);
-	void makeGam(std::shared_ptr<DataStream> block);
-	void makePro(std::shared_ptr<DataStream> block);
-	void makeFrm(std::shared_ptr<DataStream> block, const QString &suffix);
-	void makePal(std::shared_ptr<DataStream> block);
+	void addWidgetTab(WidgetResource type, std::shared_ptr<DataStream> block, QWidget *widget, QWidget *actionsPanel = nullptr);
+
+	void makeHex(WidgetResource type, std::shared_ptr<DataStream> block);
+	void makeText(WidgetResource type, std::shared_ptr<DataStream> block);
+	void makeInt(WidgetResource type, std::shared_ptr<DataStream> block);
+	void makeMsg(WidgetResource type, std::shared_ptr<DataStream> block);
+	void makeSve(WidgetResource type, std::shared_ptr<DataStream> block);
+	void makeBio(WidgetResource type, std::shared_ptr<DataStream> block);
+	void makeGcd(WidgetResource type, std::shared_ptr<DataStream> block);
+	void makeGam(WidgetResource type, std::shared_ptr<DataStream> block);
+	void makePro(WidgetResource type, std::shared_ptr<DataStream> block);
+	void makeFrm(WidgetResource type, std::shared_ptr<DataStream> block, const QString &suffix);
+	void makePal(WidgetResource type, std::shared_ptr<DataStream> block);
 
 private:
 	std::weak_ptr<StreamWidgetSelector> _selector;
 	std::shared_ptr<Resources> _resources;
-	QVBoxLayout *_centerLayout;
-	QVBoxLayout *_actionsLayout;
+	QTabWidget *_centerTabs;
+	//QVBoxLayout *_actionsLayout;
 };

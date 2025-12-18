@@ -14,9 +14,7 @@ ResourcesViewerFrame::ResourcesViewerFrame(std::shared_ptr<Resources> &resources
 	, _assetsModel(new QStandardItemModel(this))
 	, _assetsView(new QTreeView)
 	, _centerPanel(new QWidget)
-	, _centerLayout(new QVBoxLayout)
-	, _actionsPanel(new QWidget)
-  , _actionsLayout(new QVBoxLayout) {
+	, _centerTabs(new QTabWidget) {
 	setupSelector();
 	setupWidgetMaker();
 	setupAssetsTree();
@@ -26,21 +24,21 @@ ResourcesViewerFrame::ResourcesViewerFrame(std::shared_ptr<Resources> &resources
 }
 
 void ResourcesViewerFrame::setupWidgetMaker() {
-	_widgetMaker = std::make_unique<WidgetMaker>(_selector, _resources,
-		_centerLayout, _actionsLayout);
+	_widgetMaker = std::make_unique<WidgetMaker>(_selector, _resources, _centerTabs);
 }
 
 void ResourcesViewerFrame::setupView() {
-	_actionsPanel->setLayout(_actionsLayout);
-	_centerPanel->setLayout(_centerLayout);
+	_centerTabs->setTabsClosable(true);
+
+	connect(_centerTabs, &QTabWidget::tabCloseRequested, [&](int index) {
+		_centerTabs->removeTab(index);
+	});
 
 	QSplitter *splitter = new QSplitter(Qt::Horizontal);
-  splitter->addWidget(_actionsPanel);
-  splitter->addWidget(_centerPanel);
+  splitter->addWidget(_centerTabs);
 	splitter->addWidget(_assetsView);
   splitter->setStretchFactor(0, 0);
   splitter->setStretchFactor(1, 1);
-	splitter->setStretchFactor(2, 0);
 
   setCentralWidget(splitter);
   setWindowTitle("Asset Manager");
