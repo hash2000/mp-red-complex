@@ -16,7 +16,7 @@ public:
 	void name(const QString &name);
 
 	auto items() const {
-    return make_unique_ptr_view(_streams);
+    return make_deref_view(_streams);
 	}
 
 	auto find(const QString &name) const

@@ -17,7 +17,7 @@ public:
 	void load();
 
 	auto items() const {
-    return make_unique_ptr_view(_resources);
+    return make_deref_view(_resources);
 	}
 
 	auto getStream(const QString &container, const QString &path) const

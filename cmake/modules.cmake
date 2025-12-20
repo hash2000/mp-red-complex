@@ -2,7 +2,8 @@ find_package(Qt6
 	REQUIRED COMPONENTS
 		Core
 		Gui
-		Widgets)
+		Widgets
+		OpenGLWidgets)
 
 qt_standard_project_setup()
 

@@ -4,6 +4,8 @@
 #include "Launcher/engine.h"
 #include "main_frame/graphwidget/main_frame_test.h"
 #include "main_frame/resources_viewer/resources_viewer_frame.h"
+#include <QtOpenGLWidgets/QOpenGLWidget>
+#include <QSurfaceFormat>
 
 std::unique_ptr<Application> Application::create() {
   return std::make_unique<Application>();
@@ -23,6 +25,14 @@ int Application::run(int &argc, char **argv) {
 int Application::tryRun(int &argc, char **argv) {
 	_config = std::make_shared<Config>(Config::getDefult());
 	_resources = std::make_shared<Resources>();
+
+	QSurfaceFormat fmt;
+  fmt.setVersion(3, 2);
+  fmt.setProfile(QSurfaceFormat::CoreProfile);
+  fmt.setDepthBufferSize(24);
+  fmt.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
+	fmt.setSamples(4);
+  QSurfaceFormat::setDefaultFormat(fmt);
 
 	Engine engine(argc, argv);
 	engine.configure(_config);

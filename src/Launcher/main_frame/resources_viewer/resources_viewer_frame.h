@@ -45,6 +45,5 @@ private:
 	QStandardItemModel *_assetsModel;
 	QListWidget *_actionsList;
 	QTabWidget *_centerTabs;
-	QWidget *_centerPanel;
 };
 

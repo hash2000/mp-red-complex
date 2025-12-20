@@ -1,27 +1,58 @@
 #pragma once
 #include <ranges>
 #include <type_traits>
+#include <memory>
+
 
 template <typename T>
-const auto& extract_ptr(const T& x) {
-  return x; // для vector: x — unique_ptr
+const T& deref_impl(const T& x) {
+    return x;
+}
+
+template <typename T>
+const T& deref_impl(const std::unique_ptr<T>& p) {
+    return *p;
+}
+
+template <typename T>
+const T& deref_impl(const std::shared_ptr<T>& p) {
+    return *p;
+}
+
+template <typename T>
+const T& deref_impl(const T* p) {
+    return *p;
 }
 
 template <typename K, typename V>
-const V& extract_ptr(const std::pair<K, V>& p) {
-  return p.second; // для map: p — pair, нужен second
+decltype(auto) extract_for_deref(const std::pair<K, V>& p) {
+    return deref_impl(p.second);
 }
 
-template <typename Container>
-auto make_unique_ptr_view(const Container& container) {
-  using ItemRef = decltype(*container.begin());
-  using PtrType = std::decay_t<
-      decltype(extract_ptr(std::declval<ItemRef>()))
-  >;
-  using ElementType = typename PtrType::element_type;
+template <typename T>
+decltype(auto) extract_for_deref(const T& x) {
+    return deref_impl(x);
+}
 
-  return container
-    | std::views::transform([=](const auto& item) -> const ElementType& {
-      return *extract_ptr(item);
-    });
+template <typename Elem>
+using deref_result_t = decltype(extract_for_deref(std::declval<Elem>()));
+
+template <typename Elem>
+concept dereferenceable =
+    std::is_lvalue_reference_v<deref_result_t<Elem>> &&
+    !std::is_rvalue_reference_v<deref_result_t<Elem>>;
+
+template <std::ranges::input_range Container>
+    requires dereferenceable<std::ranges::range_reference_t<Container>>
+auto make_deref_view(const Container& container) {
+    using ElemRef = std::ranges::range_reference_t<Container>;
+    using ResultRef = deref_result_t<ElemRef>;
+
+    static_assert(std::is_lvalue_reference_v<ResultRef>,
+        "extract_for_deref must return an lvalue reference to avoid dangling");
+
+    return container
+        | std::views::transform([](const auto& item) -> ResultRef {
+            return extract_for_deref(item);
+        });
 }

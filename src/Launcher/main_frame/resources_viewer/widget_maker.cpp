@@ -7,6 +7,7 @@
 #include "Launcher/widgets/procedure/procedure_explorer_widget.h"
 #include "Launcher/widgets/messages/messages_explorer_widget.h"
 #include "Launcher/widgets/pallete/pallete_explorer_widget.h"
+#include "Launcher/widgets/animation/frames_explorer_widget.h"
 #include "DataFormat/data_format/int/data_reader.h"
 #include "DataFormat/data_format/int/code_reader.h"
 #include "DataFormat/data_format/txt/data_reader.h"
@@ -118,6 +119,16 @@ void WidgetMaker::makeFrm(WidgetResource type, std::shared_ptr<DataStream> block
 	auto result = std::make_unique<Proto::Animation>();
 	DataFormat::Frm::DataReader reader(*block);
 	reader.read(*result, suffix);
+
+	auto palleteBlockOpt = _resources->getStream("master.dat", "color.pal");
+	auto palleteBlock = palleteBlockOpt.value()->makeBlockAsStream();
+	auto pallete = std::make_unique<Proto::Pallete>();
+	DataFormat::Pal::DataReader pallete_reader(*palleteBlock);
+	pallete_reader.read(*pallete);
+
+	auto widget = new FramesExplorerWidget;
+	widget->setup(*result, *pallete);
+	addWidgetTab(type, block, widget);
 }
 
 void WidgetMaker::makePro(WidgetResource type, std::shared_ptr<DataStream> block) {

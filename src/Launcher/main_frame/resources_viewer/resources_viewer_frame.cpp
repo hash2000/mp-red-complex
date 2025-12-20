@@ -13,7 +13,6 @@ ResourcesViewerFrame::ResourcesViewerFrame(std::shared_ptr<Resources> &resources
 	: _resources(resources)
 	, _assetsModel(new QStandardItemModel(this))
 	, _assetsView(new QTreeView)
-	, _centerPanel(new QWidget)
 	, _centerTabs(new QTabWidget) {
 	setupSelector();
 	setupWidgetMaker();
