@@ -1,7 +1,7 @@
 #pragma once
 #include "DataStream/data_stream.h"
 
-namespace DataFormat::Int {
+namespace DataFormat::Map {
 	class DataReader {
 	public:
 		DataReader(DataStream &stream);

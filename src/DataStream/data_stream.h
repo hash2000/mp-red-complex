@@ -6,6 +6,7 @@
 #include <qstringview.h>
 #include <span>
 #include <type_traits>
+#include <streambuf>
 
 enum class Endianness : uint8_t {
   Big = 0,

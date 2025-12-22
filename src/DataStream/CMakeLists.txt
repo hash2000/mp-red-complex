@@ -5,9 +5,14 @@ set(DataStream-Sources
 )
 
 file(GLOB_RECURSE SRCS ${DataStream-Sources}/*.cpp)
+
+
 add_library(DataStream
 	${SRCS}
 )
+
+target_include_directories(DataStream PRIVATE
+	${ZLIB_INCLUDE_DIRS})
 
 target_link_libraries(DataStream
 	PRIVATE
@@ -15,5 +20,8 @@ target_link_libraries(DataStream
 		Qt6::Gui
 		Qt6::Widgets
 
+		ZLIB::ZLIB
+
 		Base
 )
+

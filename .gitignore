@@ -56,3 +56,5 @@ Release/
 
 # debug information files
 *.dwo
+
+CMakeSettings.json

@@ -3,12 +3,10 @@
     "-DCMAKE_TOOLCHAIN_FILE=$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
     "-DVCPKG_APPLOCAL_DEPS=ON",
     "-DX_VCPKG_APPLOCAL_DEPS_INSTALL=ON",
-    "-DVCPKG_TARGET_TRIPLET=x64-linux",
-    "-DVCPKG_MANIFEST_MODE=ON"
+    "-DVCPKG_MANIFEST_MODE=ON",
+    "-DVCPKG_TARGET_TRIPLET="
   ],
-	"vcpkg.general.enable": true,
-	"vcpkg.target.hostTriplet": "x64-linux",
-	"vcpkg.target.defaultTriplet": "x64-linux",
+  "vcpkg.general.enable": true,
 	"vcpkg.target.useStaticLib": false,
 	"cmake.configureSettings": {
 		"CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
@@ -98,4 +96,5 @@
   },
   "C_Cpp.errorSquiggles": "disabled",
   "C_Cpp.default.compilerPath": "/usr/bin/gcc",
+  "vcpkg.target.defaultTriplet": "",
 }
