@@ -13,9 +13,9 @@ void AtlasBuilder::build(const std::vector<Proto::Frame> &src, const Proto::Pall
 
   size_t i = 0;
   for (const auto item : src) {
-		auto &f = _frames[i++];
+		auto &f = _frames[i];
 
-    convert(item, pal, f);
+    convert(item, pal, f, ConvertOptions());
 
 		int w = f.image.width();
     int h = f.image.height();
@@ -26,12 +26,14 @@ void AtlasBuilder::build(const std::vector<Proto::Frame> &src, const Proto::Pall
       rowHeight = 0;
     }
 
-		_entries.push_back({x, y, w, h, 0, 0, 0, 0, f.offsetX, f.offsetY});
+		_entries[i] = {x, y, w, h, 0, 0, 0, 0, f.offsetX, f.offsetY};
 
 		x += w;
     rowHeight = qMax(rowHeight, h);
     atlasWidth = qMax(atlasWidth, x);
     atlasHeight = qMax(atlasHeight, y + rowHeight);
+
+		i++;
   }
 
 	_atlas = QImage(atlasWidth, atlasHeight, QImage::Format_ARGB32);

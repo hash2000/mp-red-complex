@@ -8,6 +8,7 @@
 #include "Launcher/widgets/messages/messages_explorer_widget.h"
 #include "Launcher/widgets/pallete/pallete_explorer_widget.h"
 #include "Launcher/widgets/animation/frames_explorer_widget.h"
+#include "Launcher/widgets/animation/atlas_view.h"
 #include "DataFormat/data_format/int/data_reader.h"
 #include "DataFormat/data_format/int/code_reader.h"
 #include "DataFormat/data_format/txt/data_reader.h"
@@ -126,7 +127,8 @@ void WidgetMaker::makeFrm(WidgetResource type, std::shared_ptr<DataStream> block
 	DataFormat::Pal::DataReader pallete_reader(*palleteBlock);
 	pallete_reader.read(*pallete);
 
-	auto widget = new FramesExplorerWidget;
+	//auto widget = new FramesExplorerWidget;
+	auto widget = new AtlasView;
 	widget->setup(*result, *pallete);
 	addWidgetTab(type, block, widget);
 }

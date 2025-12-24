@@ -3,6 +3,11 @@
 #include "DataFormat/proto/pal.h"
 
 namespace DataFormat::Frm {
-void convert(const Proto::Frame &src, const Proto::Pallete &pal,
-             Proto::FrameData &dst);
+	struct ConvertOptions {
+		bool useAlphaColor = true;
+		QRgb alphaColor = qRgb(255, 255, 255);
+	};
+
+	void convert(const Proto::Frame &src, const Proto::Pallete &pal,
+		 Proto::FrameData &dst, const ConvertOptions &options);
 }

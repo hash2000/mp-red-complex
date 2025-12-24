@@ -4,7 +4,6 @@
 #include "Launcher/engine.h"
 #include "main_frame/graphwidget/main_frame_test.h"
 #include "main_frame/resources_viewer/resources_viewer_frame.h"
-#include <QtOpenGLWidgets/QOpenGLWidget>
 #include <QSurfaceFormat>
 
 std::unique_ptr<Application> Application::create() {

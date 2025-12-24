@@ -3,7 +3,7 @@
 namespace DataFormat::Frm {
 
 void convert(const Proto::Frame &src, const Proto::Pallete &pal,
-             Proto::FrameData &dst) {
+	Proto::FrameData &dst, const ConvertOptions& options) {
   dst.width = src.width;
   dst.height = src.height;
   dst.offsetX = src.offsetX;
@@ -22,7 +22,17 @@ void convert(const Proto::Frame &src, const Proto::Pallete &pal,
     for (int x = 0; x < dst.width && i < src.indexes.size(); x++, i++) {
       const auto idx = std::to_integer<uint8_t>(src.indexes[i]);
       const auto color = pal.items[idx];
-      bits[y * dst.width + x] = idx;
+
+			const auto r = qRed(color);
+			const auto g = qGreen(color);
+			const auto b = qBlue(color);
+			int a = 255;
+
+			if (options.useAlphaColor && options.alphaColor == color) {
+				a = 0;
+			}
+
+      bits[y * dst.width + x] = qRgba(r, g, b, a);
     }
   }
 }
