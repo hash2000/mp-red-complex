@@ -14,21 +14,25 @@ void RawDirectory::loadFromPath(const QString &path) {
 	while (iterator.hasNext()) {
 		const auto fullPath = iterator.next();
 		const auto relative = _path
-			.relativeFilePath(fullPath)
-			.replace('/', '\\');
+			.relativeFilePath(fullPath);
 
-		auto stream = std::make_shared<std::ifstream>();
-		stream->open(fullPath.toStdString(), std::ios_base::binary);
-		stream->seekg(0,std::ios::end);
-		const auto size = static_cast<size_t>(stream->tellg());
-		auto buffer = std::make_unique<DataStreamFile>(stream);
-		buffer->compressed(false);
-		buffer->compressedSize(size);
-		buffer->decompressedSize(size);
-		buffer->dataOffset(0);
-		buffer->name(relative);
-		buffer->containerName(name());
-		buffer->type(type());
-		add(std::move(buffer));
+		try {
+			auto stream = std::make_shared<std::ifstream>();
+			stream->open(fullPath.toStdString(), std::ios_base::binary);
+			stream->seekg(0, std::ios::end);
+			const auto size = static_cast<size_t>(stream->tellg());
+			auto buffer = std::make_unique<DataStreamFile>(stream);
+			buffer->compressed(false);
+			buffer->compressedSize(size);
+			buffer->decompressedSize(size);
+			buffer->dataOffset(0);
+			buffer->name(relative);
+			buffer->containerName(name());
+			buffer->type(type());
+			add(std::move(buffer));
+		}
+		catch (std::exception& ex) {
+			qWarning() << "Load" << fullPath << "exception:" << ex.what();
+		}
 	}
 }

@@ -21,12 +21,12 @@ void Resources::load() {
 void Resources::loadDatFile(const QString& fileName) {
 	QFileInfo file(_resources_path.filePath(fileName));
 	if(!file.exists()) {
-		throw DatFileException(file.absoluteFilePath(), "not found");
+		qWarning() << file.absoluteFilePath() << "not found";
 	}
 
 	for(const auto& res : _resources) {
 		if (res->name() == fileName) {
-			qWarning() << fileName << "allready loaded";
+			qWarning() << "Load" << fileName << "allready loaded";
 			return;
 		}
 	}
@@ -38,7 +38,7 @@ void Resources::loadDatFile(const QString& fileName) {
 		_resources.push_back(std::move(item));
 	}
 	catch (std::exception &ex) {
-		qWarning() << fileName << "exception:" << ex.what();
+		qWarning() << "Load" << fileName << "exception:" << ex.what();
 		return;
 	}
 }

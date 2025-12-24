@@ -68,5 +68,5 @@ void Config::installDefaultConfigFile(const QString& path) {
 	file.write("[logginng]\r\n");
 	file.write("\r\n");
 	file.write("[session]\r\n");
-	file.write("view=ResourceView\r\n");
+	file.write("view=ResourcesView\r\n");
 }

@@ -64,7 +64,9 @@ std::unique_ptr<DataStream> DatFile::loadStream(std::shared_ptr<std::ifstream> &
 	buffer->decompressedSize(decompressedSize);
 	buffer->compressedSize(compressedSize);
 	buffer->dataOffset(dataOffset);
-	buffer->name(QString::fromStdString(name).toLower());
+	buffer->name(QString::fromStdString(name)
+		.replace("\\", "/")
+		.toLower());
 
 	return std::move(buffer);
 }

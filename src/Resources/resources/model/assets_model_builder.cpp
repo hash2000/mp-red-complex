@@ -70,7 +70,7 @@ void AssetsModelBuilder::buildItemsFromPath(QStandardItem *parent, const QString
 		return;
 	}
 
-	const auto &parts = cleanPath.split('\\', Qt::SkipEmptyParts);
+	const auto &parts = cleanPath.split('/', Qt::SkipEmptyParts);
 	QString currentPath;
 	QStandardItem* parentItem = parent;
 

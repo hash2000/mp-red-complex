@@ -24,7 +24,3 @@ target_link_libraries(Launcher
 		DataFormat
 )
 
-# target_include_directories(Launcher
-# 	PUBLIC
-# 		${ZLIB_INCLUDE_DIRS}
-# )
