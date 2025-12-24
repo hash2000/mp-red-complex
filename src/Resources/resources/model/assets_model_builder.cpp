@@ -27,7 +27,7 @@ QStandardItem *AssetsModelBuilder::createItemPart(QStandardItem *parent, const Q
 		part->setIcon(QIcon::fromTheme("folder"));
 	} else {
 		part->setData(QVariant::fromValue(AssetsViewItemType::File), static_cast<int>(AssetsViewItemRole::Type));
-		part->setIcon(QIcon::fromTheme("text-x-generic"));
+		part->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::DocumentNew));
 	}
 
 	return part;
@@ -55,7 +55,7 @@ void AssetsModelBuilder::buildFromContainer(const DataStreamContainer &container
 	auto containerItem = new QStandardItem(name);
 	containerItem->setData(container.name(), static_cast<int>(AssetsViewItemRole::ContainerName));
 	containerItem->setData((unsigned char)AssetsViewItemType::Container, static_cast<int>(AssetsViewItemRole::Type));
-	containerItem->setIcon(QIcon::fromTheme("text-x-generic"));
+	containerItem->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::DriveHarddisk));
 	_parent->appendRow(containerItem);
 
 	for(const auto &item : container.items()) {
