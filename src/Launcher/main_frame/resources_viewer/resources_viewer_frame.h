@@ -20,6 +20,8 @@ public:
 	virtual ~ResourcesViewerFrame() = default;
 
 private:
+	void setupTabs();
+	void setupHomaPageTab();
 	void setupWidgetMaker();
 	void setupAssetsTree();
 	void setupSelector();
@@ -27,6 +29,7 @@ private:
 	void populateAssetsTree();
 	void configureAssetsTree();
 	void AttachMenuAction(QMenu &menu, const QString &name, void (ResourcesViewerFrame::*slot)());
+	void CloseTabByIndex(int index);
 
 private slots:
 	void onItemDoubleClicked(const QModelIndex &index);

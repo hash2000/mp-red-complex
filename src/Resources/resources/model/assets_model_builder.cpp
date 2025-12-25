@@ -1,5 +1,6 @@
 #include "Resources/resources/model/assets_model_builder.h"
 #include "Resources/resources/model/assets_model.h"
+#include "Base/scoped_timer.h"
 
 AssetsModelBuilder::AssetsModelBuilder(QStandardItem *parent, const std::shared_ptr<Resources>& resources)
 	: _parent(parent)
@@ -8,6 +9,7 @@ AssetsModelBuilder::AssetsModelBuilder(QStandardItem *parent, const std::shared_
 
 void AssetsModelBuilder::build() {
 	for(const auto &res : _resources->items()) {
+		ScopedTimer watch(QString("Build files tree for resource %1").arg(res.name()));
 		buildFromContainer(res);
 	}
 }

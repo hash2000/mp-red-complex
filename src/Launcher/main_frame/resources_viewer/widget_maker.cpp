@@ -44,7 +44,7 @@ void WidgetMaker::make(WidgetResource type, const QString &suffix) {
 bool WidgetMaker::selectTabByName(const QString &name) {
 	for (int i = 0; i < _centerTabs->count(); i++) {
 		const auto widget = _centerTabs->widget(i);
-		if (widget && widget->property("tabId") == name) {
+		if (widget && widget->property("tab.id") == name) {
 			_centerTabs->setCurrentIndex(i);
 			return true;
 		}
@@ -71,7 +71,7 @@ void WidgetMaker::addWidgetTab(WidgetResource type, std::shared_ptr<DataStream> 
 		widget = splitter;
 	}
 
-	widget->setProperty("tabId", tabName);
+	widget->setProperty("tab.id", tabName);
 
 	const auto index = _centerTabs->addTab(widget, block->name());
 	_centerTabs->setCurrentIndex(index);

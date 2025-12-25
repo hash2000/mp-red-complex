@@ -1,6 +1,7 @@
 #include "Launcher/main_frame/resources_viewer/resources_viewer_frame.h"
 #include "Launcher/main_frame/resources_viewer/widget_maker.h"
 #include "Launcher/main_frame/resources_viewer/menu_actions_builder.h"
+#include "Launcher/widgets/home/home_page_widget.h"
 #include "Resources/resources/model/assets_model_builder.h"
 #include <QSplitter>
 #include <QFileInfo>
@@ -17,6 +18,8 @@ ResourcesViewerFrame::ResourcesViewerFrame(std::shared_ptr<Resources> &resources
 	setupSelector();
 	setupWidgetMaker();
 	setupAssetsTree();
+	setupTabs();
+	setupHomaPageTab();
 	setupView();
 	populateAssetsTree();
 	configureAssetsTree();
@@ -26,13 +29,31 @@ void ResourcesViewerFrame::setupWidgetMaker() {
 	_widgetMaker = std::make_unique<WidgetMaker>(_selector, _resources, _centerTabs);
 }
 
-void ResourcesViewerFrame::setupView() {
+
+void ResourcesViewerFrame::setupTabs() {
 	_centerTabs->setTabsClosable(true);
 
 	connect(_centerTabs, &QTabWidget::tabCloseRequested, [&](int index) {
-		_centerTabs->removeTab(index);
+		CloseTabByIndex(index);		
 	});
 
+	connect(_centerTabs, &QTabWidget::tabBarClicked, [&](int index) {
+		Qt::MouseButtons buttons = QGuiApplication::mouseButtons();
+		if (buttons & Qt::MiddleButton) {
+			CloseTabByIndex(index);
+		}
+	});
+}
+
+void ResourcesViewerFrame::setupHomaPageTab() {
+	auto widget = new HomePageWidget;
+	widget->setProperty("tab.type", "home_page");
+	widget->setProperty("tab.id", "page://home");
+	const auto index = _centerTabs->addTab(widget, "Home");
+	_centerTabs->setCurrentIndex(index);
+}
+
+void ResourcesViewerFrame::setupView() {
 	QSplitter *splitter = new QSplitter(Qt::Horizontal);
   splitter->addWidget(_centerTabs);
 	splitter->addWidget(_assetsView);
@@ -126,6 +147,18 @@ void ResourcesViewerFrame::AttachMenuAction(QMenu &menu, const QString &name, vo
 	    return;
 	  }
 	}
+}
+
+void ResourcesViewerFrame::CloseTabByIndex(int index)
+{
+	const auto widget = _centerTabs->widget(index);
+	const auto type = widget->property("tab.type");
+	if (type == "home_page") {
+		return;
+	}
+
+
+	_centerTabs->removeTab(index);
 }
 
 void ResourcesViewerFrame::onItemMenuHexView() {

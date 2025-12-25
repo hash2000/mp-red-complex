@@ -2,7 +2,7 @@
 #include "DataStream/data_stream/dat/dat_file.h"
 #include "DataStream/data_stream/dat/dat_file_exception.h"
 #include "DataStream/data_stream/raw/raw_directory.h"
-
+#include "Base/scoped_timer.h"
 
 Resources::Resources() {
 }
@@ -19,6 +19,9 @@ void Resources::load() {
 }
 
 void Resources::loadDatFile(const QString& fileName) {
+
+	ScopedTimer watch(QString("Load %1 file.").arg(fileName));
+
 	QFileInfo file(_resources_path.filePath(fileName));
 	if(!file.exists()) {
 		qWarning() << file.absoluteFilePath() << "not found";
@@ -26,7 +29,7 @@ void Resources::loadDatFile(const QString& fileName) {
 
 	for(const auto& res : _resources) {
 		if (res->name() == fileName) {
-			qWarning() << "Load" << fileName << "allready loaded";
+			watch.error(QString("%1 allready loaded").arg(fileName));
 			return;
 		}
 	}
@@ -38,7 +41,7 @@ void Resources::loadDatFile(const QString& fileName) {
 		_resources.push_back(std::move(item));
 	}
 	catch (std::exception &ex) {
-		qWarning() << "Load" << fileName << "exception:" << ex.what();
+		watch.error(ex.what());
 		return;
 	}
 }
@@ -62,6 +65,8 @@ void Resources::loadRawResources() {
 		const auto path = entry.absoluteFilePath();
 		const auto fileName = entry.fileName();
 
+		ScopedTimer watch("Load raw resources.");
+
 		try {
 			auto item = std::make_unique<RawDirectory>();
 			item->name(fileName);
@@ -69,7 +74,9 @@ void Resources::loadRawResources() {
 			_resources.push_back(std::move(item));
 		}
 		catch (std::exception &ex) {
-			qWarning() << fileName << "exception:" << ex.what();
+			watch.error(QString("%1 exception: %2")
+				.arg(fileName)
+				.arg(ex.what()));
 			return;
 		}
 	}
