@@ -29,6 +29,10 @@ AssetsViewItemType StreamWidgetSelector::getType() const {
 	return _selection.type;
 }
 
+QString StreamWidgetSelector::getSuffix() const {
+	return _selection.suffix;
+}
+
 void StreamWidgetSelector::displayModel(Resources& resources) {
 	const auto stream = getStream(resources);
 	if (!stream) {

@@ -5,7 +5,7 @@
 FramesExplorerWidget::FramesExplorerWidget(QWidget *parent)
 : QWidget(parent) {
 	setObjectName("FramesExplorerWidget");
-	_renderer = new FrmGlWidget(std::make_unique<OpenGLFramesRenderer>(), this);
+	_renderer = new FrmGlWidget(this);
 
 	auto layout = new QVBoxLayout(this);
 	setLayout(layout);

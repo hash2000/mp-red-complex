@@ -29,7 +29,7 @@ void convert(const Proto::Frame &src, const Proto::Pallete &pal,
 			int a = 255;
 
 			if (options.useAlphaColor && options.alphaColor == color) {
-				a = 0;
+				a = options.alpha;
 			}
 
       bits[y * dst.width + x] = qRgba(r, g, b, a);

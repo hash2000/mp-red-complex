@@ -36,8 +36,8 @@ void ResourcesViewerFrame::setupView() {
 	QSplitter *splitter = new QSplitter(Qt::Horizontal);
   splitter->addWidget(_centerTabs);
 	splitter->addWidget(_assetsView);
-  splitter->setStretchFactor(0, 0);
-  splitter->setStretchFactor(1, 1);
+  splitter->setStretchFactor(0, 1);
+  splitter->setStretchFactor(1, 0);
 
   setCentralWidget(splitter);
   setWindowTitle("Asset Manager");
@@ -110,7 +110,7 @@ void ResourcesViewerFrame::onCustomContextMenuRequested(const QPoint &pos) {
 	MenuActionsBuilder builder(this);
 
 	_selector->setSelection(item);
-	auto menu = builder.Build(_selector->getType());
+	auto menu = builder.Build(_selector->getType(), _selector->getSuffix());
 	if (!menu->actions().isEmpty()) {
 		AttachMenuAction(*menu, "action_hex_view", &ResourcesViewerFrame::onItemMenuHexView);
 		AttachMenuAction(*menu, "action_text_view", &ResourcesViewerFrame::onItemMenuTextView);

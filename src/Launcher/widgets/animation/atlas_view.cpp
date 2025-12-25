@@ -6,6 +6,7 @@
 AtlasView::AtlasView(QWidget* parent)
 	: QWidget(parent)
 {
+	setObjectName("AtlasView");
 	setAttribute(Qt::WA_OpaquePaintEvent, false);
 	setAttribute(Qt::WA_NoSystemBackground, true);
 	setMouseTracking(true);

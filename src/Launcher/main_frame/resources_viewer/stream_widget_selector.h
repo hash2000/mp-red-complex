@@ -27,6 +27,7 @@ public:
 	std::optional<std::shared_ptr<DataStream>> getStream(Resources& resources) const;
 
 	AssetsViewItemType getType() const;
+	QString getSuffix() const;
 
 signals:
 	void beforeStreamSelection(const QString& suffix, std::optional<std::shared_ptr<DataStream>> stream);

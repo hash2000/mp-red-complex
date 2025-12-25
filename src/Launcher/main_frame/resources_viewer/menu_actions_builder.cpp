@@ -4,7 +4,7 @@ MenuActionsBuilder::MenuActionsBuilder(QWidget *parent)
 : _parent(parent) {
 }
 
-std::unique_ptr<QMenu> MenuActionsBuilder::Build(AssetsViewItemType type) {
+std::unique_ptr<QMenu> MenuActionsBuilder::Build(AssetsViewItemType type, const QString& suffix) {
 	auto menu = std::make_unique<QMenu>(_parent);
 	if (type == AssetsViewItemType::File) {
 		menu
