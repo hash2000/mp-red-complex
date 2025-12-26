@@ -12,15 +12,40 @@ AtlasView::AtlasView(QWidget* parent)
 	setMouseTracking(true);
 }
 
-void AtlasView::setup(const Proto::Animation& animation, const Proto::Pallete& pallete)
+void AtlasView::setup(
+	std::shared_ptr<const Proto::Animation> animation,
+	std::shared_ptr<const Proto::Pallete> pallete)
 {
-	const auto &frames = animation.directions[0].frames;
+	_animation = animation;
+	_pallete = pallete;
+	_direction = 0;
+	setupFrames();
+}
 
-	DataFormat::Frm::AtlasBuilder atlas;
-	atlas.build(frames, pallete);
-	_image = atlas.atlas();
-	updateImageRect();
+void AtlasView::setDirection(size_t direction) {
+	if (direction >= directionsCount()) {
+		return;
+	}
+
+	_direction = direction;
+	setupFrames();
+}
+
+void AtlasView::showRuler(bool show) {
+	_showRuller = show;
 	update();
+}
+
+const Proto::Animation* AtlasView::animation() const noexcept {
+	return _animation.get();
+}
+
+const Proto::Direction& AtlasView::direction(size_t idx) const {
+	return _animation->directions[idx];
+}
+
+const Proto::Frame& AtlasView::frame(size_t dirIdx, size_t frameIdx) const {
+	return _animation->directions[dirIdx].frames[frameIdx];
 }
 
 void AtlasView::setOffset(int x, int y) {
@@ -59,6 +84,37 @@ void AtlasView::fitToView() {
 	update();
 }
 
+size_t AtlasView::directionsCount() const {
+	if (!_animation) {
+		return 0;
+	}
+
+	return _animation->directions.size();
+}
+
+size_t AtlasView::animationsCount(int direction) const {
+	if (!_animation) {
+		return 0;
+	}
+
+	if (direction >= _animation->directions.size()) {
+		return 0;
+	}
+
+	return _animation->directions[direction].frames.size();
+}
+
+void AtlasView::setupFrames() {
+
+	const auto& frames = _animation->directions[_direction].frames;
+
+	DataFormat::Frm::AtlasBuilder atlas;
+	atlas.build(frames, *_pallete);
+	_image = atlas.atlas();
+	updateImageRect();
+	update();
+}
+
 void AtlasView::updateImageRect() {
 	if (_image.isNull()) {
 		_imageRect = QRectF();
@@ -76,8 +132,12 @@ QPointF AtlasView::mapFromWidgetToImage(const QPointF& widgetPos) const {
 	return widgetPos / _scale + _pan;
 }
 
-void AtlasView::drawBackgroundLines(QPainter& painter)
+void AtlasView::drawBackgroundRulerLines(QPainter& painter)
 {
+	if (!_showRuller) {
+		return;
+	}
+
 	const auto oldPen = painter.pen();
 	painter.setPen(QPen(Qt::red, 3, Qt::SolidLine));
 	painter.drawLine(QLine(0, 0, 100, 0));
@@ -105,7 +165,7 @@ void AtlasView::paintEvent(QPaintEvent* event)
 		painter.drawImage(_imageRect.topLeft(), _image);
 	}
 
-	drawBackgroundLines(painter);
+	drawBackgroundRulerLines(painter);
 }
 
 void AtlasView::resizeEvent(QResizeEvent* event)

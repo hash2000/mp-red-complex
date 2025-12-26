@@ -9,6 +9,7 @@
 #include "Launcher/widgets/pallete/pallete_explorer_widget.h"
 #include "Launcher/widgets/animation/frames_explorer_widget.h"
 #include "Launcher/widgets/animation/atlas_view.h"
+#include "Launcher/widgets/animation/atlas_view_control_panel.h"
 #include "DataFormat/data_format/int/data_reader.h"
 #include "DataFormat/data_format/int/code_reader.h"
 #include "DataFormat/data_format/txt/data_reader.h"
@@ -66,8 +67,8 @@ void WidgetMaker::addWidgetTab(WidgetResource type, std::shared_ptr<DataStream> 
 		auto splitter = new QSplitter(Qt::Horizontal);
 		splitter->addWidget(actionsPanel);
 		splitter->addWidget(widget);
-		splitter->setStretchFactor(0, 0);
-		splitter->setStretchFactor(1, 1);
+		splitter->setStretchFactor(0, 1);
+		splitter->setStretchFactor(1, 0);
 		widget = splitter;
 	}
 
@@ -117,20 +118,22 @@ void WidgetMaker::makePal(WidgetResource type, std::shared_ptr<DataStream> block
 }
 
 void WidgetMaker::makeFrm(WidgetResource type, std::shared_ptr<DataStream> block, const QString &suffix) {
-	auto result = std::make_unique<Proto::Animation>();
+	auto result = std::make_shared<Proto::Animation>();
 	DataFormat::Frm::DataReader reader(*block);
 	reader.read(*result, suffix);
 
 	auto palleteBlockOpt = _resources->getStream("master.dat", "color.pal");
 	auto palleteBlock = palleteBlockOpt.value()->makeBlockAsStream();
-	auto pallete = std::make_unique<Proto::Pallete>();
+	auto pallete = std::make_shared<Proto::Pallete>();
 	DataFormat::Pal::DataReader pallete_reader(*palleteBlock);
 	pallete_reader.read(*pallete);
 
 	//auto widget = new FramesExplorerWidget;
 	auto widget = new AtlasView;
-	widget->setup(*result, *pallete);
-	addWidgetTab(type, block, widget);
+	widget->setup(result, pallete);
+
+	auto panel = new AtlasViewControlPanel(widget);
+	addWidgetTab(type, block, widget, panel);
 }
 
 void WidgetMaker::makePro(WidgetResource type, std::shared_ptr<DataStream> block) {
