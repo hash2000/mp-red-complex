@@ -42,6 +42,7 @@ private:
 	void makePro(WidgetResource type, std::shared_ptr<DataStream> block);
 	void makeFrm(WidgetResource type, std::shared_ptr<DataStream> block, const QString &suffix);
 	void makePal(WidgetResource type, std::shared_ptr<DataStream> block);
+	void makeMap(WidgetResource type, std::shared_ptr<DataStream> block);
 
 private:
 	std::weak_ptr<StreamWidgetSelector> _selector;

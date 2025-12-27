@@ -20,6 +20,7 @@
 #include "DataFormat/data_format/pro/data_reader.h"
 #include "DataFormat/data_format/frm/data_reader.h"
 #include "DataFormat/data_format/pal/data_reader.h"
+#include "DataFormat/data_format/map/data_reader.h"
 #include <QWidget>
 #include <QSplitter>
 #include <QPlainTextEdit>
@@ -67,8 +68,8 @@ void WidgetMaker::addWidgetTab(WidgetResource type, std::shared_ptr<DataStream> 
 		auto splitter = new QSplitter(Qt::Horizontal);
 		splitter->addWidget(actionsPanel);
 		splitter->addWidget(widget);
-		splitter->setStretchFactor(0, 1);
-		splitter->setStretchFactor(1, 0);
+		splitter->setStretchFactor(0, 0);
+		splitter->setStretchFactor(1, 1);
 		widget = splitter;
 	}
 
@@ -104,7 +105,15 @@ void WidgetMaker::tryMake(WidgetResource type, const QString &suffix) {
 		case WidgetResource::Pro: makePro(type, block); break;
 		case WidgetResource::Frm: makeFrm(type, block, suffix); break;
 		case WidgetResource::Pal: makePal(type, block); break;
+		case WidgetResource::Map: makeMap(type, block); break;
 	}
+}
+
+void WidgetMaker::makeMap(WidgetResource type, std::shared_ptr<DataStream> block) {
+	auto result = std::make_unique<Proto::Map>();
+	DataFormat::Map::DataReader reader(*block);
+	reader.read(*result);
+
 }
 
 void WidgetMaker::makePal(WidgetResource type, std::shared_ptr<DataStream> block) {

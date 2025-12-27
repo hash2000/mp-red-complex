@@ -14,6 +14,7 @@ enum class WidgetResource {
 	Pro,
 	Frm,
 	Pal,
+	Map,
 };
 
 template <> struct Format<WidgetResource> {
@@ -41,6 +42,8 @@ template <> struct Format<WidgetResource> {
 			return QStringLiteral("frm");
 		case WidgetResource::Pal:
 			return QStringLiteral("pal");
+		case WidgetResource::Map:
+			return QStringLiteral("map");
     }
     return QStringLiteral("Unknown ressource");
   }
@@ -82,7 +85,9 @@ template <> struct From<WidgetResource> {
       return WidgetResource::Frm;
     } else if (value == QStringLiteral("pal")) {
       return WidgetResource::Pal;
-    }
+    } else if (value == QStringLiteral("map")) {
+			return WidgetResource::Map;
+		}
     return std::nullopt;
   }
 };

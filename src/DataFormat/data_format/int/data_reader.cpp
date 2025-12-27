@@ -34,7 +34,7 @@ namespace DataFormat::Int {
 			std::string name;
 
 			for (uint32_t i = 0; i < nameSize; i++, j++) {
-				const auto ch = _stream.i8();
+				const auto ch = _stream.i8(); // ???
 				if (ch != 0) {
 					name.push_back(ch);
 				}
