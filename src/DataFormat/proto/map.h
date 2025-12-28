@@ -1,4 +1,6 @@
 #pragma once
+#include "DataFormat/proto/pro.h"
+
 #include <cstdint>
 #include <QString>
 #include <vector>
@@ -24,6 +26,7 @@ namespace Proto {
 		uint32_t elevation;
 		uint32_t objectTypeId;
 		uint32_t objectId;
+		Proto::ObjectType objectType;
 
 		// (Only for in-battle .SAV) -1 for normal objects
 		int32_t combatId;

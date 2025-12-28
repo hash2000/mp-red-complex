@@ -209,7 +209,32 @@ namespace DataFormat::Map {
 		object.invetory.slotsCount = _stream.u32();
 		object.unknown12 = _stream.u32();
 		object.unknown13 = _stream.u32();
-		
+
+		switch ((Proto::ObjectType)object.objectTypeId) {
+		case Proto::ObjectType::Item:
+
+			break;
+		case Proto::ObjectType::Critter:
+
+			break;
+		case Proto::ObjectType::Scenary:
+
+			break;
+		case Proto::ObjectType::Wall:
+
+			break;
+		case Proto::ObjectType::Tile:
+
+			break;
+		case Proto::ObjectType::Misc:
+
+			break;
+		default:
+			throw std::runtime_error(QString("Exception in [%1], position [%2]. Unknown object type")
+				.arg(_stream.name())
+				.arg(_stream.position())
+				.toStdString());
+		}
 
 	}
 }

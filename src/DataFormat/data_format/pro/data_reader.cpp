@@ -24,7 +24,7 @@ namespace DataFormat::Pro {
 				reader.read(item);
 			}
 				break;
-      case Proto::ObjectType::Scenery:
+      case Proto::ObjectType::Scenary:
 				break;
       case Proto::ObjectType::Wall:
 				break;

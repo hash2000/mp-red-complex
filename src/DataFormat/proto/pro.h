@@ -8,7 +8,7 @@ namespace Proto {
 enum class ObjectType {
   Item = 0,
   Critter,
-  Scenery,
+  Scenary,
   Wall,
   Tile,
   Misc,
