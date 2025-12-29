@@ -35,8 +35,8 @@ void Config::setupPath()
 	config_path = QDir(configPath);
 
 	if (!QDir().mkpath(configPath)) {
-		QString msg = "Con't create config directiry [" + configPath + "]";
-		throw ConfigException(msg);
+		throw ConfigException(QString("Con't create config directiry [%1]")
+			.arg(configPath));
 	}
 }
 
