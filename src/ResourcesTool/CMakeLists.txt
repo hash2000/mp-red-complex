@@ -17,8 +17,6 @@ target_link_libraries(ResourcesTool
 		Qt6::OpenGL
 		Qt6::OpenGLWidgets
 
-		${ZLIB_LIBRARIES}
-
 		Base
 		Resources
 		DataFormat

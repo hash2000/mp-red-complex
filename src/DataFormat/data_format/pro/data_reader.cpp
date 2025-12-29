@@ -10,7 +10,7 @@ namespace DataFormat::Pro {
 		_stream.endianness(Endianness::Little);
 	}
 
-	std::shared_ptr<Entity> DataReader::read() {
+	std::shared_ptr<Proto::Entity> DataReader::read() {
 		Proto::ProtoHeader hdr;
 		hdr.type = static_cast<Proto::ObjectType>(_stream.u16());
 		hdr.frameId = _stream.u16();
@@ -39,7 +39,7 @@ namespace DataFormat::Pro {
 					.toStdString());
     }
 
-    return std::shared_ptr<Entity>();
+    return std::shared_ptr<Proto::Entity>();
 	}
 
 }

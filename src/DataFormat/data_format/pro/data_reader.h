@@ -1,5 +1,5 @@
 #pragma once
-#include "DataFormat/game/entity.h"
+#include "DataFormat/proto/pro.h"
 #include "DataStream/data_stream.h"
 #include <QString>
 #include <memory>
@@ -10,7 +10,7 @@ class DataReader {
 public:
   DataReader(DataStream &stream);
 
-  std::shared_ptr<Entity> read();
+  std::shared_ptr<Proto::Entity> read();
 
 private:
   DataStream &_stream;
