@@ -28,6 +28,9 @@ int Application::tryRun(int &argc, char **argv) {
 	fmt.setSamples(4);
   QSurfaceFormat::setDefaultFormat(fmt);
 
+	QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+	QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
+
 	Engine engine(argc, argv);
 	engine.configure(_config);
 	engine.setup(_config, _resources);
