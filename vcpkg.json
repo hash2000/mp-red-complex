@@ -9,6 +9,9 @@
 		},
 		{
 			"name": "zlib"
+		},
+		{
+			"name": "entt"
 		}
 	]
 }

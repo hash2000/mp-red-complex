@@ -9,7 +9,7 @@ SideBar::SideBar(QWidget* parent)
 	_layout->setSpacing(4);
 	_layout->setContentsMargins(8, 32, 8, 8);
 	_layout->addStretch();
-	setFixedWidth(64);
+	setFixedWidth(68);
 }
 
 void SideBar::addAction(SideBarAction* action)
@@ -19,7 +19,7 @@ void SideBar::addAction(SideBarAction* action)
 	btn->setToolTip(action->description());
 	btn->setIconSize(QSize(32, 32));
 	btn->setCheckable(true);
-	btn->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+	btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 	btn->setFixedSize(48, 48);
 
 	connect(btn, &QPushButton::clicked, this, [this, btn, action] {
