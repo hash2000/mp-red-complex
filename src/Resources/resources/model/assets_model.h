@@ -7,6 +7,8 @@ enum class AssetsViewItemRole : int {
 	FullPath = Qt::UserRole + 1,
 	Suffix = Qt::UserRole + 2,
 	Type = Qt::UserRole + 3,
+	PathPart = Qt::UserRole + 4,
+	DummyItem = Qt::UserRole + 4,
 };
 
 enum class AssetsViewItemType : unsigned char {

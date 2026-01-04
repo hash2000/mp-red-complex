@@ -2,7 +2,9 @@
 #include "ResourcesTool/main_frame/resources_viewer/widget_maker.h"
 #include "ResourcesTool/main_frame/resources_viewer/menu_actions_builder.h"
 #include "ResourcesTool/widgets/home/home_page_widget.h"
-#include "Resources/resources/model/assets_model_builder.h"
+#include "Resources/resources/model/assets_model_builder_recursive.h"
+#include "Resources/resources/model/assets_model_builder_linear.h"
+#include "Resources/resources/model/assets_model_builder_linear_root.h"
 #include <QSplitter>
 #include <QFileInfo>
 #include <QMessageBox>
@@ -67,7 +69,7 @@ void ResourcesViewerFrame::populateAssetsTree() {
 	_assetsModel->clear();
 	_assetsModel->setHorizontalHeaderLabels({"Assets"});
 
-	AssetsModelBuilder(_assetsModel->invisibleRootItem(), _resources)
+	AssetsModelBuilderRecursive(_assetsModel->invisibleRootItem(), _resources)
 		.build();
 }
 
@@ -95,6 +97,8 @@ void ResourcesViewerFrame::setupAssetsTree() {
 		this, &ResourcesViewerFrame::onCustomContextMenuRequested);
 	connect(_assetsView, &QTreeView::doubleClicked,
 		this, &ResourcesViewerFrame::onItemDoubleClicked);
+	connect(_assetsView, &QTreeView::expanded,
+		this, &ResourcesViewerFrame::onAssetsTreeExpand);
 }
 
 void ResourcesViewerFrame::onItemDoubleClicked(const QModelIndex &index) {
@@ -114,6 +118,11 @@ void ResourcesViewerFrame::onBeforeStreamSelection(const QString& suffix, std::o
 	}
 
 	_widgetMaker->make(type.value(), suffix);
+}
+
+void ResourcesViewerFrame::onAssetsTreeExpand(const QModelIndex& index) {
+	//AssetsModelBuilderLinear(_assetsModel->itemFromIndex(index), _resources)
+	//	.build();
 }
 
 void ResourcesViewerFrame::onCustomContextMenuRequested(const QPoint &pos) {

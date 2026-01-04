@@ -39,6 +39,7 @@ private slots:
 	void onContainerExtract();
 	void onBeforeStreamSelection(const QString& suffix,
 		std::optional<std::shared_ptr<DataStream>> stream);
+	void onAssetsTreeExpand(const QModelIndex& index);
 
 private:
 	std::shared_ptr<Resources> _resources;
