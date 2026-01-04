@@ -1,4 +1,5 @@
 #include "Resources/resources/model/assets_model_builder_linear.h"
+#include "Resources/resources/model/assets_model_builder_recursive.h"
 #include "Resources/resources/model/assets_model.h"
 #include "Base/scoped_timer.h"
 
@@ -18,11 +19,31 @@ void AssetsModelBuilderLinear::build() {
 
 		_parent->removeRow(0);
 	}
+	else {
+		return;
+	}
 
-	const auto name = _parent->data(static_cast<int>(AssetsViewItemRole::ContainerName)).toString();
-	const auto type = _parent->data(static_cast<int>(AssetsViewItemRole::Type));
-	const auto items = _resources->items();
-	
+	const auto type = _parent->data(static_cast<int>(AssetsViewItemRole::Type)).value<AssetsViewItemType>();
+
+	if (type == AssetsViewItemType::Container) {
+		const auto name = _parent->data(static_cast<int>(AssetsViewItemRole::ContainerName)).toString();
+		for (const auto& res : _resources->items()) {
+			if (res.name() != name) {
+				continue;
+			}
+
+			switch(res.type()) {
+			case ContainerType::Repository_v1:
+				AssetsModelBuilderRecursive(_parent, res)
+					.build();
+				return;
+			case ContainerType::Directory:
+				AssetsModelBuilderRecursive(_parent, res)
+					.build();
+				break;
+			}
+		}
+	}
 
 }
 

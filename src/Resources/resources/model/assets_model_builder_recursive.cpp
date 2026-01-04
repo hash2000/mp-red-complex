@@ -2,16 +2,20 @@
 #include "Resources/resources/model/assets_model.h"
 #include "Base/scoped_timer.h"
 
-AssetsModelBuilderRecursive::AssetsModelBuilderRecursive(QStandardItem *parent,
-	const std::shared_ptr<Resources>& resources)
+AssetsModelBuilderRecursive::AssetsModelBuilderRecursive(QStandardItem *parent, const DataStreamContainer& container)
 	: _parent(parent)
-	, _resources(resources) {
+	, _container(container) {
 }
 
 void AssetsModelBuilderRecursive::build() {
-	for(const auto &res : _resources->items()) {
-		ScopedTimer watch(QString("Build files tree for resource %1").arg(res.name()));
-		buildFromContainer(res);
+	ScopedTimer watch(QString("Build files tree for resource %1")
+		.arg(_container.name()));
+
+	_treeCache.clear();
+
+	for (const auto& item : _container.items()) {
+		const auto& name = item.name();
+		buildItemsFromPath(_parent, name);
 	}
 }
 
@@ -35,37 +39,6 @@ QStandardItem *AssetsModelBuilderRecursive::createItemPart(QStandardItem *parent
 	}
 
 	return part;
-}
-
-void AssetsModelBuilderRecursive::buildFromContainer(const DataStreamContainer &container) {
-	_treeCache.clear();
-
-	QString suffix = "";
-	switch (container.type()) {
-	case ContainerType::Repository_v1:
-		suffix = "*";
-		break;
-	case ContainerType::Directory:
-		suffix = "[_]";
-		break;
-	case ContainerType::Undefined:
-		break;
-	}
-
-	const auto name = QString("%1 %2")
-		.arg(container.name())
-		.arg(suffix);
-
-	auto containerItem = new QStandardItem(name);
-	containerItem->setData(container.name(), static_cast<int>(AssetsViewItemRole::ContainerName));
-	containerItem->setData((unsigned char)AssetsViewItemType::Container, static_cast<int>(AssetsViewItemRole::Type));
-	containerItem->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::DriveHarddisk));
-	_parent->appendRow(containerItem);
-
-	for(const auto &item : container.items()) {
-		const auto &name = item.name();
-		buildItemsFromPath(containerItem, name);
-	}
 }
 
 void AssetsModelBuilderRecursive::buildItemsFromPath(QStandardItem *parent, const QString& fullPath) {

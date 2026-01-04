@@ -2,7 +2,6 @@
 #include "ResourcesTool/main_frame/resources_viewer/widget_maker.h"
 #include "ResourcesTool/main_frame/resources_viewer/menu_actions_builder.h"
 #include "ResourcesTool/widgets/home/home_page_widget.h"
-#include "Resources/resources/model/assets_model_builder_recursive.h"
 #include "Resources/resources/model/assets_model_builder_linear.h"
 #include "Resources/resources/model/assets_model_builder_linear_root.h"
 #include <QSplitter>
@@ -69,7 +68,7 @@ void ResourcesViewerFrame::populateAssetsTree() {
 	_assetsModel->clear();
 	_assetsModel->setHorizontalHeaderLabels({"Assets"});
 
-	AssetsModelBuilderRecursive(_assetsModel->invisibleRootItem(), _resources)
+	AssetsModelBuilderLinearRoot(_assetsModel->invisibleRootItem(), _resources)
 		.build();
 }
 
@@ -121,8 +120,8 @@ void ResourcesViewerFrame::onBeforeStreamSelection(const QString& suffix, std::o
 }
 
 void ResourcesViewerFrame::onAssetsTreeExpand(const QModelIndex& index) {
-	//AssetsModelBuilderLinear(_assetsModel->itemFromIndex(index), _resources)
-	//	.build();
+	AssetsModelBuilderLinear(_assetsModel->itemFromIndex(index), _resources)
+		.build();
 }
 
 void ResourcesViewerFrame::onCustomContextMenuRequested(const QPoint &pos) {

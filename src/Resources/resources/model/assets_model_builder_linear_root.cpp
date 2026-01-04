@@ -16,8 +16,21 @@ void AssetsModelBuilderLinearRoot::build() {
 }
 
 void AssetsModelBuilderLinearRoot::buildFromContainer(const DataStreamContainer& container) {
-	const auto name = QString("%1 *")
-		.arg(container.name());
+	QString suffix = "";
+	switch (container.type()) {
+	case ContainerType::Repository_v1:
+		suffix = "*";
+		break;
+	case ContainerType::Directory:
+		suffix = "[_]";
+		break;
+	case ContainerType::Undefined:
+		break;
+	}
+
+	const auto name = QString("%1 %2")
+		.arg(container.name())
+		.arg(suffix);
 
 	auto containerItem = new QStandardItem(name);
 	containerItem->setData(container.name(), static_cast<int>(AssetsViewItemRole::ContainerName));
