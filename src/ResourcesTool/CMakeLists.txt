@@ -18,8 +18,11 @@ target_link_libraries(ResourcesTool
 		Qt6::OpenGLWidgets
 
 		Base
+		BaseWidgets
 		Resources
 		DataFormat
 		Engine
+		Content.MapEditor
+		Content.ParticlesEditor
 )
 

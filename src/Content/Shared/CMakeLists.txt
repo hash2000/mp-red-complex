@@ -1,7 +1,7 @@
 message(STATUS "> Build Content.Shared")
 
 set(ContentShared-Sources
-	${RedComplex_SOURCE_DIR}/src/Shared
+	${RedComplex_SOURCE_DIR}/src/Content/Shared
 )
 
 file(GLOB_RECURSE SRCS ${ContentShared-Sources}/*.cpp)

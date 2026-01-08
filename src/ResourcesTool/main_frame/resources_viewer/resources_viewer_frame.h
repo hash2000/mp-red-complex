@@ -28,8 +28,9 @@ private:
 	void setupView();
 	void populateAssetsTree();
 	void configureAssetsTree();
-	void AttachMenuAction(QMenu &menu, const QString &name, void (ResourcesViewerFrame::*slot)());
-	void CloseTabByIndex(int index);
+	void attachMenuAction(QMenu &menu, const QString &name, void (ResourcesViewerFrame::*slot)());
+	void closeTabByIndex(int index);
+	void createTab(QWidget* widget, const QString& type, const QString& id, const QString& title);
 
 private slots:
 	void onItemDoubleClicked(const QModelIndex &index);
@@ -40,6 +41,7 @@ private slots:
 	void onBeforeStreamSelection(const QString& suffix,
 		std::optional<std::shared_ptr<DataStream>> stream);
 	void onAssetsTreeExpand(const QModelIndex& index);
+	void onRequestTabCreation(const QVariantMap& params);
 
 private:
 	std::shared_ptr<Resources> _resources;

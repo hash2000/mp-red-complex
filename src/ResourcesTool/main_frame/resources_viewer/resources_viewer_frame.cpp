@@ -4,12 +4,14 @@
 #include "ResourcesTool/widgets/home/home_page_widget.h"
 #include "Resources/resources/model/assets_model_builder_linear.h"
 #include "Resources/resources/model/assets_model_builder_linear_root.h"
+#include "ResourcesTool/main_frame/resources_viewer/widget_factory.h"
 #include <QSplitter>
 #include <QFileInfo>
 #include <QMessageBox>
 #include <QInputDialog>
 #include <QPushButton>
 #include <qnamespace.h>
+#include <QUuid>
 
 ResourcesViewerFrame::ResourcesViewerFrame(std::shared_ptr<Resources> resources)
 	: _resources(resources)
@@ -34,22 +36,29 @@ void ResourcesViewerFrame::setupTabs() {
 	_centerTabs->setTabsClosable(true);
 
 	connect(_centerTabs, &QTabWidget::tabCloseRequested, [&](int index) {
-		CloseTabByIndex(index);		
+		closeTabByIndex(index);		
 	});
 
 	connect(_centerTabs, &QTabWidget::tabBarClicked, [&](int index) {
 		Qt::MouseButtons buttons = QGuiApplication::mouseButtons();
 		if (buttons & Qt::MiddleButton) {
-			CloseTabByIndex(index);
+			closeTabByIndex(index);
 		}
 	});
 }
 
 void ResourcesViewerFrame::setupHomaPageTab() {
-	auto widget = new HomePageWidget;
-	widget->setProperty("tab.type", "home_page");
-	widget->setProperty("tab.id", "page://home");
-	const auto index = _centerTabs->addTab(widget, "Home");
+	auto widget = new HomePageWidget(this);
+	createTab(widget, "home_page", "home", "Home");
+
+	connect(widget, &HomePageWidget::requestTabCreation,
+		this, &ResourcesViewerFrame::onRequestTabCreation);
+}
+
+void ResourcesViewerFrame::createTab(QWidget* widget, const QString& type, const QString& id, const QString& title) {
+	widget->setProperty("tab.type", type);
+	widget->setProperty("tab.id", QString("page://%1").arg(id));
+	const auto index = _centerTabs->addTab(widget, title);
 	_centerTabs->setCurrentIndex(index);
 }
 
@@ -62,6 +71,20 @@ void ResourcesViewerFrame::setupView() {
 
   setCentralWidget(splitter);
   setWindowTitle("Asset Manager");
+}
+
+void ResourcesViewerFrame::onRequestTabCreation(const QVariantMap& params) {
+	const auto type = params.value("type").toString();
+	const auto title = params.value("description").toString();
+	const auto id = QUuid::createUuid().toString();
+
+	WidgetsFactory factory(params);
+	auto widget = factory.create(this);
+	if (widget == nullptr) {
+		return;
+	}
+
+	createTab(widget, type, id, title);
 }
 
 void ResourcesViewerFrame::populateAssetsTree() {
@@ -140,14 +163,14 @@ void ResourcesViewerFrame::onCustomContextMenuRequested(const QPoint &pos) {
 	_selector->setSelection(item);
 	auto menu = builder.Build(_selector->getType(), _selector->getSuffix());
 	if (!menu->actions().isEmpty()) {
-		AttachMenuAction(*menu, "action_hex_view", &ResourcesViewerFrame::onItemMenuHexView);
-		AttachMenuAction(*menu, "action_text_view", &ResourcesViewerFrame::onItemMenuTextView);
-		AttachMenuAction(*menu, "action_extract_container_to", &ResourcesViewerFrame::onContainerExtract);
+		attachMenuAction(*menu, "action_hex_view", &ResourcesViewerFrame::onItemMenuHexView);
+		attachMenuAction(*menu, "action_text_view", &ResourcesViewerFrame::onItemMenuTextView);
+		attachMenuAction(*menu, "action_extract_container_to", &ResourcesViewerFrame::onContainerExtract);
 		menu->exec(_assetsView->viewport()->mapToGlobal(pos));
 	}
 }
 
-void ResourcesViewerFrame::AttachMenuAction(QMenu &menu, const QString &name, void (ResourcesViewerFrame::*slot)()) {
+void ResourcesViewerFrame::attachMenuAction(QMenu &menu, const QString &name, void (ResourcesViewerFrame::*slot)()) {
 	for (QAction *action : menu.actions()) {
 	  if (action->objectName() == name) {
 	    connect(action, &QAction::triggered, this, slot);
@@ -156,7 +179,7 @@ void ResourcesViewerFrame::AttachMenuAction(QMenu &menu, const QString &name, vo
 	}
 }
 
-void ResourcesViewerFrame::CloseTabByIndex(int index)
+void ResourcesViewerFrame::closeTabByIndex(int index)
 {
 	const auto widget = _centerTabs->widget(index);
 	const auto type = widget->property("tab.type");
