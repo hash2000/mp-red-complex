@@ -1,5 +1,5 @@
 #include "ResourcesTool/main_frame/resources_viewer/resources_viewer_frame.h"
-#include "ResourcesTool/main_frame/resources_viewer/widget_maker.h"
+#include "ResourcesTool/main_frame/resources_viewer/resource_type_widget_builder.h"
 #include "ResourcesTool/main_frame/resources_viewer/menu_actions_builder.h"
 #include "ResourcesTool/widgets/home/home_page_widget.h"
 #include "Resources/resources/model/assets_model_builder_linear.h"
@@ -19,7 +19,6 @@ ResourcesViewerFrame::ResourcesViewerFrame(std::shared_ptr<Resources> resources)
 	, _assetsView(new QTreeView)
 	, _centerTabs(new QTabWidget) {
 	setupSelector();
-	setupWidgetMaker();
 	setupAssetsTree();
 	setupTabs();
 	setupHomaPageTab();
@@ -28,23 +27,8 @@ ResourcesViewerFrame::ResourcesViewerFrame(std::shared_ptr<Resources> resources)
 	configureAssetsTree();
 }
 
-void ResourcesViewerFrame::setupWidgetMaker() {
-	_widgetMaker = std::make_unique<WidgetMaker>(_selector, _resources, _centerTabs);
-}
-
 void ResourcesViewerFrame::setupTabs() {
-	_centerTabs->setTabsClosable(true);
-
-	connect(_centerTabs, &QTabWidget::tabCloseRequested, [&](int index) {
-		closeTabByIndex(index);		
-	});
-
-	connect(_centerTabs, &QTabWidget::tabBarClicked, [&](int index) {
-		Qt::MouseButtons buttons = QGuiApplication::mouseButtons();
-		if (buttons & Qt::MiddleButton) {
-			closeTabByIndex(index);
-		}
-	});
+	_tabs = std::make_shared<TabsController>(_centerTabs, _resources);
 }
 
 void ResourcesViewerFrame::setupHomaPageTab() {
@@ -101,7 +85,7 @@ void ResourcesViewerFrame::configureAssetsTree() {
 }
 
 void ResourcesViewerFrame::setupSelector() {
-	_selector = std::make_shared<StreamWidgetSelector>(_resources);
+	_selector = std::make_shared<StreamWidgetSelector>();
 
 	connect(_selector.get(), &StreamWidgetSelector::beforeStreamSelection,
 		this, &ResourcesViewerFrame::onBeforeStreamSelection);
@@ -134,12 +118,8 @@ void ResourcesViewerFrame::onBeforeStreamSelection(const QString& suffix, std::o
 		return;
 	}
 
-	const auto type = From<WidgetResource>::from(suffix);
-	if (!type) {
-		return;
-	}
-
-	_widgetMaker->make(type.value(), suffix);
+	ResourceTypeWidgetBuilder builder(_selector, _resources, _centerTabs);
+	builder.build(suffix);
 }
 
 void ResourcesViewerFrame::onAssetsTreeExpand(const QModelIndex& index) {
@@ -158,10 +138,10 @@ void ResourcesViewerFrame::onCustomContextMenuRequested(const QPoint &pos) {
 		return;
 	}
 
-	MenuActionsBuilder builder(this);
-
 	_selector->setSelection(item);
-	auto menu = builder.Build(_selector->getType(), _selector->getSuffix());
+
+	MenuActionsBuilder builder(this, _selector);
+	auto menu = builder.Build();
 	if (!menu->actions().isEmpty()) {
 		attachMenuAction(*menu, "action_hex_view", &ResourcesViewerFrame::onItemMenuHexView);
 		attachMenuAction(*menu, "action_text_view", &ResourcesViewerFrame::onItemMenuTextView);
@@ -179,24 +159,14 @@ void ResourcesViewerFrame::attachMenuAction(QMenu &menu, const QString &name, vo
 	}
 }
 
-void ResourcesViewerFrame::closeTabByIndex(int index)
-{
-	const auto widget = _centerTabs->widget(index);
-	const auto type = widget->property("tab.type");
-	if (type == "home_page") {
-		return;
-	}
-
-
-	_centerTabs->removeTab(index);
-}
-
 void ResourcesViewerFrame::onItemMenuHexView() {
-	_widgetMaker->make(WidgetResource::Hex, "");
+	ResourceTypeWidgetBuilder builder(_selector, _resources, _centerTabs);
+	builder.build("hex");
 }
 
 void ResourcesViewerFrame::onItemMenuTextView() {
-	_widgetMaker->make(WidgetResource::Text, "");
+	ResourceTypeWidgetBuilder builder(_selector, _resources, _centerTabs);
+	builder.build("txt");
 }
 
 void ResourcesViewerFrame::onContainerExtract() {

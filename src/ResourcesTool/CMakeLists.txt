@@ -24,5 +24,6 @@ target_link_libraries(ResourcesTool
 		Engine
 		Content.MapEditor
 		Content.ParticlesEditor
+		Content.ShaderEditor
 )
 

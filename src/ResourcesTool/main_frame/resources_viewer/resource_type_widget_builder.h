@@ -7,19 +7,19 @@
 #include <QTabWidget>
 #include <memory>
 
-class WidgetMaker: public QObject {
+class ResourceTypeWidgetBuilder: public QObject {
 	Q_OBJECT
 public:
-	WidgetMaker(
-		std::weak_ptr<StreamWidgetSelector> selector,
+	ResourceTypeWidgetBuilder(
+		std::shared_ptr<StreamWidgetSelector> selector,
 		std::shared_ptr<Resources> resources,
 		QTabWidget *centerTabs);
 
-	void make(WidgetResource type, const QString &suffix);
+	void build(const QString &suffix);
 	bool selectTabByName(const QString &name);
 
 private:
-	void tryMake(WidgetResource type, const QString &suffix);
+	void tryBuild(const QString &suffix);
 
 private slots:
 	void onSelectProcedure(
@@ -29,7 +29,7 @@ private slots:
 
 private:
 	void clearLayout(QVBoxLayout *layout);
-	void addWidgetTab(WidgetResource type, std::shared_ptr<DataStream> block, QWidget *widget, QWidget *actionsPanel = nullptr);
+	void addWidgetTab(WidgetResource type, std::shared_ptr<DataStream> block, QWidget *widget);
 
 	void makeHex(WidgetResource type, std::shared_ptr<DataStream> block);
 	void makeText(WidgetResource type, std::shared_ptr<DataStream> block);
@@ -45,7 +45,7 @@ private:
 	void makeMap(WidgetResource type, std::shared_ptr<DataStream> block);
 
 private:
-	std::weak_ptr<StreamWidgetSelector> _selector;
+	std::shared_ptr<StreamWidgetSelector> _selector;
 	std::shared_ptr<Resources> _resources;
 	QTabWidget *_centerTabs;
 	//QVBoxLayout *_actionsLayout;

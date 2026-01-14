@@ -10,7 +10,7 @@ MessagesExplorerWidget::MessagesExplorerWidget(
 	std::unique_ptr<Proto::Messages> data,
 	std::shared_ptr<DataStream> stream,
 	QWidget* parent)
-  : QWidget(parent)
+ : BaseTabWidget(parent)
 	, _stream(stream)
   , _model(new MessagesTableModel(this))
   , _proxyModel(new QSortFilterProxyModel(this))

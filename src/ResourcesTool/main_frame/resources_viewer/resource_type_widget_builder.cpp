@@ -1,4 +1,5 @@
-#include "ResourcesTool/main_frame/resources_viewer/widget_maker.h"
+#include "ResourcesTool/main_frame/resources_viewer/resource_type_widget_builder.h"
+#include "ResourcesTool/main_frame/resources_viewer/widget_resources.h"
 #include "Base/format.h"
 #include "DataFormat/data_format/gcd/data_reader.h"
 #include "DataFormat/proto/gcd.h"
@@ -7,9 +8,7 @@
 #include "ResourcesTool/widgets/procedure/procedure_explorer_widget.h"
 #include "ResourcesTool/widgets/messages/messages_explorer_widget.h"
 #include "ResourcesTool/widgets/pallete/pallete_explorer_widget.h"
-#include "ResourcesTool/widgets/animation/frames_explorer_widget.h"
-#include "ResourcesTool/widgets/animation/atlas_view.h"
-#include "ResourcesTool/widgets/animation/atlas_view_control_panel.h"
+#include "ResourcesTool/widgets/animation/atlas_widget.h"
 #include "DataFormat/data_format/int/data_reader.h"
 #include "DataFormat/data_format/int/code_reader.h"
 #include "DataFormat/data_format/txt/data_reader.h"
@@ -25,8 +24,8 @@
 #include <QSplitter>
 #include <QPlainTextEdit>
 
-WidgetMaker::WidgetMaker(
-	std::weak_ptr<StreamWidgetSelector> selector,
+ResourceTypeWidgetBuilder::ResourceTypeWidgetBuilder(
+	std::shared_ptr<StreamWidgetSelector> selector,
 	std::shared_ptr<Resources> resources,
 	QTabWidget *centerTabs)
 : QObject()
@@ -35,15 +34,15 @@ WidgetMaker::WidgetMaker(
 , _centerTabs(centerTabs) {
 }
 
-void WidgetMaker::make(WidgetResource type, const QString &suffix) {
+void ResourceTypeWidgetBuilder::build(const QString &suffix) {
 	try {
-		tryMake(type, suffix);
+		tryBuild(suffix);
 	} catch (std::exception &exc) {
 		qDebug() << "Exception: " << exc.what();
 	}
 }
 
-bool WidgetMaker::selectTabByName(const QString &name) {
+bool ResourceTypeWidgetBuilder::selectTabByName(const QString &name) {
 	for (int i = 0; i < _centerTabs->count(); i++) {
 		const auto widget = _centerTabs->widget(i);
 		if (widget && widget->property("tab.id") == name) {
@@ -54,7 +53,8 @@ bool WidgetMaker::selectTabByName(const QString &name) {
 	return false;
 }
 
-void WidgetMaker::addWidgetTab(WidgetResource type, std::shared_ptr<DataStream> block, QWidget *widget, QWidget *actionsPanel) {
+void ResourceTypeWidgetBuilder::addWidgetTab(WidgetResource type, std::shared_ptr<DataStream> block, QWidget *widget) {
+
 	const auto typeName = Format<WidgetResource>::format(type);
 	const auto tabName = QString("%1://%2")
 		.arg(typeName)
@@ -64,28 +64,21 @@ void WidgetMaker::addWidgetTab(WidgetResource type, std::shared_ptr<DataStream> 
 		return;
 	}
 
-	if (actionsPanel) {
-		auto splitter = new QSplitter(Qt::Horizontal);
-		splitter->addWidget(actionsPanel);
-		splitter->addWidget(widget);
-		splitter->setStretchFactor(0, 0);
-		splitter->setStretchFactor(1, 1);
-		widget = splitter;
-	}
-
 	widget->setProperty("tab.id", tabName);
 
 	const auto index = _centerTabs->addTab(widget, block->name());
 	_centerTabs->setCurrentIndex(index);
 }
 
-void WidgetMaker::tryMake(WidgetResource type, const QString &suffix) {
-	auto sel = _selector.lock();
-	if (!sel) {
+void ResourceTypeWidgetBuilder::tryBuild(const QString &suffix) {
+
+	const auto typeOpt = From<WidgetResource>::from(suffix);
+	if (!typeOpt) {
 		return;
 	}
 
-	auto streamOpt = sel->getStream(*_resources);
+	const auto type = typeOpt.value();
+	auto streamOpt = _selector->getStream(*_resources);
 	if (!streamOpt) {
 		return;
 	}
@@ -109,14 +102,14 @@ void WidgetMaker::tryMake(WidgetResource type, const QString &suffix) {
 	}
 }
 
-void WidgetMaker::makeMap(WidgetResource type, std::shared_ptr<DataStream> block) {
+void ResourceTypeWidgetBuilder::makeMap(WidgetResource type, std::shared_ptr<DataStream> block) {
 	auto result = std::make_unique<Proto::Map>();
 	DataFormat::Map::DataReader reader(*block);
 	reader.read(*result);
 
 }
 
-void WidgetMaker::makePal(WidgetResource type, std::shared_ptr<DataStream> block) {
+void ResourceTypeWidgetBuilder::makePal(WidgetResource type, std::shared_ptr<DataStream> block) {
 	auto result = std::make_unique<Proto::Pallete>();
 	DataFormat::Pal::DataReader reader(*block);
 	reader.read(*result);
@@ -126,7 +119,7 @@ void WidgetMaker::makePal(WidgetResource type, std::shared_ptr<DataStream> block
 	addWidgetTab(type, block, widget);
 }
 
-void WidgetMaker::makeFrm(WidgetResource type, std::shared_ptr<DataStream> block, const QString &suffix) {
+void ResourceTypeWidgetBuilder::makeFrm(WidgetResource type, std::shared_ptr<DataStream> block, const QString &suffix) {
 	auto result = std::make_shared<Proto::Animation>();
 	DataFormat::Frm::DataReader reader(*block);
 	reader.read(*result, suffix);
@@ -137,39 +130,35 @@ void WidgetMaker::makeFrm(WidgetResource type, std::shared_ptr<DataStream> block
 	DataFormat::Pal::DataReader pallete_reader(*palleteBlock);
 	pallete_reader.read(*pallete);
 
-	//auto widget = new FramesExplorerWidget;
-	auto widget = new AtlasView;
-	widget->setup(result, pallete);
-
-	auto panel = new AtlasViewControlPanel(widget);
-	addWidgetTab(type, block, widget, panel);
+	auto widget = new AtlasWidget(result, pallete);
+	addWidgetTab(type, block, widget);
 }
 
-void WidgetMaker::makePro(WidgetResource type, std::shared_ptr<DataStream> block) {
+void ResourceTypeWidgetBuilder::makePro(WidgetResource type, std::shared_ptr<DataStream> block) {
 	DataFormat::Pro::DataReader reader(*block);
 	auto result = reader.read();
 }
 
-void WidgetMaker::makeGam(WidgetResource type, std::shared_ptr<DataStream> block) {
+void ResourceTypeWidgetBuilder::makeGam(WidgetResource type, std::shared_ptr<DataStream> block) {
 	auto result = std::make_unique<Proto::GlobalVariables>();
 	DataFormat::Gam::DataReader reader(*block);
 	reader.read(*result);
 }
 
-void WidgetMaker::makeGcd(WidgetResource type, std::shared_ptr<DataStream> block) {
+void ResourceTypeWidgetBuilder::makeGcd(WidgetResource type, std::shared_ptr<DataStream> block) {
 	auto result = std::make_unique<Proto::Character>();
 	DataFormat::Gcd::DataReader reader(*block);
 	reader.read(*result);
 }
 
-void WidgetMaker::makeSve(WidgetResource type, std::shared_ptr<DataStream> block) {
+void ResourceTypeWidgetBuilder::makeSve(WidgetResource type, std::shared_ptr<DataStream> block) {
 	auto result = std::make_unique<Proto::ScriptEntries>();
 	DataFormat::Sve::DataReader reader(*block);
 	reader.read(*result);
 
 }
 
-void WidgetMaker::makeBio(WidgetResource type, std::shared_ptr<DataStream> block) {
+void ResourceTypeWidgetBuilder::makeBio(WidgetResource type, std::shared_ptr<DataStream> block) {
 	QString result;
 	DataFormat::Bio::DataReader reader(*block);
 	reader.read(result);
@@ -180,19 +169,19 @@ void WidgetMaker::makeBio(WidgetResource type, std::shared_ptr<DataStream> block
 	addWidgetTab(type, block, widget);
 }
 
-void WidgetMaker::makeInt(WidgetResource type, std::shared_ptr<DataStream> block) {
+void ResourceTypeWidgetBuilder::makeInt(WidgetResource type, std::shared_ptr<DataStream> block) {
 	auto result = std::make_unique<Proto::Programmability>();
 	DataFormat::Int::DataReader reader(*block);
 	reader.read(*result);
 
 	auto widget = new ProcedureExplorerWidget(std::move(result), block);
 	connect(widget, &ProcedureExplorerWidget::selectProcedure,
-		this, &WidgetMaker::onSelectProcedure);
+		this, &ResourceTypeWidgetBuilder::onSelectProcedure);
 
 	addWidgetTab(type, block, widget);
 }
 
-void WidgetMaker::makeMsg(WidgetResource type, std::shared_ptr<DataStream> block) {
+void ResourceTypeWidgetBuilder::makeMsg(WidgetResource type, std::shared_ptr<DataStream> block) {
 	auto result = std::make_unique<Proto::Messages>();
 	DataFormat::Msg::DataReader reader(*block);
 	reader.read(*result);
@@ -202,7 +191,7 @@ void WidgetMaker::makeMsg(WidgetResource type, std::shared_ptr<DataStream> block
 	addWidgetTab(type, block, widget);
 }
 
-void WidgetMaker::makeText(WidgetResource type, std::shared_ptr<DataStream> block) {
+void ResourceTypeWidgetBuilder::makeText(WidgetResource type, std::shared_ptr<DataStream> block) {
 	QString result;
 	DataFormat::Txt::DataReader reader( *block);
 	reader.read(result);
@@ -213,17 +202,13 @@ void WidgetMaker::makeText(WidgetResource type, std::shared_ptr<DataStream> bloc
 	addWidgetTab(type, block, widget);
 }
 
-void WidgetMaker::makeHex(WidgetResource type, std::shared_ptr<DataStream> block) {
-	auto byteBlock = block->readBlockAsQByteArray();
-	auto widget = new HexDumpWidget;
-	widget->setData(byteBlock);
+void ResourceTypeWidgetBuilder::makeHex(WidgetResource type, std::shared_ptr<DataStream> block) {
+	auto widget = new HexDumpWidget(block);
 
-	auto panel = new HexControlPanel(widget, block);
-
-	addWidgetTab(type, block, widget, panel);
+	addWidgetTab(type, block, widget);
 }
 
-void WidgetMaker::clearLayout(QVBoxLayout *layout) {
+void ResourceTypeWidgetBuilder::clearLayout(QVBoxLayout *layout) {
   QLayoutItem *item;
   while ((item = layout->takeAt(0)) != nullptr) {
     if (item->widget()) {
@@ -234,7 +219,7 @@ void WidgetMaker::clearLayout(QVBoxLayout *layout) {
   }
 }
 
-void WidgetMaker::onSelectProcedure(
+void ResourceTypeWidgetBuilder::onSelectProcedure(
 	DataStream &stream,
 	Proto::Programmability &prog,
 	Proto::Procedure &proc)

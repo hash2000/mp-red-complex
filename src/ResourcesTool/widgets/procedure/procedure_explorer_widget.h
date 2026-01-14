@@ -1,4 +1,5 @@
 #pragma once
+#include "ResourcesTool/widgets/base_tab_widget.h"
 #include "DataFormat/proto/procedure.h"
 #include "DataStream/data_stream.h"
 #include <QWidget>
@@ -7,7 +8,7 @@
 #include <memory>
 
 class ProcedureTableModel;
-class ProcedureExplorerWidget : public QWidget {
+class ProcedureExplorerWidget : public BaseTabWidget {
   Q_OBJECT
 
 public:

@@ -2,7 +2,7 @@
 #include <QPushButton>
 
 HomePageWidget::HomePageWidget(MainFrame* mainFrame, QWidget* parent)
-: QWidget(parent)
+: BaseTabWidget(parent)
 , _mainFrame(mainFrame) {
 	_flowArea = new FlowLayout;
 	_flowArea->setSpacing(12);
@@ -28,6 +28,11 @@ void HomePageWidget::setupButtons() {
 	addButton(QVariantMap{
 		{"description", "Particles editor"},
 		{"type", "particles_editor"},
+		});
+
+	addButton(QVariantMap{
+		{"description", "Shaders editor"},
+		{"type", "shaders_editor"},
 		});
 }
 

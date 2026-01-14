@@ -2,7 +2,7 @@
 #include <QVBoxLayout>
 
 PalleteExplorerWidget::PalleteExplorerWidget(QWidget *parent)
-	: QWidget(parent) {
+: BaseTabWidget(parent) {
 
   auto layout = new QVBoxLayout(this);
   layout->setContentsMargins(0, 0, 0, 0);

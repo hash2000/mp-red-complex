@@ -19,6 +19,8 @@ target_link_libraries(Content.ParticlesEditor
 		Qt6::Core
 		Qt6::Gui
 		Qt6::Widgets
+		Qt6::OpenGL
+		Qt6::OpenGLWidgets
 
 		Base
 		DataFormat

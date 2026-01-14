@@ -10,7 +10,7 @@ ProcedureExplorerWidget::ProcedureExplorerWidget(
 	std::unique_ptr<Proto::Programmability> data,
 	std::shared_ptr<DataStream> stream,
 	QWidget* parent)
-  : QWidget(parent)
+  : BaseTabWidget(parent)
 	, _data(std::move(data))
 	, _stream(stream)
   , _model(new ProcedureTableModel(this))

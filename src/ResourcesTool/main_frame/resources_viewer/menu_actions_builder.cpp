@@ -1,10 +1,12 @@
 #include "ResourcesTool/main_frame/resources_viewer/menu_actions_builder.h"
 
-MenuActionsBuilder::MenuActionsBuilder(QWidget *parent)
-: _parent(parent) {
+MenuActionsBuilder::MenuActionsBuilder(QWidget *parent, std::shared_ptr<StreamWidgetSelector> selector)
+: _parent(parent)
+, _selector(selector) {
 }
 
-std::unique_ptr<QMenu> MenuActionsBuilder::Build(AssetsViewItemType type, const QString& suffix) {
+std::unique_ptr<QMenu> MenuActionsBuilder::Build() {
+	const auto type = _selector->getType();
 	auto menu = std::make_unique<QMenu>(_parent);
 	if (type == AssetsViewItemType::File) {
 		menu

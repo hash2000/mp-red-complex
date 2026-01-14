@@ -1,7 +1,6 @@
 #pragma once
 #include "DataFormat/proto/pal.h"
 #include "DataFormat/data_format/frm/atlas_builder.h"
-#include "ResourcesTool/widgets/animation/frames_renderer.h"
 #include <QtOpenGLWidgets/QOpenGLWidget>
 #include <QOpenGLFunctions>
 #include <QOpenGLShaderProgram>

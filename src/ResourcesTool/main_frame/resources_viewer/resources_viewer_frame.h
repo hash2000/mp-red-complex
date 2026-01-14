@@ -1,7 +1,7 @@
 #pragma once
-#include "Engine/main_frame.h"
 #include "ResourcesTool/main_frame/resources_viewer/stream_widget_selector.h"
-#include "ResourcesTool/main_frame/resources_viewer/widget_maker.h"
+#include "ResourcesTool/main_frame/resources_viewer/tabs_controller.h"
+#include "Engine/main_frame.h"
 #include "Resources/resources.h"
 #include <QMainWindow>
 #include <QTreeView>
@@ -22,14 +22,12 @@ public:
 private:
 	void setupTabs();
 	void setupHomaPageTab();
-	void setupWidgetMaker();
 	void setupAssetsTree();
 	void setupSelector();
 	void setupView();
 	void populateAssetsTree();
 	void configureAssetsTree();
 	void attachMenuAction(QMenu &menu, const QString &name, void (ResourcesViewerFrame::*slot)());
-	void closeTabByIndex(int index);
 	void createTab(QWidget* widget, const QString& type, const QString& id, const QString& title);
 
 private slots:
@@ -46,7 +44,7 @@ private slots:
 private:
 	std::shared_ptr<Resources> _resources;
 	std::shared_ptr<StreamWidgetSelector> _selector;
-	std::unique_ptr<WidgetMaker> _widgetMaker;
+	std::shared_ptr<TabsController> _tabs;
 	QTreeView *_assetsView;
 	QStandardItemModel *_assetsModel;
 	QListWidget *_actionsList;

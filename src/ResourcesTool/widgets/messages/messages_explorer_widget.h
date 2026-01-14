@@ -1,4 +1,5 @@
 #pragma once
+#include "ResourcesTool/widgets/base_tab_widget.h"
 #include "DataFormat/proto/msg.h"
 #include "DataStream/data_stream.h"
 #include <QWidget>
@@ -7,7 +8,7 @@
 #include <memory>
 
 class MessagesTableModel;
-class MessagesExplorerWidget : public QWidget {
+class MessagesExplorerWidget : public BaseTabWidget {
   Q_OBJECT
 
 public:

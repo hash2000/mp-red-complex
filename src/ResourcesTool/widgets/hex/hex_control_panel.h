@@ -6,13 +6,13 @@
 #include <QPushButton>
 #include <memory>
 
-class HexDumpWidget;
+class HexDumpView;
 
 class HexControlPanel : public QWidget {
   Q_OBJECT
 
 public:
-  explicit HexControlPanel(HexDumpWidget *hexWidget, std::shared_ptr<DataStream> stream, QWidget *parent = nullptr);
+  explicit HexControlPanel(HexDumpView *hexWidget, std::shared_ptr<DataStream> stream, QWidget *parent = nullptr);
 
   void updateFromSelection();
 
@@ -26,7 +26,7 @@ private slots:
 	void onHexSelectionChanged(qint64 offset, qint64 length, const QByteArray& selected);
 
 private:
-  HexDumpWidget *_hexWidget;
+  HexDumpView *_hexWidget;
 	std::shared_ptr<DataStream> _stream;
 
   QSpinBox *_offsetSpinBox = nullptr;

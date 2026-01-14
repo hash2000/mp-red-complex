@@ -1,12 +1,12 @@
 #include "ResourcesTool/widgets/hex/hex_control_panel.h"
-#include "ResourcesTool/widgets/hex/hex_dump_widget.h"
+#include "ResourcesTool/widgets/hex/hex_dump_view.h"
 #include <QGridLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QSpinBox>
 #include <qpushbutton.h>
 
-HexControlPanel::HexControlPanel(HexDumpWidget *hexWidget, std::shared_ptr<DataStream> stream, QWidget *parent)
+HexControlPanel::HexControlPanel(HexDumpView *hexWidget, std::shared_ptr<DataStream> stream, QWidget *parent)
 : QWidget(parent)
 , _hexWidget(hexWidget)
 , _stream(stream) {
@@ -64,7 +64,7 @@ HexControlPanel::HexControlPanel(HexDumpWidget *hexWidget, std::shared_ptr<DataS
 	connect(_prevButton, &QPushButton::pressed,
 					this, &HexControlPanel::onPrevBytesGroup);
 
-	connect(_hexWidget, &HexDumpWidget::selectionChanged,
+	connect(_hexWidget, &HexDumpView::selectionChanged,
 					this, &HexControlPanel::onHexSelectionChanged);
 
   onUpdateSelection();

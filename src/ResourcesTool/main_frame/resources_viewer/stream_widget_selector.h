@@ -18,7 +18,7 @@ class StreamWidgetSelector: public QObject {
 	Q_OBJECT
 
 public:
-	StreamWidgetSelector(std::weak_ptr<Resources> resources);
+	StreamWidgetSelector();
 
 	void setSelection(const QStandardItem *item);
 	bool isSelected() const;
@@ -32,9 +32,6 @@ public:
 signals:
 	void beforeStreamSelection(const QString& suffix, std::optional<std::shared_ptr<DataStream>> stream);
 
-private slots:
-	void onHexSelectionChanged(qint64 offset, qint64 length, const QByteArray& selected);
-
 private:
 	struct {
 		QString container;
@@ -42,6 +39,4 @@ private:
 		QString suffix;
 		AssetsViewItemType type;
 	} _selection;
-
-	std::weak_ptr<Resources> _resources;
 };

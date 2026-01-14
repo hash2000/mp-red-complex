@@ -1,10 +1,11 @@
 #pragma once
+#include "ResourcesTool/widgets/base_tab_widget.h"
 #include "Engine/main_frame.h"
 #include "BaseWidgets/layouts/FlowLayout.h"
 #include <QWidget>
 #include <QScrollArea>
 
-class HomePageWidget : public QWidget {
+class HomePageWidget : public BaseTabWidget {
 	Q_OBJECT
 
 public:

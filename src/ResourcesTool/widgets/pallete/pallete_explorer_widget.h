@@ -1,10 +1,11 @@
 #pragma once
+#include "ResourcesTool/widgets/base_tab_widget.h"
 #include "ResourcesTool/widgets/pallete/pallete_view.h"
 #include <QWidget>
 #include <QScrollArea>
 #include <vector>
 
-class PalleteExplorerWidget : public QWidget {
+class PalleteExplorerWidget : public BaseTabWidget {
   Q_OBJECT
 
 public:

@@ -4,8 +4,7 @@
 #include <QWidget>
 #include <QLineEdit>
 
-StreamWidgetSelector::StreamWidgetSelector(std::weak_ptr<Resources> resources)
-: _resources(resources) {
+StreamWidgetSelector::StreamWidgetSelector() {
 }
 
 void StreamWidgetSelector::setSelection(const QStandardItem *item) {
@@ -51,10 +50,4 @@ std::optional<std::shared_ptr<DataStream>> StreamWidgetSelector::getStream(Resou
 	return resources.getStream(
 		_selection.container,
 		_selection.path);
-}
-
-void StreamWidgetSelector::onHexSelectionChanged(qint64 offset, qint64 length, const QByteArray& selected) {
-	// if (_panels.hex) {
-	// 	_panels.hex->updateFromSelection();
-	// }
 }

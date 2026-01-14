@@ -26,6 +26,9 @@ int Application::tryRun(int &argc, char **argv) {
   fmt.setDepthBufferSize(24);
   fmt.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
 	fmt.setSamples(4);
+	fmt.setStencilBufferSize(8);
+	fmt.setStereo(true);
+
   QSurfaceFormat::setDefaultFormat(fmt);
 
 	QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
