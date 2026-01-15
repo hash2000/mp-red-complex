@@ -1,7 +1,7 @@
 #include "ResourcesTool/main_frame/resources_viewer/widget_factory.h"
 #include "Content/MapEditor/map_editor_view.h"
 #include "Content/ParticlesEditor/particles_editor_view.h"
-#include "Content/ShaderEditor/shaders_editor_view.h"
+#include "Content/ShaderEditor/shaders_editor_widget.h"
 #include "ResourcesTool/widgets/animation/atlas_widget.h"
 #include "ResourcesTool/widgets/hex/hex_dump_widget.h"
 #include "ResourcesTool/widgets/procedure/procedure_explorer_widget.h"
@@ -49,7 +49,7 @@ QWidget* WidgetsFactory::createExternalWidget(const QString& type) const
 		return new ParticlesEditorView(_params);
 	}
 	if (type == "shaders_editor") {
-		return new ShadersEditorView(_resources, _params);
+		return new ShadersEditorWidget(_resources, _params);
 	}
 
 	return nullptr;

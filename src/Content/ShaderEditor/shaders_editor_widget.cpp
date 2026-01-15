@@ -1,10 +1,11 @@
-#include "Content/ShaderEditor/shaders_editor_view.h"
+#include "Content/ShaderEditor/shaders_editor_widget.h"
 #include "Content/ShaderEditor/shader_control_panel.h"
 #include "Content/ShaderEditor/shader_view.h"
 #include <QSplitter>
 #include <QHBoxLayout>
 
-ShadersEditorView::ShadersEditorView(std::shared_ptr<Resources> resources, const QVariantMap& params, QWidget* parent)
+ShadersEditorWidget::ShadersEditorWidget(std::shared_ptr<Resources> resources, const QVariantMap& params,
+	QWidget* parent)
 : QWidget(parent) {
 	auto view = new ShaderView(params);
 	auto control = new ShaderControlPanel(view);
@@ -19,5 +20,5 @@ ShadersEditorView::ShadersEditorView(std::shared_ptr<Resources> resources, const
 	setLayout(layout);
 }
 
-ShadersEditorView::~ShadersEditorView() {
+ShadersEditorWidget::~ShadersEditorWidget() {
 }
