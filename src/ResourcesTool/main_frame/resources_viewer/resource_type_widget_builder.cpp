@@ -1,5 +1,6 @@
 #include "ResourcesTool/main_frame/resources_viewer/resource_type_widget_builder.h"
 #include "ResourcesTool/main_frame/resources_viewer/widget_resources.h"
+#include "ResourcesTool/main_frame/resources_viewer/widget_factory.h"
 #include "Base/format.h"
 #include "DataFormat/data_format/gcd/data_reader.h"
 #include "DataFormat/proto/gcd.h"
@@ -110,28 +111,29 @@ void ResourceTypeWidgetBuilder::makeMap(WidgetResource type, std::shared_ptr<Dat
 }
 
 void ResourceTypeWidgetBuilder::makePal(WidgetResource type, std::shared_ptr<DataStream> block) {
-	auto result = std::make_unique<Proto::Pallete>();
-	DataFormat::Pal::DataReader reader(*block);
-	reader.read(*result);
+	//auto result = std::make_unique<Proto::Pallete>();
+	//DataFormat::Pal::DataReader reader(*block);
+	//reader.read(*result);
 
-	auto widget = new PalleteExplorerWidget();
-	widget->setPalette(result->items);
-	addWidgetTab(type, block, widget);
+	//auto widget = new PalleteExplorerWidget();
+	//widget->setPalette(result->items);
+	//addWidgetTab(type, block, widget);
 }
 
 void ResourceTypeWidgetBuilder::makeFrm(WidgetResource type, std::shared_ptr<DataStream> block, const QString &suffix) {
-	auto result = std::make_shared<Proto::Animation>();
-	DataFormat::Frm::DataReader reader(*block);
-	reader.read(*result, suffix);
 
-	auto palleteBlockOpt = _resources->getStream("master.dat", "color.pal");
-	auto palleteBlock = palleteBlockOpt.value()->makeBlockAsStream();
-	auto pallete = std::make_shared<Proto::Pallete>();
-	DataFormat::Pal::DataReader pallete_reader(*palleteBlock);
-	pallete_reader.read(*pallete);
+	//auto result = std::make_shared<Proto::Animation>();
+	//DataFormat::Frm::DataReader reader(*block);
+	//reader.read(*result, suffix);
 
-	auto widget = new AtlasWidget(result, pallete);
-	addWidgetTab(type, block, widget);
+	//auto palleteBlockOpt = _resources->getStream("master.dat", "color.pal");
+	//auto palleteBlock = palleteBlockOpt.value()->makeBlockAsStream();
+	//auto pallete = std::make_shared<Proto::Pallete>();
+	//DataFormat::Pal::DataReader pallete_reader(*palleteBlock);
+	//pallete_reader.read(*pallete);
+
+	//auto widget = new AtlasWidget(result, pallete);
+	//addWidgetTab(type, block, widget);
 }
 
 void ResourceTypeWidgetBuilder::makePro(WidgetResource type, std::shared_ptr<DataStream> block) {
@@ -159,53 +161,53 @@ void ResourceTypeWidgetBuilder::makeSve(WidgetResource type, std::shared_ptr<Dat
 }
 
 void ResourceTypeWidgetBuilder::makeBio(WidgetResource type, std::shared_ptr<DataStream> block) {
-	QString result;
-	DataFormat::Bio::DataReader reader(*block);
-	reader.read(result);
+	//QString result;
+	//DataFormat::Bio::DataReader reader(*block);
+	//reader.read(result);
 
-	auto widget = new QPlainTextEdit;
+	//auto widget = new QPlainTextEdit;
 
-	widget->setPlainText(result);
-	addWidgetTab(type, block, widget);
+	//widget->setPlainText(result);
+	//addWidgetTab(type, block, widget);
 }
 
 void ResourceTypeWidgetBuilder::makeInt(WidgetResource type, std::shared_ptr<DataStream> block) {
-	auto result = std::make_unique<Proto::Programmability>();
-	DataFormat::Int::DataReader reader(*block);
-	reader.read(*result);
+	//auto result = std::make_unique<Proto::Programmability>();
+	//DataFormat::Int::DataReader reader(*block);
+	//reader.read(*result);
 
-	auto widget = new ProcedureExplorerWidget(std::move(result), block);
-	connect(widget, &ProcedureExplorerWidget::selectProcedure,
-		this, &ResourceTypeWidgetBuilder::onSelectProcedure);
+	//auto widget = new ProcedureExplorerWidget(std::move(result), block);
+	//connect(widget, &ProcedureExplorerWidget::selectProcedure,
+	//	this, &ResourceTypeWidgetBuilder::onSelectProcedure);
 
-	addWidgetTab(type, block, widget);
+	//addWidgetTab(type, block, widget);
 }
 
 void ResourceTypeWidgetBuilder::makeMsg(WidgetResource type, std::shared_ptr<DataStream> block) {
-	auto result = std::make_unique<Proto::Messages>();
-	DataFormat::Msg::DataReader reader(*block);
-	reader.read(*result);
+	//auto result = std::make_unique<Proto::Messages>();
+	//DataFormat::Msg::DataReader reader(*block);
+	//reader.read(*result);
 
-	auto widget = new MessagesExplorerWidget(std::move(result), block);
+	//auto widget = new MessagesExplorerWidget(std::move(result), block);
 
-	addWidgetTab(type, block, widget);
+	//addWidgetTab(type, block, widget);
 }
 
 void ResourceTypeWidgetBuilder::makeText(WidgetResource type, std::shared_ptr<DataStream> block) {
-	QString result;
-	DataFormat::Txt::DataReader reader( *block);
-	reader.read(result);
+	//QString result;
+	//DataFormat::Txt::DataReader reader( *block);
+	//reader.read(result);
 
-	auto widget = new QPlainTextEdit;
+	//auto widget = new QPlainTextEdit;
 
-	widget->setPlainText(result);
-	addWidgetTab(type, block, widget);
+	//widget->setPlainText(result);
+	//addWidgetTab(type, block, widget);
 }
 
 void ResourceTypeWidgetBuilder::makeHex(WidgetResource type, std::shared_ptr<DataStream> block) {
-	auto widget = new HexDumpWidget(block);
+	//auto widget = new HexDumpWidget(block);
 
-	addWidgetTab(type, block, widget);
+	//addWidgetTab(type, block, widget);
 }
 
 void ResourceTypeWidgetBuilder::clearLayout(QVBoxLayout *layout) {

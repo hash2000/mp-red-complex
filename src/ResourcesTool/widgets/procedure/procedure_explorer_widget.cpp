@@ -1,21 +1,25 @@
 #include "ResourcesTool/widgets/procedure/procedure_explorer_widget.h"
 #include "ResourcesTool/widgets/procedure/procedure_explorer_model.h"
+#include "DataFormat/data_format/int/data_reader.h"
+#include "DataFormat/data_format/int/code_reader.h"
 #include <QHeaderView>
 #include <QItemSelectionModel>
 #include <QApplication>
 #include <QVBoxLayout>
 
 
-ProcedureExplorerWidget::ProcedureExplorerWidget(
-	std::unique_ptr<Proto::Programmability> data,
-	std::shared_ptr<DataStream> stream,
+ProcedureExplorerWidget::ProcedureExplorerWidget(std::shared_ptr<Resources> resources, const QVariantMap& params,
 	QWidget* parent)
-  : BaseTabWidget(parent)
-	, _data(std::move(data))
-	, _stream(stream)
-  , _model(new ProcedureTableModel(this))
-  , _proxyModel(new QSortFilterProxyModel(this))
+: BaseTabWidget(resources, params, parent)
+, _model(new ProcedureTableModel(this))
+, _proxyModel(new QSortFilterProxyModel(this))
 {
+	auto block = currentStream();
+
+	_data = std::make_unique<Proto::Programmability>();
+	DataFormat::Int::DataReader reader(*block);
+	reader.read(*_data);
+
   if (!_data) {
     qWarning() << "ProcedureExplorerWidget: received nullptr Programmability";
   }

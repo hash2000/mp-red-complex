@@ -1,8 +1,9 @@
 #include "ResourcesTool/widgets/home/home_page_widget.h"
 #include <QPushButton>
 
-HomePageWidget::HomePageWidget(MainFrame* mainFrame, QWidget* parent)
-: BaseTabWidget(parent)
+HomePageWidget::HomePageWidget(std::shared_ptr<Resources> resources, const QVariantMap& params,
+	MainFrame* mainFrame, QWidget* parent)
+: BaseTabWidget(resources, params, parent)
 , _mainFrame(mainFrame) {
 	_flowArea = new FlowLayout;
 	_flowArea->setSpacing(12);

@@ -3,14 +3,10 @@
 #include "Resources/resources.h"
 #include "DataStream/data_stream.h"
 #include <QString>
+#include <QVariantMap>
 #include <QStandardItem>
-#include <QStackedWidget>
-#include <QWidget>
-#include <QMenu>
-#include <QVBoxLayout>
 #include <memory>
 #include <optional>
-#include <QPlainTextEdit>
 
 class HexControlPanel;
 
@@ -22,15 +18,18 @@ public:
 
 	void setSelection(const QStandardItem *item);
 	bool isSelected() const;
-	void displayModel(Resources& resources);
+	void execute();
 	void displayHexView(const QByteArray& data);
 	std::optional<std::shared_ptr<DataStream>> getStream(Resources& resources) const;
 
 	AssetsViewItemType getType() const;
 	QString getSuffix() const;
+	QString getContainerName() const;
+	QString getContainerPath() const;
+	QVariantMap getSelection() const;
 
 signals:
-	void beforeStreamSelection(const QString& suffix, std::optional<std::shared_ptr<DataStream>> stream);
+	void beforeStreamSelection(const QVariantMap& params);
 
 private:
 	struct {

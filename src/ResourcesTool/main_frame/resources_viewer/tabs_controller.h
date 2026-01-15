@@ -2,6 +2,7 @@
 #include "ResourcesTool/widgets/base_tab_widget.h"
 #include "Resources/resources.h"
 #include <QTabWidget>
+#include <QVariantMap>
 #include <memory>
 
 class TabsController : public QObject {
@@ -11,8 +12,8 @@ public:
 
 	void closeByIndex(int index);
 
-	void add(const QString& type, const QString& id);
-	bool contains(const QString& id);
+	void execute(const QVariantMap& params);
+	bool select(const QString& id);
 
 signals:
 	void selectWidget(int index, const QString& type, const QString& id);

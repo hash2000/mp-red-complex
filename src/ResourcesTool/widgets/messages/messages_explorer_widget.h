@@ -1,5 +1,6 @@
 #pragma once
 #include "ResourcesTool/widgets/base_tab_widget.h"
+#include "Resources/resources.h"
 #include "DataFormat/proto/msg.h"
 #include "DataStream/data_stream.h"
 #include <QWidget>
@@ -12,9 +13,7 @@ class MessagesExplorerWidget : public BaseTabWidget {
   Q_OBJECT
 
 public:
-  explicit MessagesExplorerWidget(
-		std::unique_ptr<Proto::Messages> data,
-		std::shared_ptr<DataStream> stream,
+  explicit MessagesExplorerWidget(std::shared_ptr<Resources> resources, const QVariantMap& params,
 		QWidget* parent = nullptr);
   ~MessagesExplorerWidget() override = default;
 

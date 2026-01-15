@@ -1,5 +1,4 @@
 #include "ResourcesTool/main_frame/resources_viewer/resources_viewer_frame.h"
-#include "ResourcesTool/main_frame/resources_viewer/resource_type_widget_builder.h"
 #include "ResourcesTool/main_frame/resources_viewer/menu_actions_builder.h"
 #include "ResourcesTool/widgets/home/home_page_widget.h"
 #include "Resources/resources/model/assets_model_builder_linear.h"
@@ -32,7 +31,7 @@ void ResourcesViewerFrame::setupTabs() {
 }
 
 void ResourcesViewerFrame::setupHomaPageTab() {
-	auto widget = new HomePageWidget(this);
+	auto widget = new HomePageWidget(_resources, QVariantMap(), this);
 	createTab(widget, "home_page", "home", "Home");
 
 	connect(widget, &HomePageWidget::requestTabCreation,
@@ -62,7 +61,7 @@ void ResourcesViewerFrame::onRequestTabCreation(const QVariantMap& params) {
 	const auto title = params.value("description").toString();
 	const auto id = QUuid::createUuid().toString();
 
-	WidgetsFactory factory(params);
+	WidgetsFactory factory(_resources, params);
 	auto widget = factory.create(this);
 	if (widget == nullptr) {
 		return;
@@ -110,16 +109,13 @@ void ResourcesViewerFrame::setupAssetsTree() {
 void ResourcesViewerFrame::onItemDoubleClicked(const QModelIndex &index) {
 	const auto item = _assetsModel->itemFromIndex(index);
 	_selector->setSelection(item);
-	_selector->displayModel(*_resources);
+	_selector->execute();
 }
 
-void ResourcesViewerFrame::onBeforeStreamSelection(const QString& suffix, std::optional<std::shared_ptr<DataStream>> stream) {
-	if (!stream) {
-		return;
-	}
-
-	ResourceTypeWidgetBuilder builder(_selector, _resources, _centerTabs);
-	builder.build(suffix);
+void ResourcesViewerFrame::onBeforeStreamSelection(const QVariantMap& params) {
+	QVariantMap append(params);
+	append.insert("action", "add");
+	_tabs->execute(append);
 }
 
 void ResourcesViewerFrame::onAssetsTreeExpand(const QModelIndex& index) {
@@ -160,13 +156,19 @@ void ResourcesViewerFrame::attachMenuAction(QMenu &menu, const QString &name, vo
 }
 
 void ResourcesViewerFrame::onItemMenuHexView() {
-	ResourceTypeWidgetBuilder builder(_selector, _resources, _centerTabs);
-	builder.build("hex");
+	auto selection = _selector->getSelection();
+	selection.remove("suffix");
+	selection.insert("suffix", "hex");
+	selection.insert("action", "add");
+	_tabs->execute(selection);
 }
 
 void ResourcesViewerFrame::onItemMenuTextView() {
-	ResourceTypeWidgetBuilder builder(_selector, _resources, _centerTabs);
-	builder.build("txt");
+	auto selection = _selector->getSelection();
+	selection.remove("suffix");
+	selection.insert("suffix", "txt");
+	selection.insert("action", "add");
+	_tabs->execute(selection);
 }
 
 void ResourcesViewerFrame::onContainerExtract() {

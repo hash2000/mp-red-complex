@@ -1,25 +1,28 @@
 #include "ResourcesTool/widgets/messages/messages_explorer_widget.h"
 #include "ResourcesTool/widgets/messages/messages_explorer_model.h"
+#include "DataFormat/data_format/msg/data_reader.h"
 #include <QHeaderView>
 #include <QItemSelectionModel>
 #include <QApplication>
 #include <QVBoxLayout>
 
 
-MessagesExplorerWidget::MessagesExplorerWidget(
-	std::unique_ptr<Proto::Messages> data,
-	std::shared_ptr<DataStream> stream,
+MessagesExplorerWidget::MessagesExplorerWidget(std::shared_ptr<Resources> resources, const QVariantMap& params,
 	QWidget* parent)
- : BaseTabWidget(parent)
-	, _stream(stream)
+: BaseTabWidget(resources, params, parent)
   , _model(new MessagesTableModel(this))
   , _proxyModel(new QSortFilterProxyModel(this))
 {
-  if (!data) {
+	auto block = currentStream();
+	auto result = std::make_unique<Proto::Messages>();
+	DataFormat::Msg::DataReader reader(*block);
+	reader.read(*result);
+
+  if (!result) {
     qWarning() << "MessagesExplorerWidget: received nullptr data";
   }
 
-	_data = Proto::to_array(data->items);
+	_data = Proto::to_array(result->items);
 	_model->setDataRef(_data);
 
   _tableView = new QTableView(this);

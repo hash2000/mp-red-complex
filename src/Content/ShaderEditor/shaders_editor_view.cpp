@@ -4,7 +4,7 @@
 #include <QSplitter>
 #include <QHBoxLayout>
 
-ShadersEditorView::ShadersEditorView(const QVariantMap& params, QWidget* parent)
+ShadersEditorView::ShadersEditorView(std::shared_ptr<Resources> resources, const QVariantMap& params, QWidget* parent)
 : QWidget(parent) {
 	auto view = new ShaderView(params);
 	auto control = new ShaderControlPanel(view);

@@ -1,5 +1,6 @@
 #pragma once
 #include "ResourcesTool/widgets/base_tab_widget.h"
+#include "Resources/resources.h"
 #include "Engine/main_frame.h"
 #include "BaseWidgets/layouts/FlowLayout.h"
 #include <QWidget>
@@ -9,7 +10,8 @@ class HomePageWidget : public BaseTabWidget {
 	Q_OBJECT
 
 public:
-	HomePageWidget(MainFrame *mainFrame, QWidget *parent = nullptr);
+	HomePageWidget(std::shared_ptr<Resources> resources, const QVariantMap& params,
+		MainFrame *mainFrame, QWidget *parent = nullptr);
 
 private:
 	void setupButtons();

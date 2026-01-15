@@ -32,14 +32,25 @@ QString StreamWidgetSelector::getSuffix() const {
 	return _selection.suffix;
 }
 
-void StreamWidgetSelector::displayModel(Resources& resources) {
-	const auto stream = getStream(resources);
-	if (!stream) {
-		emit beforeStreamSelection("", std::nullopt);
-		return;
-	}
+QString StreamWidgetSelector::getContainerName() const {
+	return _selection.container;
+}
 
-	emit beforeStreamSelection(_selection.suffix, stream);
+QString StreamWidgetSelector::getContainerPath() const {
+	return _selection.path;
+}
+
+QVariantMap StreamWidgetSelector::getSelection() const {
+	return QVariantMap({
+		{ "container.name", _selection.container },
+		{ "container.path", _selection.path },
+		{ "suffix", _selection.suffix },
+		{ "asset.type", (unsigned char)_selection.type },
+		});
+}
+
+void StreamWidgetSelector::execute() {
+	emit beforeStreamSelection(getSelection());
 }
 
 std::optional<std::shared_ptr<DataStream>> StreamWidgetSelector::getStream(Resources& resources) const {

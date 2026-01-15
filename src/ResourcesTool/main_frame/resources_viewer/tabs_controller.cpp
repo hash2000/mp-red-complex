@@ -1,4 +1,6 @@
 #include "ResourcesTool/main_frame/resources_viewer/tabs_controller.h"
+#include "ResourcesTool/main_frame/resources_viewer/widget_resources.h"
+#include "ResourcesTool/main_frame/resources_viewer/widget_factory.h"
 #include <QGuiApplication>
 
 TabsController::TabsController(QTabWidget* tabs, std::shared_ptr<Resources> resources)
@@ -32,16 +34,42 @@ void TabsController::closeByIndex(int index)
 	_tabs->removeTab(index);
 }
 
-void TabsController::add(const QString& type, const QString& id)
+void TabsController::execute(const QVariantMap& params)
 {
-	if (contains(id)) {
+	const auto suffix = params.value("suffix").toString();
+	const auto typeOpt = From<WidgetResource>::from(suffix);
+	if (!typeOpt) {
 		return;
 	}
 
+	const auto containerName = params.value("container.name").toString();
+	const auto containerPath = params.value("container.path").toString();
+	const auto type = typeOpt.value();
+	const auto typeName = Format<WidgetResource>::format(type);
+	const auto id = QString("%1://%2/%3/")
+		.arg(typeName)
+		.arg(containerName)
+		.arg(containerPath);
 
+	if (select(id)) {
+		return;
+	}
+
+	WidgetsFactory factory(_resources, params);
+
+	auto widget = factory.create(nullptr);
+	if (widget == nullptr) {
+		return;
+	}
+
+	widget->setProperty("tab.type", typeName);
+	widget->setProperty("tab.id", id);
+
+	const auto index = _tabs->addTab(widget, id);
+	_tabs->setCurrentIndex(index);
 }
 
-bool TabsController::contains(const QString& id)
+bool TabsController::select(const QString& id)
 {
 	for (int i = 0; i < _tabs->count(); i++) {
 		const auto widget = _tabs->widget(i);

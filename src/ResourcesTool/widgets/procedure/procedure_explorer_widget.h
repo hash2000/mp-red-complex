@@ -1,5 +1,6 @@
 #pragma once
 #include "ResourcesTool/widgets/base_tab_widget.h"
+#include "Resources/resources.h"
 #include "DataFormat/proto/procedure.h"
 #include "DataStream/data_stream.h"
 #include <QWidget>
@@ -12,9 +13,7 @@ class ProcedureExplorerWidget : public BaseTabWidget {
   Q_OBJECT
 
 public:
-  explicit ProcedureExplorerWidget(
-		std::unique_ptr<Proto::Programmability> data,
-		std::shared_ptr<DataStream> stream,
+  explicit ProcedureExplorerWidget(std::shared_ptr<Resources> resources, const QVariantMap& params,
 		QWidget* parent = nullptr);
   ~ProcedureExplorerWidget() override = default;
 

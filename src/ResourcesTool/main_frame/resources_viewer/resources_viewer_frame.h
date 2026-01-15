@@ -36,8 +36,7 @@ private slots:
 	void onItemMenuHexView();
 	void onItemMenuTextView();
 	void onContainerExtract();
-	void onBeforeStreamSelection(const QString& suffix,
-		std::optional<std::shared_ptr<DataStream>> stream);
+	void onBeforeStreamSelection(const QVariantMap& params);
 	void onAssetsTreeExpand(const QModelIndex& index);
 	void onRequestTabCreation(const QVariantMap& params);
 

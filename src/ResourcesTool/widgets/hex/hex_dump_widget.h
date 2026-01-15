@@ -1,5 +1,6 @@
 #pragma once
 #include "ResourcesTool/widgets/base_tab_widget.h"
+#include "Resources/resources.h"
 #include "DataStream/data_stream.h"
 #include <QAbstractScrollArea>
 #include <QByteArray>
@@ -8,5 +9,5 @@
 
 class HexDumpWidget : public BaseTabWidget {
 public:
-  explicit HexDumpWidget(std::shared_ptr<DataStream> stream, QWidget *parent = nullptr);
+  explicit HexDumpWidget(std::shared_ptr<Resources> resources, const QVariantMap& params, QWidget *parent = nullptr);
 };
