@@ -15,11 +15,11 @@ QT_FORWARD_DECLARE_CLASS(QOpenGLTexture)
 QT_FORWARD_DECLARE_CLASS(QOpenGLShader)
 QT_FORWARD_DECLARE_CLASS(QOpenGLShaderProgram)
 
-class ParticlesEditorView : public QOpenGLWidget, protected QOpenGLFunctions {
+class ParticlesView : public QOpenGLWidget, protected QOpenGLFunctions {
 public:
-	explicit ParticlesEditorView(const QVariantMap& params, QWidget* parent = nullptr);
+	explicit ParticlesView(const QVariantMap& params, QWidget* parent = nullptr);
 
-	virtual ~ParticlesEditorView();
+	virtual ~ParticlesView();
 
 protected:
 	void initializeGL() override;

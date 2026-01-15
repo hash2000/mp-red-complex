@@ -16,14 +16,3 @@ private:
 	QVariantMap _params;
 };
 
-
-class BaseTabWidgetWrapper : public BaseTabWidget {
-public:
-	BaseTabWidgetWrapper(std::shared_ptr<Resources> resources, const QVariantMap& params,
-		QWidget* inner, QWidget* parent = nullptr)
-	: BaseTabWidget(resources, params, parent) {
-		auto layout = new QHBoxLayout(this);
-		layout->addWidget(inner);
-		setLayout(layout);
-	}
-};

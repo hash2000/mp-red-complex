@@ -1,5 +1,5 @@
 #pragma once
-#include "ResourcesTool/widgets/base_tab_widget.h"
+#include "BaseWidgets/tabs/base_tab_widget.h"
 #include "ResourcesTool/widgets/pallete/pallete_view.h"
 #include "Resources/resources.h"
 #include <QWidget>

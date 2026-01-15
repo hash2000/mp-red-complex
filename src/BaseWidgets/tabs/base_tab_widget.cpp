@@ -1,4 +1,4 @@
-#include "ResourcesTool/widgets/base_tab_widget.h"
+#include "BaseWidgets/tabs/base_tab_widget.h"
 
 BaseTabWidget::BaseTabWidget(std::shared_ptr<Resources> resources, const QVariantMap& params, QWidget* parent)
 : QWidget(parent)

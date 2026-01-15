@@ -1,5 +1,5 @@
 #pragma once
-#include "ResourcesTool/widgets/base_tab_widget.h"
+#include "BaseWidgets/tabs/base_tab_widget.h"
 #include "Resources/resources.h"
 #include "Engine/main_frame.h"
 #include "BaseWidgets/layouts/FlowLayout.h"

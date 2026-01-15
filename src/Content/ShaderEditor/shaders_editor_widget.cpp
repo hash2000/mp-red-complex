@@ -6,7 +6,7 @@
 
 ShadersEditorWidget::ShadersEditorWidget(std::shared_ptr<Resources> resources, const QVariantMap& params,
 	QWidget* parent)
-: QWidget(parent) {
+: BaseTabWidget(resources, params, parent) {
 	auto view = new ShaderView(params);
 	auto control = new ShaderControlPanel(view);
 	auto splitter = new QSplitter(Qt::Horizontal);

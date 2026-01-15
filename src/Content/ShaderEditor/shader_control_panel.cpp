@@ -39,7 +39,7 @@ ShaderControlPanel::ShaderControlPanel(ShaderView* preview, QWidget* parent)
 
 	_autoRenderCheckBox = new QCheckBox(tr("Auto render"));
 	_autoRenderCheckBox->setChecked(false);
-	_preview->autoRender(false);
+	_preview->autoRender(true);
 	auto optionsLayput = new QVBoxLayout;
 	optionsLayput->addWidget(_errorLabel);
 	optionsLayput->addWidget(_autoRenderCheckBox);

@@ -1,5 +1,5 @@
 #pragma once
-#include "ResourcesTool/widgets/base_tab_widget.h"
+#include "BaseWidgets/tabs/base_tab_widget.h"
 #include "ResourcesTool/main_frame/resources_viewer/widget_resources.h"
 #include "Resources/resources.h"
 #include <QVariantMap>
@@ -12,7 +12,7 @@ public:
 	BaseTabWidget* create(QWidget* parent = nullptr) const;
 
 private:
-	QWidget* createExternalWidget(const QString& type) const;
+	BaseTabWidget* createExternalWidget(const QString& type) const;
 	BaseTabWidget* createResourceTypeWidget(WidgetResource type, QWidget* parent) const;
 
 private:

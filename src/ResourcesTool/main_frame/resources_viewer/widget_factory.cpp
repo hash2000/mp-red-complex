@@ -1,6 +1,6 @@
 #include "ResourcesTool/main_frame/resources_viewer/widget_factory.h"
 #include "Content/MapEditor/map_editor_view.h"
-#include "Content/ParticlesEditor/particles_editor_view.h"
+#include "Content/ParticlesEditor/particles_widget.h"
 #include "Content/ShaderEditor/shaders_editor_widget.h"
 #include "ResourcesTool/widgets/animation/atlas_widget.h"
 #include "ResourcesTool/widgets/hex/hex_dump_widget.h"
@@ -19,7 +19,7 @@ BaseTabWidget* WidgetsFactory::create(QWidget* parent) const {
 		const auto type = _params.value("type").toString();
 		auto baseWidget = createExternalWidget(type);
 		if (baseWidget) {
-			return new BaseTabWidgetWrapper(_resources, _params, baseWidget, parent);
+			return baseWidget;
 		}
 	}
 
@@ -40,13 +40,13 @@ BaseTabWidget* WidgetsFactory::create(QWidget* parent) const {
 	return nullptr;
 }
 
-QWidget* WidgetsFactory::createExternalWidget(const QString& type) const
+BaseTabWidget* WidgetsFactory::createExternalWidget(const QString& type) const
 {
 	if (type == "map_editor") {
-		return new MapEditorView(_params);
+		return new MapEditorView(_resources, _params);
 	}
 	if (type == "particles_editor") {
-		return new ParticlesEditorView(_params);
+		return new ParticlesWidget(_resources, _params);
 	}
 	if (type == "shaders_editor") {
 		return new ShadersEditorWidget(_resources, _params);

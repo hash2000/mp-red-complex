@@ -1,6 +1,6 @@
 #pragma once
 #pragma once
-#include "ResourcesTool/widgets/base_tab_widget.h"
+#include "BaseWidgets/tabs/base_tab_widget.h"
 #include <QAbstractScrollArea>
 #include <QByteArray>
 #include <QMap>
