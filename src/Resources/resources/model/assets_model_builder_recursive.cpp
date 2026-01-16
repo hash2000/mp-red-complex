@@ -36,6 +36,7 @@ QStandardItem *AssetsModelBuilderRecursive::createItemPart(QStandardItem *parent
 	} else {
 		part->setData(QVariant::fromValue(AssetsViewItemType::File), static_cast<int>(AssetsViewItemRole::Type));
 		part->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::DocumentNew));
+		part->setFlags(part->flags() | Qt::ItemIsDragEnabled);
 	}
 
 	return part;

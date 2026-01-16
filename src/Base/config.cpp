@@ -22,7 +22,6 @@ Config::Config(const Config &clone) : Config() {
 	cwd = clone.cwd;
 	resources_path = clone.resources_path;
 	resources_path_raw = clone.resources_path_raw;
-	resources_language = clone.resources_language;
 }
 
 const Config &Config::getDefult() {
@@ -52,7 +51,7 @@ void Config::loadSettings() {
 	app_session = settings.value("session/view").toString();
 	resources_path = settings.value("resources/path").toString();
 	resources_path_raw = settings.value("resources/path-raw").toString();
-	resources_language = settings.value("resources/language", "english").toString();
+	resources_encoding = settings.value("system/encoding", "Windows-1251").toString();
 
 	if (resources_path_raw.isEmpty()) {
 		resources_path_raw = resources_path;

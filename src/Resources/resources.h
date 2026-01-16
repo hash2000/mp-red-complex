@@ -1,4 +1,5 @@
 #pragma once
+#include "Resources/variables/variables_context.h"
 #include "Base/config.h"
 #include "DataStream/data_stream/data_stream_container.h"
 #include "Base/container_view.h"
@@ -23,13 +24,15 @@ public:
 	auto getStream(const QString &container, const QString &path) const
 		-> std::optional<std::shared_ptr<DataStream>>;
 
+public:
+	VariablesContext Variables;
+
 private:
 	void loadDatFile(const QString& fileName);
 	void loadDatResources();
 	void loadRawResources();
 
 private:
-	QString _language;
 	QDir _resources_path;
 	QDir _resources_path_raw;
 	std::list<std::unique_ptr<DataStreamContainer>> _resources;

@@ -10,7 +10,10 @@ Resources::Resources() {
 void Resources::configure(const std::shared_ptr<Config> &config) {
 	_resources_path = QDir(config->resources_path);
 	_resources_path_raw = QDir(config->resources_path_raw);
-	_language = config->resources_language;
+
+	Variables.set("Resources.Path", _resources_path.absolutePath());
+	Variables.set("Resources.Path.Raw", _resources_path_raw.absolutePath());
+	Variables.set("System.Encoding", config->resources_encoding);
 }
 
 void Resources::load() {

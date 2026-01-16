@@ -15,10 +15,14 @@ ShaderControlPanel::ShaderControlPanel(ShaderView* preview, QWidget* parent)
 	_vertexEdit = new QTextEdit;
 	_vertexEdit->setFont(font);
 	_vertexEdit->setPlainText(_preview->vertexCode());
+	_vertexEdit->setProperty("container.name", "");
+	_vertexEdit->setProperty("container.path", "");
 
 	_fragmentEdit = new QTextEdit;
 	_fragmentEdit->setFont(font);
 	_fragmentEdit->setPlainText(_preview->fragmentCode());
+	_fragmentEdit->setProperty("container.name", "");
+	_fragmentEdit->setProperty("container.path", "");
 
 	_errorLabel = new QTextEdit;
 	_errorLabel->setStyleSheet("color: red; background: #222; padding: 5px;");
@@ -60,6 +64,25 @@ ShaderControlPanel::ShaderControlPanel(ShaderView* preview, QWidget* parent)
 	setLayout(mainLayout);
 }
 
+void ShaderControlPanel::applySourceToCurrentTab(const QString& container, const QString& path, const QString& value) {
+	const auto index = _tabs->currentIndex();
+	auto widget = _tabs->widget(index);
+	if (widget == _vertexEdit || widget == _fragmentEdit) {
+		auto edit = static_cast<QTextEdit*>(widget);
+		edit->setProperty("container.name", container);
+		edit->setProperty("container.path", path);
+		edit->setPlainText(value);
+	}
+}
+
+QString ShaderControlPanel::getContainerInfoString(const QString& prefix, const QTextEdit* edit) const {
+	auto result = QString("%1: %2://%3")
+		.arg(prefix)
+		.arg(edit->property("container.name").toString())
+		.arg(edit->property("container.path").toString());
+	return result;
+}
+
 void ShaderControlPanel::onVertexTextChanged() {
 	_debounceTimer->start();
 }
@@ -70,7 +93,10 @@ void ShaderControlPanel::onFragmentTextChanged() {
 
 void ShaderControlPanel::onShaderReloaded(bool success) {
 	if (success) {
-		_errorLabel->setText("✓ Shader compiled successfully");
+		auto message = QString("✓ Shader compiled successfully\r\n%1\r\n%2")
+			.arg(getContainerInfoString("vertex", _vertexEdit))
+			.arg(getContainerInfoString("fragment", _fragmentEdit));
+		_errorLabel->setText(message);
 		_errorLabel->setStyleSheet("color: lime; background: #222; padding: 5px;");
 	}
 	else {

@@ -7,8 +7,10 @@ namespace DataFormat::Txt {
 	}
 
 	void DataReader::read(QString &result) {
+		QByteArray buffer;
 		while (_stream.remains() > 0) {
-			result.append(QLatin1Char(_stream.u8()));
+			buffer.append(static_cast<char>(_stream.u8()));
 		}
+		result = QString::fromUtf8(buffer);
 	}
 }

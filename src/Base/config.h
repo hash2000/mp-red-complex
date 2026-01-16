@@ -31,7 +31,7 @@ public:
 	QString app_session;
 	QString resources_path;
 	QString resources_path_raw;
-	QString resources_language;
+	QString resources_encoding;
 };
 
 class Configurable {

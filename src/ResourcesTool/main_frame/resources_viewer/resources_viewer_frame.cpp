@@ -15,7 +15,7 @@
 ResourcesViewerFrame::ResourcesViewerFrame(std::shared_ptr<Resources> resources)
 	: _resources(resources)
 	, _assetsModel(new QStandardItemModel(this))
-	, _assetsView(new QTreeView)
+	, _assetsView(new ResourcesTree)
 	, _centerTabs(new QTabWidget) {
 	setupSelector();
 	setupAssetsTree();
@@ -122,6 +122,7 @@ void ResourcesViewerFrame::onAssetsTreeExpand(const QModelIndex& index) {
 	AssetsModelBuilderLinear(_assetsModel->itemFromIndex(index), _resources)
 		.build();
 }
+
 
 void ResourcesViewerFrame::onCustomContextMenuRequested(const QPoint &pos) {
   const auto index = _assetsView->indexAt(pos);

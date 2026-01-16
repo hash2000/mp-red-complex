@@ -1,6 +1,7 @@
 #pragma once
 #include "ResourcesTool/main_frame/resources_viewer/stream_widget_selector.h"
 #include "ResourcesTool/main_frame/resources_viewer/tabs_controller.h"
+#include "ResourcesTool/main_frame/resources_viewer/resources_tree.h"
 #include "Engine/main_frame.h"
 #include "Resources/resources.h"
 #include <QMainWindow>
@@ -44,7 +45,7 @@ private:
 	std::shared_ptr<Resources> _resources;
 	std::shared_ptr<StreamWidgetSelector> _selector;
 	std::shared_ptr<TabsController> _tabs;
-	QTreeView *_assetsView;
+	ResourcesTree*_assetsView;
 	QStandardItemModel *_assetsModel;
 	QListWidget *_actionsList;
 	QTabWidget *_centerTabs;

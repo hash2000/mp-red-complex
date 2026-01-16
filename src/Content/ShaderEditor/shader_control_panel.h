@@ -13,6 +13,11 @@ class ShaderControlPanel : public QWidget {
 public:
 	ShaderControlPanel(ShaderView *preview, QWidget* parent = nullptr);
 
+	void applySourceToCurrentTab(const QString& container, const QString& path, const QString& value);
+
+private:
+	QString getContainerInfoString(const QString& prefix, const QTextEdit* edit) const;
+
 private slots:
 	void onVertexTextChanged();
 	void onFragmentTextChanged();
