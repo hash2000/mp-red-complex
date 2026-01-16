@@ -9,11 +9,11 @@ DataReader::DataReader(DataStream &stream)
 void DataReader::read(Proto::ScriptEntries &result) {
   auto state = State::InOffset;
   Proto::ScriptEntry current;
-  QString buffer;
+	QByteArray buffer;
 
   while (_stream.remains() > 0) {
 		const auto pos = _stream.position();
-    const auto ch = QLatin1Char(_stream.u8());
+    const auto ch = static_cast<char>(_stream.u8());
 
     switch (state) {
     case State::InOffset:
@@ -29,7 +29,7 @@ void DataReader::read(Proto::ScriptEntries &result) {
     case State::InText:
       if (isNewLine(ch)) {
         state = State::NextLine;
-				current.text = buffer;
+				current.text = QString::fromUtf8(buffer);
         buffer.clear();
 				result.items.emplace(current.offset, current);
       } else {

@@ -10,8 +10,7 @@ BaseTabWidget::BaseTabWidget(std::shared_ptr<Resources> resources, const QVarian
 	setAcceptDrops(true);
 }
 
-std::shared_ptr<DataStream> BaseTabWidget::currentStream() const
-{
+std::shared_ptr<DataStream> BaseTabWidget::currentStream() const {
 	const auto containerName = _params.value("container.name").toString();
 	const auto containerPath = _params.value("container.path").toString();
 

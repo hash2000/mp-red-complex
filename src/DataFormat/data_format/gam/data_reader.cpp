@@ -85,16 +85,19 @@ namespace DataFormat::Gam {
 	}
 
 	bool DataReader::readLine(QString &line) {
+		QByteArray buffer;
 		while (_stream.remains() > 0) {
-			const auto ch = QLatin1Char(_stream.u8());
+			const auto ch = static_cast<char>(_stream.u8());
 
 			if (ch == '\n') {
+				line = QString::fromUtf8(buffer);
 				return true;
 			}
 
-			line += ch;
+			buffer += ch;
 		}
 
+		line = QString::fromUtf8(buffer);
 		return false;
 	}
 }

@@ -8,12 +8,12 @@ void DataReader::read(Proto::Messages &result) {
   auto state = State::Outside;
 	auto expected = Expected::None;
   Proto::Message current;
-  QString buffer;
+	QByteArray buffer;
 
 
   while (_stream.remains() > 0) {
 		const auto pos = _stream.position();
-    const auto ch = QLatin1Char(_stream.u8());
+    const auto ch = static_cast<char>(_stream.u8());
 
 		if (expected == Expected::Start) {
 			if (ch != '{') {
@@ -49,7 +49,7 @@ void DataReader::read(Proto::Messages &result) {
 
     case State::InContext:
 			if (ch == '}') {
-        current.context = buffer;
+        current.context = QString::fromUtf8(buffer);
 				expected = Expected::Start;
         state = State::InText;
         buffer.clear();
@@ -60,7 +60,7 @@ void DataReader::read(Proto::Messages &result) {
 
     case State::InText:
       if (ch == '}' && (buffer.endsWith('\\') == false)) {
-        current.text = buffer;
+        current.text = QString::fromUtf8(buffer);
         result.items.emplace(current.id, current);
 				expected = Expected::None;
         state = State::Outside;

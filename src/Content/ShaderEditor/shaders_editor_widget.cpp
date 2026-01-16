@@ -30,8 +30,7 @@ void ShadersEditorWidget::onRequestContainer(const QVariantMap& params) {
 	_params = params;
 	const auto containerName = params.value("container.name").toString();
 	const auto containerPath = params.value("container.path").toString();
-	auto blockOpt = _resources->getStream(containerName, containerPath);
-	auto block = blockOpt.value()->makeBlockAsStream();
+	auto block = currentStream();
 
 	QString source;
 	DataFormat::Txt::DataReader reader(*block);
