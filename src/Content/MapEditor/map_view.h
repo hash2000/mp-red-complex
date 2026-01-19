@@ -1,5 +1,5 @@
 #pragma once
-
+#include "Content/Shared/camera.h"
 #include <QWidget>
 #include <QVariantMap>
 #include <QtOpenGLWidgets/QOpenGLWidget>
@@ -33,22 +33,13 @@ protected:
   void paintGL() override;
 
 private:
-	QMatrix4x4 lookAt(const QVector3D& eye, const QVector3D& center, const QVector3D& up);
-	void updateCamera();
 	void setupViewport();
 
 private:
-	// Камера
-		// Камера (look-at)
-	QVector3D _cameraEye = QVector3D(5.0f, 8.0f, 5.0f);     // позиция камеры
-	QVector3D _cameraCenter = QVector3D(0.0f, 0.0f, 0.0f);  // точка, на которую смотрим
-	QVector3D _cameraUp = QVector3D(0.0f, 1.0f, 0.0f);     // направление "вверх"
+	Camera _camera{ QVector3D(5.0f, 0.0f, 5.0f), QVector3D(5.0f, 12.0f, 12.0f) };
 
 	bool _rightMousePressed = false;
 	QPoint _lastMousePos;
-
-	QMatrix4x4 _projection;
-	QMatrix4x4 _view;
 
 	// Шейдер
 	QOpenGLShaderProgram _program;

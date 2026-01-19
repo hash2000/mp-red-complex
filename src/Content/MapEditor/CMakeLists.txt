@@ -26,5 +26,6 @@ target_link_libraries(Content.MapEditor
 		DataFormat
 		DataStream
 		Resources
+		Content.Shared
 )
 
