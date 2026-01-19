@@ -1,5 +1,6 @@
 #pragma once
 #include "Content/Shared/camera.h"
+#include "Content/Shared/Draw/draw_program.h"
 #include <QWidget>
 #include <QVariantMap>
 #include <QtOpenGLWidgets/QOpenGLWidget>
@@ -41,20 +42,5 @@ private:
 	bool _rightMousePressed = false;
 	QPoint _lastMousePos;
 
-	// Шейдер
-	QOpenGLShaderProgram _program;
-
-	// Точка
-	QOpenGLVertexArrayObject _pointVao;
-	QOpenGLBuffer _pointVbo;
-
-	// Сетка
-	QOpenGLVertexArrayObject _gridVao;
-	QOpenGLBuffer _gridVbo;
-	int _gridVertexCount = 0;
-
-	// Оси
-	QOpenGLVertexArrayObject _axesVao;
-	QOpenGLBuffer _axesVbo;
-	int _axesVertexCount = 0;
+	DrawProgram _program;
 };
