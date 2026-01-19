@@ -2,7 +2,7 @@
 #include "data_write_stream_buffer.h"
 
 DataWriteStreamBuffer::DataWriteStreamBuffer(QByteArray* target)
-	: _buffer(target ? target : &_ownedBuffer) {
+: _buffer(target ? target : &_ownedBuffer) {
 	_pos = _buffer->size();
 }
 

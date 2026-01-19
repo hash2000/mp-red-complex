@@ -1,5 +1,5 @@
 #include "ResourcesTool/main_frame/resources_viewer/widget_factory.h"
-#include "Content/MapEditor/map_editor_view.h"
+#include "Content/MapEditor/map_editor_widget.h"
 #include "Content/ParticlesEditor/particles_widget.h"
 #include "Content/ShaderEditor/shaders_editor_widget.h"
 #include "ResourcesTool/widgets/animation/atlas_widget.h"
@@ -43,7 +43,7 @@ BaseTabWidget* WidgetsFactory::create(QWidget* parent) const {
 BaseTabWidget* WidgetsFactory::createExternalWidget(const QString& type) const
 {
 	if (type == "map_editor") {
-		return new MapEditorView(_resources, _params);
+		return new MapEditorWidget(_resources, _params);
 	}
 	if (type == "particles_editor") {
 		return new ParticlesWidget(_resources, _params);

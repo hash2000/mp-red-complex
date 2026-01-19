@@ -21,7 +21,7 @@ int Application::tryRun(int &argc, char **argv) {
 	_resources = std::make_shared<Resources>();
 
 	QSurfaceFormat fmt;
-  fmt.setVersion(3, 2);
+  fmt.setVersion(3, 3);
   fmt.setProfile(QSurfaceFormat::CoreProfile);
   fmt.setDepthBufferSize(24);
   fmt.setSwapBehavior(QSurfaceFormat::DoubleBuffer);

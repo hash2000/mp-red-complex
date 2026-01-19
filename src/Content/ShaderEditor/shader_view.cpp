@@ -61,6 +61,9 @@ void ShaderView::paintGL() {
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 	if (!_program.isLinked()) {
 		return;
 	}
@@ -69,8 +72,10 @@ void ShaderView::paintGL() {
 
 	// Устанавливаем стандартные uniform'ы
 	float uTime = _timer.elapsed() / 1000.0f;
+	float uWind = sin(uTime) * 0.5;
 	_program.setUniformValue("uTime", uTime);
 	_program.setUniformValue("uResolution", QSizeF(width(), height()));
+	_program.setUniformValue("uWind", uWind);
 
 	// Рисуем quad
 	_vbo.bind();
@@ -81,6 +86,10 @@ void ShaderView::paintGL() {
 	_program.setAttributeBuffer(1, GL_FLOAT, 2 * sizeof(GLfloat), 2, 4 * sizeof(GLfloat));
 
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+	_vbo.release();
+
+	_program.release();
 }
 
 QString ShaderView::lastError() const {
