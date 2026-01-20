@@ -38,13 +38,12 @@ protected:
 private:
 	bool compileAndLink();
 	void setupQuadGeometry();
+	void setupViewport();
 
 signals:
 	void shaderReloaded(bool success);
 
 private:
-	int _viewWidth{ 800 };
-	int _viewHeight{ 600 };
 	QString _lastError;
 	QString _vertexCode;
 	QString _fragmentCode;

@@ -39,6 +39,7 @@ void ShaderView::initializeGL() {
 	initializeOpenGLFunctions();
 	setupQuadGeometry();
 	compileAndLink();
+	setupViewport();
 
 	_timer.start();
 	connect(_renderTimer, &QTimer::timeout, this, [this]() {
@@ -48,14 +49,16 @@ void ShaderView::initializeGL() {
 }
 
 void ShaderView::resizeGL(int w, int h) {
-	_viewWidth = w;
-	_viewHeight = h;
+	setupViewport();
+}
+
+void ShaderView::setupViewport() {
+	glViewport(0, 0, width(), height());
 	_proj.setToIdentity();
 	_proj.ortho(-1, 1, -1, 1, -1, 1);
 }
 
 void ShaderView::paintGL() {
-	glViewport(0, 0, _viewWidth, _viewHeight);
 	glClearColor(0, 0, 0, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
