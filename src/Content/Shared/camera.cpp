@@ -40,18 +40,24 @@ void Camera::move(const QPoint& delta)
 {
 	// Получаем направление "вперёд" и "вправо" в мировой системе координат
 	// На основе текущего взгляда камеры, но проигнорируем Y
-	QVector3D viewDir = (_center - _eye).normalized();
+	QVector3D viewDir = _center - _eye;
+	float distance = viewDir.length();
+	
 	viewDir.setY(0.0f);
 	if (viewDir.length() < 1e-6f) {
 		viewDir = QVector3D(0.0f, 0.0f, -1.0f); // fallback
 	}
-	viewDir.normalize();
 
+	viewDir.normalize();
 	QVector3D rightDir = QVector3D::crossProduct(viewDir, QVector3D(0.0f, 1.0f, 0.0f)).normalized();
 
-	// Вектор смещения в мировых координатах
-	QVector3D panOffset = -rightDir * static_cast<float>(delta.x()) * _moveSpeed
-		+ viewDir * static_cast<float>(delta.y()) * _moveSpeed;
+	// Масштабируем скорость в зависимости от расстояния до центра
+	// Можно использовать линейную или логарифмическую зависимость
+	float scale = qMax(1.0f, distance * 0.1f); // подберите коэффициент (0.1) под себя
+	float effectiveSpeed = _moveSpeed * scale;
+
+	QVector3D panOffset = -rightDir * static_cast<float>(delta.x()) * effectiveSpeed
+		+ viewDir * static_cast<float>(delta.y()) * effectiveSpeed;
 
 	// Двигаем и глаз, и центр ОДИНАКОВО
 	_eye += panOffset;
@@ -68,7 +74,7 @@ void Camera::zoom(float delta)
 
 	// Минимальное и максимальное расстояние
 	float minDistance = 2.0f;
-	float maxDistance = 50.0f;
+	float maxDistance = 300.0f;
 
 	float newDistance = currentDistance * delta;
 	newDistance = qBound(minDistance, newDistance, maxDistance);
@@ -78,6 +84,46 @@ void Camera::zoom(float delta)
 	_eye = _center - viewDir * newDistance;
 
 	update();
+}
+
+std::optional<QVector3D> Camera::raycastToGround(const QPoint& screenPos, int screenWidth, int screenHeight) {
+	float x = (2.0f * screenPos.x()) / screenWidth - 1.0f;
+	float y = -(2.0f * screenPos.y()) / screenHeight + 1.0f;
+
+	QVector4D nearPoint(x, y, -1.0f, 1.0f);
+	QVector4D farPoint(x, y, 1.0f, 1.0f);
+
+	QMatrix4x4 invViewProj = (_projection * _view).inverted();
+	QVector4D rayNear4 = invViewProj * nearPoint;
+	QVector4D rayFar4 = invViewProj * farPoint;
+
+	// Перспективное деление
+	if (std::abs(rayNear4.w()) < 1e-6f || std::abs(rayFar4.w()) < 1e-6f) {
+		return std::nullopt;
+	}
+
+	QVector3D rayNear(rayNear4.x() / rayNear4.w(),
+		rayNear4.y() / rayNear4.w(),
+		rayNear4.z() / rayNear4.w());
+	QVector3D rayFar(rayFar4.x() / rayFar4.w(),
+		rayFar4.y() / rayFar4.w(),
+		rayFar4.z() / rayFar4.w());
+
+	QVector3D rayDir = (rayFar - rayNear).normalized();
+	QVector3D origin = rayNear;
+
+	// Пересечение с Y = 0
+	if (std::abs(rayDir.y()) < 1e-6f) {
+		return std::nullopt;
+	}
+
+	float t = -origin.y() / rayDir.y();
+	if (t < 0) {
+		return std::nullopt;
+	}
+
+	QVector3D hit = origin + t * rayDir;
+	return hit;
 }
 
 void Camera::moveSpeed(float speed)

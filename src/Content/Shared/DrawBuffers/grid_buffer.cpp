@@ -8,22 +8,12 @@ GridDrawBuffer::GridDrawBuffer()
 	for (int i = 0; i <= 10; i++)
 	{
 		float f = static_cast<float>(i);
-		// Линии вдоль Z (по X)
-		gridVerts.push_back(0.0f);
-		gridVerts.push_back(0.0f);
-		gridVerts.push_back(f);
-
-		gridVerts.push_back(10.0f);
-		gridVerts.push_back(0.0f);
-		gridVerts.push_back(f);
-
-		gridVerts.push_back(f);
-		gridVerts.push_back(0.0f);
-		gridVerts.push_back(0.0f);
-
-		gridVerts.push_back(f);
-		gridVerts.push_back(0.0f);
-		gridVerts.push_back(10.0f);
+		gridVerts.insert(gridVerts.end(), {
+			0.0f, 0.0f, f,
+			10.0f, 0.0f, f,
+			f, 0.0f, 0.0f,
+			f, 0.0f, 10.0f
+			});
 	}
 
 	_gridVertexCount = gridVerts.size();

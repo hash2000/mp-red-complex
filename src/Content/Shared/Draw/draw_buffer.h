@@ -27,9 +27,13 @@ public:
 	void bind();
 	void release();
 
+	void enable(bool set);
+	bool isEnabled() const;
+
 	virtual void render(DrawProgram* program, QOpenGLFunctions* fn) { }
 
 private:
 	QOpenGLVertexArrayObject _vao;
 	QOpenGLBuffer _vbo;
+	bool _enabled{ true };
 };

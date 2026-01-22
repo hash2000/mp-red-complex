@@ -13,6 +13,7 @@
 #include <QMatrix4x4>
 #include <QTimer>
 
+
 QT_FORWARD_DECLARE_CLASS(QOpenGLTexture)
 QT_FORWARD_DECLARE_CLASS(QOpenGLShader)
 QT_FORWARD_DECLARE_CLASS(QOpenGLShaderProgram)
@@ -43,4 +44,6 @@ private:
 	QPoint _lastMousePos;
 
 	DrawProgram _program;
+
+	std::optional<QPoint> _selectedNode;
 };

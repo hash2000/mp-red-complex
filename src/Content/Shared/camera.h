@@ -1,6 +1,7 @@
 #pragma once
 #include <QVector3D>
 #include <QMatrix4x4>
+#include <QPoint>
 
 class Camera {
 public:
@@ -17,6 +18,8 @@ public:
 
 	const QMatrix4x4& projection() const;
 	const QMatrix4x4 view() const;
+
+	std::optional<QVector3D> raycastToGround(const QPoint& screenPos, int screenWidth, int screenHeight);
 
 private:
 	float _moveSpeed = 0.01f;

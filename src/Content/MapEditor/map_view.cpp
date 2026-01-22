@@ -2,6 +2,7 @@
 #include "Content/Shared/DrawBuffers/once_point_buffer.h"
 #include "Content/Shared/DrawBuffers/grid_buffer.h"
 #include "Content/Shared/DrawBuffers/axes_buffer.h"
+#include "Content/Shared/DrawBuffers/terrain_chunk_buffer.h"
 #include <QMouseEvent>
 #include <QOpenGLShader>
 
@@ -37,9 +38,10 @@ void MapView::initializeGL()
 	initializeOpenGLFunctions();
 
 	_program.create(vertexShaderSource, fragmentShaderSource);	
-	_program.add(std::make_unique<OncePointDrawBuffer>());
-	_program.add(std::make_unique<GridDrawBuffer>());
+//	_program.add(std::make_unique<OncePointDrawBuffer>());
+//	_program.add(std::make_unique<GridDrawBuffer>());
 	_program.add(std::make_unique<AxesDrawBuffer>());
+	_program.add(std::make_unique<TerrainChunkDrawBuffer>(2, 2));
 	_program.release();
 
 	glEnable(GL_DEPTH_TEST);
@@ -74,11 +76,21 @@ void MapView::paintGL()
 	_program.render();
 }
 
-// === Управление мышью ===
-
 void MapView::mousePressEvent(QMouseEvent* event)
 {
-	if (event->button() == Qt::RightButton) {
+	if (event->button() == Qt::LeftButton) {
+		const auto hit = _camera.raycastToGround(event->pos(), width(), height());
+		if (hit) {
+			int worldX = qRound(hit->x());
+			int worldZ = qRound(hit->z());
+			// Проверяем границы (например, 0..127)
+			if (worldX >= 0 && worldZ >= 0 && worldX < 128 && worldZ < 128) {
+				_selectedNode = QPoint(worldX, worldZ);
+				qDebug() << "Selected:" << worldX << worldZ;
+			}
+		}
+	}
+	else if (event->button() == Qt::RightButton) {
 		_rightMousePressed = true;
 		_lastMousePos = event->pos();
 	}
@@ -89,11 +101,21 @@ void MapView::mouseReleaseEvent(QMouseEvent* event)
 	if (event->button() == Qt::RightButton) {
 		_rightMousePressed = false;
 	}
+
+	if (event->button() == Qt::LeftButton) {
+		_selectedNode = std::nullopt;
+	}
 }
 
 void MapView::mouseMoveEvent(QMouseEvent* event)
 {
-	if (_rightMousePressed) {
+	if (_selectedNode) {
+		QPoint delta = event->pos() - _lastMousePos;
+		//float newH = m_terrain.height(m_selectedNode->x(), m_selectedNode->y()) + delta;
+		//m_terrain.setHeight(m_selectedNode->x(), m_selectedNode->y(), newH);
+		//update(); // чанки сами перестроятся при рендере
+	}
+	else if (_rightMousePressed) {
 		QPoint delta = event->pos() - _lastMousePos;
 		_lastMousePos = event->pos();
 		_camera.move(delta);
@@ -104,7 +126,7 @@ void MapView::mouseMoveEvent(QMouseEvent* event)
 
 void MapView::wheelEvent(QWheelEvent* event)
 {
-	float zoomFactor = event->angleDelta().y() > 0 ? 0.9f : 1.1f; // масштаб ближе/дальше
+	float zoomFactor = event->angleDelta().y() > 0 ? 0.9f : 1.1f;
 	_camera.zoom(zoomFactor);
 	_camera.update();
 	update();

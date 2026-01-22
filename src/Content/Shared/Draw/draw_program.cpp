@@ -41,6 +41,10 @@ void DrawProgram::render() {
 
 	for (auto& buffer : _buffers)
 	{
+		if (!buffer->isEnabled()) {
+			continue;
+		}
+
 		buffer->bind();
 		buffer->render(this, f);
 		buffer->release();

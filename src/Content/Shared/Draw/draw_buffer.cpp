@@ -39,3 +39,10 @@ void DrawBuffer::release() {
 	_vao.release();
 }
 
+void DrawBuffer::enable(bool set) {
+	_enabled = set;
+}
+
+bool DrawBuffer::isEnabled() const {
+	return _enabled;
+}
