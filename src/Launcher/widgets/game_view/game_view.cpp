@@ -42,5 +42,5 @@ void GameView::paintGL()
 
 
 
-	update();
+
 }

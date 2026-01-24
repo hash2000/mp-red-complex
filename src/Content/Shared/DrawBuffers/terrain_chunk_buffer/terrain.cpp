@@ -6,8 +6,8 @@ TerrainChunk::TerrainChunk(int x0, int z0, int width, int depth)
 ,	_width(width)
 , _depth(depth) {
 	_heights.resize(_width * _depth, 0.0f);
-	// all walwable by default
-	_walkable.resize(_width * _depth, 1); 
+	_terrain.resize(_width * _depth);
+	generate();
 }
 
 float TerrainChunk::height(int x, int z) const
@@ -25,19 +25,20 @@ void TerrainChunk::height(int x, int z, float h)
 	}
 }
 
-bool TerrainChunk::walkable(int x, int z) const
-{
-	if (inbox(x, z)) {
-		return _walkable[z * _width + x] != 0;
+TerrainBlockInfo* TerrainChunk::get(int x, int z) {
+	if (!inbox(x, z)) {
+		return nullptr;
 	}
 
-	return false;
+	return _terrain[z * _width + x].get();
 }
 
-void TerrainChunk::walkable(int x, int z, bool w)
-{
-	if (inbox(x, z)) {
-		_walkable[z * _width + x] = w ? 1 : 0;
+void TerrainChunk::generate() {
+	for (size_t i = 0; i < _width * _depth; i++)
+	{
+		auto info = std::make_unique<TerrainBlockInfo>();
+
+		_terrain[i] = std::move(info);
 	}
 }
 

@@ -5,6 +5,18 @@
 
 class DrawProgram;
 
+enum class TerrainBiome : uint8_t {
+	Empty = 0,
+	Sand,
+	Dirt,
+	Clay,
+	Stone,
+};
+
+struct TerrainBlockInfo {
+	TerrainBiome _biome{ TerrainBiome::Empty };
+};
+
 class TerrainChunk {
 public:
 	static const int CHUNK_SIZE = 32;
@@ -15,8 +27,7 @@ public:
 	float height(int x, int z) const;
 	void height(int x, int z, float h);
 
-	bool walkable(int x, int z) const;
-	void walkable(int x, int z, bool w);
+	TerrainBlockInfo* get(int x, int z);
 
 	int width() const;
 	int depth() const;
@@ -30,12 +41,15 @@ public:
 	int z() const;
 
 private:
+	void generate();
+
+private:
 	int _x;
 	int _z;
 	int _width;
 	int _depth;
 	std::vector<float> _heights;
-	std::vector<uint8_t> _walkable;
+	std::vector<std::unique_ptr<TerrainBlockInfo>> _terrain;
 	bool _dirty = true;
 };
 
