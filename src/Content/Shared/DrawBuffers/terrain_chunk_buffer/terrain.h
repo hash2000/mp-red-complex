@@ -3,8 +3,6 @@
 #include <QOpenGLFunctions>
 #include <vector>
 
-class DrawProgram;
-
 class TerrainChunk {
 public:
 	static const int CHUNK_SIZE = 32;

@@ -1,52 +1,29 @@
 #include "Launcher/main_frame.h"
-#include <QLabel>
+#include "Launcher/widgets/legend_widget.h"
+#include "Launcher/widgets/actions_widget.h"
+#include "Launcher/map/map_view.h"
+#include <QSplitter>
+#include <QTabWidget>
 
 LauncherMainFrame::LauncherMainFrame(std::shared_ptr<Resources> resources)
-	: _resources(resources)
-	, _center(new QStackedWidget(this))
-	, _gameView(new GameView(qRgb(20, 20, 50), this))
-	, _profileView(new ProfileView(this))
-	, _sideBar(new SideBar(this)) {
-	setupView();
-	setupSideBarViews();
-	setupSideBar();
-}
+: _resources(resources) {
+	auto legend = new LegendWidget;
+	auto actions = new ActionsWidget;
 
-void LauncherMainFrame::setupView() {
-	auto* central = new QWidget(this);
-	setCentralWidget(central);
+	auto splitter = new QSplitter;
+	auto mapView = new MapView(actions);
+	auto tabs = new QTabWidget;
 
-	auto* mainLayout = new QHBoxLayout(central);
-	mainLayout->setContentsMargins(0, 0, 0, 0);
-	mainLayout->setSpacing(0);
+	QObject::connect(mapView, &MapView::tileInDirectionChanged,
+		actions, &ActionsWidget::onTileInDirectionChanged);
 
-	mainLayout->addWidget(_center, 1);
-	mainLayout->addWidget(_sideBar);
+	tabs->addTab(legend, "Legend");
+	tabs->addTab(actions, "Actions");
 
-	setWindowTitle("RedComplex");
-}
+	splitter->addWidget(mapView);
+	splitter->addWidget(tabs);
+	splitter->addWidget(tabs);
+	splitter->setSizes({ 800, 200 });
 
-void LauncherMainFrame::setupSideBarViews() {
-	_center->addWidget(_gameView);
-	_center->addWidget(_profileView);
-	_center->setCurrentWidget(_gameView);
-}
-
-void LauncherMainFrame::setupSideBar() {
-	_sideBar->addAction(_profileView);
-	_sideBar->addAction(_gameView);
-	_sideBar->setButtonChecked(_gameView->id(), true);
-
-	connect(_sideBar, &SideBar::onAction, this, &LauncherMainFrame::onSideBarAction);
-}
-
-void LauncherMainFrame::onSideBarAction(SideBarAction* action) {
-	switch (action->viewState()) {
-	case ViewState::UserProfile:
-		_center->setCurrentWidget(_profileView);
-		break;
-	case ViewState::Game:
-		_center->setCurrentWidget(_gameView);
-		break;
-	}
+	setCentralWidget(splitter);
 }
