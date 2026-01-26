@@ -3,8 +3,9 @@
 
 class Player {
 public:
+	void move(int dx, int dy);
+
+public:
 	QPoint pos{ 0, 0 };
-	void move(int dx, int dy) {
-		pos += QPoint(dx, dy);
-	}
+	QPoint currentDirection{ 0, 0 };
 };

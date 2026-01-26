@@ -14,11 +14,11 @@ LauncherMainFrame::LauncherMainFrame(std::shared_ptr<Resources> resources)
 	auto mapView = new MapView(actions);
 	auto tabs = new QTabWidget;
 
-	QObject::connect(mapView, &MapView::tileInDirectionChanged,
-		actions, &ActionsWidget::onTileInDirectionChanged);
+	QObject::connect(mapView, &MapView::tileInDirectionChanged, actions, &ActionsWidget::onTileInDirectionChanged);
+	QObject::connect(actions, &ActionsWidget::centerOnPlayerRequested, mapView, &MapView::centerOnPlayerAnimated);
 
-	tabs->addTab(legend, "Legend");
 	tabs->addTab(actions, "Actions");
+	tabs->addTab(legend, "Legend");
 
 	splitter->addWidget(mapView);
 	splitter->addWidget(tabs);

@@ -1,5 +1,6 @@
 // GameMap.h
 #pragma once
+#include "externals/FastNoiseLite/FastNoiseLite.h"
 #include "Launcher/map/tile.h"
 #include <unordered_map>
 #include <QPoint>
@@ -27,7 +28,9 @@ public:
 	const std::vector<Tile>& getChunkTiles(int chunkX, int chunkY);
 
 private:
-	std::unordered_map<ChunkKey, std::vector<Tile>> _chunks;
-
 	void fillChunk(std::vector<Tile>& chunkTiles, int chunkX, int chunkY);
+
+private:
+	std::unordered_map<ChunkKey, std::vector<Tile>> _chunks;
+	FastNoiseLite _noise;
 };

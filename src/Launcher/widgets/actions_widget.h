@@ -14,10 +14,12 @@ public slots:
 
 signals:
 	void digRequested();
+	void centerOnPlayerRequested();
 
 private:
 	QLabel* biomeLabel;
 	QLabel* resourcesLabel;
 	QPushButton* digButton;
+	QPushButton* searchPlayerButton;
 	Tile currentTile;
 };

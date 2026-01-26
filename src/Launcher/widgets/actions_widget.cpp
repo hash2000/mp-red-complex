@@ -8,13 +8,16 @@ ActionsWidget::ActionsWidget(QWidget* parent)
 	biomeLabel = new QLabel("Направление не выбрано");
 	resourcesLabel = new QLabel("");
 	digButton = new QPushButton("Добыча");
+	searchPlayerButton = new QPushButton("Центрировать");
 
 	layout->addWidget(biomeLabel);
 	layout->addWidget(resourcesLabel);
 	layout->addWidget(digButton);
+	layout->addWidget(searchPlayerButton);
 	layout->addStretch();
 
 	connect(digButton, &QPushButton::clicked, this, &ActionsWidget::digRequested);
+	connect(searchPlayerButton, &QPushButton::clicked, this, &ActionsWidget::centerOnPlayerRequested);
 }
 
 void ActionsWidget::onTileInDirectionChanged(const Tile& tile) {

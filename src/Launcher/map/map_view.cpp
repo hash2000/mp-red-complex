@@ -1,6 +1,8 @@
 #include "Launcher/map/map_view.h"
 #include <QKeyEvent>
 #include <QBrush>
+#include <QPropertyAnimation>
+#include <QScrollBar>
 
 MapView::MapView(ActionsWidget* actionsWidget, QWidget* parent)
 : QGraphicsView(parent)
@@ -80,18 +82,21 @@ void MapView::drawChunk(int chunkX, int chunkY) {
 }
 
 void MapView::drawPlayer() {
-	static QGraphicsEllipseItem* playerItem = nullptr;
-	if (playerItem) {
-		_scene->removeItem(playerItem);
-		delete playerItem;
+	if (_playerItem) {
+		_scene->removeItem(_playerItem);
+		delete _playerItem;
+		_playerItem = nullptr;
 	}
-	playerItem = _scene->addEllipse(
-		_player.pos.x() * TILE_SIZE + 2,
-		_player.pos.y() * TILE_SIZE + 2,
-		TILE_SIZE - 4, TILE_SIZE - 4,
-		QPen(Qt::black), QBrush(Qt::red)
+
+	QRectF rect(
+		_player.pos.x() * TILE_SIZE + 1,
+		_player.pos.y() * TILE_SIZE + 1,
+		TILE_SIZE - 2,
+		TILE_SIZE - 2
 	);
-	playerItem->setZValue(1);
+
+	_playerItem = _scene->addRect(rect, QPen(Qt::cyan, 3), QBrush(QColor("#FF4444")));
+	_playerItem->setZValue(10);
 }
 
 void MapView::setPlayerPosition(const QPoint& pos) {
@@ -111,10 +116,10 @@ void MapView::keyPressEvent(QKeyEvent* event) {
 	//default: QGraphicsView::keyPressEvent(event); return;
 	//}
 
-	if (event->key() == Qt::Key_Left) { _currentDirection = { -1, 0 }; }
-	else if (event->key() == Qt::Key_Right) { _currentDirection = { 1, 0 }; }
-	else if (event->key() == Qt::Key_Up) { _currentDirection = { 0, -1 }; }
-	else if (event->key() == Qt::Key_Down) { _currentDirection = { 0, 1 }; }
+	if (event->key() == Qt::Key_Left) { _player.currentDirection = { -1, 0 }; }
+	else if (event->key() == Qt::Key_Right) { _player.currentDirection = { 1, 0 }; }
+	else if (event->key() == Qt::Key_Up) { _player.currentDirection = { 0, -1 }; }
+	else if (event->key() == Qt::Key_Down) { _player.currentDirection = { 0, 1 }; }
 	else {
 		QGraphicsView::keyPressEvent(event);
 		return;
@@ -137,30 +142,30 @@ void MapView::drawDirectionArrow() {
 		_directionArrow = nullptr;
 	}
 
-	if (_currentDirection == QPoint(0, 0)) return;
+	if (_player.currentDirection == QPoint(0, 0)) return;
 
 	// Позиция над игроком
-	int arrowX = (_player.pos.x() + _currentDirection.x()) * TILE_SIZE;
-	int arrowY = (_player.pos.y() + _currentDirection.y()) * TILE_SIZE;
+	int arrowX = (_player.pos.x() + _player.currentDirection.x()) * TILE_SIZE;
+	int arrowY = (_player.pos.y() + _player.currentDirection.y()) * TILE_SIZE;
 
 	// Простая стрелка (треугольник)
 	QPolygonF poly;
-	if (_currentDirection == QPoint(1, 0)) { // right
+	if (_player.currentDirection == QPoint(1, 0)) { // right
 		poly << QPointF(arrowX + TILE_SIZE, arrowY + TILE_SIZE / 2)
 			<< QPointF(arrowX + TILE_SIZE + 8, arrowY)
 			<< QPointF(arrowX + TILE_SIZE + 8, arrowY + TILE_SIZE);
 	}
-	else if (_currentDirection == QPoint(-1, 0)) { // left
+	else if (_player.currentDirection == QPoint(-1, 0)) { // left
 		poly << QPointF(arrowX, arrowY + TILE_SIZE / 2)
 			<< QPointF(arrowX - 8, arrowY)
 			<< QPointF(arrowX - 8, arrowY + TILE_SIZE);
 	}
-	else if (_currentDirection == QPoint(0, -1)) { // up
+	else if (_player.currentDirection == QPoint(0, -1)) { // up
 		poly << QPointF(arrowX + TILE_SIZE / 2, arrowY)
 			<< QPointF(arrowX, arrowY - 8)
 			<< QPointF(arrowX + TILE_SIZE, arrowY - 8);
 	}
-	else if (_currentDirection == QPoint(0, 1)) { // down
+	else if (_player.currentDirection == QPoint(0, 1)) { // down
 		poly << QPointF(arrowX + TILE_SIZE / 2, arrowY + TILE_SIZE)
 			<< QPointF(arrowX, arrowY + TILE_SIZE + 8)
 			<< QPointF(arrowX + TILE_SIZE, arrowY + TILE_SIZE + 8);
@@ -171,13 +176,13 @@ void MapView::drawDirectionArrow() {
 }
 
 void MapView::updateDirectionTileInfo() {
-	if (_currentDirection == QPoint(0, 0)) {
+	if (_player.currentDirection == QPoint(0, 0)) {
 		// Передаём пустой тайл или специальный "нет направления"
 		emit tileInDirectionChanged(Tile{});
 		return;
 	}
 
-	QPoint targetPos = _player.pos + _currentDirection;
+	QPoint targetPos = _player.pos + _player.currentDirection;
 	Tile& t = _map.getOrCreateTile(
 		targetPos.x(),
 		targetPos.y());
@@ -186,8 +191,8 @@ void MapView::updateDirectionTileInfo() {
 }
 
 void MapView::performDig() {
-	if (_currentDirection == QPoint(0, 0)) return;
-	QPoint target = _player.pos + _currentDirection;
+	if (_player.currentDirection == QPoint(0, 0)) return;
+	QPoint target = _player.pos + _player.currentDirection;
 	Tile& t = _map.getOrCreateTile(target.x(), target.y());
 	t._destruction += 25.0f;
 	if (t._destruction > 100.0f) t._destruction = 100.0f;
@@ -205,4 +210,38 @@ void MapView::performDig() {
 
 	// Обновляем ActionsWidget
 	updateDirectionTileInfo();
+}
+
+void MapView::centerOnPlayer()
+{
+	QPointF playerScenePos(
+		_player.pos.x() * TILE_SIZE + TILE_SIZE / 2.0,
+		_player.pos.y() * TILE_SIZE + TILE_SIZE / 2.0
+	);
+
+	// Но проще: использовать centerOn
+	centerOn(playerScenePos);
+}
+
+void MapView::centerOnPlayerAnimated() {
+	QPointF target = mapToScene(viewport()->rect().center());
+	QPointF playerPos(
+		_player.pos.x() * TILE_SIZE + TILE_SIZE / 2,
+		_player.pos.y() * TILE_SIZE + TILE_SIZE / 2
+	);
+
+	// Используем scroll bars для анимации
+	auto hBar = horizontalScrollBar();
+	auto vBar = verticalScrollBar();
+
+	QPropertyAnimation* animH = new QPropertyAnimation(hBar, "value");
+	animH->setEndValue(hBar->value() + (playerPos.x() - target.x()));
+	animH->setDuration(300);
+
+	QPropertyAnimation* animV = new QPropertyAnimation(vBar, "value");
+	animV->setEndValue(vBar->value() + (playerPos.y() - target.y()));
+	animV->setDuration(300);
+
+	animH->start(QAbstractAnimation::DeleteWhenStopped);
+	animV->start(QAbstractAnimation::DeleteWhenStopped);
 }
