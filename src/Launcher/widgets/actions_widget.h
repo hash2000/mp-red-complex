@@ -17,9 +17,9 @@ signals:
 	void centerOnPlayerRequested();
 
 private:
-	QLabel* biomeLabel;
-	QLabel* resourcesLabel;
-	QPushButton* digButton;
-	QPushButton* searchPlayerButton;
-	Tile currentTile;
+	QLabel* _biomeLabel;
+	QLabel* _resourcesLabel;
+	QPushButton* _digButton;
+	QPushButton* _searchPlayerButton;
+	Tile _currentTile;
 };

@@ -5,33 +5,33 @@ ActionsWidget::ActionsWidget(QWidget* parent)
 : QWidget(parent) {
 	auto layout = new QVBoxLayout(this);
 
-	biomeLabel = new QLabel("Направление не выбрано");
-	resourcesLabel = new QLabel("");
-	digButton = new QPushButton("Добыча");
-	searchPlayerButton = new QPushButton("Центрировать");
+	_biomeLabel = new QLabel("Направление не выбрано");
+	_resourcesLabel = new QLabel("");
+	_digButton = new QPushButton("Добыча");
+	_searchPlayerButton = new QPushButton("Центрировать");
 
-	layout->addWidget(biomeLabel);
-	layout->addWidget(resourcesLabel);
-	layout->addWidget(digButton);
-	layout->addWidget(searchPlayerButton);
+	layout->addWidget(_biomeLabel);
+	layout->addWidget(_resourcesLabel);
+	layout->addWidget(_digButton);
+	layout->addWidget(_searchPlayerButton);
 	layout->addStretch();
 
-	connect(digButton, &QPushButton::clicked, this, &ActionsWidget::digRequested);
-	connect(searchPlayerButton, &QPushButton::clicked, this, &ActionsWidget::centerOnPlayerRequested);
+	connect(_digButton, &QPushButton::clicked, this, &ActionsWidget::digRequested);
+	connect(_searchPlayerButton, &QPushButton::clicked, this, &ActionsWidget::centerOnPlayerRequested);
 }
 
 void ActionsWidget::onTileInDirectionChanged(const Tile& tile) {
-	currentTile = tile;
+	_currentTile = tile;
 
 	if (tile._biome == BiomeType::Empty && tile._destruction == 0.0f) {
-		biomeLabel->setText("Направление не выбрано");
-		resourcesLabel->setText("");
-		digButton->setEnabled(false);
+		_biomeLabel->setText("Направление не выбрано");
+		_resourcesLabel->setText("");
+		_digButton->setEnabled(false);
 		return;
 	}
 
 	QString biomeName = Tile::biomeName(tile._biome);
-	biomeLabel->setText(QString("Биом: %1").arg(biomeName));
+	_biomeLabel->setText(QString("Биом: %1").arg(biomeName));
 
 	QString resText;
 	if (tile._resources.empty()) {
@@ -47,7 +47,7 @@ void ActionsWidget::onTileInDirectionChanged(const Tile& tile) {
 
 		resText = "Ресурсы:\n" + parts.join("\n");
 	}
-	resourcesLabel->setText(resText);
 
-	digButton->setEnabled(true);
+	_resourcesLabel->setText(resText);
+	_digButton->setEnabled(true);
 }

@@ -33,10 +33,10 @@ void ChunkItem::redrawPixmap() {
 void ChunkItem::updateTile(int localX, int localY, const Tile& newTile) {
 	if (localX >= 0 && localX < CHUNK_SIZE && localY >= 0 && localY < CHUNK_SIZE) {
 		_tiles[localY * CHUNK_SIZE + localX] = newTile;
-		// Перерисуем только один тайл в pixmap
+
 		QPainter p(&_pixmap);
 		p.fillRect(localX * TILE_SIZE, localY * TILE_SIZE, TILE_SIZE, TILE_SIZE, newTile.color());
 		p.end();
-		update(); // запрос перерисовки этого item'а
+		update();
 	}
 }

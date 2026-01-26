@@ -7,11 +7,12 @@
 #include <QGraphicsRectItem>
 
 class ActionsWidget;
+class TaskManager;
 
 class MapView : public QGraphicsView {
   Q_OBJECT
 public:
-  explicit MapView(ActionsWidget* actionsWidget, QWidget* parent = nullptr);
+  explicit MapView(TaskManager* taskManager, ActionsWidget* actionsWidget, QWidget* parent = nullptr);
 
   void updateView();
   void setPlayerPosition(const QPoint& pos);
@@ -20,6 +21,10 @@ public:
 
 signals:
   void tileInDirectionChanged(const Tile& tile);
+	void nextPerformDig(const Tile& tile);
+
+public slots:
+  void performDig();
 
 protected:
   void keyPressEvent(QKeyEvent* event) override;
@@ -29,7 +34,6 @@ private:
   void drawPlayer();
   void drawDirectionArrow();
   void updateDirectionTileInfo();
-  void performDig();
 
 private:
   static constexpr int TILE_SIZE = 16;
@@ -40,5 +44,6 @@ private:
   QGraphicsPolygonItem* _directionArrow{ nullptr };
   QGraphicsRectItem* _playerItem{ nullptr };
   ActionsWidget* _actionsWidget;
+	TaskManager* _taskManager;
   std::unordered_map<ChunkKey, ChunkItem*> _renderedChunks;
 };

@@ -5,6 +5,10 @@
 
 class ChunkItem : public QGraphicsItem {
 public:
+	static constexpr int TILE_SIZE = 16;
+	static constexpr int CHUNK_SIZE = 32;
+
+public:
 	explicit ChunkItem(int chunkX, int chunkY, const std::vector<Tile>& tiles);
 
 	QRectF boundingRect() const override;
@@ -18,6 +22,4 @@ private:
 	int _chunkY;
 	std::vector<Tile> _tiles;
 	QPixmap _pixmap;
-	static constexpr int TILE_SIZE = 16;
-	static constexpr int CHUNK_SIZE = 32;
 };

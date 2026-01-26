@@ -1,12 +1,14 @@
 #include "Launcher/map/map_view.h"
+#include "Launcher/tasks/task_manager.h"
 #include <QKeyEvent>
 #include <QBrush>
 #include <QPropertyAnimation>
 #include <QScrollBar>
 
-MapView::MapView(ActionsWidget* actionsWidget, QWidget* parent)
+MapView::MapView(TaskManager* taskManager, ActionsWidget* actionsWidget, QWidget* parent)
 : QGraphicsView(parent)
-, _actionsWidget(actionsWidget) {
+, _actionsWidget(actionsWidget)
+, _taskManager(taskManager) {
 	_scene = new QGraphicsScene(this);
 	setScene(_scene);
 	setRenderHint(QPainter::Antialiasing, false);
@@ -191,25 +193,37 @@ void MapView::updateDirectionTileInfo() {
 }
 
 void MapView::performDig() {
-	if (_player.currentDirection == QPoint(0, 0)) return;
+	if (_player.currentDirection == QPoint(0, 0)) {
+		return;
+	}
+
 	QPoint target = _player.pos + _player.currentDirection;
 	Tile& t = _map.getOrCreateTile(target.x(), target.y());
 	t._destruction += 25.0f;
-	if (t._destruction > 100.0f) t._destruction = 100.0f;
-
-	// Обновляем только один тайл в чанке
-	int chunkX = target.x() / GameMap::CHUNK_SIZE;
-	int chunkY = target.y() / GameMap::CHUNK_SIZE;
-	int localX = (target.x() % GameMap::CHUNK_SIZE + GameMap::CHUNK_SIZE) % GameMap::CHUNK_SIZE;
-	int localY = (target.y() % GameMap::CHUNK_SIZE + GameMap::CHUNK_SIZE) % GameMap::CHUNK_SIZE;
-
-	ChunkKey key{ chunkX, chunkY };
-	if (_renderedChunks.count(key)) {
-		_renderedChunks[key]->updateTile(localX, localY, t);
+	if (t._destruction >= 100.0f) {
+		t._destruction = 100.0f;
+		return;
 	}
 
-	// Обновляем ActionsWidget
-	updateDirectionTileInfo();
+	_taskManager->startMining(
+		Tile::biomeName(t._biome),
+		2000,
+		[this, target]() {
+
+			Tile& tile = _map.getOrCreateTile(
+				target.x(),
+				target.y());
+			tile._destruction += 25.0f;
+			if (tile._destruction > 100.0f) {
+				tile._destruction = 100.0f;
+			}
+			else {
+				emit nextPerformDig(tile);
+			}
+
+			updateView();
+		}
+	);
 }
 
 void MapView::centerOnPlayer()

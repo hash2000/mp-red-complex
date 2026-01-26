@@ -1,29 +1,39 @@
 #include "Launcher/main_frame.h"
-#include "Launcher/widgets/legend_widget.h"
-#include "Launcher/widgets/actions_widget.h"
-#include "Launcher/map/map_view.h"
 #include <QSplitter>
 #include <QTabWidget>
 
 LauncherMainFrame::LauncherMainFrame(std::shared_ptr<Resources> resources)
 : _resources(resources) {
-	auto legend = new LegendWidget;
-	auto actions = new ActionsWidget;
+	_legendWidget = new LegendWidget;
+	_actionsWidget = new ActionsWidget;
+	_progressWidget = new ProgressWidget;
 
 	auto splitter = new QSplitter;
-	auto mapView = new MapView(actions);
 	auto tabs = new QTabWidget;
+	_mapView = new MapView(&_taskManager, _actionsWidget);
 
-	QObject::connect(mapView, &MapView::tileInDirectionChanged, actions, &ActionsWidget::onTileInDirectionChanged);
-	QObject::connect(actions, &ActionsWidget::centerOnPlayerRequested, mapView, &MapView::centerOnPlayerAnimated);
+	QObject::connect(_mapView, &MapView::tileInDirectionChanged, _actionsWidget, &ActionsWidget::onTileInDirectionChanged);
+	QObject::connect(_mapView, &MapView::nextPerformDig, _mapView, &MapView::performDig);
+	QObject::connect(_actionsWidget, &ActionsWidget::centerOnPlayerRequested, _mapView, &MapView::centerOnPlayerAnimated);
 
-	tabs->addTab(actions, "Actions");
-	tabs->addTab(legend, "Legend");
+	QObject::connect(_actionsWidget, &ActionsWidget::digRequested, _mapView, &MapView::performDig);
 
-	splitter->addWidget(mapView);
+	QObject::connect(&_taskManager, &TaskManager::taskAdded, _progressWidget, &ProgressWidget::onTaskAdded);
+	QObject::connect(&_taskManager, &TaskManager::taskUpdated, _progressWidget, &ProgressWidget::onTaskUpdated);
+	QObject::connect(&_taskManager, &TaskManager::taskCompleted, _progressWidget, &ProgressWidget::onTaskCompleted);
+
+	tabs->addTab(_actionsWidget, "Actions");
+	tabs->addTab(_progressWidget, "Progress");
+	tabs->addTab(_legendWidget, "Legend");
+
+	splitter->addWidget(_mapView);
 	splitter->addWidget(tabs);
 	splitter->addWidget(tabs);
 	splitter->setSizes({ 800, 200 });
 
 	setCentralWidget(splitter);
+
+	_gameTimer.setInterval(30); // ~33 FPS
+	connect(&_gameTimer, &QTimer::timeout, &_taskManager, &TaskManager::update);
+	_gameTimer.start();
 }
