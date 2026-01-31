@@ -1,5 +1,6 @@
 add_subdirectory(ResourcesTool)
 add_subdirectory(Launcher)
+add_subdirectory(Game)
 add_subdirectory(Base)
 add_subdirectory(BaseWidgets)
 add_subdirectory(Resources)
