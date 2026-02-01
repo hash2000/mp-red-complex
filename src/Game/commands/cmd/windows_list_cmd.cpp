@@ -2,11 +2,12 @@
 #include "Game/commands/command_processor.h"
 #include "Game/commands/command_context.h"
 #include "Game/app_controller.h"
+#include "Game/controllers/windows_controller.h"
 
 bool ListWindowsCommand::execute(CommandContext* context, const QStringList& args) {
 	Q_UNUSED(args);
 
-	auto controller = context->applicationController();
+	auto controller = context->applicationController()->windowsController();
 	auto entries = controller->windowEntries();
 
 	if (entries.isEmpty()) {

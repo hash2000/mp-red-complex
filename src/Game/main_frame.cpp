@@ -2,6 +2,7 @@
 #include "Game/map_view/map_window.h"
 #include "Game/commands/command_console.h"
 #include "Game/app_controller.h"
+#include "Game/controllers/windows_controller.h"
 #include <QSplitter>
 #include <QTabWidget>
 #include <QMdiArea>
@@ -48,7 +49,7 @@ GameMainFrame::GameMainFrame(std::shared_ptr<Resources> resources)
 void GameMainFrame::setupMapView() {
 	auto widget = new MapWindow;
 	auto subWndow = d->mdiArea->addSubWindow(widget);
-	d->controller->registerWindow(widget);
+	d->controller->windowsController()->registerWindow(widget);
 	subWndow->setWindowTitle("Word map");
 	subWndow->setAttribute(Qt::WA_DeleteOnClose, true);
 	subWndow->resize(640, 480);
@@ -60,7 +61,7 @@ void GameMainFrame::setupConsole() {
 	d->commandConsole = new CommandConsole(d->controller, this);
 	d->commandConsole->setWindowFlags(Qt::Dialog | Qt::WindowStaysOnTopHint);
 
-	d->controller->setMdiArea(d->mdiArea);
+	d->controller->windowsController()->setMdiArea(d->mdiArea);
 
 	// Кнопка переключения в статусбаре
 	d->consoleToggleButton = new QToolButton(statusBar());
@@ -68,6 +69,7 @@ void GameMainFrame::setupConsole() {
 	d->consoleToggleButton->setToolTip("Command Console (Ctrl+`)");
 	d->consoleToggleButton->setCheckable(true);
 	d->consoleToggleButton->setAutoRaise(true);
+	d->consoleToggleButton->setChecked(!d->commandConsole->isVisible());
 
 	connect(d->consoleToggleButton, &QToolButton::toggled, this, &GameMainFrame::toggleCommandConsole);
 

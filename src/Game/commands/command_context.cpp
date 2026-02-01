@@ -1,5 +1,6 @@
 #include "Game/commands/command_context.h"
 #include "Game/app_controller.h"
+#include "Game/controllers/windows_controller.h"
 #include "Game/mdi_child_window.h"
 #include <QMdiSubWindow>
 #include <QMetaObject>
@@ -32,15 +33,15 @@ ApplicationController* CommandContext::applicationController() const {
 }
 
 QMdiArea* CommandContext::mdiArea() const {
-	return d->controller ? d->controller->mdiArea() : nullptr;
+	return d->controller ? d->controller->windowsController()->mdiArea() : nullptr;
 }
 
 MdiChildWindow* CommandContext::activeWindow() const {
-	if (!d->controller || !d->controller->mdiArea()) {
+	if (!d->controller || !d->controller->windowsController()->mdiArea()) {
 		return nullptr;
 	}
 
-	auto* subWindow = d->controller->mdiArea()->activeSubWindow();
+	auto subWindow = d->controller->windowsController()->mdiArea()->activeSubWindow();
 
 	// 🔑 Правильное использование qobject_cast с полным определением класса
 	if (subWindow && subWindow->widget()) {
@@ -51,15 +52,15 @@ MdiChildWindow* CommandContext::activeWindow() const {
 }
 
 MdiChildWindow* CommandContext::findWindowById(const QString& id) const {
-	return d->controller ? d->controller->findWindowById(id) : nullptr;
+	return d->controller ? d->controller->windowsController()->findWindowById(id) : nullptr;
 }
 
 QList<MdiChildWindow*> CommandContext::allWindows() const {
 	QList<MdiChildWindow*> result;
-	if (!d->controller || !d->controller->mdiArea()) return result;
+	if (!d->controller || !d->controller->windowsController()->mdiArea()) return result;
 
-	for (auto* subWindow : d->controller->mdiArea()->subWindowList()) {
-		if (auto* window = qobject_cast<MdiChildWindow*>(subWindow->widget())) {
+	for (auto subWindow : d->controller->windowsController()->mdiArea()->subWindowList()) {
+		if (auto window = qobject_cast<MdiChildWindow*>(subWindow->widget())) {
 			result.append(window);
 		}
 	}
