@@ -9,6 +9,8 @@
 class CommandProcessor;
 class CommandContext;
 class WindowsController;
+class EventBus;
+class Services;
 
 class ApplicationController : public QObject {
 Q_OBJECT
@@ -19,6 +21,8 @@ public:
 	CommandProcessor* commandProcessor() const;
 	CommandContext* commandContext() const;
 	WindowsController* windowsController() const;
+	EventBus* eventBus() const;
+	Services* services() const;
 
 	/**
 	 * Выполнение команды по текстовой строке

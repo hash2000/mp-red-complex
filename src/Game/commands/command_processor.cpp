@@ -1,8 +1,10 @@
 #include "Game/commands/command_processor.h"
 #include "Game/commands/command_context.h"
 #include "Game/commands/command.h"
+#include "Game/controllers/windows_controller.h"
 #include "Game/commands/cmd/help_cmd.h"
 #include "Game/app_controller.h"
+#include "Game/mdi_child_window.h"
 #include <QRegularExpression>
 #include <QDebug>
 #include <QHash>
@@ -17,53 +19,52 @@ public:
 	}
 
 	CommandProcessor* q;
-
-	// Парсинг командной строки с поддержкой кавычек
-	static QStringList parseCommandLine(const QString& line) {
-		QStringList tokens;
-		QString currentToken;
-		bool inQuotes = false;
-		bool escaped = false;
-
-		for (int i = 0; i < line.size(); ++i) {
-			QChar ch = line[i];
-
-			if (escaped) {
-				currentToken += ch;
-				escaped = false;
-				continue;
-			}
-
-			if (ch == '\\') {
-				escaped = true;
-				continue;
-			}
-
-			if (ch == '"') {
-				inQuotes = !inQuotes;
-				continue;
-			}
-
-			if (ch.isSpace() && !inQuotes) {
-				if (!currentToken.isEmpty()) {
-					tokens << currentToken;
-					currentToken.clear();
-				}
-				continue;
-			}
-
-			currentToken += ch;
-		}
-
-		if (!currentToken.isEmpty() || inQuotes) {
-			tokens << currentToken;
-		}
-
-		return tokens;
-	}
-
 	std::map<QString, std::unique_ptr<ICommand>> commands;
 };
+
+// Парсинг командной строки с поддержкой кавычек
+static QStringList parseCommandLine(const QString& line) {
+	QStringList tokens;
+	QString currentToken;
+	bool inQuotes = false;
+	bool escaped = false;
+
+	for (int i = 0; i < line.size(); ++i) {
+		QChar ch = line[i];
+
+		if (escaped) {
+			currentToken += ch;
+			escaped = false;
+			continue;
+		}
+
+		if (ch == '\\') {
+			escaped = true;
+			continue;
+		}
+
+		if (ch == '"') {
+			inQuotes = !inQuotes;
+			continue;
+		}
+
+		if (ch.isSpace() && !inQuotes) {
+			if (!currentToken.isEmpty()) {
+				tokens << currentToken;
+				currentToken.clear();
+			}
+			continue;
+		}
+
+		currentToken += ch;
+	}
+
+	if (!currentToken.isEmpty() || inQuotes) {
+		tokens << currentToken;
+	}
+
+	return tokens;
+}
 
 CommandProcessor::CommandProcessor(QObject* parent)
 	: QObject(parent)
@@ -90,7 +91,7 @@ bool CommandProcessor::execute(const QString& commandLine, CommandContext* conte
 		return false;
 	}
 
-	auto args = d->parseCommandLine(commandLine.trimmed());
+	auto args = parseCommandLine(commandLine.trimmed());
 	if (args.isEmpty()) {
 		return true;
 	}
@@ -99,18 +100,52 @@ bool CommandProcessor::execute(const QString& commandLine, CommandContext* conte
 		.takeFirst()
 		.toLower();
 
-	ICommand* command = findCommandUnsafe(cmdName);
-
+	auto command = findCommandUnsafe(cmdName);
 	if (!command) {
-		context->printError(QString("Unknown command: '%1'. Type 'help' for available commands.").arg(cmdName));
-		emit commandError(cmdName, "Unknown command");
+
+		// отправка команды в активное окно
+		if (auto activeWindow = context->activeWindow()) {
+			if (activeWindow->handleCommand(cmdName, args, context)) {
+				return true;
+			}
+		}
+
+		// поиск окна по имени и отправка команды ему
+		QString targetWindowId;
+		if (cmdName.contains(":")) {
+			int sepPos = cmdName.indexOf(':');
+			targetWindowId = cmdName.left(sepPos);
+			cmdName = cmdName.mid(sepPos + 1);
+		}
+
+		if (targetWindowId.isEmpty()) {
+			return false;
+		}
+
+		if (auto window = context->applicationController()->windowsController()->findWindowById(targetWindowId)) {
+			if (window->handleCommand(cmdName, args, context)) {
+				return true;
+			}
+
+			context->printError(QString("Window '%1' does not support command '%2'")
+				.arg(targetWindowId)
+				.arg(cmdName));
+
+			return false;
+		}
+
 		return false;
 	}
 
+	return executeCommand(command, context, cmdName, args);
+}
+
+bool CommandProcessor::executeCommand(ICommand* command, CommandContext* context, const QString& cmdName, const QStringList& args) {
 	// Проверка количества аргументов
 	if (args.size() < command->minArgs()) {
 		context->printError(QString("Command '%1' requires at least %2 arguments")
-			.arg(cmdName).arg(command->minArgs()));
+			.arg(cmdName)
+			.arg(command->minArgs()));
 		context->print(QString("Usage: %1").arg(command->help()));
 		emit commandError(cmdName, "Insufficient arguments");
 		return false;
@@ -118,7 +153,8 @@ bool CommandProcessor::execute(const QString& commandLine, CommandContext* conte
 
 	if (command->maxArgs() >= 0 && args.size() > command->maxArgs()) {
 		context->printError(QString("Command '%1' accepts at most %2 arguments")
-			.arg(cmdName).arg(command->maxArgs()));
+			.arg(cmdName)
+			.arg(command->maxArgs()));
 		context->print(QString("Usage: %1").arg(command->help()));
 		emit commandError(cmdName, "Too many arguments");
 		return false;
@@ -144,7 +180,7 @@ bool CommandProcessor::execute(const QString& commandLine, CommandContext* conte
 
 QStringList CommandProcessor::availableCommands() const {
 	QStringList result;
-	for (auto it = d->commands.cbegin(); it != d->commands.cend(); ++it) {
+	for (auto it = d->commands.cbegin(); it != d->commands.cend(); it++) {
 		result << it->first;
 	}
 	result.sort();

@@ -1,5 +1,4 @@
 #include "Game/map_view/map_widget.h"
-#include "Game/map_view/map_doc.h"
 #include "Content/Shared/camera.h"
 #include <QOpenGLShaderProgram>
 #include <QOpenGLVertexArrayObject>
@@ -24,7 +23,6 @@ public:
 	bool rightMousePressed = false;
 	QPoint lastMousePos;
 	std::optional<QPoint> selectedNode;
-	std::list<std::unique_ptr<MapDocument>> documents;
 };
 
 

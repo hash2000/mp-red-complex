@@ -7,13 +7,16 @@
 #include "Game/commands/cmd/windows_close_all_cmd.h"
 #include "Game/commands/cmd/windows_close_cmd.h"
 #include "Game/commands/cmd/windows_list_cmd.h"
-#include "Game/commands/cmd/windows_handle_cmd.h"
+#include "Game/event_bus/events/time_events.h"
+#include "Game/services.h"
+#include "Game/event_bus/event_bus.h"
 #include <QMdiArea>
 #include <QMdiSubWindow>
 #include <QTimer>
 #include <QDebug>
 #include <QElapsedTimer>
 #include <QUuid>
+#include <QMetaType>
 
 class ApplicationController::Private {
 public:
@@ -25,25 +28,30 @@ public:
 	std::unique_ptr<CommandProcessor> commandProcessor;
 	std::unique_ptr<CommandContext> commandContext;
 	std::unique_ptr<WindowsController> windowsController;
+	std::unique_ptr<EventBus> eventBus;
+	std::unique_ptr<Services> services;
 };
 
 ApplicationController::ApplicationController(QObject* parent)
 : QObject(parent)
 ,	d(new Private(this)) {
 
+	qRegisterMetaType<TickEvent>();
+	qRegisterMetaType<SecondEvent>();
+	qRegisterMetaType<MinuteEvent>();
+	qRegisterMetaType<TimerEvent>();
+
 	// Создание процессора команд
 	d->commandProcessor = std::make_unique<CommandProcessor>();
-
-	// Создание контекста с обратной ссылкой на этот контроллер
 	d->commandContext = std::make_unique<CommandContext>(this);
-
 	d->windowsController = std::make_unique<WindowsController>();
+	d->eventBus = std::make_unique<EventBus>();
+	d->services = std::make_unique<Services>(d->eventBus.get());
 
 	// Регистрация встроенных системных команд
 	d->commandProcessor->registerCommand(std::make_unique<ListWindowsCommand>());
 	d->commandProcessor->registerCommand(std::make_unique<CloseWindowCommand>());
 	d->commandProcessor->registerCommand(std::make_unique<CloseAllWindowsCommand>());
-	d->commandProcessor->registerCommand(std::make_unique<HandleWindowsCommand>());
 
 	qInfo() << "ApplicationController initialized with"
 		<< d->commandProcessor->availableCommands().size()
@@ -65,6 +73,14 @@ CommandContext* ApplicationController::commandContext() const {
 
 WindowsController* ApplicationController::windowsController() const {
 	return d->windowsController.get();
+}
+
+EventBus* ApplicationController::eventBus() const {
+	return d->eventBus.get();
+}
+
+Services* ApplicationController::services() const {
+	return d->services.get();
 }
 
 bool ApplicationController::executeCommand(const QString& commandText, QObject* requester) {

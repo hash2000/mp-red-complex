@@ -31,7 +31,9 @@ bool ListWindowsCommand::execute(CommandContext* context, const QStringList& arg
 
 		QString marker = (windowId == activeId) ? " ► " : "   ";
 		QString title = window->windowTitle().trimmed();
-		if (title.isEmpty()) title = "<untitled>";
+		if (title.isEmpty()) {
+			title = "<untitled>";
+		}
 
 		QString line = QString("%1[%2] %3 (%4)")
 			.arg(marker)

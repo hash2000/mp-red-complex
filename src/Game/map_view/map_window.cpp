@@ -35,9 +35,7 @@ MapWidget* MapWindow::mapWidget() const {
 	return d->mapWidget;
 }
 
-bool MapWindow::handleCommand(const QString& commandName,
-	const QStringList& args,
-	CommandContext* context) {
+bool MapWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) {
 
 	//if (commandName == "center") {
 	//	// Пример команды: center player

@@ -30,6 +30,7 @@ public:
 
 private:
 	ICommand* findCommandUnsafe(const QString& name) const;
+	bool executeCommand(ICommand* command, CommandContext* context, const QString& cmdName, const QStringList& args);
 
 signals:
   void commandExecuted(const QString& commandName, bool success);

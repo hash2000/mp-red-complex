@@ -3,8 +3,6 @@
 #include <QtOpenGLWidgets/QOpenGLWidget>
 #include <QOpenGLFunctions_3_3_Core>
 
-class MapDocument;
-
 class MapWidget : public QOpenGLWidget, protected QOpenGLFunctions_3_3_Core {
 public:
 	MapWidget(QWidget* parent = nullptr);
