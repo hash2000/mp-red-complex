@@ -2,12 +2,14 @@
 #include "Game/mdi_child_window.h"
 
 class MapWidget;
+class WorldService;
+class EventBus;
 
 class MapWindow : public MdiChildWindow {
 	Q_OBJECT
 
 public:
-	explicit MapWindow(QWidget* parent = nullptr);
+	explicit MapWindow(WorldService* worldService, EventBus* eventBus, QWidget* parent = nullptr);
 	~MapWindow() override;
 
 	QString windowType() const override { return "map"; }

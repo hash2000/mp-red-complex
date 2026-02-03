@@ -12,3 +12,7 @@ QVariant VariablesContext::set(const QString& name, const QString& value) {
 	_variables[name] = value;
 	return _variables[name];
 }
+
+QStringList VariablesContext::available() const {
+	return _variables.keys();
+}

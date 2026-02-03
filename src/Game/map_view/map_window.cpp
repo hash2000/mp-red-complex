@@ -1,5 +1,7 @@
 #include "Game/map_view/map_window.h"
 #include "Game/map_view/map_widget.h"
+#include "Game/services/world_service.h"
+#include "Game/event_bus/event_bus.h"
 #include <QVBoxLayout>
 
 class MapWindow::Private {
@@ -14,7 +16,7 @@ public:
 };
 
 
-MapWindow::MapWindow(QWidget* parent)
+MapWindow::MapWindow(WorldService* worldService, EventBus* eventBus, QWidget* parent)
 	: MdiChildWindow(parent)
 	, d(new Private(this)) {
 

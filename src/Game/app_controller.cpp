@@ -32,7 +32,7 @@ public:
 	std::unique_ptr<Services> services;
 };
 
-ApplicationController::ApplicationController(QObject* parent)
+ApplicationController::ApplicationController(Resources* resources, QObject* parent)
 : QObject(parent)
 ,	d(new Private(this)) {
 
@@ -42,7 +42,7 @@ ApplicationController::ApplicationController(QObject* parent)
 	qRegisterMetaType<TimerEvent>();
 
 	// Создание процессора команд
-	d->commandProcessor = std::make_unique<CommandProcessor>();
+	d->commandProcessor = std::make_unique<CommandProcessor>(resources);
 	d->commandContext = std::make_unique<CommandContext>(this);
 	d->windowsController = std::make_unique<WindowsController>();
 	d->eventBus = std::make_unique<EventBus>();

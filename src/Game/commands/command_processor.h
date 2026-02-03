@@ -4,11 +4,12 @@
 class CommandContext;
 class CommandResult;
 class ICommand;
+class Resources;
 
 class CommandProcessor : public QObject {
 Q_OBJECT
 public:
-  explicit CommandProcessor(QObject* parent = nullptr);
+  explicit CommandProcessor(Resources* resources, QObject* parent = nullptr);
 	~CommandProcessor() override;
 
 public:

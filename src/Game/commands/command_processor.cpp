@@ -5,6 +5,8 @@
 #include "Game/commands/cmd/help_cmd.h"
 #include "Game/app_controller.h"
 #include "Game/mdi_child_window.h"
+#include "Resources/resources.h"
+#include "Resources/variables/variables_context.h"
 #include <QRegularExpression>
 #include <QDebug>
 #include <QHash>
@@ -19,6 +21,7 @@ public:
 	}
 
 	CommandProcessor* q;
+	Resources* resources;
 	std::map<QString, std::unique_ptr<ICommand>> commands;
 };
 
@@ -66,9 +69,11 @@ static QStringList parseCommandLine(const QString& line) {
 	return tokens;
 }
 
-CommandProcessor::CommandProcessor(QObject* parent)
+CommandProcessor::CommandProcessor(Resources* resources, QObject* parent)
 	: QObject(parent)
 	, d(new Private(this)) {
+	d->resources = resources;
+
 	// Регистрация встроенных служебных команд
 	registerCommand(std::make_unique<HelpCommand>(this));
 }
@@ -111,28 +116,37 @@ bool CommandProcessor::execute(const QString& commandLine, CommandContext* conte
 		}
 
 		// поиск окна по имени и отправка команды ему
-		QString targetWindowId;
 		if (cmdName.contains(":")) {
 			int sepPos = cmdName.indexOf(':');
-			targetWindowId = cmdName.left(sepPos);
+			const auto target = cmdName.left(sepPos);
 			cmdName = cmdName.mid(sepPos + 1);
-		}
+			if (!target.isEmpty()) {
+				if (auto window = context->applicationController()->windowsController()->findWindowById(target)) {
+					if (window->handleCommand(cmdName, args, context)) {
+						return true;
+					}
 
-		if (targetWindowId.isEmpty()) {
-			return false;
-		}
+					context->printError(QString("Window '%1' does not support command '%2'")
+						.arg(target)
+						.arg(cmdName));
 
-		if (auto window = context->applicationController()->windowsController()->findWindowById(targetWindowId)) {
-			if (window->handleCommand(cmdName, args, context)) {
-				return true;
+				}
+				return false;
 			}
-
-			context->printError(QString("Window '%1' does not support command '%2'")
-				.arg(targetWindowId)
-				.arg(cmdName));
-
-			return false;
 		}
+
+		// поиск переменной 
+		if (cmdName.contains("=")) {
+			int sepPos = cmdName.indexOf('=');
+			const auto target = cmdName.left(sepPos);
+			const auto value = cmdName.mid(sepPos + 1);
+
+			if (!target.isEmpty() && !value.isEmpty()) {
+				d->resources->Variables.set(target, value);
+			}
+		}
+
+
 
 		return false;
 	}
@@ -183,6 +197,8 @@ QStringList CommandProcessor::availableCommands() const {
 	for (auto it = d->commands.cbegin(); it != d->commands.cend(); it++) {
 		result << it->first;
 	}
+
+	result.append(d->resources->Variables.available());
 	result.sort();
 	return result;
 }
@@ -207,13 +223,23 @@ QString CommandProcessor::helpForCommand(const QString& name) const {
 }
 
 QString CommandProcessor::fullHelp() const {
-	QString result = "Available commands:\n\n";
-	for (const QString& name : availableCommands()) {
+	QString result = "=======================\nAvailable commands:\n\n";
+	for (const auto& name : availableCommands()) {
 		if (auto cmd = d->commands[name].get()) {
 			result += QString("%1: %2\n")
 				.arg(cmd->name())
 				.arg(cmd->description());
 		}
+	}
+
+	result += "=======================\nAvailable variables:\n\n";
+
+	for (const auto& name : d->resources->Variables.available()) {
+		const auto value = d->resources->Variables.get(name, "")
+			.toString();
+		result += QString("%1: %2\n")
+			.arg(name)
+			.arg(value);
 	}
 	result += "\nType 'help <command>' for detailed information.";
 	return result;

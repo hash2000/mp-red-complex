@@ -179,10 +179,21 @@ void CommandConsole::onCommandSubmitted() {
 
 void CommandConsole::executeCommand(const QString& command) {
 	// Отображение команды в выводе
-	QString timestamp = QDateTime::currentDateTime().toString("HH:mm:ss");
-	appendMessage(QString("<span class=\"timestamp\">[%1]</span> <span class=\"command\">&gt; %2</span>")
+	QString timestamp = QDateTime::currentDateTime()
+		.toString("HH:mm:ss");
+
+	QString safeCommand = command.toHtmlEscaped();
+	QString html = QString("<br><div class=\"command\">"
+		"<span class=\"timestamp\">[%1]</span> "
+		"&gt; %2"
+		"</div>")
 		.arg(timestamp)
-		.arg(command.toHtmlEscaped()), "command");
+		.arg(safeCommand);
+
+	QTextCursor cursor = d->outputArea->textCursor();
+	cursor.movePosition(QTextCursor::End);
+	d->outputArea->setTextCursor(cursor);
+	d->outputArea->insertHtml(html);
 
 	// Выполнение
 	if (d->controller && d->controller->commandProcessor()) {
@@ -261,13 +272,18 @@ QString CommandConsole::getHistoryEntry(int offset) {
 
 void CommandConsole::appendMessage(const QString& message, const QString& styleClass) {
 	QString safeMessage = message.toHtmlEscaped();
-	safeMessage.replace("\r\n", "\n").replace('\n', "<br>");
+	safeMessage
+		.replace("\r\n", "\n")
+		.replace('\n', "<br>");
 	safeMessage.replace('\t', "&nbsp;&nbsp;&nbsp;&nbsp;");
-	auto html = QString("<div class=\"%1\">%2</div>")
+	QString html = QString("<br><div class=\"%1\">%2</div>")
 		.arg(styleClass)
 		.arg(safeMessage);
 
-	d->outputArea->append(html);
+	QTextCursor cursor = d->outputArea->textCursor();
+	cursor.movePosition(QTextCursor::End);
+	d->outputArea->setTextCursor(cursor);
+	d->outputArea->insertHtml(html);
 
 	auto sb = d->outputArea->verticalScrollBar();
 	sb->setValue(sb->maximum());

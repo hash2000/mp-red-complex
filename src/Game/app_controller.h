@@ -11,11 +11,12 @@ class CommandContext;
 class WindowsController;
 class EventBus;
 class Services;
+class Resources;
 
 class ApplicationController : public QObject {
 Q_OBJECT
 public:
-	ApplicationController(QObject* parent = nullptr);
+	ApplicationController(Resources* resources, QObject* parent = nullptr);
 	~ApplicationController();
 
 	CommandProcessor* commandProcessor() const;

@@ -2,6 +2,7 @@
 #include "Game/map_view/map_window.h"
 #include "Game/commands/command_console.h"
 #include "Game/app_controller.h"
+#include "Game/services.h"
 #include "Game/controllers/windows_controller.h"
 #include <QSplitter>
 #include <QTabWidget>
@@ -47,7 +48,9 @@ GameMainFrame::GameMainFrame(std::shared_ptr<Resources> resources)
 }
 
 void GameMainFrame::setupMapView() {
-	auto widget = new MapWindow;
+	auto widget = new MapWindow(
+		d->controller->services()->worldService(),
+		d->controller->eventBus());
 	auto subWndow = d->mdiArea->addSubWindow(widget);
 	d->controller->windowsController()->registerWindow(widget);
 	subWndow->setWindowTitle("Word map");
@@ -57,7 +60,7 @@ void GameMainFrame::setupMapView() {
 }
 
 void GameMainFrame::setupConsole() {
-	d->controller = new ApplicationController();
+	d->controller = new ApplicationController(d->resources.get());
 	d->commandConsole = new CommandConsole(d->controller, this);
 	d->commandConsole->setWindowFlags(Qt::Dialog | Qt::WindowStaysOnTopHint);
 

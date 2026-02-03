@@ -1,8 +1,9 @@
 #pragma once
 #include <memory>
 
-class TimeService;
 class EventBus;
+class TimeService;
+class WorldService;
 
 class Services {
 public:
@@ -10,6 +11,8 @@ public:
 	~Services();
 
 	TimeService* timeService() const;
+
+	WorldService* worldService() const;
 
 private:
 	class Private;
