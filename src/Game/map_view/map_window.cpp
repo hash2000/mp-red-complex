@@ -2,6 +2,7 @@
 #include "Game/map_view/map_widget.h"
 #include "Game/services/world_service.h"
 #include "Game/event_bus/event_bus.h"
+#include "Game/event_bus/events/time_events.h"
 #include <QVBoxLayout>
 
 class MapWindow::Private {
@@ -18,7 +19,7 @@ public:
 
 MapWindow::MapWindow(WorldService* worldService, EventBus* eventBus, QWidget* parent)
 	: MdiChildWindow(parent)
-	, d(new Private(this)) {
+	, d(std::make_unique<Private>(this)) {
 
 	// Создаём внутренний виджет карты
 	d->mapWidget = new MapWidget(this);
@@ -29,6 +30,8 @@ MapWindow::MapWindow(WorldService* worldService, EventBus* eventBus, QWidget* pa
 
 	setLayout(d->layout);
 	setWindowTitle("World Map");
+
+	connect(eventBus->timeEventBus(), &TimeEventBus::tick, d->mapWidget, &MapWidget::onTick);
 }
 
 MapWindow::~MapWindow() = default;

@@ -17,13 +17,17 @@ public:
 
 
 Services::Services(EventBus* eventBus)
-: d(new Private(this)) {
+: d(std::make_unique<Private>(this)) {
 	d->timeService = std::make_unique<TimeService>(eventBus);
 	d->worldService = std::make_unique<WorldService>(eventBus);
 	d->eventBus = eventBus;
 }
 
 Services::~Services() = default;
+
+void Services::run() {
+	d->timeService->start();
+}
 
 TimeService* Services::timeService() const {
 	return d->timeService.get();

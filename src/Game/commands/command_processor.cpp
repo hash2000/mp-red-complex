@@ -71,7 +71,7 @@ static QStringList parseCommandLine(const QString& line) {
 
 CommandProcessor::CommandProcessor(Resources* resources, QObject* parent)
 	: QObject(parent)
-	, d(new Private(this)) {
+	, d(std::make_unique<Private>(this)) {
 	d->resources = resources;
 
 	// Регистрация встроенных служебных команд

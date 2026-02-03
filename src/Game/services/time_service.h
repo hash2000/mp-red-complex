@@ -30,19 +30,12 @@ public:
 private:
 	void publishTick(qint64 elapsed, double deltaTime);
 	void checkAndTriggerEvents(qint64 currentTime);
-	void publishSecond(qint64 elapsed);
-	void publishMinute(qint64 elapsed);
 
 	// Бинарный поиск для эффективной вставки (опционально для больших списков)
 	int findInsertPosition(qint64 triggerTime) const;
 
 private slots:
 	void onMainTimerTimeout();
-
-signals:
-	void tick(qint64 elapsed, double deltaTime);
-	void second(int count);
-	void minute(int count);
 
 private:
 	class Private;

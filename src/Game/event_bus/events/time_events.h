@@ -1,14 +1,13 @@
 #pragma once
 #include "Game/event_bus/event.h"
+#include <QObject>
 
 struct TimeEvent : public Event {
 	qint64 elapsedMs; // Время с запуска приложения (мс)
-	QDateTime timestamp; // Абсолютное время
 
 	explicit TimeEvent(const QString& type, qint64 elapsed)
 		: Event(type)
-		, elapsedMs(elapsed)
-		, timestamp(QDateTime::currentDateTime()) {
+		, elapsedMs(elapsed) {
 	}
 };
 
@@ -32,26 +31,20 @@ struct TimerEvent : public TimeEvent {
 	}
 };
 
-struct MinuteEvent : public TimeEvent {
-	int minuteCount;  // Счётчик минут с запуска
+class TimeEventBus : public QObject {
+	Q_OBJECT
+public:
+	explicit TimeEventBus(QObject* parent = nullptr);
+	~TimeEventBus() override;
 
-	MinuteEvent(qint64 elapsed, int count)
-		: TimeEvent("Minute", elapsed)
-		, minuteCount(count) {
-	}
+	void postTick(const TickEvent& event);
+	void postTimer(const TimerEvent& event);
+	void postPaused();
+	void postResumed();
+
+signals:
+	void tick(const TickEvent& event);
+	void timer(const TimerEvent& event);
+	void paused();
+	void resumed();
 };
-
-struct SecondEvent : public TimeEvent {
-	int secondCount;  // Счётчик секунд с запуска
-
-	SecondEvent(qint64 elapsed, int count)
-		: TimeEvent("Second", elapsed)
-		, secondCount(count) {
-	}
-};
-
-Q_DECLARE_METATYPE(TimeEvent)
-Q_DECLARE_METATYPE(TickEvent)
-Q_DECLARE_METATYPE(TimerEvent)
-Q_DECLARE_METATYPE(MinuteEvent)
-Q_DECLARE_METATYPE(SecondEvent)

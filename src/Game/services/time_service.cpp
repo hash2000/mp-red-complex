@@ -26,18 +26,15 @@ public:
 	bool isRunning = false;
 	double deltaTime = 0.0;
 
-	// Состояние для агрегации системных событий
-	int secondsCounter = 0;
-	int minutesCounter = 0;
-	qint64 lastSecondBoundary = 0;  // Граница последней полной секунды
-	qint64 lastMinuteBoundary = 0;  // Граница последней полной минуты
-
 	// Очередь запланированных событий (сортируется по triggerTime)
 	QList<ScheduledEvent> scheduledEvents;
 };
 
 TimeService::TimeService(EventBus* eventBus, QObject* parent)
-	: d(new Private(this)) {
+	: d(std::make_unique<Private>(this)) {
+
+	d->eventBus = eventBus;
+
 	// Настройка основного таймера (~60 Гц)
 	d->mainTimer.setInterval(16);
 	d->mainTimer.setTimerType(Qt::PreciseTimer);
@@ -54,13 +51,10 @@ void TimeService::start() {
 		return;
 	}
 
-	d->lastSecondBoundary = 0;
-	d->lastMinuteBoundary = 0;
-	d->secondsCounter = 0;
-	d->minutesCounter = 0;
 	d->elapsedTimer.start();
 	d->mainTimer.start();
 	d->isRunning = true;
+	d->eventBus->timeEventBus()->postResumed();
 
 	qInfo() << "TimeService started";
 }
@@ -73,6 +67,7 @@ void TimeService::stop() {
 	d->mainTimer.stop();
 	d->isRunning = false;
 	d->scheduledEvents.clear();
+	d->eventBus->timeEventBus()->postPaused();
 
 	qInfo() << "TimeService stopped";
 }
@@ -92,28 +87,8 @@ void TimeService::onMainTimerTimeout() {
 
 	lastTime = currentTime;
 
-	// 1. Публикация системного тика
-	publishTick(currentTime, d->deltaTime);
-	emit tick(currentTime, d->deltaTime);
-
-	// 2. Проверка и срабатывание запланированных событий
+	d->eventBus->timeEventBus()->tick(TickEvent(currentTime, d->deltaTime));
 	checkAndTriggerEvents(currentTime);
-
-	// 3. Агрегация секунд (с выравниванием на границы секунд)
-	if (currentTime >= d->lastSecondBoundary + 1000) {
-		d->lastSecondBoundary += 1000;
-		d->secondsCounter++;
-		publishSecond(currentTime);
-		emit second(d->secondsCounter);
-	}
-
-	// 4. Агрегация минут
-	if (currentTime >= d->lastMinuteBoundary + 60000) {
-		d->lastMinuteBoundary += 60000;
-		d->minutesCounter++;
-		publishMinute(currentTime);
-		emit minute(d->minutesCounter);
-	}
 }
 
 qint64 TimeService::elapsedMilliseconds() const {
@@ -197,7 +172,7 @@ void TimeService::checkAndTriggerEvents(qint64 currentTime) {
 		Private::ScheduledEvent event = d->scheduledEvents.takeFirst();
 		event.triggerCount++;
 
-		d->eventBus->publish(TimerEvent(event.timerId, currentTime, event.triggerCount));
+		d->eventBus->timeEventBus()->timer(TimerEvent(event.timerId, currentTime, event.triggerCount));
 
 		// Для повторяющихся событий — перепланирование
 		if (event.intervalMs > 0) {
@@ -213,15 +188,7 @@ void TimeService::checkAndTriggerEvents(qint64 currentTime) {
 }
 
 void TimeService::publishTick(qint64 elapsed, double deltaTime) {
-	d->eventBus->publish(TickEvent(elapsed, deltaTime));
-}
-
-void TimeService::publishSecond(qint64 elapsed) {
-	d->eventBus->publish(SecondEvent(elapsed, d->secondsCounter));
-}
-
-void TimeService::publishMinute(qint64 elapsed) {
-	d->eventBus->publish(MinuteEvent(elapsed, d->minutesCounter));
+	d->eventBus->timeEventBus()->tick(TickEvent(elapsed, deltaTime));
 }
 
 int TimeService::findInsertPosition(qint64 triggerTime) const {

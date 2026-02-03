@@ -1,4 +1,5 @@
 #include "Game/map_view/map_widget.h"
+#include "Game/event_bus/events/time_events.h"
 #include "Content/Shared/camera.h"
 #include <QOpenGLShaderProgram>
 #include <QOpenGLVertexArrayObject>
@@ -27,10 +28,12 @@ public:
 
 
 MapWidget::MapWidget(QWidget* parent)
-: d(new Private(this))
+: d(std::make_unique<Private>(this))
 , QOpenGLWidget(parent) {
 	setFocusPolicy(Qt::StrongFocus);
 }
+
+MapWidget::~MapWidget() = default;
 
 void MapWidget::initializeGL() {
 	initializeOpenGLFunctions();
@@ -104,5 +107,9 @@ void MapWidget::wheelEvent(QWheelEvent* event) {
 	float zoomFactor = event->angleDelta().y() > 0 ? 0.9f : 1.1f;
 	d->camera.zoom(zoomFactor);
 	d->camera.update();
+	update();
+}
+
+void MapWidget::onTick(const TickEvent& event) {
 	update();
 }

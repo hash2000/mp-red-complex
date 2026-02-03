@@ -7,7 +7,6 @@
 #include "Game/commands/cmd/windows_close_all_cmd.h"
 #include "Game/commands/cmd/windows_close_cmd.h"
 #include "Game/commands/cmd/windows_list_cmd.h"
-#include "Game/event_bus/events/time_events.h"
 #include "Game/services.h"
 #include "Game/event_bus/event_bus.h"
 #include <QMdiArea>
@@ -34,12 +33,7 @@ public:
 
 ApplicationController::ApplicationController(Resources* resources, QObject* parent)
 : QObject(parent)
-,	d(new Private(this)) {
-
-	qRegisterMetaType<TickEvent>();
-	qRegisterMetaType<SecondEvent>();
-	qRegisterMetaType<MinuteEvent>();
-	qRegisterMetaType<TimerEvent>();
+,	d(std::make_unique<Private>(this)) {
 
 	// Создание процессора команд
 	d->commandProcessor = std::make_unique<CommandProcessor>(resources);
@@ -52,6 +46,8 @@ ApplicationController::ApplicationController(Resources* resources, QObject* pare
 	d->commandProcessor->registerCommand(std::make_unique<ListWindowsCommand>());
 	d->commandProcessor->registerCommand(std::make_unique<CloseWindowCommand>());
 	d->commandProcessor->registerCommand(std::make_unique<CloseAllWindowsCommand>());
+
+	d->services->run();
 
 	qInfo() << "ApplicationController initialized with"
 		<< d->commandProcessor->availableCommands().size()

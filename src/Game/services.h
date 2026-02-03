@@ -14,6 +14,8 @@ public:
 
 	WorldService* worldService() const;
 
+	void run();
+
 private:
 	class Private;
 	std::unique_ptr<Private> d;

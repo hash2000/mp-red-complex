@@ -36,7 +36,7 @@ public:
 };
 
 WindowsController::WindowsController()
-: d(new Private(this)) {
+: d(std::make_unique<Private>(this)) {
 
 }
 

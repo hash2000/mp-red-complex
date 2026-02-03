@@ -11,7 +11,7 @@ public:
 
 
 WorldService::WorldService(EventBus* eventBus, QObject* parent)
-	: d(new Private(this)) {
+	: d(std::make_unique<Private>(this)) {
 
 }
 
