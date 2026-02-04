@@ -15,9 +15,6 @@ public:
 	void mouseReleaseEvent(QMouseEvent* event) override;
 	void wheelEvent(QWheelEvent* event) override;	
 
-public slots:
-	void onTick(const TickEvent& event);
-
 protected:
 	void initializeGL() override;
 	void resizeGL(int w, int h) override;
@@ -25,6 +22,14 @@ protected:
 
 private:
 	void setupViewport();
+
+public slots:
+	void onTick(const TickEvent& event);
+
+signals:
+	void initializeContext();
+	void paintView();
+	void selectNode(std::optional<QPoint> point);
 
 private:
 	class Private;

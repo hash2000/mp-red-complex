@@ -109,7 +109,7 @@ bool CommandProcessor::execute(const QString& commandLine, CommandContext* conte
 	if (!command) {
 
 		// отправка команды в активное окно
-		if (auto activeWindow = context->activeWindow()) {
+		if (auto activeWindow = context->applicationController()->windowsController()->activeWindow()) {
 			if (activeWindow->handleCommand(cmdName, args, context)) {
 				return true;
 			}

@@ -1,4 +1,4 @@
-#include "Game/commands/cmd/windows_close_cmd.h"
+#include "Game/commands/cmd/window_close_cmd.h"
 #include "Game/commands/command_processor.h"
 #include "Game/commands/command_context.h"
 #include "Game/app_controller.h"
@@ -6,7 +6,7 @@
 
 bool CloseWindowCommand::execute(CommandContext* context, const QStringList& args) {
 	if (args.isEmpty()) {
-		context->printError("Usage: close <window_id | 'active' | 'all'>");
+		context->printError("Usage: window-close <window_id | 'active' | 'all'>");
 		return false;
 	}
 

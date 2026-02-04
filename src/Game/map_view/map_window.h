@@ -14,6 +14,8 @@ public:
 
 	QString windowType() const override { return "map"; }
 
+	QString windowTitle() const override { return "World Map"; }
+
 	// Доступ к внутреннему виджету для специфичных операций
 	MapWidget* mapWidget() const;
 

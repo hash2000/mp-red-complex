@@ -37,6 +37,9 @@ MapWidget::~MapWidget() = default;
 
 void MapWidget::initializeGL() {
 	initializeOpenGLFunctions();
+
+	emit initializeContext();
+
 	glEnable(GL_DEPTH_TEST);
 	glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
 	setupViewport();
@@ -49,13 +52,12 @@ void MapWidget::resizeGL(int w, int h) {
 void MapWidget::paintGL() {
 	glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+	emit paintView();
 }
 
 void MapWidget::setupViewport() {
 	glViewport(0, 0, width(), height());
 	d->camera.setupViewport(width(), height());
-
 }
 
 void MapWidget::mousePressEvent(QMouseEvent* event) {
@@ -67,8 +69,12 @@ void MapWidget::mousePressEvent(QMouseEvent* event) {
 			// Проверяем границы (например, 0..127)
 			if (worldX >= 0 && worldZ >= 0 && worldX < 128 && worldZ < 128) {
 				d->selectedNode = QPoint(worldX, worldZ);
+				emit selectNode(d->selectedNode);
 				qDebug() << "Selected:" << worldX << worldZ;
 			}
+		}
+		else {
+			emit selectNode(std::nullopt);
 		}
 	}
 	else if (event->button() == Qt::RightButton) {

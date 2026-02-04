@@ -13,12 +13,6 @@ public:
 
 	// Доступ к основным компонентам приложения
 	ApplicationController* applicationController() const;
-	QMdiArea* mdiArea() const;
-
-	// Поиск активного/конкретного окна
-	MdiChildWindow* activeWindow() const;
-	MdiChildWindow* findWindowById(const QString& id) const;
-	QList<MdiChildWindow*> allWindows() const;
 
 	// Вывод в консоль (безопасный из любого потока)
 	void print(const QString& message, const QString& styleClass = "info");

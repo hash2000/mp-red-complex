@@ -10,7 +10,6 @@ public:
 
 private:
 	void setupConsole();
-	void setupMapView();
 	void setupView();
 
 private slots:

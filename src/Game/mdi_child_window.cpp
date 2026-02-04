@@ -11,6 +11,10 @@ QString MdiChildWindow::windowType() const {
 	return "window";
 }
 
+QString MdiChildWindow::windowTitle() const {
+	return "window";
+}
+
 QString MdiChildWindow::windowId() const {
 	return m_windowId;
 }

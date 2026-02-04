@@ -1,5 +1,4 @@
 #include "Game/main_frame.h"
-#include "Game/map_view/map_window.h"
 #include "Game/commands/command_console.h"
 #include "Game/app_controller.h"
 #include "Game/services.h"
@@ -43,20 +42,7 @@ public:
 GameMainFrame::GameMainFrame(std::shared_ptr<Resources> resources)
 : d(new Private(this, resources)) {
 	setupConsole();
-	setupMapView();
 	setupView();
-}
-
-void GameMainFrame::setupMapView() {
-	auto widget = new MapWindow(
-		d->controller->services()->worldService(),
-		d->controller->services()->timeService());
-	auto subWndow = d->mdiArea->addSubWindow(widget);
-	d->controller->windowsController()->registerWindow(widget);
-	subWndow->setWindowTitle("Word map");
-	subWndow->setAttribute(Qt::WA_DeleteOnClose, true);
-	subWndow->resize(640, 480);
-	subWndow->show();
 }
 
 void GameMainFrame::setupConsole() {
@@ -105,4 +91,6 @@ void GameMainFrame::setupView() {
 	splitter->setStretchFactor(0, 1);
 	splitter->setStretchFactor(1, 0);
 	setCentralWidget(splitter);
+
+	d->controller->executeCommand("window-create map");
 }

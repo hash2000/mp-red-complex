@@ -5,8 +5,9 @@
 #include "Game/commands/command_processor.h"
 #include "Game/commands/command_context.h"
 #include "Game/commands/cmd/windows_close_all_cmd.h"
-#include "Game/commands/cmd/windows_close_cmd.h"
 #include "Game/commands/cmd/windows_list_cmd.h"
+#include "Game/commands/cmd/window_close_cmd.h"
+#include "Game/commands/cmd/window_create_cmd.h"
 #include "Game/services.h"
 #include <QMdiArea>
 #include <QMdiSubWindow>
@@ -43,6 +44,7 @@ ApplicationController::ApplicationController(Resources* resources, QObject* pare
 	d->commandProcessor->registerCommand(std::make_unique<ListWindowsCommand>());
 	d->commandProcessor->registerCommand(std::make_unique<CloseWindowCommand>());
 	d->commandProcessor->registerCommand(std::make_unique<CloseAllWindowsCommand>());
+	d->commandProcessor->registerCommand(std::make_unique<CreateWindowCommand>());
 
 	d->services->run();
 

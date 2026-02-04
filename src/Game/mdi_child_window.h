@@ -11,6 +11,7 @@ public:
 	~MdiChildWindow() override;
 
 	virtual QString windowType() const;
+	virtual QString windowTitle() const;
 	QString windowId() const;
 	void setWindowId(const QString& id);
 

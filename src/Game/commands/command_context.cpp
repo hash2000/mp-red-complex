@@ -32,41 +32,6 @@ ApplicationController* CommandContext::applicationController() const {
 	return d->controller;
 }
 
-QMdiArea* CommandContext::mdiArea() const {
-	return d->controller ? d->controller->windowsController()->mdiArea() : nullptr;
-}
-
-MdiChildWindow* CommandContext::activeWindow() const {
-	if (!d->controller || !d->controller->windowsController()->mdiArea()) {
-		return nullptr;
-	}
-
-	auto subWindow = d->controller->windowsController()->mdiArea()->activeSubWindow();
-
-	// 🔑 Правильное использование qobject_cast с полным определением класса
-	if (subWindow && subWindow->widget()) {
-		return qobject_cast<MdiChildWindow*>(subWindow->widget());
-	}
-
-	return nullptr;
-}
-
-MdiChildWindow* CommandContext::findWindowById(const QString& id) const {
-	return d->controller ? d->controller->windowsController()->findWindowById(id) : nullptr;
-}
-
-QList<MdiChildWindow*> CommandContext::allWindows() const {
-	QList<MdiChildWindow*> result;
-	if (!d->controller || !d->controller->windowsController()->mdiArea()) return result;
-
-	for (auto subWindow : d->controller->windowsController()->mdiArea()->subWindowList()) {
-		if (auto window = qobject_cast<MdiChildWindow*>(subWindow->widget())) {
-			result.append(window);
-		}
-	}
-	return result;
-}
-
 void CommandContext::print(const QString& message, const QString& styleClass) {
 	QMetaObject::invokeMethod(this, [this, message, styleClass]() {
 		emit outputRequested(message, styleClass);
