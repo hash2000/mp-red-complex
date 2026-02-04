@@ -1,8 +1,7 @@
 #include "Game/map_view/map_window.h"
 #include "Game/map_view/map_widget.h"
-#include "Game/services/world_service.h"
-#include "Game/event_bus/event_bus.h"
-#include "Game/event_bus/events/time_events.h"
+#include "Game/services/world_service/world_service.h"
+#include "Game/services/time_service/time_service.h"
 #include <QVBoxLayout>
 
 class MapWindow::Private {
@@ -17,7 +16,7 @@ public:
 };
 
 
-MapWindow::MapWindow(WorldService* worldService, EventBus* eventBus, QWidget* parent)
+MapWindow::MapWindow(WorldService* worldService, TimeService* timeService, QWidget* parent)
 	: MdiChildWindow(parent)
 	, d(std::make_unique<Private>(this)) {
 
@@ -31,7 +30,7 @@ MapWindow::MapWindow(WorldService* worldService, EventBus* eventBus, QWidget* pa
 	setLayout(d->layout);
 	setWindowTitle("World Map");
 
-	connect(eventBus->timeEventBus(), &TimeEventBus::tick, d->mapWidget, &MapWidget::onTick);
+	connect(timeService, &TimeService::tick, d->mapWidget, &MapWidget::onTick);
 }
 
 MapWindow::~MapWindow() = default;

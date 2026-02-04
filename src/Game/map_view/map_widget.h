@@ -1,5 +1,5 @@
 #pragma once
-#include "Game/event_bus/events/time_events.h"
+#include "Game/services/time_service/time_events.h"
 #include <QVariantMap>
 #include <QtOpenGLWidgets/QOpenGLWidget>
 #include <QOpenGLFunctions_3_3_Core>

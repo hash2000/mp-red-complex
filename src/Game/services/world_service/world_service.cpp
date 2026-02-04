@@ -1,4 +1,4 @@
-#include "Game/services/world_service.h"
+#include "Game/services/world_service/world_service.h"
 
 class WorldService::Private {
 public:
@@ -10,7 +10,7 @@ public:
 };
 
 
-WorldService::WorldService(EventBus* eventBus, QObject* parent)
+WorldService::WorldService(QObject* parent)
 	: d(std::make_unique<Private>(this)) {
 
 }

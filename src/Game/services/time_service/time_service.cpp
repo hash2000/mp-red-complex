@@ -1,7 +1,7 @@
-#include "Game/services/time_service.h"
-#include "Game/event_bus/event_bus.h"
-#include "Game/event_bus/events/time_events.h"
+#include "Game/services/time_service/time_service.h"
+#include "Game/services/time_service/time_events.h"
 #include <QTimer>
+#include <QDateTime>
 #include <QHash>
 #include <QElapsedTimer>
 
@@ -20,7 +20,6 @@ public:
 
 	TimeService* q;
 
-	EventBus* eventBus;
 	QTimer mainTimer;
 	QElapsedTimer elapsedTimer;
 	bool isRunning = false;
@@ -30,10 +29,8 @@ public:
 	QList<ScheduledEvent> scheduledEvents;
 };
 
-TimeService::TimeService(EventBus* eventBus, QObject* parent)
+TimeService::TimeService(QObject* parent)
 	: d(std::make_unique<Private>(this)) {
-
-	d->eventBus = eventBus;
 
 	// Настройка основного таймера (~60 Гц)
 	d->mainTimer.setInterval(16);
@@ -54,7 +51,7 @@ void TimeService::start() {
 	d->elapsedTimer.start();
 	d->mainTimer.start();
 	d->isRunning = true;
-	d->eventBus->timeEventBus()->postResumed();
+	emit resumed();
 
 	qInfo() << "TimeService started";
 }
@@ -67,7 +64,7 @@ void TimeService::stop() {
 	d->mainTimer.stop();
 	d->isRunning = false;
 	d->scheduledEvents.clear();
-	d->eventBus->timeEventBus()->postPaused();
+	emit paused();
 
 	qInfo() << "TimeService stopped";
 }
@@ -87,7 +84,7 @@ void TimeService::onMainTimerTimeout() {
 
 	lastTime = currentTime;
 
-	d->eventBus->timeEventBus()->tick(TickEvent(currentTime, d->deltaTime));
+	emit tick(TickEvent(currentTime, d->deltaTime));
 	checkAndTriggerEvents(currentTime);
 }
 
@@ -172,7 +169,7 @@ void TimeService::checkAndTriggerEvents(qint64 currentTime) {
 		Private::ScheduledEvent event = d->scheduledEvents.takeFirst();
 		event.triggerCount++;
 
-		d->eventBus->timeEventBus()->timer(TimerEvent(event.timerId, currentTime, event.triggerCount));
+		emit timer(TimerEvent(event.timerId, currentTime, event.triggerCount));
 
 		// Для повторяющихся событий — перепланирование
 		if (event.intervalMs > 0) {
@@ -185,10 +182,6 @@ void TimeService::checkAndTriggerEvents(qint64 currentTime) {
 		}
 		// Однократные события просто удаляются (takeFirst уже убрал из списка)
 	}
-}
-
-void TimeService::publishTick(qint64 elapsed, double deltaTime) {
-	d->eventBus->timeEventBus()->tick(TickEvent(elapsed, deltaTime));
 }
 
 int TimeService::findInsertPosition(qint64 triggerTime) const {

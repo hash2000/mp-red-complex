@@ -50,7 +50,7 @@ GameMainFrame::GameMainFrame(std::shared_ptr<Resources> resources)
 void GameMainFrame::setupMapView() {
 	auto widget = new MapWindow(
 		d->controller->services()->worldService(),
-		d->controller->eventBus());
+		d->controller->services()->timeService());
 	auto subWndow = d->mdiArea->addSubWindow(widget);
 	d->controller->windowsController()->registerWindow(widget);
 	subWndow->setWindowTitle("Word map");

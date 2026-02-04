@@ -3,13 +3,13 @@
 
 class MapWidget;
 class WorldService;
-class EventBus;
+class TimeService;
 
 class MapWindow : public MdiChildWindow {
 	Q_OBJECT
 
 public:
-	explicit MapWindow(WorldService* worldService, EventBus* eventBus, QWidget* parent = nullptr);
+	explicit MapWindow(WorldService* worldService, TimeService* timeService, QWidget* parent = nullptr);
 	~MapWindow() override;
 
 	QString windowType() const override { return "map"; }

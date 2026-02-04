@@ -1,7 +1,6 @@
 #include "Game/services.h"
-#include "Game/event_bus/event_bus.h"
-#include "Game/services/time_service.h"
-#include "Game/services/world_service.h"
+#include "Game/services/time_service/time_service.h"
+#include "Game/services/world_service/world_service.h"
 
 class Services::Private {
 public:
@@ -10,17 +9,15 @@ public:
 	}
 
 	Services* q;
-	EventBus* eventBus;
 	std::shared_ptr<TimeService> timeService;
 	std::shared_ptr<WorldService> worldService;
 };
 
 
-Services::Services(EventBus* eventBus)
+Services::Services()
 : d(std::make_unique<Private>(this)) {
-	d->timeService = std::make_unique<TimeService>(eventBus);
-	d->worldService = std::make_unique<WorldService>(eventBus);
-	d->eventBus = eventBus;
+	d->timeService = std::make_unique<TimeService>();
+	d->worldService = std::make_unique<WorldService>();
 }
 
 Services::~Services() = default;

@@ -1,5 +1,5 @@
 #include "Game/map_view/map_widget.h"
-#include "Game/event_bus/events/time_events.h"
+#include "Game/services/time_service/time_events.h"
 #include "Content/Shared/camera.h"
 #include <QOpenGLShaderProgram>
 #include <QOpenGLVertexArrayObject>

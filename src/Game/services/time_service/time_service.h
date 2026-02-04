@@ -1,14 +1,12 @@
 #pragma once
+#include "Game/services/time_service/time_events.h"
 #include <QObject>
 #include <memory>
 
-class EventBus;
-
 class TimeService : public QObject {
 	Q_OBJECT
-
 public:
-	explicit TimeService(EventBus* eventBus, QObject* parent = nullptr);
+	explicit TimeService(QObject* parent = nullptr);
 	~TimeService() override;
 
 	// Управление основным таймером
@@ -28,7 +26,6 @@ public:
 	bool hasTimer(const QString& timerId) const;
 
 private:
-	void publishTick(qint64 elapsed, double deltaTime);
 	void checkAndTriggerEvents(qint64 currentTime);
 
 	// Бинарный поиск для эффективной вставки (опционально для больших списков)
@@ -36,6 +33,12 @@ private:
 
 private slots:
 	void onMainTimerTimeout();
+
+signals:
+	void tick(const TickEvent& event);
+	void timer(const TimerEvent& event);
+	void paused();
+	void resumed();
 
 private:
 	class Private;

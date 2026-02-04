@@ -1,13 +1,12 @@
 #pragma once
 #include <memory>
 
-class EventBus;
 class TimeService;
 class WorldService;
 
 class Services {
 public:
-	explicit Services(EventBus* eventBus);
+	explicit Services();
 	~Services();
 
 	TimeService* timeService() const;

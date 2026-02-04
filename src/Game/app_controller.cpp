@@ -8,7 +8,6 @@
 #include "Game/commands/cmd/windows_close_cmd.h"
 #include "Game/commands/cmd/windows_list_cmd.h"
 #include "Game/services.h"
-#include "Game/event_bus/event_bus.h"
 #include <QMdiArea>
 #include <QMdiSubWindow>
 #include <QTimer>
@@ -27,7 +26,6 @@ public:
 	std::unique_ptr<CommandProcessor> commandProcessor;
 	std::unique_ptr<CommandContext> commandContext;
 	std::unique_ptr<WindowsController> windowsController;
-	std::unique_ptr<EventBus> eventBus;
 	std::unique_ptr<Services> services;
 };
 
@@ -39,8 +37,7 @@ ApplicationController::ApplicationController(Resources* resources, QObject* pare
 	d->commandProcessor = std::make_unique<CommandProcessor>(resources);
 	d->commandContext = std::make_unique<CommandContext>(this);
 	d->windowsController = std::make_unique<WindowsController>();
-	d->eventBus = std::make_unique<EventBus>();
-	d->services = std::make_unique<Services>(d->eventBus.get());
+	d->services = std::make_unique<Services>();
 
 	// Регистрация встроенных системных команд
 	d->commandProcessor->registerCommand(std::make_unique<ListWindowsCommand>());
@@ -69,10 +66,6 @@ CommandContext* ApplicationController::commandContext() const {
 
 WindowsController* ApplicationController::windowsController() const {
 	return d->windowsController.get();
-}
-
-EventBus* ApplicationController::eventBus() const {
-	return d->eventBus.get();
 }
 
 Services* ApplicationController::services() const {

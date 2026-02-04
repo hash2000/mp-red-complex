@@ -22,7 +22,6 @@ public:
 	CommandProcessor* commandProcessor() const;
 	CommandContext* commandContext() const;
 	WindowsController* windowsController() const;
-	EventBus* eventBus() const;
 	Services* services() const;
 
 	/**
