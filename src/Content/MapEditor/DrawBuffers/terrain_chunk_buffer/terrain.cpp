@@ -1,4 +1,4 @@
-#include "Content/Shared/DrawBuffers/terrain_chunk_buffer/terrain.h"
+#include "Content/MapEditor/DrawBuffers/terrain_chunk_buffer/terrain.h"
 
 TerrainChunk::TerrainChunk(int x0, int z0, int width, int depth)
 : _x(x0)

@@ -1,8 +1,8 @@
 #include "Content/MapEditor/map_view.h"
-#include "Content/Shared/DrawBuffers/once_point_buffer.h"
-#include "Content/Shared/DrawBuffers/grid_buffer.h"
-#include "Content/Shared/DrawBuffers/axes_buffer.h"
-#include "Content/Shared/DrawBuffers/terrain_chunk_buffer.h"
+#include "Content/MapEditor/DrawBuffers/once_point_buffer.h"
+#include "Content/MapEditor/DrawBuffers/grid_buffer.h"
+#include "Content/MapEditor/DrawBuffers/axes_buffer.h"
+#include "Content/MapEditor/DrawBuffers/terrain_chunk_buffer.h"
 #include <QMouseEvent>
 #include <QOpenGLShader>
 

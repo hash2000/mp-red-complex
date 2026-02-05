@@ -1,6 +1,6 @@
 #pragma once
-#include "Content/Shared/DrawBuffers/terrain_chunk_buffer/terrain.h"
-#include "Content/Shared/Draw/draw_buffer.h"
+#include "Content/MapEditor/DrawBuffers/terrain_chunk_buffer/terrain.h"
+#include "Content/MapEditor/Draw/draw_buffer.h"
 #include "Base/container_view.h"
 #include <unordered_map>
 #include <memory>

@@ -92,5 +92,5 @@ void GameMainFrame::setupView() {
 	splitter->setStretchFactor(1, 0);
 	setCentralWidget(splitter);
 
-	d->controller->executeCommand("window-create map");
+	d->controller->executeCommandByName("window-create", QStringList{ "map" });
 }

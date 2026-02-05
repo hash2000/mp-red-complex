@@ -1,6 +1,6 @@
 #pragma once
 #include "Content/Shared/camera.h"
-#include "Content/Shared/Draw/draw_program.h"
+#include "Content/MapEditor/Draw/draw_program.h"
 #include <QWidget>
 #include <QVariantMap>
 #include <QtOpenGLWidgets/QOpenGLWidget>

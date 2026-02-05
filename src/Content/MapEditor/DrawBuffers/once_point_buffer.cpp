@@ -1,5 +1,5 @@
-#include "Content/Shared/DrawBuffers/once_point_buffer.h"
-#include "Content/Shared/Draw/draw_program.h"
+#include "Content/MapEditor/DrawBuffers/once_point_buffer.h"
+#include "Content/MapEditor/Draw/draw_program.h"
 #include <QOpenGLFunctions>
 
 OncePointDrawBuffer::OncePointDrawBuffer()

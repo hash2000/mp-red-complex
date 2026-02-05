@@ -1,5 +1,5 @@
-#include "Content/Shared/DrawBuffers/terrain_chunk_buffer.h"
-#include "Content/Shared/Draw/draw_program.h"
+#include "Content/MapEditor/DrawBuffers/terrain_chunk_buffer.h"
+#include "Content/MapEditor/Draw/draw_program.h"
 #include <QOpenGLFunctions>
 
 TerrainChunkDrawBuffer::TerrainChunkDrawBuffer(int widthChunks, int depthChunks)

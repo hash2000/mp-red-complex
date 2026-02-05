@@ -1,5 +1,5 @@
 #pragma once
-#include "Content/Shared/Draw/draw_buffer.h"
+#include "Content/MapEditor/Draw/draw_buffer.h"
 #include <QOpenGLFunctions_3_3_Core>
 #include <QOpenGLShaderProgram>
 #include <vector>

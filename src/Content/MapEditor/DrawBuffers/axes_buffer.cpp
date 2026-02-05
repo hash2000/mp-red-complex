@@ -1,5 +1,5 @@
-#include "Content/Shared/DrawBuffers/axes_buffer.h"
-#include "Content/Shared/Draw/draw_program.h"
+#include "Content/MapEditor/DrawBuffers/axes_buffer.h"
+#include "Content/MapEditor/Draw/draw_program.h"
 #include <QOpenGLFunctions>
 
 AxesDrawBuffer::AxesDrawBuffer()
