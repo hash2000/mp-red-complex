@@ -26,12 +26,13 @@ bool CreateWindowCommand::execute(CommandContext* context, const QStringList& ar
 		return false;
 	}
 
+	const auto title = widget->windowTitle();
+	const auto sizes = widget->windowDefaultSizes();
 	auto subWndow = mdiArea->addSubWindow(widget);
-	const auto title = subWndow->windowTitle();
 	controller->registerWindow(widget);
 	subWndow->setWindowTitle(title);
 	subWndow->setAttribute(Qt::WA_DeleteOnClose, true);
-	subWndow->resize(640, 480);
+	subWndow->resize(sizes.width(), sizes.height());
 	subWndow->show();
 
 	context->printSuccess(QString("Window %1 created with title '%2'")

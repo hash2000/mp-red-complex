@@ -93,4 +93,5 @@ void GameMainFrame::setupView() {
 	setCentralWidget(splitter);
 
 	d->controller->executeCommandByName("window-create", QStringList{ "map" });
+	d->controller->executeCommandByName("window-create", QStringList{ "equipment" });
 }

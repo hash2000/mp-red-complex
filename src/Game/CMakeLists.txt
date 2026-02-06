@@ -19,7 +19,7 @@ target_link_libraries(Game
 
 		Base
 		Resources
-		DataFormat
+		DataLayer
 		Engine
 		Content.Shared
 )

@@ -1,6 +1,7 @@
 #pragma once
 #include <QWidget>
 #include <QString>
+#include <QSize>
 
 class CommandContext;
 
@@ -14,6 +15,8 @@ public:
 	virtual QString windowTitle() const;
 	QString windowId() const;
 	void setWindowId(const QString& id);
+
+	virtual QSize windowDefaultSizes() const;
 
 	virtual bool handleCommand(const QString& commandName,
 		const QStringList& args,

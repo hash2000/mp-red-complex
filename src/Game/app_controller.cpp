@@ -8,6 +8,7 @@
 #include "Game/commands/cmd/windows_list_cmd.h"
 #include "Game/commands/cmd/window_close_cmd.h"
 #include "Game/commands/cmd/window_create_cmd.h"
+#include "Game/commands/cmd/states_store_cmd.h"
 #include "Game/services.h"
 #include <QMdiArea>
 #include <QMdiSubWindow>
@@ -38,13 +39,14 @@ ApplicationController::ApplicationController(Resources* resources, QObject* pare
 	d->commandProcessor = std::make_unique<CommandProcessor>(resources);
 	d->commandContext = std::make_unique<CommandContext>(this);
 	d->windowsController = std::make_unique<WindowsController>();
-	d->services = std::make_unique<Services>();
+	d->services = std::make_unique<Services>(resources);
 
 	// Регистрация встроенных системных команд
 	d->commandProcessor->registerCommand(std::make_unique<ListWindowsCommand>());
 	d->commandProcessor->registerCommand(std::make_unique<CloseWindowCommand>());
 	d->commandProcessor->registerCommand(std::make_unique<CloseAllWindowsCommand>());
 	d->commandProcessor->registerCommand(std::make_unique<CreateWindowCommand>());
+	d->commandProcessor->registerCommand(std::make_unique<StatesStoreCommand>());
 
 	d->services->run();
 

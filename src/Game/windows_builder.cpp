@@ -1,7 +1,8 @@
 #include "Game/windows_builder.h"
-#include "Game/map_view/map_window.h"
 #include "Game/app_controller.h"
 #include "Game/services.h"
+#include "Game/widgets/map_view/map_window.h"
+#include "Game/widgets/equipment/equipment_window.h"
 
 class WindowsBuilder::Private {
 public:
@@ -27,6 +28,10 @@ MdiChildWindow* WindowsBuilder::build(const QString& name) {
 		return new MapWindow(
 			d->appController->services()->worldService(),
 			d->appController->services()->timeService());
+	}
+	else if (name == "equipment") {
+		return new EquipmentWindow(
+			d->appController->services()->inventoryService());
 	}
 
 	return nullptr;

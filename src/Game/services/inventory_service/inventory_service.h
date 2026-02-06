@@ -1,12 +1,12 @@
 #pragma once
+#include "DataLayer/data_serializer.h"
 #include <QObject>
 #include <memory>
 
-class WorldService : public QObject {
+class InventoryService : public QObject {
 	Q_OBJECT
-public:
-	explicit WorldService(QObject* parent = nullptr);
-	~WorldService() override;
+public:InventoryService(QObject* parent = nullptr);
+	~InventoryService() override;
 
 public slots:
 	void onSave();

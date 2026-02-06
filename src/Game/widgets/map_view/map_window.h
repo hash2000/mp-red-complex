@@ -16,10 +16,8 @@ public:
 
 	QString windowTitle() const override { return "World Map"; }
 
-	// Доступ к внутреннему виджету для специфичных операций
 	MapWidget* mapWidget() const;
 
-	// Пример специфичной команды для карты
 	bool handleCommand(const QString& commandName,
 		const QStringList& args,
 		CommandContext* context) override;

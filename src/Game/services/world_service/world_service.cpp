@@ -16,3 +16,11 @@ WorldService::WorldService(QObject* parent)
 }
 
 WorldService::~WorldService() = default;
+
+void WorldService::onSave() {
+
+}
+
+void WorldService::onLoad() {
+
+}

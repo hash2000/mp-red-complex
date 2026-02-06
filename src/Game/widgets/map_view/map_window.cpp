@@ -1,5 +1,5 @@
-#include "Game/map_view/map_window.h"
-#include "Game/map_view/map_widget.h"
+#include "Game/widgets/map_view/map_window.h"
+#include "Game/widgets/map_view/map_widget.h"
 #include "Game/services/world_service/world_service.h"
 #include "Game/services/time_service/time_service.h"
 #include <QVBoxLayout>
@@ -12,7 +12,6 @@ public:
 
 	MapWindow* q;
 	MapWidget* mapWidget;
-	QVBoxLayout* layout;
 };
 
 
@@ -22,12 +21,11 @@ MapWindow::MapWindow(WorldService* worldService, TimeService* timeService, QWidg
 
 	// Создаём внутренний виджет карты
 	d->mapWidget = new MapWidget(this);
+	auto layout = new QVBoxLayout(this);
+	layout->setContentsMargins(0, 0, 0, 0);
+	layout->addWidget(d->mapWidget);
 
-	d->layout = new QVBoxLayout(this);
-	d->layout->setContentsMargins(0, 0, 0, 0);
-	d->layout->addWidget(d->mapWidget);
-
-	setLayout(d->layout);
+	setLayout(layout);
 	setWindowTitle("World Map");
 
 	connect(timeService, &TimeService::tick, d->mapWidget, &MapWidget::onTick);

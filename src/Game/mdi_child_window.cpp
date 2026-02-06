@@ -23,6 +23,10 @@ void MdiChildWindow::setWindowId(const QString& id) {
 	m_windowId = id;
 }
 
+QSize MdiChildWindow::windowDefaultSizes() const {
+	return QSize(640, 480);
+}
+
 bool MdiChildWindow::handleCommand(const QString& commandName,
 	const QStringList& args,
 	CommandContext* context) {

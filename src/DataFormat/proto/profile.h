@@ -10,5 +10,4 @@ namespace Proto {
 		QString name;
 	};
 
-
 } // namespace Proto
