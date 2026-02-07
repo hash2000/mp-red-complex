@@ -1,5 +1,5 @@
 #pragma once
-#include "Game/widgets/inventory/inventory_item.h"
+#include "DataLayer/inventory/inventory_item.h"
 #include <QWidget>
 #include <QVector>
 #include <QMap>
@@ -39,7 +39,7 @@ public:
 	void clear();
 
 	// Для ящиков — получение внутренней сетки
-	static InventoryGrid* createContainerGrid(const InventoryItem::ContainerCapacity& capacity);
+	static InventoryGrid* createContainerGrid(const InventoryItemContainerCapacity& capacity);
 
 signals:
 	void itemPlaced(InventoryItemWidget* widget);

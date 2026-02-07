@@ -1,5 +1,5 @@
 #pragma once
-#include "Game/widgets/inventory/inventory_item.h"
+#include "DataLayer/inventory/inventory_item.h"
 #include <QWidget>
 #include <QPoint>
 #include <QMouseEvent>

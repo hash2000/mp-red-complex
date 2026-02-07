@@ -221,7 +221,7 @@ void InventoryGrid::clear() {
 	d->items.clear();
 }
 
-InventoryGrid* InventoryGrid::createContainerGrid(const InventoryItem::ContainerCapacity& capacity) {
+InventoryGrid* InventoryGrid::createContainerGrid(const InventoryItemContainerCapacity& capacity) {
 	auto grid = new InventoryGrid(capacity.rows, capacity.cols);
 	return grid;
 }

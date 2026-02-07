@@ -1,11 +1,14 @@
 #pragma once
+#include "DataLayer/inventory/inventory_data_provider.h"
 #include <QObject>
 #include <memory>
 
 class InventoryService : public QObject {
 	Q_OBJECT
-public:InventoryService(QObject* parent = nullptr);
+public:InventoryService(InventoryDataProvider* dataProvider, QObject* parent = nullptr);
 	~InventoryService() override;
+
+	QList<InventoryItem> fromContainer(const QUuid& id) const;
 
 public slots:
 	void onSave();

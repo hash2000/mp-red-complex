@@ -1,4 +1,4 @@
-#include "Game/widgets/equipment/equipment_slot.h"
+#include "Game/widgets/equipment/equipment_slot_widget.h"
 #include <QMouseEvent>
 #include <QDragEnterEvent>
 #include <QDropEvent>
@@ -15,14 +15,14 @@ public:
 
   EquipmentSlot* q;
 
-  SlotType type;
+	EquipmentSlotType type;
   EquipmentWidget* parentWidget;
-  std::optional<Item> item;
+  std::optional<EquipmentItem> item;
   bool highlighted = false;
   bool dragging = false;
 };
 
-EquipmentSlot::EquipmentSlot(SlotType type, EquipmentWidget* parentWidget, QWidget* parent)
+EquipmentSlot::EquipmentSlot(EquipmentSlotType type, EquipmentWidget* parentWidget, QWidget* parent)
   : d(std::make_unique<Private>(this))
 	, QLabel(parent) {
 	setAcceptDrops(true);
@@ -34,11 +34,11 @@ EquipmentSlot::EquipmentSlot(SlotType type, EquipmentWidget* parentWidget, QWidg
 
 	// Специальные размеры для некоторых слотов
 	switch (type) {
-	case SlotType::WeaponLeft:
-	case SlotType::WeaponRight:
+	case EquipmentSlotType::WeaponLeft:
+	case EquipmentSlotType::WeaponRight:
 		setFixedSize(48, 96); // Вертикальное оружие
 		break;
-	case SlotType::Body:
+	case EquipmentSlotType::Body:
 		setFixedSize(64, 96); // Тело выше
 		break;
 	default:
@@ -83,15 +83,15 @@ void EquipmentSlot::setHighlighted(bool highlighted) {
 	}
 }
 
-const std::optional<Item>& EquipmentSlot::item() const {
+const std::optional<EquipmentItem>& EquipmentSlot::item() const {
   return d->item;
 }
 
-EquipmentSlot::SlotType EquipmentSlot::slotType() const {
+EquipmentSlotType EquipmentSlot::slotType() const {
   return d->type;
 }
 
-bool EquipmentSlot::setItem(const Item& item) {
+bool EquipmentSlot::setItem(const EquipmentItem& item) {
 	if (!canAcceptItem(item)) {
 		return false;
 	}
@@ -105,7 +105,7 @@ bool EquipmentSlot::setItem(const Item& item) {
 
 void EquipmentSlot::clearItem() {
 	if (d->item.has_value()) {
-		Item removed = *d->item;
+		EquipmentItem removed = *d->item;
 		d->item.reset();
 		clear();
 		updateVisualState();
@@ -134,8 +134,8 @@ void EquipmentSlot::dragEnterEvent(QDragEnterEvent* event) {
 		qint32 rarity;
 		stream >> id >> typeInt >> rarity;
 
-		Item::Type type = static_cast<Item::Type>(typeInt);
-		Item previewItem{ id, "Preview", type, QPixmap(), static_cast<int>(rarity) };
+		EquipmentItemType type = static_cast<EquipmentItemType>(typeInt);
+		EquipmentItem previewItem{ id, "Preview", type, QPixmap(), static_cast<EquipmentItemRarityType>(rarity) };
 
 		if (canAcceptItem(previewItem)) {
 			setHighlighted(true);
@@ -164,12 +164,12 @@ void EquipmentSlot::dropEvent(QDropEvent* event) {
 
 		// Здесь нужно получить полные данные предмета из вашей системы предметов
 		// Для примера создаём временный предмет:
-		Item droppedItem{
+		EquipmentItem droppedItem{
 				id,
 				QString("Item %1").arg(id),
-				static_cast<Item::Type>(typeInt),
+				static_cast<EquipmentItemType>(typeInt),
 				QPixmap(64, 64), // Замените на реальную иконку
-				static_cast<int>(rarity)
+				static_cast<EquipmentItemRarityType>(rarity)
 		};
 		droppedItem.icon.fill(Qt::transparent);
 
@@ -193,40 +193,40 @@ void EquipmentSlot::paintEvent(QPaintEvent* event) {
 		painter.setPen(QColor(100, 116, 139));
 
 		switch (d->type) {
-		case SlotType::Head: painter.drawText(rect(), Qt::AlignCenter, "H"); break;
-		case SlotType::Body: painter.drawText(rect(), Qt::AlignCenter, "B"); break;
-		case SlotType::WeaponLeft: painter.drawText(rect(), Qt::AlignCenter, "L"); break;
-		case SlotType::WeaponRight: painter.drawText(rect(), Qt::AlignCenter, "R"); break;
-		case SlotType::GlovesLeft: painter.drawText(rect(), Qt::AlignCenter, "GL"); break;
-		case SlotType::GlovesRight: painter.drawText(rect(), Qt::AlignCenter, "GR"); break;
-		case SlotType::Boots: painter.drawText(rect(), Qt::AlignCenter, "F"); break;
-		case SlotType::RingLeft: painter.drawText(rect(), Qt::AlignCenter, "RL"); break;
-		case SlotType::RingRight: painter.drawText(rect(), Qt::AlignCenter, "RR"); break;
-		case SlotType::Amulet: painter.drawText(rect(), Qt::AlignCenter, "A"); break;
+		case EquipmentSlotType::Head: painter.drawText(rect(), Qt::AlignCenter, "H"); break;
+		case EquipmentSlotType::Body: painter.drawText(rect(), Qt::AlignCenter, "B"); break;
+		case EquipmentSlotType::WeaponLeft: painter.drawText(rect(), Qt::AlignCenter, "L"); break;
+		case EquipmentSlotType::WeaponRight: painter.drawText(rect(), Qt::AlignCenter, "R"); break;
+		case EquipmentSlotType::GlovesLeft: painter.drawText(rect(), Qt::AlignCenter, "GL"); break;
+		case EquipmentSlotType::GlovesRight: painter.drawText(rect(), Qt::AlignCenter, "GR"); break;
+		case EquipmentSlotType::Boots: painter.drawText(rect(), Qt::AlignCenter, "F"); break;
+		case EquipmentSlotType::RingLeft: painter.drawText(rect(), Qt::AlignCenter, "RL"); break;
+		case EquipmentSlotType::RingRight: painter.drawText(rect(), Qt::AlignCenter, "RR"); break;
+		case EquipmentSlotType::Amulet: painter.drawText(rect(), Qt::AlignCenter, "A"); break;
 		}
 	}
 }
 
-bool EquipmentSlot::canAcceptItem(const Item& item) const {
+bool EquipmentSlot::canAcceptItem(const EquipmentItem& item) const {
 	switch (d->type) {
-	case SlotType::Head:
-		return item.type == Item::Type::Head;
-	case SlotType::Body:
-		return item.type == Item::Type::Body;
-	case SlotType::WeaponLeft:
-		return item.type == Item::Type::Weapon || item.type == Item::Type::Shield;
-	case SlotType::WeaponRight:
-		return item.type == Item::Type::Weapon; // Только оружие в правой
-	case SlotType::GlovesLeft:
-	case SlotType::GlovesRight:
-		return item.type == Item::Type::Gloves;
-	case SlotType::Boots:
-		return item.type == Item::Type::Boots;
-	case SlotType::RingLeft:
-	case SlotType::RingRight:
-		return item.type == Item::Type::Ring;
-	case SlotType::Amulet:
-		return item.type == Item::Type::Amulet;
+	case EquipmentSlotType::Head:
+		return item.type == EquipmentItemType::Head;
+	case EquipmentSlotType::Body:
+		return item.type == EquipmentItemType::Body;
+	case EquipmentSlotType::WeaponLeft:
+		return item.type == EquipmentItemType::Weapon || item.type == EquipmentItemType::Shield;
+	case EquipmentSlotType::WeaponRight:
+		return item.type == EquipmentItemType::Weapon; // Только оружие в правой
+	case EquipmentSlotType::GlovesLeft:
+	case EquipmentSlotType::GlovesRight:
+		return item.type == EquipmentItemType::Gloves;
+	case EquipmentSlotType::Boots:
+		return item.type == EquipmentItemType::Boots;
+	case EquipmentSlotType::RingLeft:
+	case EquipmentSlotType::RingRight:
+		return item.type == EquipmentItemType::Ring;
+	case EquipmentSlotType::Amulet:
+		return item.type == EquipmentItemType::Amulet;
 	default:
 		return false;
 	}
@@ -238,7 +238,7 @@ void EquipmentSlot::updateVisualState() {
 
 	// Для редкости предмета (опционально)
 	if (d->item.has_value()) {
-		setProperty("rarity", d->item->rarity);
+		setProperty("rarity", static_cast<int>(d->item->rarity));
 	}
 	else {
 		setProperty("rarity", -1);

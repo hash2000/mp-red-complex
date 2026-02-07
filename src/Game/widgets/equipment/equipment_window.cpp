@@ -22,15 +22,19 @@ EquipmentWindow::EquipmentWindow(InventoryService* incentoryService, QWidget* pa
 	setLayout(layout);
 	setWindowTitle("Equipment");
 
-	connect(d->widget, &EquipmentWidget::itemEquipped, [](const Item& item, EquipmentSlot::SlotType slot) {
+	connect(d->widget, &EquipmentWidget::itemEquipped, [](const EquipmentItem& item, EquipmentSlotType slot) {
 		qDebug() << "Equipped" << item.name << "to slot" << static_cast<int>(slot);
 		});
 
-	connect(d->widget, &EquipmentWidget::itemUnequipped, [](const Item& item, EquipmentSlot::SlotType slot) {
+	connect(d->widget, &EquipmentWidget::itemUnequipped, [](const EquipmentItem& item, EquipmentSlotType slot) {
 		qDebug() << "Unequipped" << item.name << "from slot" << static_cast<int>(slot);
 		});
 
-	Item sword{ "sword_001", "Rusty Sword", Item::Type::Weapon, QPixmap(":/icons/sword.png"), 1 };
+	EquipmentItem sword{ "sword_001", "Rusty Sword",
+		EquipmentItemType::Weapon,
+		QPixmap(":/icons/sword.png"),
+		EquipmentItemRarityType::Common };
+
 	d->widget->equipItem(sword);
 }
 

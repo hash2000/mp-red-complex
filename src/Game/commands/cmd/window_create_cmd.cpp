@@ -26,6 +26,11 @@ bool CreateWindowCommand::execute(CommandContext* context, const QStringList& ar
 		return false;
 	}
 
+	if (!widget->handleCommand("create", args, context)) {
+		delete widget;
+		return false;
+	}
+
 	const auto title = widget->windowTitle();
 	const auto sizes = widget->windowDefaultSizes();
 	auto subWndow = mdiArea->addSubWindow(widget);
@@ -34,6 +39,7 @@ bool CreateWindowCommand::execute(CommandContext* context, const QStringList& ar
 	subWndow->setAttribute(Qt::WA_DeleteOnClose, true);
 	subWndow->resize(sizes.width(), sizes.height());
 	subWndow->show();
+
 
 	context->printSuccess(QString("Window %1 created with title '%2'")
 		.arg(target)

@@ -1,5 +1,5 @@
 #pragma once
-#include "Game/widgets/equipment/equipment_slot.h"
+#include "Game/widgets/equipment/equipment_slot_widget.h"
 #include <QWidget>
 #include <optional>
 #include <memory>
@@ -12,25 +12,25 @@ public:
 	~EquipmentWidget() override;
 
 	// Получить предмет из слота
-	std::optional<Item> getItem(EquipmentSlot::SlotType slot) const;
+	std::optional<EquipmentItem> getItem(EquipmentSlotType slot) const;
 
 	// Программное снаряжение/снятие
-	bool equipItem(const Item& item);
-	void unequipItem(EquipmentSlot::SlotType slot);
+	bool equipItem(const EquipmentItem& item);
+	void unequipItem(EquipmentSlotType slot);
 
 	// Очистить всё снаряжение
 	void clearAll();
 
 	// Получить все слоты для интеграции с инвентарем
-	QMap<EquipmentSlot::SlotType, EquipmentSlot*> allSlots() const;
+	QMap<EquipmentSlotType, EquipmentSlot*> allSlots() const;
 
 signals:
-	void itemEquipped(const Item& item, EquipmentSlot::SlotType slot);
-	void itemUnequipped(const Item& item, EquipmentSlot::SlotType slot);
+	void itemEquipped(const EquipmentItem& item, EquipmentSlotType slot);
+	void itemUnequipped(const EquipmentItem& item, EquipmentSlotType slot);
 
 private:
 	void setupLayout();
-	EquipmentSlot* findCompatibleSlot(const Item& item) const;
+	EquipmentSlot* findCompatibleSlot(const EquipmentItem& item) const;
 
 private:
 	class Private;
