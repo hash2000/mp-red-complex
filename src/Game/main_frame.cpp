@@ -94,4 +94,5 @@ void GameMainFrame::setupView() {
 
 	d->controller->executeCommandByName("window-create", QStringList{ "map" });
 	d->controller->executeCommandByName("window-create", QStringList{ "equipment" });
+	d->controller->executeCommandByName("window-create", QStringList{ "inventory" });
 }

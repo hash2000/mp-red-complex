@@ -3,6 +3,7 @@
 #include "Game/services.h"
 #include "Game/widgets/map_view/map_window.h"
 #include "Game/widgets/equipment/equipment_window.h"
+#include "Game/widgets/inventory/inventory_window.h"
 
 class WindowsBuilder::Private {
 public:
@@ -12,7 +13,6 @@ public:
 
 	WindowsBuilder* q;
 	ApplicationController* appController;
-
 };
 
 WindowsBuilder::WindowsBuilder(ApplicationController* appController)
@@ -31,6 +31,10 @@ MdiChildWindow* WindowsBuilder::build(const QString& name) {
 	}
 	else if (name == "equipment") {
 		return new EquipmentWindow(
+			d->appController->services()->inventoryService());
+	}
+	else if (name == "inventory") {
+		return new InventoryWindow(
 			d->appController->services()->inventoryService());
 	}
 

@@ -36,7 +36,7 @@ EquipmentWindow::EquipmentWindow(InventoryService* incentoryService, QWidget* pa
 
 EquipmentWindow::~EquipmentWindow() = default;
 
-EquipmentWidget* EquipmentWindow::mapWidget() const {
+EquipmentWidget* EquipmentWindow::widget() const {
 	return d->widget;
 }
 

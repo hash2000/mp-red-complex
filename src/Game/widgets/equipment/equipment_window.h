@@ -17,7 +17,7 @@ public:
 
 	QSize windowDefaultSizes() const override { return QSize(380, 500); }
 
-	EquipmentWidget* mapWidget() const;
+	EquipmentWidget* widget() const;
 
 	bool handleCommand(const QString& commandName,
 		const QStringList& args,

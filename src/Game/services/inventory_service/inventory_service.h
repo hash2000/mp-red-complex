@@ -1,5 +1,4 @@
 #pragma once
-#include "DataLayer/data_serializer.h"
 #include <QObject>
 #include <memory>
 

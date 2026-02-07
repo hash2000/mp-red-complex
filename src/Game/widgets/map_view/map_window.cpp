@@ -33,7 +33,7 @@ MapWindow::MapWindow(WorldService* worldService, TimeService* timeService, QWidg
 
 MapWindow::~MapWindow() = default;
 
-MapWidget* MapWindow::mapWidget() const {
+MapWidget* MapWindow::widget() const {
 	return d->mapWidget;
 }
 

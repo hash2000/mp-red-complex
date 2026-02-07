@@ -16,7 +16,7 @@ public:
 
 	QString windowTitle() const override { return "World Map"; }
 
-	MapWidget* mapWidget() const;
+	MapWidget* widget() const;
 
 	bool handleCommand(const QString& commandName,
 		const QStringList& args,
