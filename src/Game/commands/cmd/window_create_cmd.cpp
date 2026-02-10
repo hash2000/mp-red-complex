@@ -5,21 +5,31 @@
 #include "Game/app_controller.h"
 #include "Game/windows_builder.h"
 #include <QMdiSubWindow>
+#include <QUuid>
 
 bool CreateWindowCommand::execute(CommandContext* context, const QStringList& args) {
 	auto app = context->applicationController();
 	auto controller = app->windowsController();
 	auto mdiArea = controller->mdiArea();
 
-	if (args.isEmpty()) {
-		context->printError("Usage: window-create <type>");
+	if (args.count() < 1) {
+		context->printError("Usage: window-create <type> <id>");
 		return false;
 	}
 
-	const auto target = args.first();
+	const auto target = args.at(0);
+	QString id;
+
+	if (args.count() == 2) {
+		id = args.at(1);
+	}
+	else {
+		id = QUuid::createUuid()
+			.toString();
+	}
 
 	WindowsBuilder builder(app);
-	auto widget = builder.build(target);
+	auto widget = builder.build(target, id);
 	if (!widget) {
 		context->printError(QString("Can't find target window %1")
 			.arg(target));
@@ -31,15 +41,15 @@ bool CreateWindowCommand::execute(CommandContext* context, const QStringList& ar
 		return false;
 	}
 
+	controller->registerWindow(widget);
+
 	const auto title = widget->windowTitle();
 	const auto sizes = widget->windowDefaultSizes();
 	auto subWndow = mdiArea->addSubWindow(widget);
-	controller->registerWindow(widget);
 	subWndow->setWindowTitle(title);
 	subWndow->setAttribute(Qt::WA_DeleteOnClose, true);
 	subWndow->resize(sizes.width(), sizes.height());
 	subWndow->show();
-
 
 	context->printSuccess(QString("Window %1 created with title '%2'")
 		.arg(target)

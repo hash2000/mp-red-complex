@@ -8,7 +8,7 @@ class EquipmentWindow : public MdiChildWindow {
 	Q_OBJECT
 
 public:
-	EquipmentWindow(InventoryService* incentoryService, QWidget* parent = nullptr);
+	EquipmentWindow(InventoryService* incentoryService, const QString& id, QWidget* parent = nullptr);
 	~EquipmentWindow() override;
 
 	QString windowType() const override { return "equipment"; }

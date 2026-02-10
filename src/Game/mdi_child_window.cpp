@@ -1,8 +1,21 @@
 #include "Game/mdi_child_window.h"
 #include "Game/commands/command_context.h"
 
-MdiChildWindow::MdiChildWindow(QWidget* parent)
-	: QWidget(parent) {
+class MdiChildWindow::Private {
+public:
+	Private(MdiChildWindow* parent)
+		: q(parent) {
+	}
+
+	MdiChildWindow* q;
+	QString windowId;
+};
+
+
+MdiChildWindow::MdiChildWindow(const QString& id, QWidget* parent)
+	: QWidget(parent)
+	, d(std::make_unique<Private>(this)) {
+	d->windowId = id;
 }
 
 MdiChildWindow::~MdiChildWindow() = default;
@@ -16,11 +29,7 @@ QString MdiChildWindow::windowTitle() const {
 }
 
 QString MdiChildWindow::windowId() const {
-	return m_windowId;
-}
-
-void MdiChildWindow::setWindowId(const QString& id) {
-	m_windowId = id;
+	return d->windowId;
 }
 
 QSize MdiChildWindow::windowDefaultSizes() const {

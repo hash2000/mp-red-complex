@@ -66,7 +66,7 @@ InventoryItemWidget::InventoryItemWidget(const InventoryItem& item, InventoryGri
 
 	setStyleSheet("InventoryItemWidget { border: 1px solid #4a5568; border-radius: 3px; }");
 	setAcceptDrops(true);
-	setMouseTracking(true);
+	//setMouseTracking(true);
 	setAttribute(Qt::WA_NoSystemBackground, false); // Разрешаем фон
 	setAttribute(Qt::WA_OpaquePaintEvent, true);    // Оптимизация отрисовки
 	show();

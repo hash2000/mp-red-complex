@@ -22,20 +22,23 @@ WindowsBuilder::WindowsBuilder(ApplicationController* appController)
 
 WindowsBuilder::~WindowsBuilder() = default;
 
-MdiChildWindow* WindowsBuilder::build(const QString& name) {
+MdiChildWindow* WindowsBuilder::build(const QString& name, const QString& id) {
 
 	if (name == "map") {
 		return new MapWindow(
 			d->appController->services()->worldService(),
-			d->appController->services()->timeService());
+			d->appController->services()->timeService(),
+			id);
 	}
 	else if (name == "equipment") {
 		return new EquipmentWindow(
-			d->appController->services()->inventoryService());
+			d->appController->services()->inventoryService(),
+			id);
 	}
 	else if (name == "inventory") {
 		return new InventoryWindow(
-			d->appController->services()->inventoryService());
+			d->appController->services()->inventoryService(),
+			id);
 	}
 
 	return nullptr;

@@ -8,13 +8,12 @@ class CommandContext;
 class MdiChildWindow : public QWidget {
 	Q_OBJECT
 public:
-	explicit MdiChildWindow(QWidget* parent = nullptr);
+	explicit MdiChildWindow(const QString& id, QWidget* parent = nullptr);
 	~MdiChildWindow() override;
 
 	virtual QString windowType() const;
 	virtual QString windowTitle() const;
 	QString windowId() const;
-	void setWindowId(const QString& id);
 
 	virtual QSize windowDefaultSizes() const;
 
@@ -25,6 +24,7 @@ public:
 signals:
 	void requestClose();
 
-protected:
-	QString m_windowId;
+private:
+	class Private;
+	std::unique_ptr<Private> d;
 };

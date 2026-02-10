@@ -12,8 +12,9 @@ public:
 	EquipmentWidget* widget;
 };
 
-EquipmentWindow::EquipmentWindow(InventoryService* incentoryService, QWidget* parent)
-	: d(std::make_unique<Private>(this)) {
+EquipmentWindow::EquipmentWindow(InventoryService* incentoryService, const QString& id, QWidget* parent)
+	: d(std::make_unique<Private>(this))
+	, MdiChildWindow(id, parent) {
 	d->widget = new EquipmentWidget(this);
 	auto layout = new QVBoxLayout(this);
 	layout->setContentsMargins(0, 0, 0, 0);

@@ -13,26 +13,11 @@ public:
 	:	q(parent) {
 	}
 
-	// Генерация уникального идентификатора окна
-	QString generateUniqueWindowId(const QString& baseName = "window") const {
-		QString candidate;
-		do {
-			candidate = QString("%1_%2")
-				.arg(baseName)
-				.arg(++windowIdCounter);
-		} while (windowRegistry.contains(candidate));
-
-		return candidate;
-	}
-
 	WindowsController* q;
-
 	QPointer<QMdiArea> mdiArea;
 	QHash<QString, QPointer<MdiChildWindow>> windowRegistry;
 	QHash<MdiChildWindow*, QString> windowToId;
 	QPointer<MdiChildWindow> activeWindow;
-	// Счётчик для генерации уникальных ID
-	mutable quint64 windowIdCounter = 0;
 };
 
 WindowsController::WindowsController()
@@ -74,35 +59,17 @@ QMdiArea* WindowsController::mdiArea() const {
 	return d->mdiArea.data();
 }
 
-QString WindowsController::registerWindow(MdiChildWindow* window, const QString& requestedId) {
+bool WindowsController::registerWindow(MdiChildWindow* window) {
 	if (!window) {
 		qWarning() << "Attempted to register null window";
-		return QString();
-	}
-
-	// Проверка: окно уже зарегистрировано?
-	if (d->windowToId.contains(window)) {
-		QString existingId = d->windowToId.value(window);
-		if (requestedId.isEmpty() || requestedId == existingId) {
-			return existingId; // уже зарегистрировано с тем же или безымянным ID
-		}
-		// Если запрошен другой ID — сначала удаляем старую регистрацию
-		unregisterWindow(window);
+		return false;
 	}
 
 	// Генерация или валидация идентификатора
-	QString windowId = requestedId;
-	if (windowId.isEmpty()) {
-		//windowId = d->generateUniqueWindowId(window->windowType());
-		windowId = d->generateUniqueWindowId();
-	}
-	else {
-		// Проверка уникальности
-		int suffix = 1;
-		QString baseId = windowId;
-		while (d->windowRegistry.contains(windowId)) {
-			windowId = QString("%1_%2").arg(baseId).arg(suffix++);
-		}
+	QString windowId = window->windowId();
+	if (d->windowRegistry.contains(windowId)) {
+		qWarning() << "Window allready registered" << windowId;
+		return false;
 	}
 
 	// Регистрация окна
@@ -116,7 +83,7 @@ QString WindowsController::registerWindow(MdiChildWindow* window, const QString&
 	qInfo() << "Window registered:" << windowId << "type:" << window->windowType();
 
 	emit windowCreated(window, windowId);
-	return windowId;
+	return true;
 }
 
 void WindowsController::unregisterWindow(MdiChildWindow* window) {

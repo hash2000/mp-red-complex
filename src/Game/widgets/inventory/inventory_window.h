@@ -9,7 +9,7 @@ class InventoryWindow : public MdiChildWindow {
 	Q_OBJECT
 
 public:
-	InventoryWindow(InventoryService* incentoryService, QWidget* parent = nullptr);
+	InventoryWindow(InventoryService* incentoryService, const QString& id, QWidget* parent = nullptr);
 	~InventoryWindow() override;
 
 	QString windowType() const override { return "inventory"; }

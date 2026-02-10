@@ -10,7 +10,7 @@ public:
 	WindowsBuilder(ApplicationController* appController);
 	~WindowsBuilder();
 
-	MdiChildWindow* build(const QString& name);
+	MdiChildWindow* build(const QString& name, const QString& id);
 
 private:
 	class Private;

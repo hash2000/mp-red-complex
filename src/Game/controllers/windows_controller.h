@@ -19,7 +19,7 @@ public:
 	 * @param windowId Уникальный идентификатор (если пустой — генерируется автоматически)
 	 * @return Идентификатор окна (может отличаться от запрошенного, если был занят)
 	 */
-	QString registerWindow(MdiChildWindow* window, const QString& windowId = QString());
+	bool registerWindow(MdiChildWindow* window);
 
 	/**
 	 * Удаление окна из реестра (вызывается автоматически при уничтожении окна)
