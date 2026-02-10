@@ -9,6 +9,7 @@
 #include <QToolTip>
 #include <QTimer>
 
+
 class InventoryItemWidget::Private {
 public:
 	Private(InventoryItemWidget* parent)
@@ -30,19 +31,22 @@ InventoryItemWidget::InventoryItemWidget(const InventoryItem& item, InventoryGri
 	: d(std::make_unique<Private>(this))
 	, QFrame(parent) {
 	// Устанавливаем ФИКСИРОВАННЫЙ размер на основе ячеек
-	const int cellSize = 32;
-	setFixedSize(item.width * cellSize, item.height * cellSize);
+	setFixedSize(item.width * CELL_SIZE, item.height * CELL_SIZE);
+	setObjectName(newObjectName());
 
 	// Создаем контейнер для иконки и счётчика
 	auto* layout = new QVBoxLayout(this);
 	layout->setContentsMargins(2, 2, 2, 2);
 	layout->setSpacing(0);
 
+	d->item = item;
+	d->grid = grid;
+
 	// Иконка
 	d->iconLabel = new QLabel(this);
 	d->iconLabel->setPixmap(item.icon.scaled(
-		item.width * cellSize - 4,
-		item.height * cellSize - 4,
+		item.width * CELL_SIZE - 4,
+		item.height * CELL_SIZE - 4,
 		Qt::KeepAspectRatio,
 		Qt::SmoothTransformation
 	));
@@ -60,14 +64,21 @@ InventoryItemWidget::InventoryItemWidget(const InventoryItem& item, InventoryGri
 		d->countLabel = nullptr;
 	}
 
-	setAttribute(Qt::WA_StyledBackground, true);
 	setStyleSheet("InventoryItemWidget { border: 1px solid #4a5568; border-radius: 3px; }");
-
-	// Важно: принимаем дроп для объединения стеков
 	setAcceptDrops(true);
+	setMouseTracking(true);
+	setAttribute(Qt::WA_NoSystemBackground, false); // Разрешаем фон
+	setAttribute(Qt::WA_OpaquePaintEvent, true);    // Оптимизация отрисовки
+	show();
 }
 
 InventoryItemWidget::~InventoryItemWidget() = default;
+
+QString InventoryItemWidget::newObjectName() {
+	static int s_widgetNumber = 0;
+	QString name; name.setNum(s_widgetNumber++); name.prepend("inventory_item_widget_");
+	return name;
+}
 
 const InventoryItem& InventoryItemWidget::item() const {
 	return d->item;
@@ -79,7 +90,8 @@ QPoint InventoryItemWidget::gridPosition() const {
 
 void InventoryItemWidget::setGridPosition(const QPoint& pos) {
 	d->gridPos = pos;
-	move(pos.x() * 32, pos.y() * 32);
+	d->item.x = pos.x();
+	d->item.y = pos.y();
 }
 
 void InventoryItemWidget::setCount(int count) {
@@ -115,17 +127,20 @@ void InventoryItemWidget::startDrag() {
 	QMimeData* mimeData = new QMimeData();
 
 	mimeData->setData("application/x-game-item", d->item.toMimeData());
+	mimeData->setData("application/x-game-item-source-grid", d->grid->objectName().toUtf8());
+	mimeData->setData("application/x-game-item-source-widget", objectName().toUtf8());
+	mimeData->setData("application/x-game-item-remove-from-source", "1");
 	mimeData->setText(d->item.name);
 
 	// Иконка для курсора
 	QPixmap dragPixmap;
 	if (d->item.icon.isNull()) {
-		dragPixmap = QPixmap(48, 48);
+		dragPixmap = QPixmap(CELL_SIZE, CELL_SIZE);
 		dragPixmap.fill(Qt::darkCyan);
 	}
 	else
 	{
-		dragPixmap = d->item.icon.scaled(48, 48, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+		dragPixmap = d->item.icon.scaled(CELL_SIZE, CELL_SIZE, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 	}
 
 	drag->setMimeData(mimeData);
@@ -135,14 +150,17 @@ void InventoryItemWidget::startDrag() {
 	// Визуальная обратная связь: полупрозрачность во время драга
 	setWindowOpacity(0.6);
 
-	Qt::DropAction dropAction = drag->exec(Qt::MoveAction | Qt::CopyAction);
+	Qt::DropAction dropAction = drag->exec(Qt::MoveAction);
 
 	// Восстанавливаем прозрачность
 	setWindowOpacity(1.0);
 
-	if (dropAction == Qt::MoveAction) {
-		// Успешный перемещающий дроп — удаляем из сетки
-		emit removedFromGrid(this);
+
+	if (dropAction == Qt::MoveAction) {		
+		const auto removeFrpmSourceFlag = mimeData->data("application/x-game-item-remove-from-source");
+		if (removeFrpmSourceFlag == "1") {
+			emit removedFromGrid(this);
+		}
 	}
 }
 
@@ -193,21 +211,19 @@ void InventoryItemWidget::mouseDoubleClickEvent(QMouseEvent* event) {
 }
 
 void InventoryItemWidget::dragEnterEvent(QDragEnterEvent* event) {
-	if (d->item.type == InventoryItemType::Resource &&
-		event->mimeData()->hasFormat("application/x-game-item")) {
-
-		auto droppedItemOpt = InventoryItem::fromMimeData(
-			event->mimeData()->data("application/x-game-item")
-		);
-
-		if (droppedItemOpt.has_value() &&
-			droppedItemOpt->id == d->item.id &&
-			d->item.count < d->item.maxStack) {
-			event->acceptProposedAction();
-			return;
-		}
+	if (!event->mimeData()->hasFormat("application/x-game-item")) {
+		event->ignore();
+		return;
 	}
-	event->ignore();
+
+	auto droppedItemOpt = InventoryItem::fromMimeData(event->mimeData()->data("application/x-game-item"));
+
+	if (droppedItemOpt.has_value() && droppedItemOpt->id == d->item.id &&
+		d->item.count <= d->item.maxStack) {
+		event->acceptProposedAction();
+		return;
+	}
+	
 }
 
 void InventoryItemWidget::dropEvent(QDropEvent* event) {

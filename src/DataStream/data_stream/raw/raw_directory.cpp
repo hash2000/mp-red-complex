@@ -14,7 +14,8 @@ void RawDirectory::loadFromPath(const QString &path) {
 	while (iterator.hasNext()) {
 		const auto fullPath = iterator.next();
 		const auto relative = _path
-			.relativeFilePath(fullPath);
+			.relativeFilePath(fullPath)
+			.toLower();
 
 		try {
 			auto stream = std::make_shared<std::ifstream>();

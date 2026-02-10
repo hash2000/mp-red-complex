@@ -3,6 +3,7 @@
 
 class InventoryWidget;
 class InventoryService;
+class InventoryItem;
 
 class InventoryWindow : public MdiChildWindow {
 	Q_OBJECT
@@ -17,9 +18,7 @@ public:
 
 	QSize windowDefaultSizes() const override { return QSize(380, 500); }
 
-	bool handleCommand(const QString& commandName,
-		const QStringList& args,
-		CommandContext* context) override;
+	bool handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) override;
 
 private:
 	class Private;

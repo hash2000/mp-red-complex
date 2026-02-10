@@ -1,6 +1,6 @@
 #include "Game/widgets/inventory/inventory_window.h"
 #include "Game/widgets/inventory/inventory_grid_view.h"
-#include "Game/services/inventory_service/inventory_service.h"
+#include "Game/widgets/inventory/inventory_grid.h"
 #include <QVBoxLayout>
 #include <QUuid>
 
@@ -11,14 +11,12 @@ public:
 	}
 
 	InventoryWindow* q;
-	InventoryService* incentoryService;
 	InventoryGridView* widget;
 };
 
 InventoryWindow::InventoryWindow(InventoryService* incentoryService, QWidget* parent)
 : d(std::make_unique<Private>(this)) {
-	d->incentoryService = incentoryService;
-	d->widget = new InventoryGridView(100, 10, this);
+	d->widget = new InventoryGridView(incentoryService, this);
 	auto layout = new QVBoxLayout(this);
 	layout->setContentsMargins(0, 0, 0, 0);
 	layout->addWidget(d->widget);
@@ -40,12 +38,7 @@ bool InventoryWindow::handleCommand(const QString& commandName, const QStringLis
 			return false;
 		}
 
-		const auto items =  d->incentoryService->fromContainer(target);
-		for (const auto item : items) {
-			d->widget->addItem(item);
-		}
-
-		return true;
+		return d->widget->load(target);
 	}
 
 	return false;

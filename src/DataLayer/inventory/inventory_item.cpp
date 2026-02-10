@@ -6,7 +6,7 @@ QByteArray InventoryItem::toMimeData() const {
 	QByteArray data;
 	QDataStream stream(&data, QIODevice::WriteOnly);
 
-	stream << id << name << static_cast<qint32>(type) << width << height << count;
+	stream << id << name << static_cast<qint32>(type) << x << y << width << height << count;
 
 	if (type == InventoryItemType::Equipment && equipmentType.has_value()) {
 		stream << static_cast<qint32>(*equipmentType);
@@ -18,13 +18,15 @@ QByteArray InventoryItem::toMimeData() const {
 std::optional<InventoryItem> InventoryItem::fromMimeData(const QByteArray& data) {
 	QDataStream stream(data);
 	QString id, name;
-	qint32 typeInt, width, height, count;
-	stream >> id >> name >> typeInt >> width >> height >> count;
+	qint32 typeInt, x, y, width, height, count;
+	stream >> id >> name >> typeInt >> x >> y >> width >> height >> count;
 
 	// В реальном проекте здесь нужно запросить полные данные из ItemDatabase
 	// Для примера возвращаем заглушку:
 	InventoryItem item;
 	item.id = id;
+	item.x = x;
+	item.y = y;
 	item.name = name;
 	item.type = static_cast<InventoryItemType>(typeInt);
 	item.width = width;
@@ -46,20 +48,7 @@ InventoryItem InventoryItem::fromJson(const QJsonObject& json) {
 	item.id = json["id"].toString();
 	item.name = json["name"].toString();
 	item.description = json["description"].toString();
-
-	// Загрузка иконки (путь относительно ресурсов)
-	QString iconPath = json["icon"].toString();
-	if (!iconPath.isEmpty()) {
-		item.icon = QPixmap(iconPath);
-		if (item.icon.isNull()) {
-			// Фолбэк для отладки
-			item.icon = QPixmap(64, 64);
-			item.icon.fill(Qt::darkGray);
-			QPainter painter(&item.icon);
-			painter.setPen(Qt::white);
-			painter.drawText(item.icon.rect(), Qt::AlignCenter, item.id.left(2));
-		}
-	}
+	item.iconPath = json["icon"].toString();
 
 	// Тип предмета
 	QString typeStr = json["type"].toString().toLower();

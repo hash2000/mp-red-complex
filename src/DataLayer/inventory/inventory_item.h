@@ -2,8 +2,8 @@
 #include "DataLayer/equipment/equipment_item.h"
 #include <QString>
 #include <QPixmap>
+#include <QList>
 #include <optional>
-#include <vector>
 #include <QJsonObject>
 #include <QJsonArray>
 
@@ -52,7 +52,11 @@ struct InventoryItem {
 	QString name;
 	QString description;
 	QPixmap icon;
+	QString iconPath;
 	InventoryItemType type;
+
+	int x = 0;
+	int y = 0;
 
 	// Размер в ячейках сетки (1x1 по умолчанию)
 	int width = 1;
@@ -74,4 +78,10 @@ struct InventoryItem {
 	static std::optional<InventoryItem> fromMimeData(const QByteArray& data);
 
 	static InventoryItem fromJson(const QJsonObject& json);
+};
+
+struct Inventory {
+	QList<InventoryItem> items;
+	int rows;
+	int cols;
 };

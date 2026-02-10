@@ -19,8 +19,9 @@ public:
 	int cols() const;
 
 	// Размещение предмета
-	bool placeItem(const InventoryItem& item, int col, int row);
+	bool placeItem(const InventoryItem& item);
 	bool placeItemWidget(InventoryItemWidget* widget, int col, int row);
+	bool moveItemWidget(InventoryItemWidget* widget, int newCol, int newRow);
 
 	// Удаление предмета
 	void removeItem(int col, int row);
@@ -51,6 +52,8 @@ protected:
 	void dragEnterEvent(QDragEnterEvent* event) override;
 	void dragMoveEvent(QDragMoveEvent* event) override;
 	void dropEvent(QDropEvent* event) override;
+
+	QString newObjectName();
 
 private:
 	void setupGrid();

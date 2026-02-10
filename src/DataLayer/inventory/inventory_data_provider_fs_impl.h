@@ -10,7 +10,12 @@ public:
 	InventoryDataProviderFilesistemImpl(Resources* resources);
 	~InventoryDataProviderFilesistemImpl() override;
 
-	QList<InventoryItem> fromContainer(const QUuid& id) const override;
+	std::optional<Inventory> fromContainer(const QUuid& id) const override;
+	std::optional<InventoryItem> getItem(const QString& id) const override;
+	QPixmap loadIcon(const InventoryItem& item) const override;
+
+private:
+	static QPixmap loadEmptyStubIcon(const QString& id);
 
 private:
 	class Private;

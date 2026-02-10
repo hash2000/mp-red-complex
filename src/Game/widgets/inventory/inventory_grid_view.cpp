@@ -1,5 +1,6 @@
 #include "Game/widgets/inventory/inventory_grid_view.h"
 #include "Game/widgets/inventory/inventory_grid.h"
+#include "Game/services/inventory_service/inventory_service.h"
 
 class InventoryGridView::Private {
 public:
@@ -9,12 +10,14 @@ public:
 	}
 
 	InventoryGridView* q;
-	InventoryGrid* grid;
+	InventoryGrid* grid = nullptr;
+	InventoryService* inventoryService;
 };
 
-InventoryGridView::InventoryGridView(int rows, int cols, QWidget* parent)
+InventoryGridView::InventoryGridView(InventoryService* inventoryService, QWidget* parent)
 : d(std::make_unique<Private>(this))
 , QScrollArea(parent) {
+	d->inventoryService = inventoryService;
 	setWidgetResizable(false);
 	setAlignment(Qt::AlignLeft | Qt::AlignTop);
 	setStyleSheet(R"(
@@ -52,9 +55,6 @@ InventoryGridView::InventoryGridView(int rows, int cols, QWidget* parent)
         }
     )");
 
-	d->grid = new InventoryGrid(rows, cols);
-	setWidget(d->grid);
-
 	setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
 	setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
 }
@@ -65,9 +65,33 @@ InventoryGrid* InventoryGridView::grid() const {
 	return d->grid;
 }
 
-bool InventoryGridView::addItem(const InventoryItem& item) {
+bool InventoryGridView::placeItem(InventoryItem& item) {
 	if (auto pos = d->grid->findFreeSpace(item)) {
-		return d->grid->placeItem(item, pos->x(), pos->y());
+		item.x = pos->x();
+		item.y = pos->y();
+		return d->grid->placeItem(item);
 	}
+
 	return false;
+}
+
+bool InventoryGridView::load(const QUuid& id) {
+	if (d->grid) {
+		return false;
+	}
+
+	const auto inventory = d->inventoryService->fromContainer(id);
+	if (!inventory) {
+		return false;
+	}
+
+	const auto inv = inventory.value();
+	d->grid = new InventoryGrid(inv.rows, inv.cols);
+	setWidget(d->grid);
+
+	for (const auto item : inv.items) {
+		d->grid->placeItem(item);
+	}
+
+	return true;
 }

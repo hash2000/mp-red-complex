@@ -1,20 +1,24 @@
 #pragma once
 #include "DataLayer/inventory/inventory_item.h"
 #include <QScrollArea>
+#include <QUuid>
 #include <memory>
 
 class InventoryGrid;
+class InventoryService;
 
 class InventoryGridView : public QScrollArea {
 	Q_OBJECT
 
 public:
-	explicit InventoryGridView(int rows = 6, int cols = 10, QWidget* parent = nullptr);
+	explicit InventoryGridView(InventoryService* inventoryService, QWidget* parent = nullptr);
 	~InventoryGridView() override;
 
 	InventoryGrid* grid() const;
 
-	bool addItem(const InventoryItem& item);
+	bool placeItem(InventoryItem& item);
+
+	bool load(const QUuid& id);
 
 private:
 	class Private;

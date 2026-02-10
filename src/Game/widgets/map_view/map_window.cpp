@@ -63,6 +63,6 @@ bool MapWindow::handleCommand(const QString& commandName, const QStringList& arg
 	//}
 
 	// Не обработано — передать базовому классу или выше
-	return MdiChildWindow::handleCommand(commandName, args, context);
+	return true;
 }
 

@@ -11,7 +11,8 @@ class QLabel;
 
 class InventoryItemWidget : public QFrame {
 	Q_OBJECT
-
+public:
+	static const int CELL_SIZE = 32;
 public:
 	explicit InventoryItemWidget(const InventoryItem& item, InventoryGrid* grid, QWidget* parent = nullptr);
 	~InventoryItemWidget() override;
@@ -48,6 +49,8 @@ protected:
 	void dragEnterEvent(QDragEnterEvent* event) override;
 	void dropEvent(QDropEvent* event) override;
 	void paintEvent(QPaintEvent* event) override;
+
+	QString newObjectName();
 
 private:
 	class Private;

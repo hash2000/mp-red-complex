@@ -44,9 +44,7 @@ EquipmentWidget* EquipmentWindow::widget() const {
 	return d->widget;
 }
 
-bool EquipmentWindow::handleCommand(const QString& commandName,
-	const QStringList& args,
-	CommandContext* context) {
+bool EquipmentWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) {
 
-	return MdiChildWindow::handleCommand(commandName, args, context);
+	return true;
 }

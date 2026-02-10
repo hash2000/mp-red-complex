@@ -17,7 +17,7 @@ InventoryService::InventoryService(InventoryDataProvider* dataProvider, QObject*
 
 InventoryService::~InventoryService() = default;
 
-QList<InventoryItem> InventoryService::fromContainer(const QUuid& id) const {
+std::optional<Inventory> InventoryService::fromContainer(const QUuid& id) const {
 	return d->dataProvider->fromContainer(id);
 }
 
