@@ -70,13 +70,8 @@ bool InventoryGridView::load(const QUuid& id) {
 		return false;
 	}
 
-	auto inventoryService = d->inventoriesService->inventoryService(id);
-	if (!inventoryService) {
-		return false;
-	}
-
 	d->grid = new InventoryGrid(this);
-	d->grid->setInventoryService(inventoryService);
+	d->grid->setInventoryService(d->inventoriesService, id);
 
 	setWidget(d->grid);
 	return true;

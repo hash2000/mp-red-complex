@@ -7,6 +7,7 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <memory>
+#include <map>
 
 enum class InventoryResourceType {
 	Sand,
@@ -91,7 +92,7 @@ struct InventoryItem : public InventoryHandler {
 
 struct Inventory {
 	QString id;
-	QList<std::shared_ptr<InventoryItem>> items;
+	std::map<QString, std::shared_ptr<InventoryItem>> items;
 	int rows;
 	int cols;
 };

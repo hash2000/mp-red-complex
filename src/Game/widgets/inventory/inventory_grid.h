@@ -3,9 +3,11 @@
 #include <QWidget>
 #include <QVector>
 #include <QMap>
+#include <QUuid>
 
 class InventoryCell;
 class InventoryItemWidget;
+class InventoriesService;
 class InventoryService;
 
 class InventoryGrid : public QWidget {
@@ -15,7 +17,7 @@ public:
 	explicit InventoryGrid(QWidget* parent = nullptr);
 	~InventoryGrid() override;
 
-	void setInventoryService(InventoryService* service);
+	void setInventoryService(InventoriesService* inventories, const QUuid& id);
 	InventoryService* inventoryService() const;
 
 	InventoryItemWidget* widgetAt(int col, int row) const;

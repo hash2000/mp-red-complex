@@ -1,4 +1,5 @@
 #include "Game/services/inventory/inventory_service.h"
+#include "Game/services/inventory/inventories_service.h"
 #include <vector>
 
 
@@ -55,7 +56,8 @@ void InventoryService::setupCells() {
 
 	d->items.clear();
 
-	for (auto item : d->inventory->items) {
+	for (auto itemIt : d->inventory->items) {
+		auto item = itemIt.second;
 		if (!item) {
 			continue;
 		}
@@ -108,7 +110,7 @@ bool InventoryService::placeItem(const InventoryHandler& item) {
 	int col = itemPtr->x;
 	int row = itemPtr->y;
 
-	if (!canPlaceItem(item, row, col)) {
+	if (!canPlaceItem(item, col, row)) {
 		return false;
 	}
 
@@ -144,7 +146,18 @@ bool InventoryService::canPlaceItem(const InventoryHandler& item, int col, int r
 	// проверяем, возможно ли занять предмметом ячейки, которые ему требуются
 	for (int dy = 0; dy < item.height; dy++) {
 		for (int dx = 0; dx < item.width; dx++) {
-			if (d->cells[col + dx][row + dy]->occupied) {
+			int checkX = col + dx;
+			int checkY = row + dy;
+
+			const auto& cell = d->cells[col + dx][row + dy];
+			if (cell->occupied) {
+				bool isOldCell = (checkX >= item.x && checkX < item.x + item.width &&
+					checkY >= item.y && checkY < item.y + item.height);
+
+				if (isOldCell) {
+					return true;
+				}
+
 				return false;
 			}
 		}
@@ -194,7 +207,12 @@ void InventoryService::clear() {
 }
 
 void InventoryService::removeItem(const InventoryHandler& item) {
-	auto itemPtr = itemById(item.id);
+	auto itemIt = d->inventory->items.find(item.id);
+	if (itemIt == d->inventory->items.end()) {
+		return;
+	}
+
+	auto itemPtr = itemIt->second;
 	if (!itemPtr) {
 		return;
 	}
@@ -215,6 +233,7 @@ void InventoryService::removeItem(const InventoryHandler& item) {
 	}
 
 	d->items.remove(QPoint(itemPtr->x, itemPtr->y));
+	d->inventory->items.erase(item.id);
 
 	emit removeItemEvent(item, itemPtr->x, itemPtr->y);
 }
@@ -318,11 +337,11 @@ bool InventoryService::containsItem(const InventoryHandler& item) const {
 }
 
 std::shared_ptr<InventoryItem> InventoryService::itemById(const QString& id) const {
-	for (auto item : d->inventory->items) {
-		if (item->id == id) {
-			return item;
-		}
+	const auto it = d->inventory->items.find(id);
+	if (it != d->inventory->items.end()) {
+		return it->second;
 	}
 
 	return std::shared_ptr<InventoryItem>();
 }
+

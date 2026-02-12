@@ -3,6 +3,7 @@
 #include "Game/widgets/inventory/inventory_item_widget.h"
 #include "Game/widgets/inventory/drop_preview_widget.h"
 #include "Game/services/inventory/inventory_service.h"
+#include "Game/services/inventory/inventories_service.h"
 #include <QPoint>
 #include <QLayoutItem>
 #include <QLayout>
@@ -21,6 +22,7 @@ public:
 
 	InventoryGrid* q;
 	InventoryService* service = nullptr;
+	InventoriesService* inventories = nullptr;
 	QHash<QString, InventoryItemWidget*> widgets; // Кэш виджетов по ID предмета
 	DropPreviewWidget* dropPreview = nullptr;
 
@@ -54,10 +56,13 @@ InventoryService* InventoryGrid::inventoryService() const {
 	return d->service;
 }
 
-void InventoryGrid::setInventoryService(InventoryService* service) {
+void InventoryGrid::setInventoryService(InventoriesService* inventories, const QUuid& id) {
+	auto service = inventories->inventoryService(id, true);
+
 	if (d->service == service) {
 		return;
 	}
+
 
 	// Отписываемся от старого сервиса
 	if (d->service) {
@@ -70,6 +75,7 @@ void InventoryGrid::setInventoryService(InventoryService* service) {
 	}
 
 	d->service = service;
+	d->inventories = inventories;
 
 	if (d->service) {
 		// Подписываемся на события сервиса
@@ -249,7 +255,7 @@ void InventoryGrid::dropEvent(QDropEvent* event) {
 	}
 
 	QByteArray data = event->mimeData()->data("application/x-game-item");
-	auto item = InventoryItem::fromMimeData(data);
+	const auto item = InventoryItem::fromMimeData(data);
 
 	// Определяем целевую позицию
 	QPoint pos = event->position().toPoint();
@@ -258,11 +264,14 @@ void InventoryGrid::dropEvent(QDropEvent* event) {
 
 	// Получаем источник
 	bool isSameGrid = false;
-	if (event->mimeData()->hasFormat("application/x-game-item-source-grid")) {
-		const auto sourceGridName = QString::fromUtf8(event->mimeData()->data("application/x-game-item-source-grid"));
-		const auto currentGridName = objectName();
-		isSameGrid = (sourceGridName == currentGridName);
+	if (!event->mimeData()->hasFormat("application/x-game-item-source-inventory-id")) {
+		qDebug() << "Drop inventory item" << item.id << "from unknown inventory container";
+		return;
 	}
+
+	const auto sourceInventoryId = QString::fromUtf8(event->mimeData()->data("application/x-game-item-source-inventory-id"));
+	const auto currentInventoryId = inventoryId();
+	isSameGrid = (sourceInventoryId == currentInventoryId);
 
 	// Перемещение внутри той же сетки
 	if (isSameGrid && d->service->containsItem(item)) {
@@ -279,25 +288,10 @@ void InventoryGrid::dropEvent(QDropEvent* event) {
 		}
 	}
 
-	// Размещение нового предмета
-	// Проверяем, есть ли свободное место
-	if (!d->service->canPlaceItem(item, col, row)) {
-		auto freePos = d->service->findFreeSpace(item);
-		if (freePos.has_value()) {
-			col = freePos->x();
-			row = freePos->y();
-		}
-		else {
-			event->ignore();
-			return;
-		}
-	}
-
-	// Обновляем координаты и размещаем
-	item.x = col;
-	item.y = row;
-
-	if (d->service->placeItem(item)) {
+	// нужно извлечь из инвентаря источника, и переместить в текущий инвентарь
+	if (d->inventories && d->inventories->crossInventoryMove(item, col, row,
+		QUuid::fromString(sourceInventoryId),
+		QUuid::fromString(currentInventoryId))) {
 		event->acceptProposedAction();
 		return;
 	}

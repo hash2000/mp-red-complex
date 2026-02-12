@@ -126,8 +126,7 @@ void InventoryItemWidget::startDrag() {
 	QMimeData* mimeData = new QMimeData();
 
 	mimeData->setData("application/x-game-item", d->item.toMimeData());
-	mimeData->setData("application/x-game-item-source-grid", d->grid->objectName().toUtf8());
-	mimeData->setData("application/x-game-item-source-widget", objectName().toUtf8());
+	mimeData->setData("application/x-game-item-source-inventory-id", d->grid->inventoryId().toUtf8());
 	mimeData->setData("application/x-game-item-remove-from-source", "1");
 	mimeData->setText(d->item.name);
 

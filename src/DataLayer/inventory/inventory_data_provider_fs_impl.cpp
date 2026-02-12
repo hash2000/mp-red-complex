@@ -55,6 +55,12 @@ std::shared_ptr<Inventory> InventoryDataProviderFilesistemImpl::loadInventory(co
 		const auto id = it["id"]
 			.toString()
 			.toLower();
+
+		if (id.isEmpty()) {
+			qDebug() << "Inventory" << path << "has item without id field. entityId =" << entityId;
+			continue;
+		}
+
 		const auto x = it["x"].toInt();
 		const auto y = it["y"].toInt();
 		auto invItem = loadItem(entityId);
@@ -65,7 +71,7 @@ std::shared_ptr<Inventory> InventoryDataProviderFilesistemImpl::loadInventory(co
 		invItem->id = id;
 		invItem->x = x;
 		invItem->y = y;
-		result->items.append(invItem);
+		result->items.emplace(invItem->id, invItem);
 	}
 
 	return result;

@@ -11,7 +11,8 @@ public:
 	InventoriesService(InventoryDataProvider* dataProvider, QObject* parent = nullptr);
 	~InventoriesService() override;
 
-	InventoryService* inventoryService(const QUuid& id) const;
+	InventoryService* inventoryService(const QUuid& id, bool loadIfNotExists = true) const;
+	bool crossInventoryMove(const InventoryHandler& item, int col, int row, const QUuid& fromInventoryId, const QUuid& toInventoryId);
 
 public slots:
 	void onSave();

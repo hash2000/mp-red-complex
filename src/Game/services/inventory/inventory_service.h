@@ -1,7 +1,10 @@
 #pragma once
-#include <QObject>
 #include "DataLayer/inventory/inventory_item.h"
+#include <QObject>
+#include <QUuid>
 #include <memory>
+
+class InventoriesService;
 
 class InventoryService : public QObject {
 	Q_OBJECT
