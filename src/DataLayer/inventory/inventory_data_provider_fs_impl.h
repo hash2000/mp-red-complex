@@ -10,8 +10,8 @@ public:
 	InventoryDataProviderFilesistemImpl(Resources* resources);
 	~InventoryDataProviderFilesistemImpl() override;
 
-	std::optional<Inventory> fromContainer(const QUuid& id) const override;
-	std::optional<InventoryItem> getItem(const QString& id) const override;
+	std::shared_ptr<Inventory> loadInventory(const QUuid& id) const override;
+	std::shared_ptr<InventoryItem> loadItem(const QString& id) const override;
 	QPixmap loadIcon(const InventoryItem& item) const override;
 
 private:

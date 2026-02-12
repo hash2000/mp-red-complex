@@ -22,13 +22,13 @@ InventoryDataProviderFilesistemImpl::InventoryDataProviderFilesistemImpl(Resourc
 
 InventoryDataProviderFilesistemImpl::~InventoryDataProviderFilesistemImpl() = default;
 
-std::optional<Inventory> InventoryDataProviderFilesistemImpl::fromContainer(const QUuid& id) const {
+std::shared_ptr<Inventory> InventoryDataProviderFilesistemImpl::loadInventory(const QUuid& id) const {
 	const auto path = QString("inventory/%1.json")
 		.arg(id.toString().toLower());
 
 	auto stream = d->resources->getStream("data", path);
 	if (!stream) {
-		return std::nullopt;
+		return std::shared_ptr<Inventory>();
 	}
 
 	QJsonObject json;
@@ -39,43 +39,49 @@ std::optional<Inventory> InventoryDataProviderFilesistemImpl::fromContainer(cons
 	}
 	catch (std::exception& ex) {
 		qDebug() << ex.what();
-		return std::nullopt;
+		return std::shared_ptr<Inventory>();
 	}
 
-	Inventory result;
-	result.rows = json["rows"].toInt();
-	result.cols = json["cols"].toInt();
+	auto result = std::make_shared<Inventory>();
+	result->id = id.toString(QUuid::StringFormat::WithoutBraces);
+	result->rows = json["rows"].toInt();
+	result->cols = json["cols"].toInt();
 
 	QJsonArray items = json["items"].toArray();
-	for (const QJsonValue& item : items) {
-		const auto id = item["id"].toString();
-		const auto x = item["x"].toInt();
-		const auto y = item["y"].toInt();
-		auto invItemOpt = getItem(id);
-		if (!invItemOpt) {
+	for (const QJsonValue& it : items) {
+		const auto entityId = it["entityId"]
+			.toString()
+			.toLower();
+		const auto id = it["id"]
+			.toString()
+			.toLower();
+		const auto x = it["x"].toInt();
+		const auto y = it["y"].toInt();
+		auto invItem = loadItem(entityId);
+		if (!invItem) {
 			continue;
 		}
 
-		auto invItem = invItemOpt.value();
-		invItem.x = x;
-		invItem.y = y;
-		result.items.append(invItem);
+		invItem->id = id;
+		invItem->x = x;
+		invItem->y = y;
+		result->items.append(invItem);
 	}
 
 	return result;
 }
 
-std::optional<InventoryItem> InventoryDataProviderFilesistemImpl::getItem(const QString& id) const {
+std::shared_ptr<InventoryItem> InventoryDataProviderFilesistemImpl::loadItem(const QString& id) const {
 	const auto path = QString("items/%1.json")
 		.arg(id);
 
 	auto stream = d->resources->getStream("assets", path);
 	if (!stream) {
 		qDebug().nospace() << "Can't open stream [" << "assets" << "] " << path;
-		return std::nullopt;
+		return std::shared_ptr<InventoryItem>();
 	}
 
-	InventoryItem result;
+	std::shared_ptr<InventoryItem> result;
 	QJsonObject json;
 	try {
 		auto block = stream.value()->makeBlockAsStream();
@@ -84,11 +90,11 @@ std::optional<InventoryItem> InventoryDataProviderFilesistemImpl::getItem(const 
 	}
 	catch (std::exception& ex) {
 		qDebug() << ex.what();
-		return std::nullopt;
+		return std::shared_ptr<InventoryItem>();
 	}
 
 	result = InventoryItem::fromJson(json);
-	result.icon = loadIcon(result);
+	result->icon = loadIcon(*result);
 	return result;
 }
 

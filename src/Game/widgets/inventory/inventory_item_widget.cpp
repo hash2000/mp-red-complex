@@ -30,17 +30,15 @@ public:
 InventoryItemWidget::InventoryItemWidget(const InventoryItem& item, InventoryGrid* grid, QWidget* parent)
 	: d(std::make_unique<Private>(this))
 	, QFrame(parent) {
-	// Устанавливаем ФИКСИРОВАННЫЙ размер на основе ячеек
-	setFixedSize(item.width * CELL_SIZE, item.height * CELL_SIZE);
-	setObjectName(newObjectName());
-
-	// Создаем контейнер для иконки и счётчика
 	auto* layout = new QVBoxLayout(this);
 	layout->setContentsMargins(2, 2, 2, 2);
 	layout->setSpacing(0);
 
 	d->item = item;
 	d->grid = grid;
+
+	setFixedSize(item.width * CELL_SIZE, item.height * CELL_SIZE);
+	setObjectName(newObjectName());
 
 	// Иконка
 	d->iconLabel = new QLabel(this);
@@ -65,7 +63,7 @@ InventoryItemWidget::InventoryItemWidget(const InventoryItem& item, InventoryGri
 	}
 
 	setStyleSheet("InventoryItemWidget { border: 1px solid #4a5568; border-radius: 3px; }");
-	setAcceptDrops(true);
+	//setAcceptDrops(true);
 	//setMouseTracking(true);
 	setAttribute(Qt::WA_NoSystemBackground, false); // Разрешаем фон
 	setAttribute(Qt::WA_OpaquePaintEvent, true);    // Оптимизация отрисовки
@@ -75,8 +73,9 @@ InventoryItemWidget::InventoryItemWidget(const InventoryItem& item, InventoryGri
 InventoryItemWidget::~InventoryItemWidget() = default;
 
 QString InventoryItemWidget::newObjectName() {
-	static int s_widgetNumber = 0;
-	QString name; name.setNum(s_widgetNumber++); name.prepend("inventory_item_widget_");
+	const auto name = QString("inventory_item_widget_%1_%2")
+		.arg(d->item.id)
+		.arg(d->grid->inventoryId());
 	return name;
 }
 
@@ -216,9 +215,8 @@ void InventoryItemWidget::dragEnterEvent(QDragEnterEvent* event) {
 		return;
 	}
 
-	auto droppedItemOpt = InventoryItem::fromMimeData(event->mimeData()->data("application/x-game-item"));
-
-	if (droppedItemOpt.has_value() && droppedItemOpt->id == d->item.id &&
+	auto droppedItem = InventoryItem::fromMimeData(event->mimeData()->data("application/x-game-item"));
+	if (droppedItem.id == d->item.id &&
 		d->item.count <= d->item.maxStack) {
 		event->acceptProposedAction();
 		return;
@@ -232,17 +230,14 @@ void InventoryItemWidget::dropEvent(QDropEvent* event) {
 		return;
 	}
 
-	auto droppedItemOpt = InventoryItem::fromMimeData(
-		event->mimeData()->data("application/x-game-item")
-	);
-
-	if (!droppedItemOpt.has_value() || droppedItemOpt->id != d->item.id) {
+	auto droppedItem = InventoryItem::fromMimeData(event->mimeData()->data("application/x-game-item"));
+	if (droppedItem.id != d->item.id) {
 		event->ignore();
 		return;
 	}
 
 	// Объединение стеков
-	int total = d->item.count + droppedItemOpt->count;
+	int total = d->item.count + droppedItem.count;
 	int added = qMin(total, d->item.maxStack) - d->item.count;
 
 	if (added > 0) {

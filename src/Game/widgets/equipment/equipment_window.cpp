@@ -1,6 +1,6 @@
 #include "Game/widgets/equipment/equipment_window.h"
 #include "Game/widgets/equipment/equipment_widget.h"
-#include "Game/services/inventory_service/inventory_service.h"
+#include "Game/services/inventory/inventories_service.h"
 #include <QVBoxLayout>
 
 class EquipmentWindow::Private {
@@ -12,7 +12,7 @@ public:
 	EquipmentWidget* widget;
 };
 
-EquipmentWindow::EquipmentWindow(InventoryService* incentoryService, const QString& id, QWidget* parent)
+EquipmentWindow::EquipmentWindow(InventoriesService* inventoriesService, const QString& id, QWidget* parent)
 	: d(std::make_unique<Private>(this))
 	, MdiChildWindow(id, parent) {
 	d->widget = new EquipmentWidget(this);

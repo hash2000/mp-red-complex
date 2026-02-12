@@ -2,14 +2,14 @@
 #include "Game/mdi_child_window.h"
 
 class InventoryWidget;
-class InventoryService;
+class InventoriesService;
 class InventoryItem;
 
 class InventoryWindow : public MdiChildWindow {
 	Q_OBJECT
 
 public:
-	InventoryWindow(InventoryService* incentoryService, const QString& id, QWidget* parent = nullptr);
+	InventoryWindow(InventoriesService* inventoriesService, const QString& id, QWidget* parent = nullptr);
 	~InventoryWindow() override;
 
 	QString windowType() const override { return "inventory"; }

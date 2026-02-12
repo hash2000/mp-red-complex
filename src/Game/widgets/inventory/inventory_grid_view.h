@@ -5,18 +5,16 @@
 #include <memory>
 
 class InventoryGrid;
-class InventoryService;
+class InventoriesService;
 
 class InventoryGridView : public QScrollArea {
 	Q_OBJECT
 
 public:
-	explicit InventoryGridView(InventoryService* inventoryService, QWidget* parent = nullptr);
+	explicit InventoryGridView(InventoriesService* inventoriesService, QWidget* parent = nullptr);
 	~InventoryGridView() override;
 
 	InventoryGrid* grid() const;
-
-	bool placeItem(InventoryItem& item);
 
 	bool load(const QUuid& id);
 

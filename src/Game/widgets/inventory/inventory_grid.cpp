@@ -1,6 +1,8 @@
 #include "Game/widgets/inventory/inventory_grid.h"
 #include "Game/widgets/inventory/inventory_cell.h"
 #include "Game/widgets/inventory/inventory_item_widget.h"
+#include "Game/widgets/inventory/drop_preview_widget.h"
+#include "Game/services/inventory/inventory_service.h"
 #include <QPoint>
 #include <QLayoutItem>
 #include <QLayout>
@@ -8,6 +10,8 @@
 #include <QDragEnterEvent>
 #include <QMimeData>
 #include <QPainter>
+#include <QDrag>
+#include <QDebug>
 
 class InventoryGrid::Private {
 public:
@@ -16,275 +20,188 @@ public:
 	}
 
 	InventoryGrid* q;
-	int rows;
-	int cols;
-	int cellSize = InventoryItemWidget::CELL_SIZE;
+	InventoryService* service = nullptr;
+	QHash<QString, InventoryItemWidget*> widgets; // Кэш виджетов по ID предмета
+	DropPreviewWidget* dropPreview = nullptr;
 
-	QVector<QVector<InventoryCell*>> cells;
-	QHash<QPoint, InventoryItemWidget*> items;
+	static constexpr int CELL_SIZE = InventoryItemWidget::CELL_SIZE;
 };
 
-InventoryGrid::InventoryGrid(int rows, int cols, QWidget* parent)
-	: d(std::make_unique<Private>(this)) {
-	d->rows = rows;
-	d->cols = cols;
-	setObjectName(newObjectName());
-	setAcceptDrops(true);
-	setFixedSize(d->cols * d->cellSize, d->rows * d->cellSize);
-	setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-	setupGrid();
-}
-
-InventoryGrid::~InventoryGrid() {
-	clear();
+QString InventoryGrid::inventoryId() const {
+	return d->service ? d->service->inventory()->id : QString();
 }
 
 QString InventoryGrid::newObjectName() {
-	static int s_widgetNumber = 0;
-	QString name; name.setNum(s_widgetNumber++); name.prepend("inventory_grid_");
+	const auto name = QString("inventory_grid_%1")
+		.arg(inventoryId());
 	return name;
 }
 
-int InventoryGrid::rows() const {
-	return d->rows;
+InventoryGrid::InventoryGrid(QWidget* parent)
+	: QWidget(parent), d(std::make_unique<Private>(this))
+{
+	setAcceptDrops(true);
+	setAttribute(Qt::WA_NoSystemBackground, false);
+
+	// Создаём оверлей для подсветки дропа
+	d->dropPreview = new DropPreviewWidget(this);
+	d->dropPreview->hide();
 }
 
-int InventoryGrid::cols() const {
-	return d->cols;
+InventoryGrid::~InventoryGrid() = default;
+
+InventoryService* InventoryGrid::inventoryService() const {
+	return d->service;
 }
 
-bool InventoryGrid::placeItem(const InventoryItem& item) {
-	int col = item.x;
-	int row = item.y;
-
-	// Проверка границ
-	if (col < 0 || row < 0 || col + item.width > d->cols || row + item.height > d->rows) {
-		return false;
-	}
-
-	// Проверка занятости ВСЕХ ячеек предмета
-	for (int dy = 0; dy < item.height; ++dy) {
-		for (int dx = 0; dx < item.width; ++dx) {
-			if (d->cells[col + dx][row + dy]->isOccupied()) {
-				return false;
-			}
-		}
-	}
-
-	auto* widget = new InventoryItemWidget(item, this, this);
-	widget->setFixedSize(item.width * d->cellSize, item.height * d->cellSize);
-	widget->move(col * d->cellSize, row * d->cellSize);
-	widget->show();
-	widget->setGridPosition({ col, row });
-
-	for (int dy = 0; dy < item.height; ++dy) {
-		for (int dx = 0; dx < item.width; ++dx) {
-			d->cells[col + dx][row + dy]->setOccupied(true);
-			if (dx == 0 && dy == 0) {
-				d->cells[col][row]->setItemWidget(widget);
-			}
-		}
-	}
-
-	d->items[{col, row}] = widget;
-
-	connect(widget, &InventoryItemWidget::removedFromGrid, this, [this, widget]() {
-		removeItemWidget(widget);
-		});
-
-	emit itemPlaced(widget);
-	return true;
-}
-
-bool InventoryGrid::placeItemWidget(InventoryItemWidget* widget, int col, int row) {
-	if (!widget || !canPlaceItem(widget->item(), col, row)) {
-		delete widget;
-		return false;
-	}
-
-	const InventoryItem& item = widget->item();
-
-	// Установка размера и позиции виджета
-	widget->setFixedSize(d->cellSize * item.width, d->cellSize * item.height);
-	widget->move(col * d->cellSize, row * d->cellSize);
-	widget->show();
-	widget->setGridPosition(QPoint(col, row));
-
-	// Занятие ячеек
-	for (int dy = 0; dy < item.height; ++dy) {
-		for (int dx = 0; dx < item.width; ++dx) {
-			int cellCol = col + dx;
-			int cellRow = row + dy;
-
-			if (dx == 0 && dy == 0) {
-				// Ячейка [0,0] — привязываем виджет
-				d->cells[cellRow][cellCol]->setItemWidget(widget);
-			}
-			d->cells[cellRow][cellCol]->setOccupied(true);
-		}
-	}
-
-	// Сохранение в мапу
-	d->items[QPoint(col, row)] = widget;
-
-	// Подключение сигналов для очистки
-	connect(widget, &InventoryItemWidget::removedFromGrid, this, [this, widget]() {
-		removeItemWidget(widget);
-		});
-
-	emit itemPlaced(widget);
-	return true;
-}
-
-void InventoryGrid::removeItem(int col, int row) {
-	if (col < 0 || row < 0 || col >= d->cols || row >= d->rows) {
+void InventoryGrid::setInventoryService(InventoryService* service) {
+	if (d->service == service) {
 		return;
 	}
 
-	if (auto widget = d->cells[col][row]->itemWidget()) {
-		removeItemWidget(widget);
+	// Отписываемся от старого сервиса
+	if (d->service) {
+		disconnect(d->service, nullptr, this, nullptr);
+		// Очищаем все виджеты
+		for (auto* widget : d->widgets) {
+			widget->deleteLater();
+		}
+		d->widgets.clear();
+	}
+
+	d->service = service;
+
+	if (d->service) {
+		// Подписываемся на события сервиса
+		connect(d->service, &InventoryService::placeItemEvent,
+			this, &InventoryGrid::onItemPlaced);
+		connect(d->service, &InventoryService::removeItemEvent,
+			this, &InventoryGrid::onItemRemoved);
+		connect(d->service, &InventoryService::moveItemEvent,
+			this, &InventoryGrid::onItemMoved);
+
+		// Инициализируем виджеты из текущего состояния сервиса
+		updateGridSize();
+		for (auto item : d->service->items()) {
+			createWidgetForItem(*item);
+		}
+	}
+
+	setObjectName(newObjectName());
+}
+
+void InventoryGrid::updateGridSize() {
+	if (!d->service) {
+		return;
+	}
+
+	int width = d->service->inventory()->cols * Private::CELL_SIZE;
+	int height = d->service->inventory()->rows * Private::CELL_SIZE;
+	setFixedSize(width, height);
+
+	// Синхронизируем размер оверлея
+	d->dropPreview->setFixedSize(size());
+}
+
+void InventoryGrid::onItemPlaced(const InventoryHandler& item, int row, int col) {
+	Q_UNUSED(row);
+	Q_UNUSED(col);
+
+	// Создаём виджет для нового предмета
+	createWidgetForItem(item);
+}
+
+void InventoryGrid::onItemRemoved(const InventoryHandler& item, int row, int col) {
+	Q_UNUSED(row);
+	Q_UNUSED(col);
+
+	// Удаляем виджет предмета
+	removeWidgetForItem(item);
+}
+
+void InventoryGrid::onItemMoved(const InventoryHandler& item, int oldRow, int oldCol, int newRow, int newCol) {
+	Q_UNUSED(oldRow);
+	Q_UNUSED(oldCol);
+
+	// Перемещаем существующий виджет
+	moveWidgetForItem(item, item.x, item.y);
+}
+
+void InventoryGrid::createWidgetForItem(const InventoryHandler& item) {
+	if (d->widgets.contains(item.id)) {
+		return;
+	}
+
+	auto itemPtr = d->service->itemById(item.id);
+	if (!itemPtr) {
+		return;
+	}
+
+	auto widget = new InventoryItemWidget(*itemPtr, this, this);
+	widget->setFixedSize(item.width * Private::CELL_SIZE, item.height * Private::CELL_SIZE);
+	widget->move(item.x * Private::CELL_SIZE, item.y * Private::CELL_SIZE);
+	widget->show();
+
+	// Подключаем сигнал удаления (для перемещения между сетками)
+	connect(widget, &InventoryItemWidget::removedFromGrid, this, [this, widget](InventoryItemWidget* srcWidget) {
+		if (srcWidget != widget || !d->service) return;
+
+		// Удаляем из сервиса (сервис сам обновит состояние)
+		d->service->removeItem(widget->item());
+		// Виджет будет удалён в onItemRemoved
+		});
+
+	d->widgets[item.id] = widget;
+}
+
+void InventoryGrid::removeWidgetForItem(const InventoryHandler& item) {
+	if (!d->widgets.contains(item.id)) {
+		return;
+	}
+
+	auto widget = d->widgets.take(item.id);
+	if (widget) {
+		widget->hide();
+		widget->deleteLater();
 	}
 }
 
-void InventoryGrid::removeItemWidget(InventoryItemWidget* widget) {
+void InventoryGrid::moveWidgetForItem(const InventoryHandler& item, int newCol, int newRow) {
+	if (!d->widgets.contains(item.id)) {
+		return;
+	}
+
+	auto* widget = d->widgets[item.id];
 	if (!widget) {
 		return;
 	}
 
-	QPoint pos = widget->gridPosition();
-	if (pos.x() < 0 || pos.y() < 0) {
-		return; // Не в сетке
-	}
-
-	const InventoryItem& item = widget->item();
-
-	// Освобождение ячеек
-	for (int dy = 0; dy < item.height; ++dy) {
-		for (int dx = 0; dx < item.width; ++dx) {
-			int cellCol = pos.x() + dx;
-			int cellRow = pos.y() + dy;
-
-			if (cellCol < d->cols && cellRow < d->rows) {
-				d->cells[cellRow][cellCol]->setOccupied(false);
-				if (dx == 0 && dy == 0) {
-					d->cells[cellRow][cellCol]->setItemWidget(nullptr);
-				}
-			}
-		}
-	}
-
-	// Удаление из мапы
-	d->items.remove(pos);
-
-	// Удаление виджета (асинхронно, чтобы избежать проблем с событиями)
-	widget->hide();
-	widget->deleteLater();
-
-	emit itemRemoved(widget);
+	// Обновляем позицию виджета
+	widget->move(newCol * Private::CELL_SIZE, newRow * Private::CELL_SIZE);
+	widget->setGridPosition({ newCol, newRow });
+	widget->raise();
+	widget->update();
 }
 
-std::optional<QPoint> InventoryGrid::findFreeSpace(const InventoryItem& item) const {
-	for (int row = 0; row < d->rows; ++row) {
-		for (int col = 0; col < d->cols; ++col) {
-			if (canPlaceItem(item, col, row)) {
-				return QPoint(col, row);
-			}
-		}
-	}
-
-	return std::nullopt;
-}
-
-bool InventoryGrid::canPlaceItem(const InventoryItem& item, int col, int row) const {
-	if (col < 0 || row < 0 || col + item.width > d->cols || row + item.height > d->rows) {
-		return false;
-	}
-
-	for (int dy = 0; dy < item.height; ++dy) {
-		for (int dx = 0; dx < item.width; ++dx) {
-			if (d->cells[col + dx][row + dy]->isOccupied()) {
-				return false;
-			}
-		}
-	}
-	return true;
-}
-
-InventoryItemWidget* InventoryGrid::itemAt(int col, int row) const {
-	if (col < 0 || row < 0 || col >= d->cols || row >= d->rows) {
+InventoryItemWidget* InventoryGrid::widgetAt(int col, int row) const {
+	if (!d->service) {
 		return nullptr;
 	}
 
-	return d->cells[col][row]->itemWidget();
+	auto item = d->service->itemAt(col, row);
+	if (!item || !d->widgets.contains(item->id)) {
+		return nullptr;
+	}
+
+	return d->widgets[item->id];
 }
 
-void InventoryGrid::clear() {
-	auto keys = d->items.keys();
-	for (const auto& pos : keys) {
-		if (auto widget = d->items.value(pos)) {
-			removeItemWidget(widget);
-		}
-	}
-
-	// Сбрасываем состояние ячеек
-	for (int col = 0; col < d->cols; ++col) {
-		for (int row = 0; row < d->rows; ++row) {
-			d->cells[col][row]->setOccupied(false);
-			d->cells[col][row]->setItemWidget(nullptr);
-		}
-	}
-
-	d->items.clear();
+int InventoryGrid::rows() const {
+	return d->service ? d->service->inventory()->rows : 0;
 }
 
-InventoryGrid* InventoryGrid::createContainerGrid(const InventoryItemContainerCapacity& capacity) {
-	auto grid = new InventoryGrid(capacity.rows, capacity.cols);
-	return grid;
-}
-
-void InventoryGrid::resizeEvent(QResizeEvent* event) {
-	QWidget::resizeEvent(event);
-	updateGridLayout();
-}
-
-void InventoryGrid::setupGrid() {
-	d->cells.resize(d->cols);
-	for (int col = 0; col < d->cols; ++col) {
-		d->cells[col].resize(d->rows);
-		for (int row = 0; row < d->rows; ++row) {
-			auto* cell = new InventoryCell(col, row, this);
-			cell->setGeometry(col * d->cellSize, row * d->cellSize, d->cellSize, d->cellSize);
-			d->cells[col][row] = cell;
-		}
-	}
-}
-
-void InventoryGrid::updateGridLayout() {
-	if (!layout()) {
-		return;
-	}
-
-	// Динамический размер ячейки в зависимости от размера виджета
-	int cellWidth = width() / d->cols;
-	int cellHeight = height() / d->rows;
-	d->cellSize = qMin(cellWidth, cellHeight);
-
-	for (int row = 0; row < d->rows; ++row) {
-		for (int col = 0; col < d->cols; ++col) {
-			d->cells[row][col]->setFixedSize(d->cellSize, d->cellSize);
-		}
-	}
-
-	// Обновление позиций предметов
-	for (auto it = d->items.begin(); it != d->items.end(); ++it) {
-		QPoint pos = it.key();
-		InventoryItemWidget* widget = it.value();
-		if (widget && widget->parentWidget() == this) {
-			widget->setFixedSize(d->cellSize * widget->item().width,
-				d->cellSize * widget->item().height);
-			widget->move(pos.x() * d->cellSize, pos.y() * d->cellSize);
-		}
-	}
+int InventoryGrid::cols() const {
+	return d->service ? d->service->inventory()->cols : 0;
 }
 
 void InventoryGrid::dragEnterEvent(QDragEnterEvent* event) {
@@ -297,72 +214,92 @@ void InventoryGrid::dragEnterEvent(QDragEnterEvent* event) {
 }
 
 void InventoryGrid::dragMoveEvent(QDragMoveEvent* event) {
-	QPoint globalPos = event->position().toPoint();
-	QPoint localPos = mapFromGlobal(globalPos);
+	if (!d->service || !event->mimeData()->hasFormat("application/x-game-item")) {
+		event->ignore();
+		return;
+	}
 
-	int col = localPos.x() / d->cellSize;
-	int row = localPos.y() / d->cellSize;
+	auto item = InventoryItem::fromMimeData(event->mimeData()->data("application/x-game-item"));
+
+	// Определяем целевую ячейку
+	QPoint pos = event->position().toPoint();
+	int col = pos.x() / Private::CELL_SIZE;
+	int row = pos.y() / Private::CELL_SIZE;
+
+	// Проверяем возможность размещения
+	bool canPlace = d->service->canPlaceItem(item, col, row);
+
+	// Показываем подсветку
+	showDropPreview(col, row, item.width, item.height, canPlace);
 
 	event->acceptProposedAction();
 }
 
+void InventoryGrid::dragLeaveEvent(QDragLeaveEvent* event) {
+	hideDropPreview();
+	QWidget::dragLeaveEvent(event);
+}
+
 void InventoryGrid::dropEvent(QDropEvent* event) {
-	if (!event->mimeData()->hasFormat("application/x-game-item")) {
+	hideDropPreview();
+
+	if (!d->service || !event->mimeData()->hasFormat("application/x-game-item")) {
 		event->ignore();
 		return;
 	}
 
 	QByteArray data = event->mimeData()->data("application/x-game-item");
-	auto itemOpt = InventoryItem::fromMimeData(data);
-	if (!itemOpt.has_value()) {
-		event->ignore();
-		return;
+	auto item = InventoryItem::fromMimeData(data);
+
+	// Определяем целевую позицию
+	QPoint pos = event->position().toPoint();
+	int col = pos.x() / Private::CELL_SIZE;
+	int row = pos.y() / Private::CELL_SIZE;
+
+	// Получаем источник
+	bool isSameGrid = false;
+	if (event->mimeData()->hasFormat("application/x-game-item-source-grid")) {
+		const auto sourceGridName = QString::fromUtf8(event->mimeData()->data("application/x-game-item-source-grid"));
+		const auto currentGridName = objectName();
+		isSameGrid = (sourceGridName == currentGridName);
 	}
 
-	QPoint dropPos = event->position().toPoint();
-	int col = dropPos.x() / d->cellSize;
-	int row = dropPos.y() / d->cellSize;
-
-	if (!canPlaceItem(*itemOpt, col, row)) {
-		event->ignore();
-		return;
-	}
-
-	const auto sourceGridName = QString::fromUtf8(event->mimeData()->data("application/x-game-item-source-grid"));
-	const auto isSomeGrid = sourceGridName == objectName();
-
-	if (isSomeGrid) {
-		QPoint srcPos(itemOpt->x, itemOpt->y);
-		if (d->items.contains(srcPos)) {
-			auto widget = d->items.value(srcPos);
-			if (widget && moveItemWidget(widget, col, row)) {
-				event->acceptProposedAction();
-				const_cast<QMimeData*>(event->mimeData())->setData("application/x-game-item-remove-from-source", "0");
-				return;
-			}
-		}
-	}
-
-	// Размещение нового предмета (из другой сетки/экипировки)
-	if (canPlaceItem(*itemOpt, col, row)) {
-		itemOpt->x = col;
-		itemOpt->y = row;
-
-		if (placeItem(*itemOpt)) {
+	// Перемещение внутри той же сетки
+	if (isSameGrid && d->service->containsItem(item)) {
+		if (d->service->moveItem(item.id, col, row)) {
+			// Сервис сам обновит состояние → виджет переместится через сигнал moveItemEvent
 			event->acceptProposedAction();
+			// Говорим источнику НЕ удалять предмет
+			const_cast<QMimeData*>(event->mimeData())->setData("application/x-game-item-remove-from-source", "0");
+			return;
+		}
+		else {
+			// не удалось переместить внутри текущей сетки, выходим
 			return;
 		}
 	}
 
-	// Поиск свободного места
-	if (auto freePos = findFreeSpace(*itemOpt)) {
-		itemOpt->x = freePos->x();
-		itemOpt->y = freePos->y();
-
-		if (placeItem(*itemOpt)) {
-			event->acceptProposedAction();
+	// Размещение нового предмета
+	// Проверяем, есть ли свободное место
+	if (!d->service->canPlaceItem(item, col, row)) {
+		auto freePos = d->service->findFreeSpace(item);
+		if (freePos.has_value()) {
+			col = freePos->x();
+			row = freePos->y();
+		}
+		else {
+			event->ignore();
 			return;
 		}
+	}
+
+	// Обновляем координаты и размещаем
+	item.x = col;
+	item.y = row;
+
+	if (d->service->placeItem(item)) {
+		event->acceptProposedAction();
+		return;
 	}
 
 	event->ignore();
@@ -371,90 +308,52 @@ void InventoryGrid::dropEvent(QDropEvent* event) {
 void InventoryGrid::paintEvent(QPaintEvent* event) {
 	QWidget::paintEvent(event);
 
-	// Рисуем сетку поверх всех элементов
+	if (!d->service) {
+		return;
+	}
+
 	QPainter painter(this);
 	painter.setRenderHint(QPainter::Antialiasing, false);
 
-	// Вертикальные линии
-	for (int col = 0; col <= d->cols; ++col) {
-		int x = col * d->cellSize;
-		painter.setPen((col == d->cols) ? Qt::gray : Qt::darkGray);
+	// Фон
+	painter.fillRect(rect(), QColor(30, 41, 59));
+
+	// Сетка
+	for (int col = 0; col <= d->service->inventory()->cols; ++col) {
+		int x = col * Private::CELL_SIZE;
+		painter.setPen(QColor(66, 73, 83));
 		painter.drawLine(x, 0, x, height());
 	}
-
-	// Горизонтальные линии
-	for (int row = 0; row <= d->rows; ++row) {
-		int y = row * d->cellSize;
-		painter.setPen((row == d->rows) ? Qt::gray : Qt::darkGray);
+	for (int row = 0; row <= d->service->inventory()->rows; ++row) {
+		int y = row * Private::CELL_SIZE;
+		painter.setPen(QColor(66, 73, 83));
 		painter.drawLine(0, y, width(), y);
 	}
 }
 
-bool InventoryGrid::moveItemWidget(InventoryItemWidget* widget, int newCol, int newRow) {
-	if (!widget || !d->items.contains(widget->gridPosition())) {
-		return false;
+void InventoryGrid::showDropPreview(int col, int row, int width, int height, bool canPlace) {
+	QRect previewRect(
+		col * Private::CELL_SIZE,
+		row * Private::CELL_SIZE,
+		width * Private::CELL_SIZE,
+		height * Private::CELL_SIZE
+	);
+
+	// Ограничиваем прямоугольник границами сетки
+	previewRect = previewRect.intersected(rect());
+
+	if (!previewRect.isEmpty()) {
+		d->dropPreview->showPreview(previewRect, canPlace);
 	}
+}
 
-	QPoint oldPos = widget->gridPosition();
-	const InventoryItem& item = widget->item();
+void InventoryGrid::hideDropPreview() {
+	d->dropPreview->hidePreview();
+}
 
-	// Проверка возможности размещения на новый позиции (игнорируя текущий предмет)
-	if (newCol < 0 || newRow < 0 || newCol + item.width > d->cols || newRow + item.height > d->rows) {
-		return false;
+void InventoryGrid::resizeEvent(QResizeEvent* event) {
+	QWidget::resizeEvent(event);
+	if (d->dropPreview) {
+		d->dropPreview->setFixedSize(size());
 	}
-
-	for (int dy = 0; dy < item.height; dy++) {
-		for (int dx = 0; dx < item.width; dx++) {
-			int checkX = newCol + dx;
-			int checkY = newRow + dy;
-
-			// Пропускаем ячейки, которые принадлежат СТАРОЙ позиции предмета
-			bool isOldPosition = (checkX >= oldPos.x() && checkX < oldPos.x() + item.width &&
-				checkY >= oldPos.y() && checkY < oldPos.y() + item.height);
-
-			if (!isOldPosition && d->cells[checkX][checkY]->isOccupied()) {
-				return false; // Занято другим предметом
-			}
-		}
-	}
-
-	widget->setGridPosition({ newCol, newRow });
-	widget->move(newCol * d->cellSize, newRow * d->cellSize);
-
-	// Временно освобождаем все ячейки текущего предмета
-	for (int dy = 0; dy < item.height; dy++) {
-		for (int dx = 0; dx < item.width; dx++) {
-			int x = oldPos.x() + dx;
-			int y = oldPos.y() + dy;
-			if (x < d->cols && y < d->rows) {
-				d->cells[x][y]->setOccupied(false);
-				if (dx == 0 && dy == 0) {
-					d->cells[x][y]->setItemWidget(nullptr);
-				}
-			}
-		}
-	}
-
-	// Перемещаем на новые ячейки
-	for (int dy = 0; dy < item.height; dy++) {
-		for (int dx = 0; dx < item.width; dx++) {
-			int x = newCol + dx;
-			int y = newRow + dy;
-			if (x < d->cols && y < d->rows) {
-				d->cells[x][y]->setOccupied(true);
-				if (dx == 0 && dy == 0) {
-					d->cells[x][y]->setItemWidget(widget);
-				}
-			}
-		}
-	}
-
-	d->items.remove(oldPos);
-	d->items[{newCol, newRow}] = widget;
-
-	widget->show();
-	widget->raise();
-	widget->update();
-
-	return true;
 }

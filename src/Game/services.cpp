@@ -1,7 +1,7 @@
 #include "Game/services.h"
 #include "Game/services/time_service/time_service.h"
 #include "Game/services/world_service/world_service.h"
-#include "Game/services/inventory_service/inventory_service.h"
+#include "Game/services/inventory/inventories_service.h"
 #include "DataLayer/inventory/inventory_data_provider_fs_impl.h"
 #include <list>
 
@@ -14,7 +14,7 @@ public:
 	Services* q;
 	std::unique_ptr<TimeService> timeService;
 	std::unique_ptr<WorldService> worldService;
-	std::unique_ptr<InventoryService> inventoryService;
+	std::unique_ptr<InventoriesService> inventoriesService;
 	std::unique_ptr<InventoryDataProvider> inventoryDataProvider;
 };
 
@@ -28,9 +28,9 @@ Services::Services(Resources* resources)
 	connect(this, &Services::save, d->worldService.get(), &WorldService::onSave);
 	connect(this, &Services::load, d->worldService.get(), &WorldService::onLoad);
 
-	d->inventoryService = std::make_unique<InventoryService>(d->inventoryDataProvider.get());
-	connect(this, &Services::save, d->inventoryService.get(), &InventoryService::onSave);
-	connect(this, &Services::load, d->inventoryService.get(), &InventoryService::onLoad);
+	d->inventoriesService = std::make_unique<InventoriesService>(d->inventoryDataProvider.get());
+	connect(this, &Services::save, d->inventoriesService.get(), &InventoriesService::onSave);
+	connect(this, &Services::load, d->inventoriesService.get(), &InventoriesService::onLoad);
 }
 
 Services::~Services() = default;
@@ -55,6 +55,6 @@ WorldService* Services::worldService() const {
 	return d->worldService.get();
 }
 
-InventoryService* Services::inventoryService() const {
-	return d->inventoryService.get();
+InventoriesService* Services::inventoriesService() const {
+	return d->inventoriesService.get();
 }

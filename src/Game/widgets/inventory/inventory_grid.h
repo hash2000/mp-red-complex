@@ -6,58 +6,51 @@
 
 class InventoryCell;
 class InventoryItemWidget;
+class InventoryService;
 
-// Управление размещением предметов в сетке
 class InventoryGrid : public QWidget {
 	friend class InventoryItemWidget;
 	Q_OBJECT
 public:
-	explicit InventoryGrid(int rows = 6, int cols = 10, QWidget* parent = nullptr);
+	explicit InventoryGrid(QWidget* parent = nullptr);
 	~InventoryGrid() override;
+
+	void setInventoryService(InventoryService* service);
+	InventoryService* inventoryService() const;
+
+	InventoryItemWidget* widgetAt(int col, int row) const;
 
 	int rows() const;
 	int cols() const;
 
-	// Размещение предмета
-	bool placeItem(const InventoryItem& item);
-	bool placeItemWidget(InventoryItemWidget* widget, int col, int row);
-	bool moveItemWidget(InventoryItemWidget* widget, int newCol, int newRow);
-
-	// Удаление предмета
-	void removeItem(int col, int row);
-	void removeItemWidget(InventoryItemWidget* widget);
-
-	// Поиск свободного места
-	std::optional<QPoint> findFreeSpace(const InventoryItem& item) const;
-
-	// Проверка возможности размещения
-	bool canPlaceItem(const InventoryItem& item, int col, int row) const;
-
-	// Получение предмета по позиции
-	InventoryItemWidget* itemAt(int col, int row) const;
-
-	// Очистка всей сетки
-	void clear();
-
-	// Для ящиков — получение внутренней сетки
-	static InventoryGrid* createContainerGrid(const InventoryItemContainerCapacity& capacity);
-
-signals:
-	void itemPlaced(InventoryItemWidget* widget);
-	void itemRemoved(InventoryItemWidget* widget);
+	QString inventoryId() const;
 
 protected:
-	void resizeEvent(QResizeEvent* event) override;
+	QString newObjectName();
+
+signals:
+	void itemDroppedForEquipment(const InventoryItem& item);
+	void containerOpened(const InventoryItem& container);
+
+protected:
 	void paintEvent(QPaintEvent* event) override;
 	void dragEnterEvent(QDragEnterEvent* event) override;
 	void dragMoveEvent(QDragMoveEvent* event) override;
+	void dragLeaveEvent(QDragLeaveEvent* event) override;
 	void dropEvent(QDropEvent* event) override;
-
-	QString newObjectName();
+	void resizeEvent(QResizeEvent* event) override;
 
 private:
-	void setupGrid();
-	void updateGridLayout();
+	void onItemPlaced(const InventoryHandler& item, int row, int col);
+	void onItemRemoved(const InventoryHandler& item, int row, int col);
+	void onItemMoved(const InventoryHandler& item, int oldRow, int oldCol, int newRow, int newCol);
+
+	void createWidgetForItem(const InventoryHandler& item);
+	void removeWidgetForItem(const InventoryHandler& item);
+	void moveWidgetForItem(const InventoryHandler& item, int newCol, int newRow);
+	void updateGridSize();
+	void showDropPreview(int col, int row, int width, int height, bool canPlace);
+	void hideDropPreview();
 
 private:
 	class Private;

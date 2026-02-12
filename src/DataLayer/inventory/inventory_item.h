@@ -6,6 +6,7 @@
 #include <optional>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <memory>
 
 enum class InventoryResourceType {
 	Sand,
@@ -47,14 +48,8 @@ struct InventoryItemRecipe {
 	std::vector<Ingredient> ingredients;
 };
 
-struct InventoryItem {
+struct InventoryHandler {
 	QString id;
-	QString name;
-	QString description;
-	QPixmap icon;
-	QString iconPath;
-	InventoryItemType type;
-
 	int x = 0;
 	int y = 0;
 
@@ -62,9 +57,21 @@ struct InventoryItem {
 	int width = 1;
 	int height = 1;
 
+	int count = 1;
+
+	QPixmap icon;
+};
+
+struct InventoryItem : public InventoryHandler {
+	QString entityId;
+	QString name;
+	QString description;
+	QString iconPath;
+	InventoryItemType type;
+
 	// Для стекируемых предметов (сырьё, запчасти)
 	int maxStack = 1;
-	int count = 1;
+
 	EquipmentItemRarityType rarity = EquipmentItemRarityType::Common;
 
 	std::optional<EquipmentItemType> equipmentType;
@@ -75,13 +82,16 @@ struct InventoryItem {
 
 	QByteArray toMimeData() const;
 
-	static std::optional<InventoryItem> fromMimeData(const QByteArray& data);
+	static InventoryHandler fromMimeData(const QByteArray& data);
 
-	static InventoryItem fromJson(const QJsonObject& json);
+	static std::shared_ptr<InventoryItem> fromJson(const QJsonObject& json);
+
+	bool compare(const InventoryHandler& item);
 };
 
 struct Inventory {
-	QList<InventoryItem> items;
+	QString id;
+	QList<std::shared_ptr<InventoryItem>> items;
 	int rows;
 	int cols;
 };

@@ -14,10 +14,10 @@ public:
 	InventoryGridView* widget;
 };
 
-InventoryWindow::InventoryWindow(InventoryService* incentoryService, const QString& id, QWidget* parent)
+InventoryWindow::InventoryWindow(InventoriesService* inventoriesService, const QString& id, QWidget* parent)
 : d(std::make_unique<Private>(this))
 , MdiChildWindow(id, parent) {
-	d->widget = new InventoryGridView(incentoryService, this);
+	d->widget = new InventoryGridView(inventoriesService, this);
 	auto layout = new QVBoxLayout(this);
 	layout->setContentsMargins(0, 0, 0, 0);
 	layout->addWidget(d->widget);

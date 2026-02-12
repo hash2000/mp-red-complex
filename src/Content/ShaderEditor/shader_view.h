@@ -9,6 +9,7 @@
 #include <QOpenGLBuffer>
 #include <QVector3D>
 #include <QMatrix4x4>
+#include <QElapsedTimer>
 #include <QTimer>
 
 QT_FORWARD_DECLARE_CLASS(QOpenGLTexture)
