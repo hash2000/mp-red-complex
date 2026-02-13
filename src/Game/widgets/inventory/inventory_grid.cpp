@@ -1,5 +1,4 @@
 #include "Game/widgets/inventory/inventory_grid.h"
-#include "Game/widgets/inventory/inventory_cell.h"
 #include "Game/widgets/inventory/inventory_item_widget.h"
 #include "Game/widgets/inventory/drop_preview_widget.h"
 #include "Game/services/inventory/inventory_service.h"
@@ -46,7 +45,7 @@ InventoryGrid::InventoryGrid(QWidget* parent)
 	setAttribute(Qt::WA_NoSystemBackground, false);
 
 	// Создаём оверлей для подсветки дропа
-	d->dropPreview = new DropPreviewWidget(this);
+	d->dropPreview = new DropPreviewWidget(Private::CELL_SIZE, this);
 	d->dropPreview->hide();
 }
 

@@ -16,7 +16,7 @@ public:
 
 	QString windowTitle() const override { return "Character inventory"; }
 
-	QSize windowDefaultSizes() const override { return QSize(380, 500); }
+	QSize windowDefaultSizes() const override { return QSize(460, 500); }
 
 	bool handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) override;
 

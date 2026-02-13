@@ -11,12 +11,14 @@ public:
 	QRect previewRect;
 	bool canPlace = false;
 	bool visible = false;
+	int cellSize;
 };
 
-DropPreviewWidget::DropPreviewWidget(QWidget* parent)
+DropPreviewWidget::DropPreviewWidget(int cellSize, QWidget* parent)
 	: QWidget(parent)
 	, d(std::make_unique<Private>(this))
 {
+	d->cellSize = cellSize;
 	setAttribute(Qt::WA_TransparentForMouseEvents, true);
 	setAttribute(Qt::WA_NoSystemBackground, true);
 	hide();
@@ -61,10 +63,10 @@ void DropPreviewWidget::paintEvent(QPaintEvent* event) {
 
 	// Внутренняя сетка для визуализации размера
 	painter.setPen(QColor(255, 255, 255, 100));
-	for (int x = d->previewRect.left() + 32; x < d->previewRect.right(); x += 32) {
+	for (int x = d->previewRect.left() + d->cellSize; x < d->previewRect.right(); x += d->cellSize) {
 		painter.drawLine(x, d->previewRect.top(), x, d->previewRect.bottom());
 	}
-	for (int y = d->previewRect.top() + 32; y < d->previewRect.bottom(); y += 32) {
+	for (int y = d->previewRect.top() + d->cellSize; y < d->previewRect.bottom(); y += d->cellSize) {
 		painter.drawLine(d->previewRect.left(), y, d->previewRect.right(), y);
 	}
 }

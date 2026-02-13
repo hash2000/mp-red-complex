@@ -5,7 +5,7 @@
 class DropPreviewWidget : public QWidget {
 	Q_OBJECT
 public:
-	explicit DropPreviewWidget(QWidget* parent = nullptr);
+	explicit DropPreviewWidget(int cellSize, QWidget* parent = nullptr);
 	~DropPreviewWidget() override;
 
 	void showPreview(const QRect& rect, bool canPlace);

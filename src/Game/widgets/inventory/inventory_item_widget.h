@@ -12,7 +12,7 @@ class QLabel;
 class InventoryItemWidget : public QFrame {
 	Q_OBJECT
 public:
-	static constexpr int CELL_SIZE = 32;
+	static constexpr int CELL_SIZE = 38;
 
 public:
 	explicit InventoryItemWidget(const InventoryItem& item, InventoryGrid* grid, QWidget* parent = nullptr);

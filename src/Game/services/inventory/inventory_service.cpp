@@ -23,6 +23,7 @@ public:
 			if (checkItemPlace) {
 				bool isOldCell = (item.id == cell.item->id) && (checkX >= item.x && checkX < item.x + item.width &&
 					checkY >= item.y && checkY < item.y + item.height);
+				qDebug() << !isOldCell;
 				return !isOldCell;
 			}
 			return true;

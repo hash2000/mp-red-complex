@@ -10,9 +10,6 @@ class InventoryService : public QObject {
 	Q_OBJECT
 
 public:
-	static const int CELL_SIZE = 32;
-
-public:
 	InventoryService(std::shared_ptr<Inventory> inventory);
 	~InventoryService() override;
 
