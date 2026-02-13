@@ -62,7 +62,6 @@ void InventoryGrid::setInventoryService(InventoriesService* inventories, const Q
 		return;
 	}
 
-
 	// Отписываемся от старого сервиса
 	if (d->service) {
 		disconnect(d->service, nullptr, this, nullptr);

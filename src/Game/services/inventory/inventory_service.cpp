@@ -23,7 +23,6 @@ public:
 			if (checkItemPlace) {
 				bool isOldCell = (item.id == cell.item->id) && (checkX >= item.x && checkX < item.x + item.width &&
 					checkY >= item.y && checkY < item.y + item.height);
-				qDebug() << !isOldCell;
 				return !isOldCell;
 			}
 			return true;
@@ -165,7 +164,9 @@ bool InventoryService::canPlaceItem(const InventoryHandler& item, int col, int r
 			int checkY = row + dy;
 
 			const auto& cell = d->cells[col + dx][row + dy];
-			return !d->checkSpaceOccupied(item, *cell, checkX, checkY, checkItemPlace);
+			if (d->checkSpaceOccupied(item, *cell, checkX, checkY, checkItemPlace)) {
+				return false;
+			}
 		}
 	}
 
