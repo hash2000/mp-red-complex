@@ -14,7 +14,7 @@ public:
 
 	QString windowType() const override { return "inventory"; }
 
-	QString windowTitle() const override { return "Character inventory"; }
+	QString windowTitle() const override;
 
 	QSize windowDefaultSizes() const override { return QSize(460, 500); }
 

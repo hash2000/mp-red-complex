@@ -3,6 +3,7 @@
 #include "Game/widgets/inventory/inventory_grid.h"
 #include <QVBoxLayout>
 #include <QUuid>
+#include <QMdiSubWindow>
 
 class InventoryWindow::Private {
 public:
@@ -12,18 +13,19 @@ public:
 
 	InventoryWindow* q;
 	InventoryGridView* widget;
+	QString inventoryName;
 };
 
 InventoryWindow::InventoryWindow(InventoriesService* inventoriesService, const QString& id, QWidget* parent)
 : d(std::make_unique<Private>(this))
 , MdiChildWindow(id, parent) {
 	d->widget = new InventoryGridView(inventoriesService, this);
+	d->inventoryName = "Inventory";
 	auto layout = new QVBoxLayout(this);
 	layout->setContentsMargins(0, 0, 0, 0);
 	layout->addWidget(d->widget);
 
 	setLayout(layout);
-	setWindowTitle("Inventory");
 }
 
 InventoryWindow::~InventoryWindow() = default;
@@ -40,7 +42,7 @@ bool InventoryWindow::handleCommand(const QString& commandName, const QStringLis
 			return false;
 		}
 
-		setWindowTitle(d->widget->grid()->inventoryName());
+		d->inventoryName = d->widget->grid()->inventoryName();
 
 		return true;
 	}
@@ -48,3 +50,6 @@ bool InventoryWindow::handleCommand(const QString& commandName, const QStringLis
 	return false;
 }
 
+QString InventoryWindow::windowTitle() const {
+	return d->inventoryName;
+}
