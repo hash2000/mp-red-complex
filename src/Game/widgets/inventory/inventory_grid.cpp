@@ -226,6 +226,9 @@ void InventoryGrid::dragMoveEvent(QDragMoveEvent* event) {
 	}
 
 	auto item = InventoryItem::fromMimeData(event->mimeData()->data("application/x-game-item"));
+	const auto sourceInventoryId = QString::fromUtf8(event->mimeData()->data("application/x-game-item-source-inventory-id"));
+	const auto currentInventoryId = inventoryId();
+	const auto isSameGrid = (sourceInventoryId == currentInventoryId);
 
 	// Определяем целевую ячейку
 	QPoint pos = event->position().toPoint();
@@ -233,11 +236,10 @@ void InventoryGrid::dragMoveEvent(QDragMoveEvent* event) {
 	int row = pos.y() / Private::CELL_SIZE;
 
 	// Проверяем возможность размещения
-	bool canPlace = d->service->canPlaceItem(item, col, row);
+	bool canPlace = d->service->canPlaceItem(item, col, row, isSameGrid);
 
 	// Показываем подсветку
 	showDropPreview(col, row, item.width, item.height, canPlace);
-
 	event->acceptProposedAction();
 }
 
@@ -263,7 +265,6 @@ void InventoryGrid::dropEvent(QDropEvent* event) {
 	int row = pos.y() / Private::CELL_SIZE;
 
 	// Получаем источник
-	bool isSameGrid = false;
 	if (!event->mimeData()->hasFormat("application/x-game-item-source-inventory-id")) {
 		qDebug() << "Drop inventory item" << item.id << "from unknown inventory container";
 		return;
@@ -271,11 +272,11 @@ void InventoryGrid::dropEvent(QDropEvent* event) {
 
 	const auto sourceInventoryId = QString::fromUtf8(event->mimeData()->data("application/x-game-item-source-inventory-id"));
 	const auto currentInventoryId = inventoryId();
-	isSameGrid = (sourceInventoryId == currentInventoryId);
+	const auto isSameGrid = (sourceInventoryId == currentInventoryId);
 
 	// Перемещение внутри той же сетки
 	if (isSameGrid && d->service->containsItem(item)) {
-		if (d->service->moveItem(item.id, col, row)) {
+		if (d->service->moveItem(item.id, col, row, true)) {
 			// Сервис сам обновит состояние → виджет переместится через сигнал moveItemEvent
 			event->acceptProposedAction();
 			// Говорим источнику НЕ удалять предмет

@@ -19,10 +19,10 @@ public:
 	std::shared_ptr<Inventory> inventory() const;
 
 	bool placeItem(const InventoryHandler& item);
-	bool canPlaceItem(const InventoryHandler& item, int col, int row) const;
-	std::optional<QPoint> findFreeSpace(const InventoryHandler& item) const;
+	bool canPlaceItem(const InventoryHandler& item, int col, int row, bool checkItemPlace) const;
+	std::optional<QPoint> findFreeSpace(const InventoryHandler& item, bool checkItemPlace) const;
 
-	bool moveItem(const QString& id, int newCol, int newRow);
+	bool moveItem(const QString& id, int newCol, int newRow, bool checkItemPlace);
 	void removeItem(const InventoryHandler& item);
 
 	std::shared_ptr<InventoryItem> itemById(const QString& id) const;

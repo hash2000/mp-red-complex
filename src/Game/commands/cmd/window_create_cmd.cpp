@@ -25,7 +25,7 @@ bool CreateWindowCommand::execute(CommandContext* context, const QStringList& ar
 	}
 	else {
 		id = QUuid::createUuid()
-			.toString();
+			.toString(QUuid::StringFormat::WithoutBraces);
 	}
 
 	WindowsBuilder builder(app);

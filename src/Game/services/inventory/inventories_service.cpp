@@ -52,7 +52,7 @@ bool InventoriesService::crossInventoryMove(const InventoryHandler& item, int co
 	}
 
 	// 3. Проверяем возможность размещения в ЦЕЛЕВОМ инвентаре
-	if (!toService->canPlaceItem(item, col, row)) {
+	if (!toService->canPlaceItem(item, col, row, false)) {
 		return false;
 	}
 

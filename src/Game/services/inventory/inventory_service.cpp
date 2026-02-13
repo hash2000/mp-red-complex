@@ -18,6 +18,19 @@ public:
 	: q(parent) {
 	}
 
+	bool checkSpaceOccupied(const InventoryHandler& item, const InventoryViewCell& cell, int checkX, int checkY, bool checkItemPlace) {
+		if (cell.occupied) {
+			if (checkItemPlace) {
+				bool isOldCell = (item.id == cell.item->id) && (checkX >= item.x && checkX < item.x + item.width &&
+					checkY >= item.y && checkY < item.y + item.height);
+				return !isOldCell;
+			}
+			return true;
+		}
+		return false;
+	}
+
+
 	InventoryService* q;
 	std::shared_ptr<Inventory> inventory;
 	std::vector<std::vector<std::unique_ptr<InventoryViewCell>>> cells;
@@ -86,10 +99,11 @@ void InventoryService::setupCells() {
 					break;
 				}
 
-				d->cells[cellCol][cellRow]->occupied = true;
-				if (dx == 0 && dy == 0) {
-					d->cells[cellCol][cellRow]->item = item.get();
-				}
+				auto& cell = d->cells[cellCol][cellRow];
+				cell->occupied = true;
+				cell->item = item.get();
+				cell->col = item->x;
+				cell->row = item->y;
 			}
 		}
 
@@ -110,20 +124,20 @@ bool InventoryService::placeItem(const InventoryHandler& item) {
 	int col = itemPtr->x;
 	int row = itemPtr->y;
 
-	if (!canPlaceItem(item, col, row)) {
+	if (!canPlaceItem(item, col, row, true)) {
 		return false;
 	}
 
 	for (int dy = 0; dy < itemPtr->height; dy++) {
 		for (int dx = 0; dx < itemPtr->width; dx++) {
 			// занимаем все ячейки обласи предмета
-			d->cells[col + dx][row + dy]->occupied = true;
-			if (dx == 0 && dy == 0) {
-				auto cell = d->cells[col][row].get();
-				cell->row = row;
-				cell->col = col;
-				cell->item = itemPtr.get();
-			}
+			// в каждой ячейке занимаемой предметом ссылка на этот предмет,
+			// но row и col показывают на первую занятую ячейку
+			auto& cell = d->cells[col + dx][row + dy];
+			cell->occupied = true;
+			cell->row = row;
+			cell->col = col;
+			cell->item = itemPtr.get();			
 		}
 	}
 
@@ -137,7 +151,7 @@ bool InventoryService::placeItem(const InventoryHandler& item) {
 	return true;
 }
 
-bool InventoryService::canPlaceItem(const InventoryHandler& item, int col, int row) const {
+bool InventoryService::canPlaceItem(const InventoryHandler& item, int col, int row, bool checkItemPlace) const {
 	// Проверка границ инвентаря целиком
 	if (col < 0 || row < 0 || col + item.width > d->inventory->cols || row + item.height > d->inventory->rows) {
 		return false;
@@ -150,26 +164,17 @@ bool InventoryService::canPlaceItem(const InventoryHandler& item, int col, int r
 			int checkY = row + dy;
 
 			const auto& cell = d->cells[col + dx][row + dy];
-			if (cell->occupied) {
-				bool isOldCell = (checkX >= item.x && checkX < item.x + item.width &&
-					checkY >= item.y && checkY < item.y + item.height);
-
-				if (isOldCell) {
-					return true;
-				}
-
-				return false;
-			}
+			return !d->checkSpaceOccupied(item, *cell, checkX, checkY, checkItemPlace);
 		}
 	}
 
 	return true;
 }
 
-std::optional<QPoint> InventoryService::findFreeSpace(const InventoryHandler& item) const {
+std::optional<QPoint> InventoryService::findFreeSpace(const InventoryHandler& item, bool checkItemPlace) const {
 	for (int row = 0; row < d->inventory->rows; row++) {
 		for (int col = 0; col < d->inventory->cols; col++) {
-			if (canPlaceItem(item, col, row)) {
+			if (canPlaceItem(item, col, row, checkItemPlace)) {
 				return QPoint(col, row);
 			}
 		}
@@ -225,9 +230,9 @@ void InventoryService::removeItem(const InventoryHandler& item) {
 			if (cellCol < d->inventory->cols && cellRow < d->inventory->rows) {
 				auto& cell = d->cells[cellCol][cellRow];
 				cell->occupied = false;
-				if (dx == 0 && dy == 0) {
-					cell->item = nullptr;
-				}
+				cell->item = nullptr;
+				cell->col = 0;
+				cell->row = 0;
 			}
 		}
 	}
@@ -238,7 +243,7 @@ void InventoryService::removeItem(const InventoryHandler& item) {
 	emit removeItemEvent(item, itemPtr->x, itemPtr->y);
 }
 
-bool InventoryService::moveItem(const QString& id, int newCol, int newRow) {
+bool InventoryService::moveItem(const QString& id, int newCol, int newRow, bool checkItemPlace) {
 	auto item = itemById(id);
 	if (!item) {
 		return false;
@@ -262,10 +267,8 @@ bool InventoryService::moveItem(const QString& id, int newCol, int newRow) {
 			int checkX = newCol + dx;
 			int checkY = newRow + dy;
 
-			bool isOldCell = (checkX >= oldPos.x() && checkX < oldPos.x() + item->width &&
-				checkY >= oldPos.y() && checkY < oldPos.y() + item->height);
-
-			if (!isOldCell && d->cells[checkX][checkY]->occupied) {
+			const auto& cell = d->cells[checkX][checkY];
+			if (d->checkSpaceOccupied(*item, *cell, checkX, checkY, checkItemPlace)) {
 				return false;
 			}
 		}
@@ -279,9 +282,9 @@ bool InventoryService::moveItem(const QString& id, int newCol, int newRow) {
 			if (x < d->inventory->cols && y < d->inventory->rows) {
 				auto& cell = d->cells[x][y];
 				cell->occupied = false;
-				if (dx == 0 && dy == 0) {
-					cell->item = nullptr;
-				}
+				cell->item = nullptr;
+				cell->col = 0;
+				cell->row = 0;
 			}
 		}
 	}
@@ -294,11 +297,9 @@ bool InventoryService::moveItem(const QString& id, int newCol, int newRow) {
 			if (x < d->inventory->cols && y < d->inventory->rows) {
 				auto& cell = d->cells[x][y];
 				cell->occupied = true;
-				if (dx == 0 && dy == 0) {
-					cell->item = item.get();
-					cell->col = newCol;
-					cell->row = newRow;
-				}
+				cell->item = item.get();
+				cell->col = newCol;
+				cell->row = newRow;
 			}
 		}
 	}
