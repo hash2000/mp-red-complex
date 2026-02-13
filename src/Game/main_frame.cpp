@@ -2,6 +2,7 @@
 #include "Game/commands/command_console.h"
 #include "Game/app_controller.h"
 #include "Game/services.h"
+#include "Game/controllers.h"
 #include "Game/controllers/windows_controller.h"
 #include <QSplitter>
 #include <QTabWidget>
@@ -50,7 +51,7 @@ void GameMainFrame::setupConsole() {
 	d->commandConsole = new CommandConsole(d->controller, this);
 	d->commandConsole->setWindowFlags(Qt::Dialog | Qt::WindowStaysOnTopHint);
 
-	d->controller->windowsController()->setMdiArea(d->mdiArea);
+	d->controller->controllers()->windowsController()->setMdiArea(d->mdiArea);
 
 	// Кнопка переключения в статусбаре
 	d->consoleToggleButton = new QToolButton(statusBar());

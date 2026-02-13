@@ -1,6 +1,5 @@
 #include "Game/app_controller.h"
 #include "Game/mdi_child_window.h"
-#include "Game/controllers/windows_controller.h"
 #include "Game/commands/command.h"
 #include "Game/commands/command_processor.h"
 #include "Game/commands/command_context.h"
@@ -10,6 +9,7 @@
 #include "Game/commands/cmd/window_create_cmd.h"
 #include "Game/commands/cmd/states_store_cmd.h"
 #include "Game/services.h"
+#include "Game/controllers.h"
 #include <QMdiArea>
 #include <QMdiSubWindow>
 #include <QTimer>
@@ -27,8 +27,8 @@ public:
 	ApplicationController* q;
 	std::unique_ptr<CommandProcessor> commandProcessor;
 	std::unique_ptr<CommandContext> commandContext;
-	std::unique_ptr<WindowsController> windowsController;
 	std::unique_ptr<Services> services;
+	std::unique_ptr<Controllers> controllers;
 };
 
 ApplicationController::ApplicationController(Resources* resources, QObject* parent)
@@ -38,8 +38,8 @@ ApplicationController::ApplicationController(Resources* resources, QObject* pare
 	// Создание процессора команд
 	d->commandProcessor = std::make_unique<CommandProcessor>(resources);
 	d->commandContext = std::make_unique<CommandContext>(this);
-	d->windowsController = std::make_unique<WindowsController>();
 	d->services = std::make_unique<Services>(resources);
+	d->controllers = std::make_unique<Controllers>();
 
 	// Регистрация встроенных системных команд
 	d->commandProcessor->registerCommand(std::make_unique<ListWindowsCommand>());
@@ -68,12 +68,12 @@ CommandContext* ApplicationController::commandContext() const {
 	return d->commandContext.get();
 }
 
-WindowsController* ApplicationController::windowsController() const {
-	return d->windowsController.get();
-}
-
 Services* ApplicationController::services() const {
 	return d->services.get();
+}
+
+Controllers* ApplicationController::controllers() const {
+	return d->controllers.get();
 }
 
 bool ApplicationController::executeCommand(const QString& commandText, QObject* requester) {

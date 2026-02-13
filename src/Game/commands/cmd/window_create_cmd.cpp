@@ -3,13 +3,14 @@
 #include "Game/commands/command_context.h"
 #include "Game/controllers/windows_controller.h"
 #include "Game/app_controller.h"
+#include "Game/controllers.h"
 #include "Game/windows_builder.h"
 #include <QMdiSubWindow>
 #include <QUuid>
 
 bool CreateWindowCommand::execute(CommandContext* context, const QStringList& args) {
 	auto app = context->applicationController();
-	auto controller = app->windowsController();
+	auto controller = app->controllers()->windowsController();
 	auto mdiArea = controller->mdiArea();
 
 	if (args.count() < 1) {

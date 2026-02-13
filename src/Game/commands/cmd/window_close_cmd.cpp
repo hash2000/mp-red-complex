@@ -2,6 +2,7 @@
 #include "Game/commands/command_processor.h"
 #include "Game/commands/command_context.h"
 #include "Game/app_controller.h"
+#include "Game/controllers.h"
 #include "Game/controllers/windows_controller.h"
 
 bool CloseWindowCommand::execute(CommandContext* context, const QStringList& args) {
@@ -11,7 +12,7 @@ bool CloseWindowCommand::execute(CommandContext* context, const QStringList& arg
 	}
 
 	QString target = args.first().toLower();
-	auto controller = context->applicationController()->windowsController();
+	auto controller = context->applicationController()->controllers()->windowsController();
 
 	if (target == "active") {
 		auto activeEntry = controller->activeWindowEntry();

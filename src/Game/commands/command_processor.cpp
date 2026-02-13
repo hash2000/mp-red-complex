@@ -7,6 +7,7 @@
 #include "Game/mdi_child_window.h"
 #include "Resources/resources.h"
 #include "Resources/variables/variables_context.h"
+#include "Game/controllers.h"
 #include <QRegularExpression>
 #include <QDebug>
 #include <QHash>
@@ -109,7 +110,7 @@ bool CommandProcessor::execute(const QString& commandLine, CommandContext* conte
 	if (!command) {
 
 		// отправка команды в активное окно
-		if (auto activeWindow = context->applicationController()->windowsController()->activeWindow()) {
+		if (auto activeWindow = context->applicationController()->controllers()->windowsController()->activeWindow()) {
 			if (activeWindow->handleCommand(cmdName, args, context)) {
 				return true;
 			}
@@ -121,7 +122,7 @@ bool CommandProcessor::execute(const QString& commandLine, CommandContext* conte
 			const auto target = cmdName.left(sepPos);
 			cmdName = cmdName.mid(sepPos + 1);
 			if (!target.isEmpty()) {
-				if (auto window = context->applicationController()->windowsController()->findWindowById(target)) {
+				if (auto window = context->applicationController()->controllers()->windowsController()->findWindowById(target)) {
 					if (window->handleCommand(cmdName, args, context)) {
 						return true;
 					}
