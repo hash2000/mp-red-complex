@@ -27,6 +27,8 @@ public:
 
 	QString inventoryId() const;
 
+	QString inventoryName() const;
+
 protected:
 	QString newObjectName();
 

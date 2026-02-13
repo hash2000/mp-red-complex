@@ -152,14 +152,6 @@ void InventoryItemWidget::startDrag() {
 
 	// Восстанавливаем прозрачность
 	setWindowOpacity(1.0);
-
-
-	if (dropAction == Qt::MoveAction) {		
-		const auto removeFrpmSourceFlag = mimeData->data("application/x-game-item-remove-from-source");
-		if (removeFrpmSourceFlag == "1") {
-			emit removedFromGrid(this);
-		}
-	}
 }
 
 void InventoryItemWidget::openContainer() {
@@ -219,8 +211,7 @@ void InventoryItemWidget::dragEnterEvent(QDragEnterEvent* event) {
 		d->item.count <= d->item.maxStack) {
 		event->acceptProposedAction();
 		return;
-	}
-	
+	}	
 }
 
 void InventoryItemWidget::dropEvent(QDropEvent* event) {

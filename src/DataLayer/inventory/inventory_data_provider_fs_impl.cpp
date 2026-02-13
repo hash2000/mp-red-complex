@@ -46,6 +46,7 @@ std::shared_ptr<Inventory> InventoryDataProviderFilesistemImpl::loadInventory(co
 	result->id = id.toString(QUuid::StringFormat::WithoutBraces);
 	result->rows = json["rows"].toInt();
 	result->cols = json["cols"].toInt();
+	result->name = json["name"].toString();
 
 	QJsonArray items = json["items"].toArray();
 	for (const QJsonValue& it : items) {
@@ -61,18 +62,15 @@ std::shared_ptr<Inventory> InventoryDataProviderFilesistemImpl::loadInventory(co
 			continue;
 		}
 
-		const auto x = it["x"].toInt();
-		const auto y = it["y"].toInt();
-		const auto count = it["count"].toInt(1);
 		auto invItem = loadItem(entityId);
 		if (!invItem) {
 			continue;
 		}
 
 		invItem->id = id;
-		invItem->x = x;
-		invItem->y = y;
-		invItem->count = count;
+		invItem->x = it["x"].toInt();
+		invItem->y = it["y"].toInt();
+		invItem->count = it["count"].toInt(1);
 		result->items.emplace(invItem->id, invItem);
 	}
 

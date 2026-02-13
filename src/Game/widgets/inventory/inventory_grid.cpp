@@ -32,6 +32,10 @@ QString InventoryGrid::inventoryId() const {
 	return d->service ? d->service->inventory()->id : QString();
 }
 
+QString InventoryGrid::inventoryName() const {
+	return d->service ? d->service->inventory()->name : QString();
+}
+
 QString InventoryGrid::newObjectName() {
 	const auto name = QString("inventory_grid_%1")
 		.arg(inventoryId());
@@ -278,7 +282,6 @@ void InventoryGrid::dropEvent(QDropEvent* event) {
 			// Сервис сам обновит состояние → виджет переместится через сигнал moveItemEvent
 			event->acceptProposedAction();
 			// Говорим источнику НЕ удалять предмет
-			const_cast<QMimeData*>(event->mimeData())->setData("application/x-game-item-remove-from-source", "0");
 			return;
 		}
 		else {

@@ -36,7 +36,13 @@ bool InventoryWindow::handleCommand(const QString& commandName, const QStringLis
 			return false;
 		}
 
-		return d->widget->load(target);
+		if (!d->widget->load(target)) {
+			return false;
+		}
+
+		setWindowTitle(d->widget->grid()->inventoryName());
+
+		return true;
 	}
 
 	return false;

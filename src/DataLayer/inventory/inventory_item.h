@@ -91,6 +91,7 @@ struct InventoryItem : public InventoryHandler {
 };
 
 struct Inventory {
+	QString name;
 	QString id;
 	std::map<QString, std::shared_ptr<InventoryItem>> items;
 	int rows;
