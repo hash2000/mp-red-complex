@@ -63,6 +63,7 @@ std::shared_ptr<Inventory> InventoryDataProviderFilesistemImpl::loadInventory(co
 
 		const auto x = it["x"].toInt();
 		const auto y = it["y"].toInt();
+		const auto count = it["count"].toInt(1);
 		auto invItem = loadItem(entityId);
 		if (!invItem) {
 			continue;
@@ -71,6 +72,7 @@ std::shared_ptr<Inventory> InventoryDataProviderFilesistemImpl::loadInventory(co
 		invItem->id = id;
 		invItem->x = x;
 		invItem->y = y;
+		invItem->count = count;
 		result->items.emplace(invItem->id, invItem);
 	}
 

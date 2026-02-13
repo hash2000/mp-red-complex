@@ -62,11 +62,13 @@ std::shared_ptr<InventoryItem> InventoryItem::fromJson(const QJsonObject& json) 
 	}
 	else if (typeStr == "resource") {
 		item->type = InventoryItemType::Resource;
-		item->maxStack = json["maxStack"].toInt(999);
+		item->maxStack = json["maxStack"].toInt(100);
+		item->count = json["count"].toInt(0);
 	}
 	else if (typeStr == "component") {
 		item->type = InventoryItemType::Component;
 		item->maxStack = json["maxStack"].toInt(100);
+		item->count = json["count"].toInt(0);
 	}
 	else if (typeStr == "container") {
 		item->type = InventoryItemType::Container;
