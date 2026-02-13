@@ -1,5 +1,5 @@
 #pragma once
-#include "Game/services/inventory/inventory_service.h"
+#include "ApplicationLayer/services/inventory/inventory_service.h"
 #include "DataLayer/inventory/inventory_data_provider.h"
 #include <QObject>
 #include <memory>

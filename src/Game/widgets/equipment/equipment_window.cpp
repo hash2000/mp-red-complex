@@ -1,6 +1,6 @@
 #include "Game/widgets/equipment/equipment_window.h"
 #include "Game/widgets/equipment/equipment_widget.h"
-#include "Game/services/inventory/inventories_service.h"
+#include "ApplicationLayer/services/inventory/inventories_service.h"
 #include <QVBoxLayout>
 
 class EquipmentWindow::Private {

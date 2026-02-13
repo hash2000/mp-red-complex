@@ -1,8 +1,8 @@
 #include "Game/widgets/inventory/inventory_grid.h"
 #include "Game/widgets/inventory/inventory_item_widget.h"
 #include "Game/widgets/inventory/drop_preview_widget.h"
-#include "Game/services/inventory/inventory_service.h"
-#include "Game/services/inventory/inventories_service.h"
+#include "ApplicationLayer/services/inventory/inventory_service.h"
+#include "ApplicationLayer/services/inventory/inventories_service.h"
 #include <QPoint>
 #include <QLayoutItem>
 #include <QLayout>

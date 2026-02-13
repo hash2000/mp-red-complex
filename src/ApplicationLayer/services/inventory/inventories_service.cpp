@@ -1,5 +1,5 @@
-#include "Game/services/inventory/inventories_service.h"
-#include "Game/services/inventory/inventory_service.h"
+#include "ApplicationLayer/services/inventory/inventories_service.h"
+#include "ApplicationLayer/services/inventory/inventory_service.h"
 #include <map>
 
 class InventoriesService::Private {

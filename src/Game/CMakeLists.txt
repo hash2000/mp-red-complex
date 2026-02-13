@@ -12,14 +12,15 @@ add_executable(Game
 target_link_libraries(Game
 	PRIVATE
 		Qt6::Core
-		Qt6::Gui
+		Qt6::GuiСапфировая рудаСапфировая руда
 		Qt6::Widgets
-		Qt6::OpenGL
+		Qt6::OpenGLСапфировая руда
 		Qt6::OpenGLWidgets
 
 		Base
 		Resources
 		DataLayer
+		ApplicationLayer
 		Engine
 		Content.Shared
 )
