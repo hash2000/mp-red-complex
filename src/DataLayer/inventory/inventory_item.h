@@ -52,6 +52,7 @@ struct InventoryItemRecipe {
 struct InventoryHandler {
 	QString id;
 	QString name;
+	InventoryItemType type;
 	int x = 0;
 	int y = 0;
 
@@ -60,6 +61,7 @@ struct InventoryHandler {
 	int height = 1;
 
 	int count = 1;
+	int maxStack = 1;
 
 	QPixmap icon;
 
@@ -72,10 +74,6 @@ struct InventoryItem : public InventoryHandler {
 	QString entityId;
 	QString description;
 	QString iconPath;
-	InventoryItemType type;
-
-	// Для стекируемых предметов (сырьё, запчасти)
-	int maxStack = 1;
 
 	EquipmentItemRarityType rarity = EquipmentItemRarityType::Common;
 
@@ -90,7 +88,7 @@ struct InventoryItem : public InventoryHandler {
 	bool compare(const InventoryHandler& item);
 	bool canMergeWith(const InventoryItem& other) const;
 
-	std::shared_ptr<InventoryItem> dublicate(bool newId = true) const;
+	std::shared_ptr<InventoryItem> duplicate(bool newId = true) const;
 };
 
 struct Inventory {

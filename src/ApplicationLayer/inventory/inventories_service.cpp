@@ -60,7 +60,8 @@ bool InventoriesService::crossInventoryMove(const InventoryHandler& item, int co
 	}
 
 	// 3. Проверяем возможность размещения в ЦЕЛЕВОМ инвентаре
-	if (!toService->canPlaceItem(item, col, row, false)) {
+	const auto count = toService->canPlaceItem(item, col, row, false);
+	if (count == 0) {
 		return false;
 	}
 
@@ -86,7 +87,7 @@ bool InventoriesService::crossInventoryMove(const InventoryHandler& item, int co
 			// стопка выведена не полностью, поэтому исходную стопку оставляем
 			// и создаём новую
 			itemToMove->count = remains;
-			itemToMove = itemToMove->dublicate(true);
+			itemToMove = itemToMove->duplicate(true);
 			itemToMove->count = item.count;
 		}
 	}

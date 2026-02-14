@@ -87,6 +87,7 @@ void InventoryGrid::setInventoryService(InventoriesService* inventories, const Q
 		connect(d->inventory, &InventoryService::placeItemEvent, this, &InventoryGrid::onItemPlaced);
 		connect(d->inventory, &InventoryService::removeItemEvent, this, &InventoryGrid::onItemRemoved);
 		connect(d->inventory, &InventoryService::moveItemEvent, this, &InventoryGrid::onItemMoved);
+		connect(d->inventory, &InventoryService::itemCountChanged, this, &InventoryGrid::onItemCountChanged);
 
 		// Инициализируем виджеты из текущего состояния сервиса
 		updateGridSize();
@@ -127,12 +128,18 @@ void InventoryGrid::onItemRemoved(const InventoryHandler& item, int row, int col
 	removeWidgetForItem(item);
 }
 
-void InventoryGrid::onItemMoved(const InventoryHandler& item, int oldRow, int oldCol, int newRow, int newCol) {
+void InventoryGrid::onItemMoved(const InventoryHandler& item, int oldCol, int oldRow, int newCol, int newRow) {
 	Q_UNUSED(oldRow);
 	Q_UNUSED(oldCol);
 
 	// Перемещаем существующий виджет
-	moveWidgetForItem(item, item.x, item.y);
+	moveWidgetForItem(item, newCol, newRow);
+}
+
+void InventoryGrid::onItemCountChanged(const InventoryHandler& item) {
+
+
+	changeItemStackCount(item);
 }
 
 void InventoryGrid::createWidgetForItem(const InventoryHandler& item) {
@@ -162,6 +169,17 @@ void InventoryGrid::createWidgetForItem(const InventoryHandler& item) {
 		});
 
 	d->widgets[item.id] = widget;
+}
+
+void InventoryGrid::changeItemStackCount(const InventoryHandler& item) {
+	if (!d->widgets.contains(item.id)) {
+		return;
+	}
+
+	auto widget = d->widgets.value(item.id);
+	if (widget) {
+		widget->setCount(item.count);
+	}
 }
 
 void InventoryGrid::removeWidgetForItem(const InventoryHandler& item) {
@@ -240,7 +258,8 @@ void InventoryGrid::dragMoveEvent(QDragMoveEvent* event) {
 	int row = pos.y() / Private::CELL_SIZE;
 
 	// Проверяем возможность размещения
-	bool canPlace = d->inventory->canPlaceItem(item, col, row, isSameGrid);
+	const auto count = d->inventory->canPlaceItem(item, col, row, isSameGrid);
+	const auto canPlace = count > 0;
 
 	// Показываем подсветку
 	showDropPreview(col, row, item.width, item.height, canPlace);
@@ -279,8 +298,8 @@ void InventoryGrid::dropEvent(QDropEvent* event) {
 	const auto isSameGrid = (sourceInventoryId == currentInventoryId);
 
 	// Перемещение внутри той же сетки
-	if (isSameGrid && d->inventory->containsItem(item)) {
-		if (d->inventory->splitItemStack(item, col, row, true)) {
+	if (isSameGrid) {
+		if (d->inventory->moveItem(item, col, row, true)) {
 			// Сервис сам обновит состояние → виджет переместится через сигнал moveItemEvent
 			event->acceptProposedAction();
 			// Говорим источнику НЕ удалять предмет

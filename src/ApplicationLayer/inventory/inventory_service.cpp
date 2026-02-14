@@ -5,8 +5,6 @@
 
 struct InventoryViewCell {
 	bool occupied = false;
-	int row = 0;
-	int col = 0;
 	InventoryItem* item = nullptr;
 };
 
@@ -15,18 +13,6 @@ class InventoryService::Private {
 public:
 	Private(InventoryService* parent)
 	: q(parent) {
-	}
-
-	bool checkSpaceOccupied(const InventoryHandler& item, const InventoryViewCell& cell, int checkX, int checkY, bool checkItemPlace) {
-		if (cell.occupied) {
-			if (checkItemPlace) {
-				bool isOldCell = (item.id == cell.item->id) && (checkX >= item.x && checkX < item.x + item.width &&
-					checkY >= item.y && checkY < item.y + item.height);
-				return !isOldCell;
-			}
-			return true;
-		}
-		return false;
 	}
 
 	InventoryService* q;
@@ -65,8 +51,6 @@ void InventoryService::setupCells() {
 		d->cells[col].resize(d->inventory->rows);
 		for (int row = 0; row < d->inventory->rows; row++) {
 			auto cell = std::make_unique<InventoryViewCell>();
-			cell->row = row;
-			cell->col = col;
 			d->cells[col][row] = std::move(cell);
 		}
 	}
@@ -106,8 +90,6 @@ void InventoryService::setupCells() {
 				auto& cell = d->cells[cellCol][cellRow];
 				cell->occupied = true;
 				cell->item = item.get();
-				cell->col = item->x;
-				cell->row = item->y;
 			}
 		}
 
@@ -119,7 +101,6 @@ void InventoryService::setupCells() {
 }
 
 bool InventoryService::placeItem(const InventoryHandler& item) {
-
 	auto itemPtr = itemById(item.id);
 	if (!itemPtr) {
 		return false;
@@ -128,20 +109,41 @@ bool InventoryService::placeItem(const InventoryHandler& item) {
 	int col = itemPtr->x;
 	int row = itemPtr->y;
 
-	if (!canPlaceItem(item, col, row, true)) {
+	const auto availableSpace = canPlaceItem(item, col, row, true);
+	if (availableSpace == 0) {
 		return false;
+	}
+
+	int moveCount = qMin(item.count, availableSpace);
+	auto& targetCell = d->cells[item.x][item.y];
+	if (targetCell->occupied) {
+		bool canMerge = (
+			targetCell->item &&
+			targetCell->item->type == item.type &&
+			targetCell->item->id != item.id &&
+			item.maxStack > 1);
+
+		if (canMerge) {
+			int spaceInTarget = targetCell->item->maxStack - targetCell->item->count;
+			int actualMergeCount = qMin(moveCount, spaceInTarget);
+			if (actualMergeCount == 0) {
+				return false;
+			}
+
+			targetCell->item->count += actualMergeCount;
+
+			emit itemCountChanged(*targetCell->item);
+			return true;
+		}
 	}
 
 	for (int dy = 0; dy < itemPtr->height; dy++) {
 		for (int dx = 0; dx < itemPtr->width; dx++) {
 			// занимаем все ячейки обласи предмета
 			// в каждой ячейке занимаемой предметом ссылка на этот предмет,
-			// но row и col показывают на первую занятую ячейку
 			auto& cell = d->cells[col + dx][row + dy];
 			cell->occupied = true;
-			cell->row = row;
-			cell->col = col;
-			cell->item = itemPtr.get();			
+			cell->item = itemPtr.get();
 		}
 	}
 
@@ -155,32 +157,50 @@ bool InventoryService::placeItem(const InventoryHandler& item) {
 	return true;
 }
 
-bool InventoryService::canPlaceItem(const InventoryHandler& item, int col, int row, bool checkItemPlace) const {
+int InventoryService::canPlaceItem(const InventoryHandler& item, int col, int row, bool checkItemPlace) const {
 	// Проверка границ инвентаря целиком
 	if (col < 0 || row < 0 || col + item.width > d->inventory->cols || row + item.height > d->inventory->rows) {
-		return false;
+		return 0;
 	}
 
-	// проверяем, возможно ли занять предмметом ячейки, которые ему требуются
-	for (int dy = 0; dy < item.height; dy++) {
-		for (int dx = 0; dx < item.width; dx++) {
+	// Проверяем все ячейки области предмета
+	for (int dy = 0; dy < item.height; ++dy) {
+		for (int dx = 0; dx < item.width; ++dx) {
 			int checkX = col + dx;
 			int checkY = row + dy;
 
-			const auto& cell = d->cells[col + dx][row + dy];
-			if (d->checkSpaceOccupied(item, *cell, checkX, checkY, checkItemPlace)) {
-				return false;
+			const auto& cell = d->cells[checkX][checkY];
+
+			// Если ячейка занята — проверяем условия
+			if (cell->occupied) {
+				// Случай 1: это та же самая ячейка исходного предмета (при перемещении внутри себя)
+				if (checkItemPlace && cell->item && cell->item->id == item.id &&
+					checkX >= item.x && checkX < item.x + item.width &&
+					checkY >= item.y && checkY < item.y + item.height) {
+					continue; // Пропускаем ячейки самого предмета
+				}
+
+				// Случай 2: совместимый стекируемый предмет
+				if (cell->item && cell->item->type == item.type && item.maxStack > 1) {
+					// Возвращаем свободное место в стеке
+					return qMax(cell->item->maxStack - cell->item->count, 0);
+				}
+
+				// Случай 3: другая занятая ячейка — нельзя разместить ничего
+				return 0;
 			}
 		}
 	}
 
-	return true;
+	// Все ячейки свободны — можно разместить полный стек
+	return item.count;
 }
 
 std::optional<QPoint> InventoryService::findFreeSpace(const InventoryHandler& item, bool checkItemPlace) const {
 	for (int row = 0; row < d->inventory->rows; row++) {
 		for (int col = 0; col < d->inventory->cols; col++) {
-			if (canPlaceItem(item, col, row, checkItemPlace)) {
+			const auto count = canPlaceItem(item, col, row, checkItemPlace);
+			if (count == item.count) {
 				return QPoint(col, row);
 			}
 		}
@@ -228,96 +248,179 @@ void InventoryService::removeItem(const InventoryHandler& item) {
 		return;
 	}
 
-	for (int dy = 0; dy < itemPtr->height; dy++) {
-		for (int dx = 0; dx < itemPtr->width; dx++) {
+	// Освобождаем ВСЕ ячейки предмета
+	for (int dy = 0; dy < itemPtr->height; ++dy) {
+		for (int dx = 0; dx < itemPtr->width; ++dx) {
 			int cellCol = itemPtr->x + dx;
 			int cellRow = itemPtr->y + dy;
-
 			if (cellCol < d->inventory->cols && cellRow < d->inventory->rows) {
 				auto& cell = d->cells[cellCol][cellRow];
 				cell->occupied = false;
 				cell->item = nullptr;
-				cell->col = 0;
-				cell->row = 0;
 			}
 		}
 	}
 
 	d->items.remove(QPoint(itemPtr->x, itemPtr->y));
-	d->inventory->items.erase(item.id);
+	d->inventory->items.erase(itemIt);
 
-	emit removeItemEvent(item, itemPtr->x, itemPtr->y);
+	emit removeItemEvent(item, itemPtr->y, itemPtr->x);
 }
 
-bool InventoryService::moveItem(const QString& id, int newCol, int newRow, bool checkItemPlace) {
-	auto item = itemById(id);
-	if (!item) {
+bool InventoryService::moveItem(const InventoryHandler& item, int newCol, int newRow, bool checkItemPlace) {
+	// Получаем полный предмет из инвентаря по ID
+	auto itemPtr = itemById(item.id);
+	if (!itemPtr) {
 		return false;
 	}
 
-	QPoint oldPos(item->x, item->y);
-	if (!d->items.contains(oldPos) || !d->items.value(oldPos)->compare(*item)) {
+	// Текущая позиция предмета
+	QPoint oldPos(itemPtr->x, itemPtr->y);
+
+	// Проверяем, существует ли предмет в указанной позиции
+	if (!d->items.contains(oldPos) || d->items.value(oldPos) != itemPtr.get()) {
 		return false;
 	}
 
-	// Проверка границ
-	if (newCol < 0 || newRow < 0 ||
-		newCol + item->width > d->inventory->cols ||
-		newRow + item->height > d->inventory->rows) {
+	// Проверяем возможность размещения (возвращает доступное количество)
+	int availableSpace = canPlaceItem(item, newCol, newRow, checkItemPlace);
+	if (availableSpace == 0) {
 		return false;
 	}
 
-	// Проверка занятости (игнорируем старую позицию предмета)
-	for (int dy = 0; dy < item->height; dy++) {
-		for (int dx = 0; dx < item->width; dx++) {
-			int checkX = newCol + dx;
-			int checkY = newRow + dy;
+	// Определяем сколько реально перемещаем (не больше чем доступно и не больше чем запрошено)
+	int moveCount = qMin(item.count, availableSpace);
+	int remainingCount = itemPtr->count - moveCount;
 
-			const auto& cell = d->cells[checkX][checkY];
-			if (d->checkSpaceOccupied(*item, *cell, checkX, checkY, checkItemPlace)) {
-				return false;
+	// === Проверяем возможность объединения с существующим стеком в целевой ячейке ===
+	auto& targetCell = d->cells[newCol][newRow];
+	bool canMerge = (targetCell->occupied &&
+		targetCell->item &&
+		targetCell->item->type == item.type &&
+		targetCell->item->id != item.id &&
+		item.maxStack > 1);
+
+	// === СЛУЧАЙ 1: Объединение стеков (полное или частичное) ===
+	if (canMerge) {
+		int spaceInTarget = targetCell->item->maxStack - targetCell->item->count;
+		int actualMergeCount = qMin(moveCount, spaceInTarget);
+
+		if (actualMergeCount > 0) {
+			// Обновляем целевой стек
+			targetCell->item->count += actualMergeCount;
+
+			emit itemCountChanged(*targetCell->item);
+
+			// Обновляем исходный стек
+			itemPtr->count -= actualMergeCount;
+
+			// Если исходный стек опустел — полностью удаляем его
+			if (itemPtr->count == 0) {
+				// Освобождаем ВСЕ ячейки исходного предмета
+				for (int dy = 0; dy < itemPtr->height; ++dy) {
+					for (int dx = 0; dx < itemPtr->width; ++dx) {
+						int x = oldPos.x() + dx;
+						int y = oldPos.y() + dy;
+						if (x < d->inventory->cols && y < d->inventory->rows) {
+							auto& cell = d->cells[x][y];
+							cell->occupied = false;
+							cell->item = nullptr;
+						}
+					}
+				}
+
+				// Удаляем из хеша позиций
+				d->items.remove(oldPos);
+
+				// Удаляем из основного хранилища (освобождает память через shared_ptr)
+				d->inventory->items.erase(itemPtr->id);
+
+				// Отправляем сигналы
+				emit removeItemEvent(*itemPtr, oldPos.x(), oldPos.y());
+				// Целевой предмет обновлён — можно отправить отдельный сигнал или обновить через представление
+				return true;
 			}
+
+			emit itemCountChanged(*itemPtr);
+			// Если остался остаток — обновляем только количество исходного предмета
+			// (позиция не меняется, поэтому не отправляем moveItemEvent)
+			return true;
 		}
 	}
 
-	// Освобождаем старые ячейки
-	for (int dy = 0; dy < item->height; dy++) {
-		for (int dx = 0; dx < item->width; dx++) {
-			int x = oldPos.x() + dx;
-			int y = oldPos.y() + dy;
-			if (x < d->inventory->cols && y < d->inventory->rows) {
-				auto& cell = d->cells[x][y];
-				cell->occupied = false;
-				cell->item = nullptr;
-				cell->col = 0;
-				cell->row = 0;
+	// === СЛУЧАЙ 2: Полное перемещение без объединения (остаток = 0) ===
+	if (remainingCount == 0) {
+		// Освобождаем старые ячейки
+		for (int dy = 0; dy < itemPtr->height; ++dy) {
+			for (int dx = 0; dx < itemPtr->width; ++dx) {
+				int x = oldPos.x() + dx;
+				int y = oldPos.y() + dy;
+				if (x < d->inventory->cols && y < d->inventory->rows) {
+					auto& cell = d->cells[x][y];
+					cell->occupied = false;
+					cell->item = nullptr;
+				}
 			}
 		}
+
+		// Занимаем новые ячейки
+		for (int dy = 0; dy < itemPtr->height; ++dy) {
+			for (int dx = 0; dx < itemPtr->width; ++dx) {
+				int x = newCol + dx;
+				int y = newRow + dy;
+				if (x < d->inventory->cols && y < d->inventory->rows) {
+					auto& cell = d->cells[x][y];
+					cell->occupied = true;
+					cell->item = itemPtr.get();
+				}
+			}
+		}
+
+		// Обновляем позицию в хеш-таблице
+		d->items.remove(oldPos);
+		d->items[{newCol, newRow}] = itemPtr.get();
+
+		// Обновляем координаты предмета
+		itemPtr->x = newCol;
+		itemPtr->y = newRow;
+
+		emit moveItemEvent(item, oldPos.x(), oldPos.y(), newCol, newRow);
+		return true;
 	}
 
-	// Занимаем новые ячейки
-	for (int dy = 0; dy < item->height; dy++) {
-		for (int dx = 0; dx < item->width; dx++) {
+	// === СЛУЧАЙ 3: Частичное перемещение без объединения (создаём новый предмет) ===
+
+	// Создаём новый предмет для перемещённой части
+	auto newItemPtr = itemPtr->duplicate(true); // Создаём копию с новым уникальным ID
+	newItemPtr->count = moveCount;
+	newItemPtr->x = newCol;
+	newItemPtr->y = newRow;
+
+	// Добавляем новый предмет в инвентарь
+	d->inventory->items.emplace(newItemPtr->id, newItemPtr);
+
+	// Занимаем целевые ячейки новым предметом
+	for (int dy = 0; dy < newItemPtr->height; ++dy) {
+		for (int dx = 0; dx < newItemPtr->width; ++dx) {
 			int x = newCol + dx;
 			int y = newRow + dy;
 			if (x < d->inventory->cols && y < d->inventory->rows) {
 				auto& cell = d->cells[x][y];
 				cell->occupied = true;
-				cell->item = item.get();
-				cell->col = newCol;
-				cell->row = newRow;
+				cell->item = newItemPtr.get();
 			}
 		}
 	}
 
-	// Обновляем координаты предмета
-	item->x = newCol;
-	item->y = newRow;
+	// Добавляем новый предмет в хеш позиций
+	d->items[{newCol, newRow}] = newItemPtr.get();
 
-	d->items.remove(oldPos);
-	d->items[{newCol, newRow}] = item.get();
+	// Обновляем исходный предмет (уменьшаем количество)
+	itemPtr->count = remainingCount;
 
-	emit moveItemEvent(*item, oldPos.x(), oldPos.y(), newCol, newRow);
+	// Отправляем сигналы
+	emit placeItemEvent(*newItemPtr, newRow, newCol); // Новый предмет создан
+	// Исходный предмет обновлён (количество уменьшено) — позиция не изменилась
 	return true;
 }
 
@@ -352,25 +455,53 @@ std::shared_ptr<InventoryItem> InventoryService::itemById(const QString& id) con
 	return std::shared_ptr<InventoryItem>();
 }
 
-bool InventoryService::splitItemStack(const InventoryHandler& item, int newCol, int newRow, bool checkItemPlace) {
-	auto itemPtr = itemById(item.id);
-	if (!itemPtr) {
+bool InventoryService::splitStack(const QString& itemId, int newCol, int newRow, int splitCount) {
+	auto itemPtr = itemById(itemId);
+	if (!itemPtr || splitCount <= 0 || splitCount >= itemPtr->count) {
 		return false;
 	}
 
-	const auto remains = qMax(itemPtr->count - item.count, 0);
-	if (remains == 0) {
-		return moveItem(item.id, newCol, newRow, checkItemPlace);
+	// Проверяем возможность размещения
+	InventoryHandler handler;
+	handler.id = itemId;
+	handler.x = newCol;
+	handler.y = newRow;
+	handler.width = itemPtr->width;
+	handler.height = itemPtr->height;
+	handler.count = splitCount;
+	handler.maxStack = itemPtr->maxStack;
+
+	if (canPlaceItem(handler, newCol, newRow, false) < splitCount) {
+		return false;
 	}
 
-	itemPtr->count = remains;
-	itemPtr = itemPtr->dublicate();
-	itemPtr->count = item.count;
-	itemPtr->x = newCol;
-	itemPtr->y = newRow;
+	// Создаём новый предмет для разделённой части
+	auto newItemPtr = itemPtr->duplicate(true);
+	newItemPtr->count = splitCount;
+	newItemPtr->x = newCol;
+	newItemPtr->y = newRow;
 
-	d->inventory->items.emplace(itemPtr->id, itemPtr);
+	// Добавляем в инвентарь
+	d->inventory->items.emplace(newItemPtr->id, newItemPtr);
 
-	return placeItem(*itemPtr);
+	// Занимаем ячейки
+	for (int dy = 0; dy < newItemPtr->height; ++dy) {
+		for (int dx = 0; dx < newItemPtr->width; ++dx) {
+			int x = newCol + dx;
+			int y = newRow + dy;
+			if (x < d->inventory->cols && y < d->inventory->rows) {
+				auto& cell = d->cells[x][y];
+				cell->occupied = true;
+				cell->item = newItemPtr.get();
+			}
+		}
+	}
 
+	d->items[{newCol, newRow}] = newItemPtr.get();
+
+	// Уменьшаем количество в исходном предмете
+	itemPtr->count -= splitCount;
+
+	emit placeItemEvent(*newItemPtr, newRow, newCol);
+	return true;
 }

@@ -18,13 +18,13 @@ public:
 	InventoriesController* controller() const;
 
 	bool placeItem(const InventoryHandler& item);
-	bool canPlaceItem(const InventoryHandler& item, int col, int row, bool checkItemPlace) const;
+	int canPlaceItem(const InventoryHandler& item, int col, int row, bool checkItemPlace) const;
 	std::optional<QPoint> findFreeSpace(const InventoryHandler& item, bool checkItemPlace) const;
 
-	bool moveItem(const QString& id, int newCol, int newRow, bool checkItemPlace);
+	bool moveItem(const InventoryHandler& item, int newCol, int newRow, bool checkItemPlace);
 	void removeItem(const InventoryHandler& item);
 
-	bool splitItemStack(const InventoryHandler& item, int newCol, int newRow, bool checkItemPlace);
+	bool splitStack(const QString& itemId, int newCol, int newRow, int splitCount);
 
 	std::shared_ptr<InventoryItem> itemById(const QString& id) const;
 	InventoryItem* itemAt(int col, int row) const;
@@ -42,6 +42,7 @@ signals:
 	void placeItemEvent(const InventoryHandler& item, int row, int col);
 	void removeItemEvent(const InventoryHandler& item, int row, int col);
 	void moveItemEvent(const InventoryHandler& item, int row, int col, int newCol, int newRow);
+	void itemCountChanged(const InventoryHandler& item);
 
 private:
 	class Private;

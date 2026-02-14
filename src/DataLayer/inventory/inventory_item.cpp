@@ -6,7 +6,7 @@ QByteArray InventoryHandler::toMimeData() const {
 	QByteArray data;
 	QDataStream stream(&data, QIODevice::WriteOnly);
 
-	stream << id << name << x << y << width << height << count;
+	stream << id << name << x << y << width << height << count << maxStack << static_cast<qint32>(type);
 
 	return data;
 }
@@ -14,8 +14,8 @@ QByteArray InventoryHandler::toMimeData() const {
 InventoryHandler InventoryHandler::fromMimeData(const QByteArray& data) {
 	QDataStream stream(data);
 	QString id, name;
-	qint32 x, y, width, height, count;
-	stream >> id >> name >> x >> y >> width >> height >> count;
+	qint32 x, y, width, height, count, maxStack, type;
+	stream >> id >> name >> x >> y >> width >> height >> count >> maxStack >> type;
 
 	// В реальном проекте здесь нужно запросить полные данные из ItemDatabase
 	// Для примера возвращаем заглушку:
@@ -27,6 +27,8 @@ InventoryHandler InventoryHandler::fromMimeData(const QByteArray& data) {
 	item.width = width;
 	item.height = height;
 	item.count = count;
+	item.maxStack = maxStack;
+	item.type = static_cast<InventoryItemType>(type);
 
 	// Иконка-заглушка
 	item.icon = QPixmap(64, 64);
@@ -103,7 +105,7 @@ std::shared_ptr<InventoryItem> InventoryItem::fromJson(const QJsonObject& json) 
 	return item;
 }
 
-std::shared_ptr<InventoryItem> InventoryItem::dublicate(bool newId) const {
+std::shared_ptr<InventoryItem> InventoryItem::duplicate(bool newId) const {
 	auto item = std::make_shared<InventoryItem>();
 
 	if (newId) {

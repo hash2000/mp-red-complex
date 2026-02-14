@@ -47,7 +47,8 @@ protected:
 private:
 	void onItemPlaced(const InventoryHandler& item, int row, int col);
 	void onItemRemoved(const InventoryHandler& item, int row, int col);
-	void onItemMoved(const InventoryHandler& item, int oldRow, int oldCol, int newRow, int newCol);
+	void onItemMoved(const InventoryHandler& item, int oldCol, int oldRow, int newCol, int newRow);
+	void onItemCountChanged(const InventoryHandler& item);
 
 	void createWidgetForItem(const InventoryHandler& item);
 	void removeWidgetForItem(const InventoryHandler& item);
@@ -55,6 +56,7 @@ private:
 	void updateGridSize();
 	void showDropPreview(int col, int row, int width, int height, bool canPlace);
 	void hideDropPreview();
+	void changeItemStackCount(const InventoryHandler& item);
 
 private:
 	class Private;
