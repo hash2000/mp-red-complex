@@ -1,5 +1,6 @@
 #include "Game/widgets/inventory/inventory_item_widget.h"
 #include "Game/widgets/inventory/inventory_grid.h"
+#include "Game/widgets/inventory/stack_split_widget.h"
 #include <QApplication>
 #include <QVBoxLayout>
 #include <QLabel>
@@ -127,7 +128,6 @@ void InventoryItemWidget::startDrag() {
 
 	mimeData->setData("application/x-game-item", d->item.toMimeData());
 	mimeData->setData("application/x-game-item-source-inventory-id", d->grid->inventoryId().toUtf8());
-	mimeData->setData("application/x-game-item-remove-from-source", "1");
 	mimeData->setText(d->item.name);
 
 	// Иконка для курсора
@@ -194,9 +194,43 @@ void InventoryItemWidget::mouseMoveEvent(QMouseEvent* event) {
 }
 
 void InventoryItemWidget::mouseDoubleClickEvent(QMouseEvent* event) {
-	if (event->button() == Qt::LeftButton && isContainer()) {
-		openContainer();
+	if (event->button() == Qt::LeftButton) {
+		if (isContainer()) {
+			openContainer();
+			event->accept();
+			return;
+		}
+
+		if (isStackable() && d->item.count > 1) {
+			// Создаём и показываем виджет разделения
+			auto splitWidget = new StackSplitWidget(d->item, d->grid, nullptr);
+
+			// Позиционируем относительно текущего виджета
+			QTimer::singleShot(0, splitWidget, [splitWidget, this]() {
+				splitWidget->positionNearWidget(this);
+				});
+
+			// Обработка успешного разделения
+			connect(splitWidget, &StackSplitWidget::splitDragStarted, this, [this](const InventoryHandler& splitItem) {
+				// Обновляем количество в исходном предмете
+				int remaining = d->item.count - splitItem.count;
+				if (remaining > 0) {
+					setCount(remaining);
+				}
+				else {
+					// Если всё вынесено — удаляем предмет
+					emit removedFromGrid(this);
+				}
+				});
+
+			// Обработка отмены
+			connect(splitWidget, &StackSplitWidget::splitCancelled, splitWidget, &QWidget::deleteLater);
+
+			event->accept();
+			return;
+		}
 	}
+
 	QWidget::mouseDoubleClickEvent(event);
 }
 

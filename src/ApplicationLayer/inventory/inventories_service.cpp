@@ -78,13 +78,21 @@ bool InventoriesService::crossInventoryMove(const InventoryHandler& item, int co
 		// Сохраняем владение перед удалением
 		itemToMove = it->second;
 
-		// Удаляем из исходного инвентаря (освобождает только карту, не сам предмет благодаря itemToMove)
-		fromService->removeItem(item);
-
-		// Обновляем координаты предмета для нового инвентаря
-		itemToMove->x = col;
-		itemToMove->y = row;
+		const auto remains = qMax(itemToMove->count - item.count, 0);
+		if (remains == 0) {
+			fromService->removeItem(item);
+		}
+		else {
+			// стопка выведена не полностью, поэтому исходную стопку оставляем
+			// и создаём новую
+			itemToMove->count = remains;
+			itemToMove = itemToMove->dublicate(true);
+			itemToMove->count = item.count;
+		}
 	}
+
+	itemToMove->x = col;
+	itemToMove->y = row;
 
 	// 5. Размещаем в целевом инвентаре
 	toService->inventory()->items.emplace(itemToMove->id, itemToMove);

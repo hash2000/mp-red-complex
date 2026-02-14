@@ -352,3 +352,25 @@ std::shared_ptr<InventoryItem> InventoryService::itemById(const QString& id) con
 	return std::shared_ptr<InventoryItem>();
 }
 
+bool InventoryService::splitItemStack(const InventoryHandler& item, int newCol, int newRow, bool checkItemPlace) {
+	auto itemPtr = itemById(item.id);
+	if (!itemPtr) {
+		return false;
+	}
+
+	const auto remains = qMax(itemPtr->count - item.count, 0);
+	if (remains == 0) {
+		return moveItem(item.id, newCol, newRow, checkItemPlace);
+	}
+
+	itemPtr->count = remains;
+	itemPtr = itemPtr->dublicate();
+	itemPtr->count = item.count;
+	itemPtr->x = newCol;
+	itemPtr->y = newRow;
+
+	d->inventory->items.emplace(itemPtr->id, itemPtr);
+
+	return placeItem(*itemPtr);
+
+}

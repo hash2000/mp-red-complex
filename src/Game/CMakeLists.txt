@@ -18,6 +18,7 @@ target_link_libraries(Game
 		Qt6::OpenGLWidgets
 
 		Base
+		BaseWidgets
 		Resources
 		DataLayer
 		ApplicationLayer

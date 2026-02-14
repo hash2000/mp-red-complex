@@ -152,7 +152,9 @@ void InventoryGrid::createWidgetForItem(const InventoryHandler& item) {
 
 	// Подключаем сигнал удаления (для перемещения между сетками)
 	connect(widget, &InventoryItemWidget::removedFromGrid, this, [this, widget](InventoryItemWidget* srcWidget) {
-		if (srcWidget != widget || !d->inventory) return;
+		if (srcWidget != widget || !d->inventory) {
+			return;
+		}
 
 		// Удаляем из сервиса (сервис сам обновит состояние)
 		d->inventory->removeItem(widget->item());
@@ -179,7 +181,7 @@ void InventoryGrid::moveWidgetForItem(const InventoryHandler& item, int newCol, 
 		return;
 	}
 
-	auto* widget = d->widgets[item.id];
+	auto widget = d->widgets[item.id];
 	if (!widget) {
 		return;
 	}
@@ -278,7 +280,7 @@ void InventoryGrid::dropEvent(QDropEvent* event) {
 
 	// Перемещение внутри той же сетки
 	if (isSameGrid && d->inventory->containsItem(item)) {
-		if (d->inventory->moveItem(item.id, col, row, true)) {
+		if (d->inventory->splitItemStack(item, col, row, true)) {
 			// Сервис сам обновит состояние → виджет переместится через сигнал moveItemEvent
 			event->acceptProposedAction();
 			// Говорим источнику НЕ удалять предмет

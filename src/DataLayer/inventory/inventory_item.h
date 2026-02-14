@@ -51,6 +51,7 @@ struct InventoryItemRecipe {
 
 struct InventoryHandler {
 	QString id;
+	QString name;
 	int x = 0;
 	int y = 0;
 
@@ -61,11 +62,14 @@ struct InventoryHandler {
 	int count = 1;
 
 	QPixmap icon;
+
+	QByteArray toMimeData() const;
+
+	static InventoryHandler fromMimeData(const QByteArray& data);
 };
 
 struct InventoryItem : public InventoryHandler {
 	QString entityId;
-	QString name;
 	QString description;
 	QString iconPath;
 	InventoryItemType type;
@@ -81,13 +85,12 @@ struct InventoryItem : public InventoryHandler {
 
 	std::optional<InventoryItemRecipe> recipe;
 
-	QByteArray toMimeData() const;
-
-	static InventoryHandler fromMimeData(const QByteArray& data);
-
 	static std::shared_ptr<InventoryItem> fromJson(const QJsonObject& json);
 
 	bool compare(const InventoryHandler& item);
+	bool canMergeWith(const InventoryItem& other) const;
+
+	std::shared_ptr<InventoryItem> dublicate(bool newId = true) const;
 };
 
 struct Inventory {

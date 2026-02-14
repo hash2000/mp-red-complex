@@ -24,6 +24,8 @@ public:
 	bool moveItem(const QString& id, int newCol, int newRow, bool checkItemPlace);
 	void removeItem(const InventoryHandler& item);
 
+	bool splitItemStack(const InventoryHandler& item, int newCol, int newRow, bool checkItemPlace);
+
 	std::shared_ptr<InventoryItem> itemById(const QString& id) const;
 	InventoryItem* itemAt(int col, int row) const;
 	QVector<InventoryItem*> items() const;
