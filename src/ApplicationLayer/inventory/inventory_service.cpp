@@ -135,6 +135,8 @@ bool InventoryService::placeItem(const InventoryHandler& item) {
 			emit itemCountChanged(*targetCell->item);
 			return true;
 		}
+
+		return false;
 	}
 
 	for (int dy = 0; dy < itemPtr->height; dy++) {
