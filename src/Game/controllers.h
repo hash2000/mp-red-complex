@@ -1,15 +1,16 @@
 #pragma once
 #include <memory>
 
+class Services;
 class WindowsController;
+class InventoriesController;
 
 class Controllers {
 public:
-	Controllers();
+	Controllers(Services* services);
 	~Controllers();
 
 	WindowsController* windowsController() const;
-
 
 private:
 	class Private;

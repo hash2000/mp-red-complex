@@ -1,5 +1,6 @@
-#include "ApplicationLayer/services/inventory/inventories_service.h"
-#include "ApplicationLayer/services/inventory/inventory_service.h"
+#include "ApplicationLayer/inventory/inventories_service.h"
+#include "ApplicationLayer/inventory/inventory_service.h"
+#include "ApplicationLayer/inventory/inventories_controller.h"
 #include <map>
 
 class InventoriesService::Private {
@@ -10,15 +11,21 @@ public:
 
 	InventoriesService* q;
 	InventoryDataProvider* dataProvider;
+	std::unique_ptr<InventoriesController> controller;
 	std::map<QUuid, std::unique_ptr<InventoryService>> inventories;
 };
 
 InventoriesService::InventoriesService(InventoryDataProvider* dataProvider, QObject* parent)
 : d(std::make_unique<Private>(this)) {
 	d->dataProvider = dataProvider;
+	d->controller = std::make_unique<InventoriesController>();
 }
 
 InventoriesService::~InventoriesService() = default;
+
+InventoriesController* InventoriesService::controller() const {
+	return d->controller.get();
+}
 
 InventoryService* InventoriesService::inventoryService(const QUuid& id, bool loadIfNotExists) const {
 	if (!d->inventories.contains(id)) {
@@ -27,7 +34,8 @@ InventoryService* InventoriesService::inventoryService(const QUuid& id, bool loa
 		}
 
 		auto inventory = d->dataProvider->loadInventory(id);
-		d->inventories[id] = std::make_unique<InventoryService>(inventory);
+		d->inventories[id] = std::make_unique<InventoryService>(inventory, controller());
+		qDebug() << "Load inventory" << id;
 	}
 
 	return d->inventories[id].get();
@@ -101,6 +109,12 @@ bool InventoriesService::crossInventoryMove(const InventoryHandler& item, int co
 
 }
 
+void InventoriesService::onInventoryClosed(const QUuid& id) {
+	const auto & result = d->inventories.erase(id);
+	if (result != 0) {
+		qDebug() << "Unload inventory" << id;
+	}
+}
 
 void InventoriesService::onSave() {
 

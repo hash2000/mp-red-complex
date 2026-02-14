@@ -1,9 +1,13 @@
 #include "Game/widgets/inventory/inventory_window.h"
 #include "Game/widgets/inventory/inventory_grid_view.h"
 #include "Game/widgets/inventory/inventory_grid.h"
+#include "ApplicationLayer/inventory/inventories_controller.h"
+#include "ApplicationLayer/inventory/inventories_service.h"
 #include <QVBoxLayout>
 #include <QUuid>
 #include <QMdiSubWindow>
+#include <QEvent>
+#include <QCloseEvent>
 
 class InventoryWindow::Private {
 public:
@@ -12,20 +16,18 @@ public:
 	}
 
 	InventoryWindow* q;
+	InventoriesService* service;
 	InventoryGridView* widget;
 	QString inventoryName;
 };
 
-InventoryWindow::InventoryWindow(InventoriesService* inventoriesService, const QString& id, QWidget* parent)
+InventoryWindow::InventoryWindow(InventoriesService* service, const QString& id, QWidget* parent)
 : d(std::make_unique<Private>(this))
 , MdiChildWindow(id, parent) {
-	d->widget = new InventoryGridView(inventoriesService, this);
+	d->service = service;
+	d->widget = new InventoryGridView(service, this);
 	d->inventoryName = "Inventory";
-	auto layout = new QVBoxLayout(this);
-	layout->setContentsMargins(0, 0, 0, 0);
-	layout->addWidget(d->widget);
-
-	setLayout(layout);
+	setWidget(d->widget);
 }
 
 InventoryWindow::~InventoryWindow() = default;
@@ -38,11 +40,16 @@ bool InventoryWindow::handleCommand(const QString& commandName, const QStringLis
 			return false;
 		}
 
+		if (!d->service->controller()->postInventoryLoad(target)) {
+			return false;
+		}
+
 		if (!d->widget->load(target)) {
 			return false;
 		}
 
 		d->inventoryName = d->widget->grid()->inventoryName();
+		d->service->controller()->postInventoryLoaded(target);
 
 		return true;
 	}
@@ -52,4 +59,10 @@ bool InventoryWindow::handleCommand(const QString& commandName, const QStringLis
 
 QString InventoryWindow::windowTitle() const {
 	return d->inventoryName;
+}
+
+void InventoryWindow::closeEvent(QCloseEvent* closeEvent) {
+	const auto target = QUuid::fromString(d->widget->grid()->inventoryId());
+	d->service->controller()->postInventoryUnloaded(target);
+	QMdiSubWindow::closeEvent(closeEvent);
 }

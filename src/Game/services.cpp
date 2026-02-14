@@ -1,7 +1,7 @@
 #include "Game/services.h"
 #include "Game/services/time_service/time_service.h"
 #include "Game/services/world_service/world_service.h"
-#include "ApplicationLayer/services/inventory/inventories_service.h"
+#include "ApplicationLayer/inventory/inventories_service.h"
 #include "DataLayer/inventory/inventory_data_provider_fs_impl.h"
 #include <list>
 

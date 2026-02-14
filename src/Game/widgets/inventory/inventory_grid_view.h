@@ -11,7 +11,7 @@ class InventoryGridView : public QScrollArea {
 	Q_OBJECT
 
 public:
-	explicit InventoryGridView(InventoriesService* inventoriesService, QWidget* parent = nullptr);
+	explicit InventoryGridView(InventoriesService* service, QWidget* parent = nullptr);
 	~InventoryGridView() override;
 
 	InventoryGrid* grid() const;

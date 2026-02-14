@@ -11,7 +11,7 @@ public:
 	}
 
 	MapWindow* q;
-	MapWidget* mapWidget;
+	MapWidget* widget;
 };
 
 
@@ -20,21 +20,19 @@ MapWindow::MapWindow(WorldService* worldService, TimeService* timeService, const
 	, d(std::make_unique<Private>(this)) {
 
 	// Создаём внутренний виджет карты
-	d->mapWidget = new MapWidget(this);
-	auto layout = new QVBoxLayout(this);
-	layout->setContentsMargins(0, 0, 0, 0);
-	layout->addWidget(d->mapWidget);
+	d->widget = new MapWidget(this);
 
-	setLayout(layout);
 	setWindowTitle("World Map");
 
-	connect(timeService, &TimeService::tick, d->mapWidget, &MapWidget::onTick);
+	connect(timeService, &TimeService::tick, d->widget, &MapWidget::onTick);
+
+	setWidget(d->widget);
 }
 
 MapWindow::~MapWindow() = default;
 
 MapWidget* MapWindow::widget() const {
-	return d->mapWidget;
+	return d->widget;
 }
 
 bool MapWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) {

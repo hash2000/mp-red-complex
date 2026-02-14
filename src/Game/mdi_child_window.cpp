@@ -13,7 +13,7 @@ public:
 
 
 MdiChildWindow::MdiChildWindow(const QString& id, QWidget* parent)
-	: QWidget(parent)
+	: QMdiSubWindow(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->windowId = id;
 }

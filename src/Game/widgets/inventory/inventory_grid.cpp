@@ -1,8 +1,8 @@
 #include "Game/widgets/inventory/inventory_grid.h"
 #include "Game/widgets/inventory/inventory_item_widget.h"
 #include "Game/widgets/inventory/drop_preview_widget.h"
-#include "ApplicationLayer/services/inventory/inventory_service.h"
-#include "ApplicationLayer/services/inventory/inventories_service.h"
+#include "ApplicationLayer/inventory/inventory_service.h"
+#include "ApplicationLayer/inventory/inventories_service.h"
 #include <QPoint>
 #include <QLayoutItem>
 #include <QLayout>
@@ -20,20 +20,23 @@ public:
 	}
 
 	InventoryGrid* q;
-	InventoryService* service = nullptr;
+	// сервис текущего инвентаря
+	InventoryService* inventory = nullptr;
+	// сервис всех инвентарей, для перебрасывания предметов между инвентарями
 	InventoriesService* inventories = nullptr;
-	QHash<QString, InventoryItemWidget*> widgets; // Кэш виджетов по ID предмета
+	// Кэш виджетов по ID предмета
+	QHash<QString, InventoryItemWidget*> widgets; 
 	DropPreviewWidget* dropPreview = nullptr;
 
 	static constexpr int CELL_SIZE = InventoryItemWidget::CELL_SIZE;
 };
 
 QString InventoryGrid::inventoryId() const {
-	return d->service ? d->service->inventory()->id : QString();
+	return d->inventory ? d->inventory->inventory()->id : QString();
 }
 
 QString InventoryGrid::inventoryName() const {
-	return d->service ? d->service->inventory()->name : QString();
+	return d->inventory ? d->inventory->inventory()->name : QString();
 }
 
 QString InventoryGrid::newObjectName() {
@@ -56,19 +59,19 @@ InventoryGrid::InventoryGrid(QWidget* parent)
 InventoryGrid::~InventoryGrid() = default;
 
 InventoryService* InventoryGrid::inventoryService() const {
-	return d->service;
+	return d->inventory;
 }
 
 void InventoryGrid::setInventoryService(InventoriesService* inventories, const QUuid& id) {
 	auto service = inventories->inventoryService(id, true);
 
-	if (d->service == service) {
+	if (d->inventory == service) {
 		return;
 	}
 
 	// Отписываемся от старого сервиса
-	if (d->service) {
-		disconnect(d->service, nullptr, this, nullptr);
+	if (d->inventory) {
+		disconnect(d->inventory, nullptr, this, nullptr);
 		// Очищаем все виджеты
 		for (auto* widget : d->widgets) {
 			widget->deleteLater();
@@ -76,21 +79,18 @@ void InventoryGrid::setInventoryService(InventoriesService* inventories, const Q
 		d->widgets.clear();
 	}
 
-	d->service = service;
+	d->inventory = service;
 	d->inventories = inventories;
 
-	if (d->service) {
+	if (d->inventory) {
 		// Подписываемся на события сервиса
-		connect(d->service, &InventoryService::placeItemEvent,
-			this, &InventoryGrid::onItemPlaced);
-		connect(d->service, &InventoryService::removeItemEvent,
-			this, &InventoryGrid::onItemRemoved);
-		connect(d->service, &InventoryService::moveItemEvent,
-			this, &InventoryGrid::onItemMoved);
+		connect(d->inventory, &InventoryService::placeItemEvent, this, &InventoryGrid::onItemPlaced);
+		connect(d->inventory, &InventoryService::removeItemEvent, this, &InventoryGrid::onItemRemoved);
+		connect(d->inventory, &InventoryService::moveItemEvent, this, &InventoryGrid::onItemMoved);
 
 		// Инициализируем виджеты из текущего состояния сервиса
 		updateGridSize();
-		for (auto item : d->service->items()) {
+		for (auto item : d->inventory->items()) {
 			createWidgetForItem(*item);
 		}
 	}
@@ -99,12 +99,12 @@ void InventoryGrid::setInventoryService(InventoriesService* inventories, const Q
 }
 
 void InventoryGrid::updateGridSize() {
-	if (!d->service) {
+	if (!d->inventory) {
 		return;
 	}
 
-	int width = d->service->inventory()->cols * Private::CELL_SIZE;
-	int height = d->service->inventory()->rows * Private::CELL_SIZE;
+	int width = d->inventory->inventory()->cols * Private::CELL_SIZE;
+	int height = d->inventory->inventory()->rows * Private::CELL_SIZE;
 	setFixedSize(width, height);
 
 	// Синхронизируем размер оверлея
@@ -140,7 +140,7 @@ void InventoryGrid::createWidgetForItem(const InventoryHandler& item) {
 		return;
 	}
 
-	auto itemPtr = d->service->itemById(item.id);
+	auto itemPtr = d->inventory->itemById(item.id);
 	if (!itemPtr) {
 		return;
 	}
@@ -152,10 +152,10 @@ void InventoryGrid::createWidgetForItem(const InventoryHandler& item) {
 
 	// Подключаем сигнал удаления (для перемещения между сетками)
 	connect(widget, &InventoryItemWidget::removedFromGrid, this, [this, widget](InventoryItemWidget* srcWidget) {
-		if (srcWidget != widget || !d->service) return;
+		if (srcWidget != widget || !d->inventory) return;
 
 		// Удаляем из сервиса (сервис сам обновит состояние)
-		d->service->removeItem(widget->item());
+		d->inventory->removeItem(widget->item());
 		// Виджет будет удалён в onItemRemoved
 		});
 
@@ -192,11 +192,11 @@ void InventoryGrid::moveWidgetForItem(const InventoryHandler& item, int newCol, 
 }
 
 InventoryItemWidget* InventoryGrid::widgetAt(int col, int row) const {
-	if (!d->service) {
+	if (!d->inventory) {
 		return nullptr;
 	}
 
-	auto item = d->service->itemAt(col, row);
+	auto item = d->inventory->itemAt(col, row);
 	if (!item || !d->widgets.contains(item->id)) {
 		return nullptr;
 	}
@@ -205,11 +205,11 @@ InventoryItemWidget* InventoryGrid::widgetAt(int col, int row) const {
 }
 
 int InventoryGrid::rows() const {
-	return d->service ? d->service->inventory()->rows : 0;
+	return d->inventory ? d->inventory->inventory()->rows : 0;
 }
 
 int InventoryGrid::cols() const {
-	return d->service ? d->service->inventory()->cols : 0;
+	return d->inventory ? d->inventory->inventory()->cols : 0;
 }
 
 void InventoryGrid::dragEnterEvent(QDragEnterEvent* event) {
@@ -222,7 +222,7 @@ void InventoryGrid::dragEnterEvent(QDragEnterEvent* event) {
 }
 
 void InventoryGrid::dragMoveEvent(QDragMoveEvent* event) {
-	if (!d->service || !event->mimeData()->hasFormat("application/x-game-item")) {
+	if (!d->inventory || !event->mimeData()->hasFormat("application/x-game-item")) {
 		event->ignore();
 		return;
 	}
@@ -238,7 +238,7 @@ void InventoryGrid::dragMoveEvent(QDragMoveEvent* event) {
 	int row = pos.y() / Private::CELL_SIZE;
 
 	// Проверяем возможность размещения
-	bool canPlace = d->service->canPlaceItem(item, col, row, isSameGrid);
+	bool canPlace = d->inventory->canPlaceItem(item, col, row, isSameGrid);
 
 	// Показываем подсветку
 	showDropPreview(col, row, item.width, item.height, canPlace);
@@ -253,7 +253,7 @@ void InventoryGrid::dragLeaveEvent(QDragLeaveEvent* event) {
 void InventoryGrid::dropEvent(QDropEvent* event) {
 	hideDropPreview();
 
-	if (!d->service || !event->mimeData()->hasFormat("application/x-game-item")) {
+	if (!d->inventory || !event->mimeData()->hasFormat("application/x-game-item")) {
 		event->ignore();
 		return;
 	}
@@ -277,8 +277,8 @@ void InventoryGrid::dropEvent(QDropEvent* event) {
 	const auto isSameGrid = (sourceInventoryId == currentInventoryId);
 
 	// Перемещение внутри той же сетки
-	if (isSameGrid && d->service->containsItem(item)) {
-		if (d->service->moveItem(item.id, col, row, true)) {
+	if (isSameGrid && d->inventory->containsItem(item)) {
+		if (d->inventory->moveItem(item.id, col, row, true)) {
 			// Сервис сам обновит состояние → виджет переместится через сигнал moveItemEvent
 			event->acceptProposedAction();
 			// Говорим источнику НЕ удалять предмет
@@ -304,7 +304,7 @@ void InventoryGrid::dropEvent(QDropEvent* event) {
 void InventoryGrid::paintEvent(QPaintEvent* event) {
 	QWidget::paintEvent(event);
 
-	if (!d->service) {
+	if (!d->inventory) {
 		return;
 	}
 
@@ -315,12 +315,12 @@ void InventoryGrid::paintEvent(QPaintEvent* event) {
 	painter.fillRect(rect(), QColor(30, 41, 59));
 
 	// Сетка
-	for (int col = 0; col <= d->service->inventory()->cols; ++col) {
+	for (int col = 0; col <= d->inventory->inventory()->cols; ++col) {
 		int x = col * Private::CELL_SIZE;
 		painter.setPen(QColor(66, 73, 83));
 		painter.drawLine(x, 0, x, height());
 	}
-	for (int row = 0; row <= d->service->inventory()->rows; ++row) {
+	for (int row = 0; row <= d->inventory->inventory()->rows; ++row) {
 		int y = row * Private::CELL_SIZE;
 		painter.setPen(QColor(66, 73, 83));
 		painter.drawLine(0, y, width(), y);

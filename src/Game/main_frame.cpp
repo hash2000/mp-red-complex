@@ -50,6 +50,7 @@ void GameMainFrame::setupConsole() {
 	d->controller = new ApplicationController(d->resources.get());
 	d->commandConsole = new CommandConsole(d->controller, this);
 	d->commandConsole->setWindowFlags(Qt::Dialog | Qt::WindowStaysOnTopHint);
+	toggleCommandConsole(false);
 
 	d->controller->controllers()->windowsController()->setMdiArea(d->mdiArea);
 
@@ -59,7 +60,7 @@ void GameMainFrame::setupConsole() {
 	d->consoleToggleButton->setToolTip("Command Console (Ctrl+`)");
 	d->consoleToggleButton->setCheckable(true);
 	d->consoleToggleButton->setAutoRaise(true);
-	d->consoleToggleButton->setChecked(!d->commandConsole->isVisible());
+	d->consoleToggleButton->setChecked(false);
 
 	connect(d->consoleToggleButton, &QToolButton::toggled, this, &GameMainFrame::toggleCommandConsole);
 

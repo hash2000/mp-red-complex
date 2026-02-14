@@ -1,6 +1,6 @@
 #include "Game/widgets/equipment/equipment_window.h"
 #include "Game/widgets/equipment/equipment_widget.h"
-#include "ApplicationLayer/services/inventory/inventories_service.h"
+#include "ApplicationLayer/inventory/inventories_service.h"
 #include <QVBoxLayout>
 
 class EquipmentWindow::Private {
@@ -16,11 +16,6 @@ EquipmentWindow::EquipmentWindow(InventoriesService* inventoriesService, const Q
 	: d(std::make_unique<Private>(this))
 	, MdiChildWindow(id, parent) {
 	d->widget = new EquipmentWidget(this);
-	auto layout = new QVBoxLayout(this);
-	layout->setContentsMargins(0, 0, 0, 0);
-	layout->addWidget(d->widget);
-
-	setLayout(layout);
 	setWindowTitle("Equipment");
 
 	connect(d->widget, &EquipmentWidget::itemEquipped, [](const EquipmentItem& item, EquipmentSlotType slot) {
@@ -37,6 +32,7 @@ EquipmentWindow::EquipmentWindow(InventoriesService* inventoriesService, const Q
 		EquipmentItemRarityType::Common };
 
 	d->widget->equipItem(sword);
+	setWidget(d->widget);
 }
 
 EquipmentWindow::~EquipmentWindow() = default;

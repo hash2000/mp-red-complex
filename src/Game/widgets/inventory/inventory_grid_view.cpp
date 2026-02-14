@@ -1,6 +1,6 @@
 #include "Game/widgets/inventory/inventory_grid_view.h"
 #include "Game/widgets/inventory/inventory_grid.h"
-#include "ApplicationLayer/services/inventory/inventories_service.h"
+#include "ApplicationLayer/inventory/inventories_service.h"
 
 class InventoryGridView::Private {
 public:
@@ -11,13 +11,13 @@ public:
 
 	InventoryGridView* q;
 	InventoryGrid* grid = nullptr;
-	InventoriesService* inventoriesService;
+	InventoriesService* service;
 };
 
-InventoryGridView::InventoryGridView(InventoriesService* inventoriesService, QWidget* parent)
+InventoryGridView::InventoryGridView(InventoriesService* service, QWidget* parent)
 : d(std::make_unique<Private>(this))
 , QScrollArea(parent) {
-	d->inventoriesService = inventoriesService;
+	d->service = service;
 	setWidgetResizable(false);
 	setAlignment(Qt::AlignLeft | Qt::AlignTop);
 	setStyleSheet(R"(
@@ -71,7 +71,7 @@ bool InventoryGridView::load(const QUuid& id) {
 	}
 
 	d->grid = new InventoryGrid(this);
-	d->grid->setInventoryService(d->inventoriesService, id);
+	d->grid->setInventoryService(d->service, id);
 
 	setWidget(d->grid);
 	return true;

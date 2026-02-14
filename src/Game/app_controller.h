@@ -12,7 +12,6 @@ class EventBus;
 class Services;
 class Controllers;
 class Resources;
-class InventoriesController;
 
 class ApplicationController : public QObject {
 Q_OBJECT

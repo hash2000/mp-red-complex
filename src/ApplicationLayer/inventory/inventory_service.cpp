@@ -1,5 +1,5 @@
-#include "ApplicationLayer/services/inventory/inventory_service.h"
-#include "ApplicationLayer/services/inventory/inventories_service.h"
+#include "ApplicationLayer/inventory/inventory_service.h"
+#include "ApplicationLayer/inventory/inventories_service.h"
 #include <vector>
 
 
@@ -9,7 +9,6 @@ struct InventoryViewCell {
 	int col = 0;
 	InventoryItem* item = nullptr;
 };
-
 
 
 class InventoryService::Private {
@@ -30,20 +29,25 @@ public:
 		return false;
 	}
 
-
 	InventoryService* q;
+	InventoriesController* controller;
 	std::shared_ptr<Inventory> inventory;
 	std::vector<std::vector<std::unique_ptr<InventoryViewCell>>> cells;
 	QHash<QPoint, InventoryItem*> items;
 };
 
-InventoryService::InventoryService(std::shared_ptr<Inventory> inventory)
+InventoryService::InventoryService(std::shared_ptr<Inventory> inventory, InventoriesController* controller)
 : d(std::make_unique<Private>(this)) {
 	d->inventory = inventory;
+	d->controller = controller;
 	setupCells();
 }
 
 InventoryService::~InventoryService() = default;
+
+InventoriesController* InventoryService::controller() const {
+	return d->controller;
+}
 
 std::shared_ptr<Inventory> InventoryService::inventory() const {
 	return d->inventory;

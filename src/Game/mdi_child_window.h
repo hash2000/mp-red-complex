@@ -1,11 +1,12 @@
 #pragma once
+#include <QMdiSubWindow>
 #include <QWidget>
 #include <QString>
 #include <QSize>
 
 class CommandContext;
 
-class MdiChildWindow : public QWidget {
+class MdiChildWindow : public QMdiSubWindow {
 	Q_OBJECT
 public:
 	explicit MdiChildWindow(const QString& id, QWidget* parent = nullptr);
@@ -20,9 +21,6 @@ public:
 	virtual bool handleCommand(const QString& commandName,
 		const QStringList& args,
 		class CommandContext* context);
-
-signals:
-	void requestClose();
 
 private:
 	class Private;
