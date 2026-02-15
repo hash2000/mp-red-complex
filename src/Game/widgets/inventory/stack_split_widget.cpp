@@ -3,7 +3,8 @@
 #include "Game/widgets/inventory/inventory_grid.h"
 #include "BaseWidgets/clicable_label.h"
 #include <QSlider>
-#include <QSpinBox>
+#include <QLineEdit>
+#include <QIntValidator>
 #include <QLabel>
 #include <QHBoxLayout>
 #include <QApplication>
@@ -26,7 +27,7 @@ public:
 	int selectedCount = 1;
 
 	QSlider* slider = nullptr;
-	QSpinBox* spinBox = nullptr;
+	QLineEdit* countEditor = nullptr;
 	ClickableLabel* iconLabel = nullptr;
 	QLabel* nameLabel = nullptr;
 	InventoryGrid* grid;
@@ -51,7 +52,7 @@ StackSplitWidget::StackSplitWidget(const InventoryHandler& item, InventoryGrid* 
 	// Устанавливаем начальное значение (половина стека или 1)
 	int initial = qMax(1, item.count / 2);
 	d->slider->setValue(initial);
-	d->spinBox->setValue(initial);
+	d->countEditor->setText(QString::number(initial));
 	d->selectedCount = initial;
 
 	setupEventHandling();
@@ -88,12 +89,12 @@ void StackSplitWidget::setupUi() {
 	connect(d->slider, &QSlider::valueChanged, this, &StackSplitWidget::onSliderChanged);
 
 	// Спинбокс
-	d->spinBox = new QSpinBox(this);
-	d->spinBox->setRange(1, d->item.count);
-	d->spinBox->setFixedWidth(50);
-	d->spinBox->setAlignment(Qt::AlignCenter);
-	connect(d->spinBox, QOverload<int>::of(&QSpinBox::valueChanged),
-		this, &StackSplitWidget::onSpinBoxChanged);
+	d->countEditor = new QLineEdit(this);
+	d->countEditor->setValidator(new QIntValidator(1, d->item.count, this));
+	d->countEditor->setFixedWidth(50);
+	d->countEditor->setAlignment(Qt::AlignCenter);
+	d->countEditor->setText(QString::number(d->selectedCount));
+	connect(d->countEditor, &QLineEdit::textChanged, this, &StackSplitWidget::onLineEditTextChanged);
 
 	// Иконка для дропа
 	d->iconLabel = new ClickableLabel(this);
@@ -119,7 +120,7 @@ void StackSplitWidget::setupUi() {
 	d->nameLabel->setAlignment(Qt::AlignVCenter);
 
 	layout->addWidget(d->slider, 1);
-	layout->addWidget(d->spinBox);
+	layout->addWidget(d->countEditor);
 	layout->addWidget(d->iconLabel);
 	layout->addWidget(d->nameLabel);
 
@@ -158,8 +159,8 @@ void StackSplitWidget::setupUi() {
 
 void StackSplitWidget::setupEventHandling() {
 	// Разрешаем фокус для спинбокса
-	d->spinBox->setFocusPolicy(Qt::StrongFocus);
-	d->spinBox->installEventFilter(this);
+	d->countEditor->setFocusPolicy(Qt::StrongFocus);
+	d->countEditor->installEventFilter(this);
 
 	// Слайдер тоже может получать фокус
 	d->slider->setFocusPolicy(Qt::StrongFocus);
@@ -206,16 +207,20 @@ void StackSplitWidget::positionNearWidget(QWidget* targetWidget) {
 
 void StackSplitWidget::onSliderChanged(int value) {
 	d->selectedCount = value;
-	d->spinBox->blockSignals(true);
-	d->spinBox->setValue(value);
-	d->spinBox->blockSignals(false);
+	d->countEditor->blockSignals(true);
+	d->countEditor->setText(QString::number(value));
+	d->countEditor->blockSignals(false);
 }
 
-void StackSplitWidget::onSpinBoxChanged(int value) {
-	d->selectedCount = value;
-	d->slider->blockSignals(true);
-	d->slider->setValue(value);
-	d->slider->blockSignals(false);
+void StackSplitWidget::onLineEditTextChanged(const QString& text) {
+	bool ok = false;
+	int value = text.toInt(&ok);
+	if (ok && value >= 1 && value <= d->item.count) {
+		d->selectedCount = value;
+		d->slider->blockSignals(true);
+		d->slider->setValue(value);
+		d->slider->blockSignals(false);
+	}
 }
 
 void StackSplitWidget::onStartDrag() {

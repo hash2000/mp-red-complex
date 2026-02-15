@@ -30,7 +30,7 @@ protected:
 
 private slots:
 	void onSliderChanged(int value);
-	void onSpinBoxChanged(int value);
+	void onLineEditTextChanged(const QString& text);
 	void onStartDrag();
 
 private:

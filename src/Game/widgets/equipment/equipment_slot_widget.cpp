@@ -227,9 +227,9 @@ bool EquipmentSlot::canAcceptItem(const EquipmentItem& item) const {
 		return item.type == EquipmentItemType::Ring;
 	case EquipmentSlotType::Amulet:
 		return item.type == EquipmentItemType::Amulet;
-	default:
-		return false;
 	}
+
+	return false;
 }
 
 void EquipmentSlot::updateVisualState() {

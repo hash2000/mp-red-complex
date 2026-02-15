@@ -19,7 +19,6 @@ EquipmentWidget::EquipmentWidget(QWidget* parent)
 
 	setupLayout();
 
-	// Стиль по умолчанию (можно переопределить через внешний QSS)
 	setStyleSheet(R"(
         #EquipmentWidget {
             background-color: #1a202c;
@@ -33,24 +32,24 @@ EquipmentWidget::EquipmentWidget(QWidget* parent)
 EquipmentWidget::~EquipmentWidget() = default;
 
 void EquipmentWidget::setupLayout() {
-	auto* mainLayout = new QVBoxLayout(this);
+	auto mainLayout = new QVBoxLayout(this);
 	mainLayout->setContentsMargins(10, 10, 10, 10);
 	mainLayout->setSpacing(12);
 
 	// === Верхний ряд: оружие/щит + голова ===
-	auto* topRow = new QHBoxLayout();
+	auto topRow = new QHBoxLayout();
 	topRow->setSpacing(16);
 	topRow->addStretch();
 
-	auto* leftWeaponSlot = new EquipmentSlot(EquipmentSlotType::WeaponLeft, this);
+	auto leftWeaponSlot = new EquipmentSlot(EquipmentSlotType::WeaponLeft, this);
 	d->allSlots[EquipmentSlotType::WeaponLeft] = leftWeaponSlot;
 	topRow->addWidget(leftWeaponSlot);
 
-	auto* headSlot = new EquipmentSlot(EquipmentSlotType::Head, this);
+	auto headSlot = new EquipmentSlot(EquipmentSlotType::Head, this);
 	d->allSlots[EquipmentSlotType::Head] = headSlot;
 	topRow->addWidget(headSlot);
 
-	auto* rightWeaponSlot = new EquipmentSlot(EquipmentSlotType::WeaponRight, this);
+	auto rightWeaponSlot = new EquipmentSlot(EquipmentSlotType::WeaponRight, this);
 	d->allSlots[EquipmentSlotType::WeaponRight] = rightWeaponSlot;
 	topRow->addWidget(rightWeaponSlot);
 
@@ -58,10 +57,10 @@ void EquipmentWidget::setupLayout() {
 	mainLayout->addLayout(topRow);
 
 	// === Центр: тело ===
-	auto* bodyRow = new QHBoxLayout();
+	auto bodyRow = new QHBoxLayout();
 	bodyRow->addStretch();
 
-	auto* bodySlot = new EquipmentSlot(EquipmentSlotType::Body, this);
+	auto bodySlot = new EquipmentSlot(EquipmentSlotType::Body, this);
 	d->allSlots[EquipmentSlotType::Body] = bodySlot;
 	bodyRow->addWidget(bodySlot);
 
@@ -69,40 +68,40 @@ void EquipmentWidget::setupLayout() {
 	mainLayout->addLayout(bodyRow);
 
 	// === Нижний ряд: перчатки + обувь + кольца/амулет ===
-	auto* bottomRow = new QHBoxLayout();
+	auto bottomRow = new QHBoxLayout();
 	bottomRow->setSpacing(16);
 	bottomRow->addStretch();
 
 	// Левые перчатки
-	auto* glovesLeftSlot = new EquipmentSlot(EquipmentSlotType::GlovesLeft, this);
+	auto glovesLeftSlot = new EquipmentSlot(EquipmentSlotType::GlovesLeft, this);
 	d->allSlots[EquipmentSlotType::GlovesLeft] = glovesLeftSlot;
 	bottomRow->addWidget(glovesLeftSlot);
 
 	// Обувь
-	auto* bootsSlot = new EquipmentSlot(EquipmentSlotType::Boots, this);
+	auto bootsSlot = new EquipmentSlot(EquipmentSlotType::Boots, this);
 	d->allSlots[EquipmentSlotType::Boots] = bootsSlot;
 	bottomRow->addWidget(bootsSlot);
 
 	// Правые перчатки
-	auto* glovesRightSlot = new EquipmentSlot(EquipmentSlotType::GlovesRight, this);
+	auto glovesRightSlot = new EquipmentSlot(EquipmentSlotType::GlovesRight, this);
 	d->allSlots[EquipmentSlotType::GlovesRight] = glovesRightSlot;
 	bottomRow->addWidget(glovesRightSlot);
 
 	bottomRow->addSpacing(24);
 
 	// Аксессуары (вертикальная колонка)
-	auto* accessoriesLayout = new QVBoxLayout();
+	auto accessoriesLayout = new QVBoxLayout();
 	accessoriesLayout->setSpacing(8);
 
-	auto* amuletSlot = new EquipmentSlot(EquipmentSlotType::Amulet, this);
+	auto amuletSlot = new EquipmentSlot(EquipmentSlotType::Amulet, this);
 	d->allSlots[EquipmentSlotType::Amulet] = amuletSlot;
 	accessoriesLayout->addWidget(amuletSlot);
 
-	auto* ringLeftSlot = new EquipmentSlot(EquipmentSlotType::RingLeft, this);
+	auto ringLeftSlot = new EquipmentSlot(EquipmentSlotType::RingLeft, this);
 	d->allSlots[EquipmentSlotType::RingLeft] = ringLeftSlot;
 	accessoriesLayout->addWidget(ringLeftSlot);
 
-	auto* ringRightSlot = new EquipmentSlot(EquipmentSlotType::RingRight, this);
+	auto ringRightSlot = new EquipmentSlot(EquipmentSlotType::RingRight, this);
 	d->allSlots[EquipmentSlotType::RingRight] = ringRightSlot;
 	accessoriesLayout->addWidget(ringRightSlot);
 
@@ -113,7 +112,7 @@ void EquipmentWidget::setupLayout() {
 	mainLayout->addStretch();
 
 	// Подключаем сигналы слотов к виджету
-	for (auto* slot : d->allSlots) {
+	for (auto slot : d->allSlots) {
 		connect(slot, &EquipmentSlot::itemEquipped, this, [this, slot](const EquipmentItem& item) {
 			emit itemEquipped(item, slot->slotType());
 			});
@@ -145,7 +144,7 @@ void EquipmentWidget::unequipItem(EquipmentSlotType slot) {
 }
 
 void EquipmentWidget::clearAll() {
-	for (auto* slot : d->allSlots) {
+	for (auto slot : d->allSlots) {
 		slot->clearItem();
 	}
 }
