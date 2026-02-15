@@ -11,10 +11,12 @@ public:
 	~InventoryDataProviderFilesistemImpl() override;
 
 	std::shared_ptr<Inventory> loadInventory(const QUuid& id) const override;
-	std::shared_ptr<InventoryItem> loadItem(const QString& id) const override;
-	QPixmap loadIcon(const InventoryItem& item) const override;
 
 private:
+
+	bool loadItem(InventoryItem& item) const;
+
+	QPixmap loadIcon(const InventoryItem& item) const;
 	static QPixmap loadEmptyStubIcon(const QString& id);
 
 private:

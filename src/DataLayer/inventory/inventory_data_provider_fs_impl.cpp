@@ -1,6 +1,7 @@
 #include "DataLayer/inventory/inventory_data_provider_fs_impl.h"
 #include "Resources/resources.h"
-#include "DataFormat/data_format/json/data_reader.h"
+#include "DataFormat/data_format/item/data_reader_json.h"
+#include "DataFormat/data_format/inventory/data_reader_json.h"
 #include "DataFormat/data_format/pixmap/data_reader.h"
 #include <QPainter>
 
@@ -31,77 +32,48 @@ std::shared_ptr<Inventory> InventoryDataProviderFilesistemImpl::loadInventory(co
 		return std::shared_ptr<Inventory>();
 	}
 
-	QJsonObject json;
+	auto result = std::make_shared<Inventory>();
 	try {
 		auto block = stream.value()->makeBlockAsStream();
-		DataFormat::Json::DataReader reader(*block);
-		reader.read(json);
+		DataFormat::Inv::DataReaderJson reader(*block);
+		reader.read(*result);
 	}
 	catch (std::exception& ex) {
 		qDebug() << ex.what();
 		return std::shared_ptr<Inventory>();
 	}
 
-	auto result = std::make_shared<Inventory>();
 	result->id = id.toString(QUuid::StringFormat::WithoutBraces);
-	result->rows = json["rows"].toInt();
-	result->cols = json["cols"].toInt();
-	result->name = json["name"].toString();
 
-	QJsonArray items = json["items"].toArray();
-	for (const QJsonValue& it : items) {
-		const auto entityId = it["entityId"]
-			.toString()
-			.toLower();
-		const auto id = it["id"]
-			.toString()
-			.toLower();
-
-		if (id.isEmpty()) {
-			qDebug() << "Inventory" << path << "has item without id field. entityId =" << entityId;
-			continue;
-		}
-
-		auto invItem = loadItem(entityId);
-		if (!invItem) {
-			continue;
-		}
-
-		invItem->id = id;
-		invItem->x = it["x"].toInt();
-		invItem->y = it["y"].toInt();
-		invItem->count = it["count"].toInt(1);
-		result->items.emplace(invItem->id, invItem);
+	for (const auto& it : result->items) {
+		loadItem(*it.second);		
 	}
 
 	return result;
 }
 
-std::shared_ptr<InventoryItem> InventoryDataProviderFilesistemImpl::loadItem(const QString& id) const {
+bool InventoryDataProviderFilesistemImpl::loadItem(InventoryItem& item) const {
 	const auto path = QString("items/%1.json")
-		.arg(id);
+		.arg(item.entityId);
 
 	auto stream = d->resources->getStream("assets", path);
 	if (!stream) {
 		qDebug().nospace() << "Can't open stream [" << "assets" << "] " << path;
-		return std::shared_ptr<InventoryItem>();
+		return false;
 	}
 
-	std::shared_ptr<InventoryItem> result;
-	QJsonObject json;
 	try {
 		auto block = stream.value()->makeBlockAsStream();
-		DataFormat::Json::DataReader reader(*block);
-		reader.read(json);
+		DataFormat::Item::DataReaderJson reader(*block);
+		reader.read(item);
 	}
 	catch (std::exception& ex) {
 		qDebug() << ex.what();
-		return std::shared_ptr<InventoryItem>();
+		return false;
 	}
 
-	result = InventoryItem::fromJson(json);
-	result->icon = loadIcon(*result);
-	return result;
+	item.icon = loadIcon(item);
+	return true;
 }
 
 QPixmap InventoryDataProviderFilesistemImpl::loadIcon(const InventoryItem& item) const {

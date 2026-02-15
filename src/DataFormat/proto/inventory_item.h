@@ -1,5 +1,5 @@
 #pragma once
-#include "DataLayer/equipment/equipment_item.h"
+#include "DataFormat/proto/equipment_item.h"
 #include <QString>
 #include <QPixmap>
 #include <QList>
@@ -82,8 +82,6 @@ struct InventoryItem : public InventoryHandler {
 	std::optional<InventoryItemContainerCapacity> containerCapacity;
 
 	std::optional<InventoryItemRecipe> recipe;
-
-	static std::shared_ptr<InventoryItem> fromJson(const QJsonObject& json);
 
 	bool compare(const InventoryHandler& item);
 	bool canMergeWith(const InventoryItem& other) const;

@@ -2,13 +2,13 @@
 #include "DataStream/data_stream.h"
 #include "DataFormat/proto/inventory_item.h"
 
-namespace DataFormat::Item {
+namespace DataFormat::Inv {
 
 	class DataReaderJson {
 	public:
 		DataReaderJson(DataStream& stream);
 
-		void read(InventoryItem& result);
+		void read(Inventory& result);
 
 	private:
 		DataStream& _stream;

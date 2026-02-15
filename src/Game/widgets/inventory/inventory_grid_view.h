@@ -1,5 +1,5 @@
 #pragma once
-#include "DataLayer/inventory/inventory_item.h"
+#include "DataFormat/proto/inventory_item.h"
 #include <QScrollArea>
 #include <QUuid>
 #include <memory>

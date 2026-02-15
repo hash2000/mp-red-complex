@@ -1,5 +1,5 @@
 #pragma once
-#include "DataLayer/inventory/inventory_item.h"
+#include "DataFormat/proto/inventory_item.h"
 #include <QObject>
 #include <QUuid>
 #include <memory>
