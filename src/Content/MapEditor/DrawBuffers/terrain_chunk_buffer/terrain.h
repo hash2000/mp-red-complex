@@ -5,6 +5,18 @@
 
 class DrawProgram;
 
+enum class TerrainBiome : uint8_t {
+	Empty = 0,
+	Sand,
+	Dirt,
+	Clay,
+	Stone,
+};
+
+struct TerrainBlockInfo {
+	TerrainBiome _biome{ TerrainBiome::Empty };
+};
+
 class TerrainChunk {
 public:
 	static const int CHUNK_SIZE = 32;
