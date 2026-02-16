@@ -179,6 +179,10 @@ void DataStream::throwExceptionIsSizeIsTooLong(size_t size, const std::string& m
 		return;
 	}
 
+	throwExceptionMessage(message);
+}
+
+void DataStream::throwExceptionMessage(const std::string& message) {
 	throw std::runtime_error(QString("Exception in [%1], position [%2]. %3")
 		.arg(name())
 		.arg(position())
