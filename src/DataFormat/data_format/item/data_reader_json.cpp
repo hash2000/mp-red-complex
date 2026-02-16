@@ -38,11 +38,6 @@ namespace DataFormat::Item {
 			}
 			else if (typeStr == "container") {
 				item.type = InventoryItemType::Container;
-				QJsonObject cap = json["capacity"].toObject();
-				item.containerCapacity = InventoryItemContainerCapacity{
-						cap["rows"].toInt(4),
-						cap["cols"].toInt(4)
-				};
 			}
 
 			// Размер в ячейках

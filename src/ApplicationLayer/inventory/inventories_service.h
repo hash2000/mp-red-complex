@@ -6,7 +6,6 @@
 #include <optional>
 
 class InventoryService;
-class InventoriesController;
 
 class InventoriesService : public QObject {
 	Q_OBJECT
@@ -16,8 +15,6 @@ public:
 
 	InventoryService* inventoryService(const QUuid& id, bool loadIfNotExists = true) const;
 	bool crossInventoryMove(const InventoryHandler& item, int col, int row, const QUuid& fromInventoryId, const QUuid& toInventoryId);
-
-	InventoriesController* controller() const;
 
 public slots:
 	void onSave();

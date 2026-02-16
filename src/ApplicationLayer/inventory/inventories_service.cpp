@@ -1,6 +1,5 @@
 #include "ApplicationLayer/inventory/inventories_service.h"
 #include "ApplicationLayer/inventory/inventory_service.h"
-#include "ApplicationLayer/inventory/inventories_controller.h"
 #include <map>
 
 class InventoriesService::Private {
@@ -11,21 +10,16 @@ public:
 
 	InventoriesService* q;
 	InventoryDataProvider* dataProvider;
-	std::unique_ptr<InventoriesController> controller;
 	std::map<QUuid, std::unique_ptr<InventoryService>> inventories;
 };
 
 InventoriesService::InventoriesService(InventoryDataProvider* dataProvider, QObject* parent)
 : d(std::make_unique<Private>(this)) {
 	d->dataProvider = dataProvider;
-	d->controller = std::make_unique<InventoriesController>();
 }
 
 InventoriesService::~InventoriesService() = default;
 
-InventoriesController* InventoriesService::controller() const {
-	return d->controller.get();
-}
 
 InventoryService* InventoriesService::inventoryService(const QUuid& id, bool loadIfNotExists) const {
 	if (!d->inventories.contains(id)) {
@@ -34,7 +28,7 @@ InventoryService* InventoriesService::inventoryService(const QUuid& id, bool loa
 		}
 
 		auto inventory = d->dataProvider->loadInventory(id);
-		d->inventories[id] = std::make_unique<InventoryService>(inventory, controller());
+		d->inventories[id] = std::make_unique<InventoryService>(inventory);
 		qDebug() << "Load inventory" << id;
 	}
 

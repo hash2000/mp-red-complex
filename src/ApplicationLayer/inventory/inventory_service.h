@@ -5,17 +5,15 @@
 #include <memory>
 
 class InventoriesService;
-class InventoriesController;
 
 class InventoryService : public QObject {
 	Q_OBJECT
 
 public:
-	InventoryService(std::shared_ptr<Inventory> inventory, InventoriesController* controller);
+	InventoryService(std::shared_ptr<Inventory> inventory);
 	~InventoryService() override;
 
 	std::shared_ptr<Inventory> inventory() const;
-	InventoriesController* controller() const;
 
 	bool placeItem(const InventoryHandler& item);
 	int canPlaceItem(const InventoryHandler& item, int col, int row, bool checkItemPlace) const;
@@ -28,7 +26,6 @@ public:
 
 	std::shared_ptr<InventoryItem> itemById(const QString& id) const;
 	InventoryItem* itemAt(int col, int row) const;
-	QVector<InventoryItem*> items() const;
 
 	// пространство заполнено этим же элементом
 	bool containsItem(const InventoryHandler& item) const;

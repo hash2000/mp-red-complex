@@ -16,24 +16,18 @@ public:
 	}
 
 	InventoryService* q;
-	InventoriesController* controller;
 	std::shared_ptr<Inventory> inventory;
 	std::vector<std::vector<std::unique_ptr<InventoryViewCell>>> cells;
 	QHash<QPoint, InventoryItem*> items;
 };
 
-InventoryService::InventoryService(std::shared_ptr<Inventory> inventory, InventoriesController* controller)
+InventoryService::InventoryService(std::shared_ptr<Inventory> inventory)
 : d(std::make_unique<Private>(this)) {
 	d->inventory = inventory;
-	d->controller = controller;
 	setupCells();
 }
 
 InventoryService::~InventoryService() = default;
-
-InventoriesController* InventoryService::controller() const {
-	return d->controller;
-}
 
 std::shared_ptr<Inventory> InventoryService::inventory() const {
 	return d->inventory;
@@ -424,17 +418,6 @@ bool InventoryService::moveItem(const InventoryHandler& item, int newCol, int ne
 	emit placeItemEvent(*newItemPtr, newRow, newCol); // Новый предмет создан
 	// Исходный предмет обновлён (количество уменьшено) — позиция не изменилась
 	return true;
-}
-
-QVector<InventoryItem*> InventoryService::items() const {
-	QVector<InventoryItem*> result;
-	result.reserve(d->items.size());
-	for (auto item : d->items) {
-		if (item) {
-			result.append(item);
-		}
-	}
-	return result;
 }
 
 bool InventoryService::containsItem(const InventoryHandler& item) const {

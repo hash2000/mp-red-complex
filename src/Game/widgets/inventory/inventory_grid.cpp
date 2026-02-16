@@ -91,8 +91,8 @@ void InventoryGrid::setInventoryService(InventoriesService* inventories, const Q
 
 		// Инициализируем виджеты из текущего состояния сервиса
 		updateGridSize();
-		for (auto item : d->inventory->items()) {
-			createWidgetForItem(*item);
+		for (auto item : d->inventory->inventory()->items) {
+			createWidgetForItem(*item.second);
 		}
 	}
 

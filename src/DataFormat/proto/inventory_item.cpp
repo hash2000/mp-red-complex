@@ -29,14 +29,6 @@ InventoryHandler InventoryHandler::fromMimeData(const QByteArray& data) {
 	item.count = count;
 	item.maxStack = maxStack;
 	item.type = static_cast<InventoryItemType>(type);
-
-	// Иконка-заглушка
-	item.icon = QPixmap(64, 64);
-	item.icon.fill(Qt::darkCyan);
-	QPainter painter(&item.icon);
-	painter.setPen(Qt::white);
-	painter.drawText(item.icon.rect(), Qt::AlignCenter, id.left(3));
-
 	return item;
 }
 
@@ -64,7 +56,6 @@ std::shared_ptr<InventoryItem> InventoryItem::duplicate(bool newId) const {
 	item->height = height;
 	item->recipe = recipe;
 	item->rarity = rarity;
-	item->containerCapacity = containerCapacity;
 	item->icon = icon.copy();
 	return item;
 }

@@ -34,12 +34,6 @@ enum class InventoryItemType {
 	Container, // Ящики (могут содержать другие предметы)
 };
 
-// Для ящиков — вместимость (размер внутренней сетки)
-struct InventoryItemContainerCapacity {
-	int rows = 4;
-	int cols = 4;
-};
-
 // рецепты
 struct InventoryItemRecipe {
 	struct Ingredient {
@@ -53,6 +47,9 @@ struct InventoryHandler {
 	QString id;
 	QString name;
 	InventoryItemType type;
+
+	QPixmap icon;
+
 	int x = 0;
 	int y = 0;
 
@@ -63,10 +60,7 @@ struct InventoryHandler {
 	int count = 1;
 	int maxStack = 1;
 
-	QPixmap icon;
-
 	QByteArray toMimeData() const;
-
 	static InventoryHandler fromMimeData(const QByteArray& data);
 };
 
@@ -78,8 +72,6 @@ struct InventoryItem : public InventoryHandler {
 	EquipmentItemRarityType rarity = EquipmentItemRarityType::Common;
 
 	std::optional<EquipmentItemType> equipmentType;
-
-	std::optional<InventoryItemContainerCapacity> containerCapacity;
 
 	std::optional<InventoryItemRecipe> recipe;
 

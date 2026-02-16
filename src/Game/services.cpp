@@ -2,7 +2,7 @@
 #include "Game/services/time_service/time_service.h"
 #include "Game/services/world_service/world_service.h"
 #include "ApplicationLayer/inventory/inventories_service.h"
-#include "DataLayer/inventory/inventory_data_provider_fs_impl.h"
+#include "DataLayer/inventory/inventory_data_provider_json_impl.h"
 #include <list>
 
 class Services::Private {
@@ -21,7 +21,7 @@ public:
 
 Services::Services(Resources* resources)
 : d(std::make_unique<Private>(this)) {
-	d->inventoryDataProvider = std::make_unique<InventoryDataProviderFilesistemImpl>(resources);
+	d->inventoryDataProvider = std::make_unique<InventoryDataProviderJsonImpl>(resources);
 	d->timeService = std::make_unique<TimeService>();
 
 	d->worldService = std::make_unique<WorldService>();

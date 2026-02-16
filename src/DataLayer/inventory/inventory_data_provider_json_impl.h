@@ -5,10 +5,10 @@
 
 class Resources;
 
-class InventoryDataProviderFilesistemImpl : public InventoryDataProvider {
+class InventoryDataProviderJsonImpl : public InventoryDataProvider {
 public:
-	InventoryDataProviderFilesistemImpl(Resources* resources);
-	~InventoryDataProviderFilesistemImpl() override;
+	InventoryDataProviderJsonImpl(Resources* resources);
+	~InventoryDataProviderJsonImpl() override;
 
 	std::shared_ptr<Inventory> loadInventory(const QUuid& id) const override;
 
