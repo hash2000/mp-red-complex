@@ -5,11 +5,11 @@
 
 class ItemsService;
 
-class ItemsWidget : public QWidget {
+class EntitiesWidget : public QWidget {
 	Q_OBJECT
 public:
-	explicit ItemsWidget(ItemsService* service, QWidget* parent = nullptr);
-	~ItemsWidget() override;
+	explicit EntitiesWidget(ItemsService* service, QWidget* parent = nullptr);
+	~EntitiesWidget() override;
 
 	void addItemEntity(const ItemEntity& entity);
 

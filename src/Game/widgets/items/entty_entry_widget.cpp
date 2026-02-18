@@ -1,4 +1,4 @@
-#include "Game/widgets/items/item_entty_entry_widget.h"
+#include "Game/widgets/items/entty_entry_widget.h"
 #include "Game/widgets/items/items_styles.h"
 #include "Game/widgets/items/item_tooltip.h"
 #include <QApplication>
@@ -9,25 +9,25 @@
 #include <QPushButton>
 #include <QPainter>
 
-class ItemEntityEntryWidget::Private {
+class EntityEntryWidget::Private {
 public:
-	Private(ItemEntityEntryWidget* parent)
+	Private(EntityEntryWidget* parent)
 	: q(parent) {
 		if (!s_tooltipInstance) {
 			s_tooltipInstance = new ItemTooltip(qApp->activeWindow());
 		}
 	}
 
-	ItemEntityEntryWidget* q;
+	EntityEntryWidget* q;
 	ItemEntity entity;
 	QPushButton* createButton;
 	QLabel* iconLabel;
 	static ItemTooltip* s_tooltipInstance;
 };
 
-ItemTooltip* ItemEntityEntryWidget::Private::s_tooltipInstance = nullptr;
+ItemTooltip* EntityEntryWidget::Private::s_tooltipInstance = nullptr;
 
-ItemEntityEntryWidget::ItemEntityEntryWidget(const ItemEntity& entity, QWidget* parent)
+EntityEntryWidget::EntityEntryWidget(const ItemEntity& entity, QWidget* parent)
 	: d(std::make_unique<Private>(this))
 	, QWidget(parent) {
 
@@ -111,7 +111,7 @@ ItemEntityEntryWidget::ItemEntityEntryWidget(const ItemEntity& entity, QWidget* 
 
 	// Стилизация фона записи
 	setStyleSheet(R"(
-            ItemEntityEntryWidget {
+            EntityEntryWidget {
                 border: 2px dashed #4a5568;
                 background-color: rgba(30, 41, 59, 200);
                 border-radius: 6px;
@@ -124,9 +124,9 @@ ItemEntityEntryWidget::ItemEntityEntryWidget(const ItemEntity& entity, QWidget* 
 		});
 }
 
-ItemEntityEntryWidget::~ItemEntityEntryWidget() = default;
+EntityEntryWidget::~EntityEntryWidget() = default;
 
-void ItemEntityEntryWidget::paintEvent(QPaintEvent* event) {
+void EntityEntryWidget::paintEvent(QPaintEvent* event) {
 	QStyleOption opt;
 	opt.initFrom(this);
 	QPainter p(this);
@@ -134,11 +134,11 @@ void ItemEntityEntryWidget::paintEvent(QPaintEvent* event) {
 	QWidget::paintEvent(event);
 }
 
-void ItemEntityEntryWidget::enterEvent(QEnterEvent* event) {
+void EntityEntryWidget::enterEvent(QEnterEvent* event) {
 	QWidget::enterEvent(event);
 }
 
-void ItemEntityEntryWidget::leaveEvent(QEvent* event) {
+void EntityEntryWidget::leaveEvent(QEvent* event) {
 	QWidget::leaveEvent(event);
 	// Скрываем тултип при уходе с ВСЕЙ записи
 	if (d->s_tooltipInstance && d->s_tooltipInstance->currentItem() == d->entity.id) {
@@ -146,7 +146,7 @@ void ItemEntityEntryWidget::leaveEvent(QEvent* event) {
 	}
 }
 
-bool ItemEntityEntryWidget::eventFilter(QObject* watched, QEvent* event) {
+bool EntityEntryWidget::eventFilter(QObject* watched, QEvent* event) {
 	if (watched == d->iconLabel) {
 		if (event->type() == QEvent::Enter) {
 			// Показываем тултип с задержкой

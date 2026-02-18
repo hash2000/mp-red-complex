@@ -2,12 +2,12 @@
 #include "DataLayer/items/item.h"
 #include <QWidget>
 
-class ItemEntityEntryWidget : public QWidget {
+class EntityEntryWidget : public QWidget {
 	Q_OBJECT
 
 public:
-	explicit ItemEntityEntryWidget(const ItemEntity& entity, QWidget* parent = nullptr);
-	~ItemEntityEntryWidget() override;
+	explicit EntityEntryWidget(const ItemEntity& entity, QWidget* parent = nullptr);
+	~EntityEntryWidget() override;
 
 signals:
 	void createRequested(const QString& itemId);

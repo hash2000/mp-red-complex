@@ -12,6 +12,7 @@ public:
 	ItemsService* q;
 	ItemsDataProvider* dataProvider;
 	std::map<QString, std::unique_ptr<ItemEntity>> itemEntities;
+	std::map<QString, std::unique_ptr<Item>> items;
 };
 
 ItemsService::ItemsService(ItemsDataProvider* dataProvider, QObject* parent)
@@ -43,6 +44,15 @@ bool ItemsService::loadEntities() {
 	return true;
 }
 
-ItemsService::ItemsView ItemsService::items() const {
+ItemsService::EntityView ItemsService::entities() const {
 	return make_deref_view(d->itemEntities);
+}
+
+const ItemEntity* ItemsService::entityById(const QString& id) const {
+	const auto& it = d->itemEntities.find(id);
+	if (it == d->itemEntities.end()) {
+		return nullptr;
+	}
+
+	return it->second.get();
 }

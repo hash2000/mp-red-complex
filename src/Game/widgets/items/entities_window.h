@@ -5,12 +5,12 @@
 
 class ItemsService;
 
-class ItemsWindow : public MdiChildWindow {
+class EntitiesWindow : public MdiChildWindow {
 	Q_OBJECT
 
 public:
-	explicit ItemsWindow(ItemsService* service, const QString& id, QWidget* parent = nullptr);
-	~ItemsWindow() override;
+	explicit EntitiesWindow(ItemsService* service, const QString& id, QWidget* parent = nullptr);
+	~EntitiesWindow() override;
 
 	QString windowType() const override { return "items"; }
 

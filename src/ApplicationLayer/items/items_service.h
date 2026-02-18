@@ -15,8 +15,10 @@ public:
 
 	bool loadEntities();
 
-	using ItemsView = decltype(make_deref_view(std::declval<const std::map<QString, std::unique_ptr<ItemEntity>>&>()));
-	ItemsView items() const;
+	using EntityView = decltype(make_deref_view(std::declval<const std::map<QString, std::unique_ptr<ItemEntity>>&>()));
+	EntityView entities() const;
+
+	const ItemEntity* entityById(const QString& id) const;
 
 private:
 	class Private;

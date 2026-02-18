@@ -27,8 +27,13 @@ InventoryService* InventoriesService::inventoryService(const QUuid& id, bool loa
 			return nullptr;
 		}
 
-		auto inventory = d->dataProvider->loadInventory(id);
-		d->inventories[id] = std::make_unique<InventoryService>(inventory);
+		InventoryRaw inventory;
+		if (!d->dataProvider->loadInventory(id, inventory)) {
+			return nullptr;
+		}
+
+		//auto inventory = d->dataProvider->loadInventory(id);
+		//d->inventories[id] = std::make_unique<InventoryService>(inventory);
 		qDebug() << "Load inventory" << id;
 	}
 

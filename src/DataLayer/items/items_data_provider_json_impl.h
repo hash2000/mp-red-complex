@@ -10,8 +10,9 @@ public:
 	ItemsDataProviderJsonImpl(Resources* resources);
 	~ItemsDataProviderJsonImpl() override;
 
+	bool loadEntitiesIds(std::list<QString>& list) const override;
 	bool loadEntity(const QString& id, ItemEntity& entity) const override;
-	bool loadEntitiesIds(std::list<QString>& list) override;
+	bool loadItem(const QString& id, Item& item) const override;
 
 private:
 	QPixmap loadIcon(const ItemEntity& item) const;

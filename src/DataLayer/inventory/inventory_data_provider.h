@@ -1,5 +1,5 @@
 #pragma once
-#include "DataFormat/proto/inventory_item.h"
+#include "DataLayer/inventory/inventory_item.h"
 #include <QList>
 #include <QUuid>
 #include <memory>
@@ -7,5 +7,5 @@
 struct InventoryDataProvider {
 	virtual ~InventoryDataProvider() = default;
 
-	virtual std::shared_ptr<Inventory> loadInventory(const QUuid& id) const = 0;
+	virtual bool loadInventory(const QUuid& id, InventoryRaw& inventory) const = 0;
 };

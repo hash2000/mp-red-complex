@@ -10,14 +10,7 @@ public:
 	InventoryDataProviderJsonImpl(Resources* resources);
 	~InventoryDataProviderJsonImpl() override;
 
-	std::shared_ptr<Inventory> loadInventory(const QUuid& id) const override;
-
-private:
-
-	bool loadItem(InventoryItem& item) const;
-
-	QPixmap loadIcon(const InventoryItem& item) const;
-	static QPixmap loadEmptyStubIcon(const QString& id);
+	bool loadInventory(const QUuid& id, InventoryRaw& inventory) const override;
 
 private:
 	class Private;

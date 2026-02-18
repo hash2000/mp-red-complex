@@ -1,24 +1,24 @@
-#include "Game/widgets/items/items_widget.h"
-#include "Game/widgets/items/item_entty_entry_widget.h"
+#include "Game/widgets/items/entities_widget.h"
+#include "Game/widgets/items/entty_entry_widget.h"
 #include <QScrollArea>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
 
-class ItemsWidget::Private {
+class EntitiesWidget::Private {
 public:
-	Private(ItemsWidget* parent)
+	Private(EntitiesWidget* parent)
 		: q(parent) {
 	}
 
-	ItemsWidget* q;
+	EntitiesWidget* q;
 	QScrollArea* scrollArea;
 	QWidget* contentWidget;
 	QVBoxLayout* contentLayout;
 	ItemsService* service;
 };
 
-ItemsWidget::ItemsWidget(ItemsService* service, QWidget* parent)
+EntitiesWidget::EntitiesWidget(ItemsService* service, QWidget* parent)
 	: d(std::make_unique<Private>(this))
 	, QWidget(parent) {
 
@@ -70,28 +70,28 @@ ItemsWidget::ItemsWidget(ItemsService* service, QWidget* parent)
 	mainLayout->addWidget(d->scrollArea);
 }
 
-ItemsWidget::~ItemsWidget() {
+EntitiesWidget::~EntitiesWidget() {
 	clear();
 }
 
-void ItemsWidget::addItemEntity(const ItemEntity& entity) {
+void EntitiesWidget::addItemEntity(const ItemEntity& entity) {
 	// Убираем stretch перед добавлением нового элемента
 	if (d->contentLayout->count() > 0) {
 		delete d->contentLayout->takeAt(d->contentLayout->count() - 1);
 	}
 
-	auto entry = new ItemEntityEntryWidget(entity, this);
+	auto entry = new EntityEntryWidget(entity, this);
 	d->contentLayout->addWidget(entry);
 
 	// Возвращаем stretch в конец
 	d->contentLayout->addStretch();
 
 	// Подключаем сигнал записи к сигналу окна
-	connect(entry, &ItemEntityEntryWidget::createRequested,
-		this, &ItemsWidget::itemCreateRequested);
+	connect(entry, &EntityEntryWidget::createRequested,
+		this, &EntitiesWidget::itemCreateRequested);
 }
 
-void ItemsWidget::clear() {
+void EntitiesWidget::clear() {
 	QLayoutItem* item;
 	while ((item = d->contentLayout->takeAt(0)) != nullptr) {
 		if (item->widget()) {

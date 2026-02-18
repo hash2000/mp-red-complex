@@ -123,7 +123,7 @@ QPixmap ItemsDataProviderJsonImpl::loadEmptyStubIcon(const QString& id) {
 	return result;
 }
 
-bool ItemsDataProviderJsonImpl::loadEntitiesIds(std::list<QString>& list) {
+bool ItemsDataProviderJsonImpl::loadEntitiesIds(std::list<QString>& list) const {
 	const auto path = QString("items/items_ids.json");
 
 	QJsonObject json;
@@ -138,6 +138,22 @@ bool ItemsDataProviderJsonImpl::loadEntitiesIds(std::list<QString>& list) {
 	for (const auto& item : items) {
 		list.push_back(item.toString());
 	}
+
+	return true;
+}
+
+bool ItemsDataProviderJsonImpl::loadItem(const QString& id, Item& item) const {
+	const auto path = QString("items/%1.json")
+		.arg(id.toLower());
+
+	QJsonObject json;
+	Format::Json::DataReader reader(d->resources, "data", path);
+	if (!reader.read(json)) {
+		return false;
+	}
+
+	item.id = id;
+	item.entity.id = json["entityId"].toString();
 
 	return true;
 }
