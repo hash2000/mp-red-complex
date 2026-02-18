@@ -71,6 +71,11 @@ struct ItemRecipe {
 	std::vector<Ingredient> ingredients;
 };
 
+struct ItemContainer {
+	int rows = 1;
+	int cols = 1;
+};
+
 struct ItemEntity {
 	QString id;
 	QString name;
@@ -90,6 +95,8 @@ struct ItemEntity {
 	std::optional<ItemEquipmentType> equipmentType;
 	// рецепт
 	std::optional<ItemRecipe> recipe;
+	// контейнер
+	std::optional<ItemContainer> container;
 };
 
 struct Item {

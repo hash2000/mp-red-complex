@@ -14,11 +14,14 @@ public:
 
 	QString windowType() const override { return "items"; }
 
-	QString windowTitle() const { return "Items"; }
+	QString windowTitle() const { return "Библиотека предметов"; }
 
 	QSize windowDefaultSizes() const override { return QSize(460, 500); }
 
 	bool handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) override;
+
+private slots:
+	void onItemCreateRequested(const QString& itemId);
 
 private:
 	class Private;

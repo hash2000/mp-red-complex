@@ -73,7 +73,9 @@ ItemEntityEntryWidget::ItemEntityEntryWidget(const ItemEntity& entity, QWidget* 
 
 	// Название предмета (цвет по редкости)
 	auto nameLabel = new QLabel(entity.name);
-	nameLabel->setStyleSheet(QString("color: %1; font-weight: 600; font-size: 13px;").arg(ItemsStyles::rarityColor(entity.rarity)));
+	nameLabel->setStyleSheet(
+		QString("color: %1; font-weight: 600; font-size: 13px;")
+			.arg(ItemsStyles::rarityColor(entity.rarity)));
 	nameLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
 
 	textLayout->addWidget(idLabel);

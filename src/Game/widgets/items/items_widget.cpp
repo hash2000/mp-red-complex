@@ -29,20 +29,6 @@ ItemsWidget::ItemsWidget(ItemsService* service, QWidget* parent)
 	mainLayout->setContentsMargins(0, 0, 0, 0);
 	mainLayout->setSpacing(0);
 
-	// Заголовок окна
-	auto header = new QWidget();
-	header->setFixedHeight(50);
-	header->setStyleSheet("background-color: #1e293b; border-bottom: 1px solid #334155;");
-
-	auto headerLayout = new QHBoxLayout(header);
-	headerLayout->setContentsMargins(20, 0, 20, 0);
-
-	auto titleLabel = new QLabel("Библиотека предметов");
-	titleLabel->setStyleSheet("color: #f1f5f9; font-size: 18px; font-weight: bold;");
-
-	headerLayout->addWidget(titleLabel);
-	headerLayout->addStretch();
-
 	// Область прокрутки
 	d->scrollArea = new QScrollArea();
 	d->scrollArea->setWidgetResizable(true);
@@ -81,8 +67,6 @@ ItemsWidget::ItemsWidget(ItemsService* service, QWidget* parent)
 	d->contentWidget->setStyleSheet("background-color: transparent;");
 	d->scrollArea->setWidget(d->contentWidget);
 
-	// Собираем всё вместе
-	mainLayout->addWidget(header);
 	mainLayout->addWidget(d->scrollArea);
 }
 

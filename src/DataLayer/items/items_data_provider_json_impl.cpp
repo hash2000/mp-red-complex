@@ -33,10 +33,14 @@ namespace {
 		}
 		else if (typeStr == "component") {
 			entity.type = ItemType::Component;
-			entity.maxStack = json["maxStack"].toInt(100);
 		}
 		else if (typeStr == "container") {
 			entity.type = ItemType::Container;
+			QJsonObject cap = json["container"].toObject();
+			entity.container = ItemContainer{
+				cap["rows"].toInt(4),
+				cap["cols"].toInt(4),
+			};
 		}
 
 		// Размер в ячейках

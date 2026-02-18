@@ -92,7 +92,11 @@ public:
 			details = "<b>Тип:</b> Компонент";
 			break;
 		case ItemType::Container:
-			details = QString("<b>Тип:</b> Контейнер (%1×%2 ячеек)").arg(item.width).arg(item.height);
+			if (item.container.has_value()) {
+				details = QString("<b>Тип:</b> Контейнер (%1×%2 ячеек)")
+					.arg(item.container->rows)
+					.arg(item.container->cols);
+			}
 			break;
 		}
 
@@ -178,7 +182,7 @@ public:
 	}
 };
 
-ItemTooltip::ItemTooltip(QWidget* parent )
+ItemTooltip::ItemTooltip(QWidget* parent)
 	: d(std::make_unique<Private>(this))
 	, QWidget(parent, Qt::ToolTip) {
 	setWindowFlags(Qt::ToolTip | Qt::FramelessWindowHint);
@@ -199,7 +203,6 @@ ItemTooltip::ItemTooltip(QWidget* parent )
 
 	// Иконка (увеличенная)
 	d->iconLabel = new QLabel();
-	d->iconLabel->setFixedSize(64, 64);
 	d->iconLabel->setScaledContents(true);
 	d->iconLabel->setStyleSheet("background-color: rgba(0, 0, 0, 100); border-radius: 6px;");
 
@@ -250,6 +253,10 @@ ItemTooltip::ItemTooltip(QWidget* parent )
 ItemTooltip::~ItemTooltip() = default;
 
 void ItemTooltip::showForItem(const ItemEntity& item, const QPoint& globalPos) {
+	d->iconLabel->setFixedSize(
+		item.width * ItemsStyles::CELL_SIZE,
+		item.height * ItemsStyles::CELL_SIZE);
+
 	// Настраиваем содержимое
 	d->setupContent(item);
 
