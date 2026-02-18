@@ -71,7 +71,7 @@ struct ItemRecipe {
 	std::vector<Ingredient> ingredients;
 };
 
-struct Item {
+struct ItemEntity {
 	QString id;
 	QString name;
 	ItemType type;
@@ -79,38 +79,20 @@ struct Item {
 	QString iconPath;
 	QPixmap icon;
 
-	// идентификатор элемента
-	QString entityId;
-	// тжентификатор инвентаря, может находиться только в одном инвентаре
-	std::optional<QString> inventoryId;
-
-	// позиция в инвентаре
-	int x = 0;
-	int y = 0;
-	// ячеек в инвентаре
 	int width = 1;
 	int height = 1;
 	// стек 
 	int count = 1;
 	int maxStack = 1;
 
-	// как часто встречается
 	ItemRarityType rarity = ItemRarityType::Common;
-
 	// если это экипировка, то какая
 	std::optional<ItemEquipmentType> equipmentType;
-
+	// рецепт
 	std::optional<ItemRecipe> recipe;
+};
 
-	QByteArray toMimeData();
-
-	static Item fromMimeData(const QByteArray& data);
-
-	bool compare(const Item& other);
-
-	bool canMergeWith(const Item& other);
-
-	void duplicate(Item& item, bool newId = true);
-
-	bool canAcceptEquipment(const ItemEquipmentSlotType& slotType);
+struct Item {
+	QString id;
+	ItemEntity entity;
 };

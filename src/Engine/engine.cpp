@@ -23,7 +23,7 @@ void Engine::setup(std::shared_ptr<Config> &config, std::shared_ptr<Resources> &
 
 void Engine::setupMainFrame(std::unique_ptr<MainFrame> &&mainFrame) {
 	_main_frame = std::move(mainFrame);
-	_main_frame->resize(800, 600);
+	_main_frame->resize(1024, 768);
 	_main_frame->show();
 }
 

@@ -4,16 +4,8 @@
 
 namespace Format::Pixmap {
 
-	DataReader::DataReader(Resources* resources, const QString& container, const QString& path) {
-		auto stream = resources->getStream(container, path);
-		if (!stream.has_value()) {
-			qFatal() << QString("Format::Pixmap::DataReader: Error read %1, read %2.")
-				.arg(container)
-				.arg(path);
-			return;
-		}
-
-		_block = stream.value()->makeBlockAsStream();
+	DataReader::DataReader(Resources* resources, const QString& container, const QString& path)
+	: BaseDataReader(resources, container, path, "Format::Pixmap::DataReader") {
 	}
 
 	bool DataReader::read(QPixmap& result) {
