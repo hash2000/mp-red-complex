@@ -1,6 +1,7 @@
 #include "ApplicationLayer/items/items_service.h"
 #include "DataLayer/items/items_data_provider.h"
 #include <QString>
+#include <QUuid>
 #include <map>
 
 class ItemsService::Private {
@@ -55,4 +56,40 @@ const ItemEntity* ItemsService::entityById(const QString& id) const {
 	}
 
 	return it->second.get();
+}
+
+const Item* ItemsService::itemById(const QString& id) {
+	const auto& it = d->items.find(id);
+	if (it == d->items.end()) {
+		return it->second.get();
+	}
+
+	std::unique_ptr<Item> item;
+	if (!d->dataProvider->loadItem(id, *item)) {
+		return nullptr;
+	}
+
+	item->entity = entityById(item->entityId);
+
+	const auto& emplaceResult = d->items.emplace(item->id, std::move(item));
+
+	return emplaceResult.first->second.get();
+}
+
+const Item* ItemsService::createItem(const QString& entittyId) {
+	const auto entity = entityById(entittyId);
+	if (!entity) {
+		return nullptr;
+	}
+
+	auto item = std::make_unique<Item>();
+	item->entityId = entittyId;
+	item->entity = entity;
+	item->id = QUuid::createUuid()
+		.toString(QUuid::StringFormat::WithoutBraces)
+		.toLower();
+
+	const auto& emplaceResult = d->items.emplace(item->id, std::move(item));
+
+	return emplaceResult.first->second.get();
 }

@@ -19,6 +19,8 @@ public:
 	EntityView entities() const;
 
 	const ItemEntity* entityById(const QString& id) const;
+	const Item* itemById(const QString& id);
+	const Item* createItem(const QString& entittyId);
 
 private:
 	class Private;

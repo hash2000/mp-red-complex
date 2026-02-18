@@ -153,7 +153,7 @@ bool ItemsDataProviderJsonImpl::loadItem(const QString& id, Item& item) const {
 	}
 
 	item.id = id;
-	item.entity.id = json["entityId"].toString();
+	item.entityId = json["entityId"].toString();
 
 	return true;
 }

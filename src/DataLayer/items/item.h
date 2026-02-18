@@ -101,5 +101,6 @@ struct ItemEntity {
 
 struct Item {
 	QString id;
-	ItemEntity entity;
+	QString entityId;
+	const ItemEntity* entity;
 };
