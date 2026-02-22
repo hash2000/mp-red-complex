@@ -21,6 +21,7 @@ public:
 	const ItemEntity* entityById(const QString& id) const;
 	const Item* itemById(const QString& id);
 	const Item* createItem(const QString& entittyId);
+	const Item* duplicate(const QString& id);
 
 private:
 	class Private;

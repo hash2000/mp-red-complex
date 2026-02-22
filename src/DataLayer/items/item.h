@@ -63,7 +63,8 @@ enum class ItemEquipmentSlotType {
 };
 
 // рецепты
-struct ItemRecipe {
+class  ItemRecipe {
+public:
 	struct Ingredient {
 		QString itemId;
 		int amount;
@@ -71,12 +72,14 @@ struct ItemRecipe {
 	std::vector<Ingredient> ingredients;
 };
 
-struct ItemContainer {
+class ItemContainer {
+public:
 	int rows = 1;
 	int cols = 1;
 };
 
-struct ItemEntity {
+class ItemEntity {
+public:
 	QString id;
 	QString name;
 	ItemType type;
@@ -87,7 +90,6 @@ struct ItemEntity {
 	int width = 1;
 	int height = 1;
 	// стек 
-	int count = 1;
 	int maxStack = 1;
 
 	ItemRarityType rarity = ItemRarityType::Common;
@@ -99,7 +101,8 @@ struct ItemEntity {
 	std::optional<ItemContainer> container;
 };
 
-struct Item {
+class Item {
+public:
 	QString id;
 	QString entityId;
 	const ItemEntity* entity;

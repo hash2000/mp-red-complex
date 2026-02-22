@@ -1,11 +1,13 @@
 #pragma once
-#include "DataLayer/inventory/inventory_item.h"
 #include <QList>
 #include <QUuid>
 #include <memory>
 
-struct InventoryDataProvider {
+class Inventory;
+
+class InventoryDataProvider {
+public:
 	virtual ~InventoryDataProvider() = default;
 
-	virtual bool loadInventory(const QUuid& id, InventoryRaw& inventory) const = 0;
+	virtual bool loadInventory(const QUuid& id, Inventory& inventory) const = 0;
 };

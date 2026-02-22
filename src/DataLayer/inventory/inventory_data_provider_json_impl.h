@@ -10,7 +10,7 @@ public:
 	InventoryDataProviderJsonImpl(Resources* resources);
 	~InventoryDataProviderJsonImpl() override;
 
-	bool loadInventory(const QUuid& id, InventoryRaw& inventory) const override;
+	bool loadInventory(const QUuid& id, Inventory& inventory) const override;
 
 private:
 	class Private;

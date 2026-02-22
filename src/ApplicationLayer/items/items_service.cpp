@@ -2,6 +2,7 @@
 #include "DataLayer/items/items_data_provider.h"
 #include <QString>
 #include <QUuid>
+#include <QDebug>
 #include <map>
 
 class ItemsService::Private {
@@ -41,7 +42,7 @@ bool ItemsService::loadEntities() {
 		d->itemEntities.emplace(id, std::move(entity));
 	}
 
-	//qDebug() << "Loading" << count << "items entities";
+	qDebug() << "Loading" << count << "items entities";
 	return true;
 }
 
@@ -60,11 +61,11 @@ const ItemEntity* ItemsService::entityById(const QString& id) const {
 
 const Item* ItemsService::itemById(const QString& id) {
 	const auto& it = d->items.find(id);
-	if (it == d->items.end()) {
+	if (it != d->items.end()) {
 		return it->second.get();
 	}
 
-	std::unique_ptr<Item> item;
+	auto item = std::make_unique<Item>();
 	if (!d->dataProvider->loadItem(id, *item)) {
 		return nullptr;
 	}
@@ -88,6 +89,23 @@ const Item* ItemsService::createItem(const QString& entittyId) {
 	item->id = QUuid::createUuid()
 		.toString(QUuid::StringFormat::WithoutBraces)
 		.toLower();
+
+	const auto& emplaceResult = d->items.emplace(item->id, std::move(item));
+
+	return emplaceResult.first->second.get();
+}
+
+const Item* ItemsService::duplicate(const QString& id) {
+	const auto from = itemById(id);
+	if (!from) {
+		return nullptr;
+	}
+
+	auto item = std::make_unique<Item>();
+	item->entity = from->entity;
+	item->entityId = from->entityId;
+	item->id = QUuid::createUuid()
+		.toString(QUuid::StringFormat::WithoutBraces);
 
 	const auto& emplaceResult = d->items.emplace(item->id, std::move(item));
 

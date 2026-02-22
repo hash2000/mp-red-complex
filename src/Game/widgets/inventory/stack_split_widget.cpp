@@ -1,6 +1,8 @@
 #include "Game/widgets/inventory/stack_split_widget.h"
 #include "Game/widgets/inventory/inventory_item_widget.h"
 #include "Game/widgets/inventory/inventory_grid.h"
+#include "ApplicationLayer/inventory/inventory_item_handler.h"
+#include "ApplicationLayer/inventory/inventory_item_mime_data.h"
 #include "BaseWidgets/clicable_label.h"
 #include <QSlider>
 #include <QLineEdit>
@@ -23,7 +25,7 @@ public:
 
 	StackSplitWidget* q;
 
-	InventoryHandler item;
+	InventoryItemHandler item;
 	int selectedCount = 1;
 
 	QSlider* slider = nullptr;
@@ -37,7 +39,7 @@ public:
 };
 
 
-StackSplitWidget::StackSplitWidget(const InventoryHandler& item, InventoryGrid* grid, QWidget* parent)
+StackSplitWidget::StackSplitWidget(const InventoryItemHandler& item, InventoryGrid* grid, QWidget* parent)
 : d(std::make_unique<Private>(this))
 , QWidget(parent) {
 	d->item = item;
@@ -72,7 +74,7 @@ int StackSplitWidget::selectedCount() const {
 	return d->selectedCount;
 }
 
-const InventoryHandler& StackSplitWidget::originalItem() const {
+const InventoryItemHandler& StackSplitWidget::originalItem() const {
 	return d->item;
 }
 
@@ -99,7 +101,7 @@ void StackSplitWidget::setupUi() {
 	// Иконка для дропа
 	d->iconLabel = new ClickableLabel(this);
 	d->iconLabel->setFixedSize(24, 24);
-	d->iconLabel->setPixmap(d->item.icon.scaled(24, 24, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+	d->iconLabel->setPixmap(d->item.entity->icon.scaled(24, 24, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 	d->iconLabel->setCursor(Qt::OpenHandCursor);
 	d->iconLabel->setStyleSheet(R"(
         ClickableLabel {
@@ -115,7 +117,7 @@ void StackSplitWidget::setupUi() {
 	connect(d->iconLabel, &ClickableLabel::clicked, this, &StackSplitWidget::onStartDrag);
 
 	// Название предмета (маленьким шрифтом)
-	d->nameLabel = new QLabel(d->item.name, this);
+	d->nameLabel = new QLabel(d->item.entity->name, this);
 	d->nameLabel->setStyleSheet("font-size: 9px; color: #a0aec0;");
 	d->nameLabel->setAlignment(Qt::AlignVCenter);
 
@@ -233,10 +235,10 @@ void StackSplitWidget::onStartDrag() {
 
 	mimeData->setData("application/x-game-item", splitItem.toMimeData());
 	mimeData->setData("application/x-game-item-source-inventory-id", d->grid->inventoryId().toUtf8());
-	mimeData->setText(splitItem.name);
+	mimeData->setText(splitItem.entity->name);
 
 	// Иконка для курсора
-	QPixmap dragPixmap = splitItem.icon.scaled(
+	QPixmap dragPixmap = splitItem.entity->icon.scaled(
 		InventoryItemWidget::CELL_SIZE,
 		InventoryItemWidget::CELL_SIZE,
 		Qt::KeepAspectRatio, Qt::SmoothTransformation);
@@ -252,13 +254,13 @@ void StackSplitWidget::onStartDrag() {
 	d->iconLabel->setCursor(Qt::OpenHandCursor);
 
 	if (dropAction == Qt::MoveAction) {
-		emit splitDragStarted(splitItem);
+		emit splitDragStarted(InventoryItemMimeData(splitItem));
 		close(); // Закрываем виджет после успешного дропа
 	}
 }
 
-InventoryHandler StackSplitWidget::createSplitItem() const {
-	InventoryHandler splitItem = d->item;
+InventoryItemHandler StackSplitWidget::createSplitItem() const {
+	InventoryItemHandler splitItem = d->item;
 	splitItem.count = d->selectedCount;
 	return splitItem;
 }

@@ -1,34 +1,47 @@
 #pragma once
-#include "DataFormat/proto/inventory_item.h"
+#include "Base/container_view.h"
 #include <QObject>
 #include <QUuid>
 #include <memory>
 
 class InventoriesService;
+class ItemsService;
+class Inventory;
+class InventoryItem;
+class InventoryItemHandler;
+class InventoryItemMimeData;
 
 class InventoryService : public QObject {
 	Q_OBJECT
+public:
+	using EntityView = decltype(make_deref_view(std::declval<const std::map<QString, std::unique_ptr<InventoryItemHandler>>&>()));
 
 public:
-	InventoryService(std::shared_ptr<Inventory> inventory);
+	InventoryService(ItemsService* itemsService);
 	~InventoryService() override;
 
-	std::shared_ptr<Inventory> inventory() const;
+	bool load(const Inventory& inventory);
 
-	bool placeItem(const InventoryHandler& item);
-	int canPlaceItem(const InventoryHandler& item, int col, int row, bool checkItemPlace) const;
-	std::optional<QPoint> findFreeSpace(const InventoryHandler& item, bool checkItemPlace) const;
+	QString inventoryId() const;
+	QString inventoryName() const;
+	int rows() const;
+	int cols() const;
 
-	bool moveItem(const InventoryHandler& item, int newCol, int newRow, bool checkItemPlace);
-	void removeItem(const InventoryHandler& item);
+	bool placeItem(const InventoryItemMimeData& item);
+	int canPlaceItem(const InventoryItemMimeData& item, int col, int row, bool checkItemPlace) const;
+	std::optional<QPoint> findFreeSpace(const InventoryItemMimeData& item, bool checkItemPlace) const;
+
+	bool moveItem(const InventoryItemMimeData& item, int newCol, int newRow, bool checkItemPlace);
+	void removeItem(const InventoryItemMimeData& item);
 
 	bool splitStack(const QString& itemId, int newCol, int newRow, int splitCount);
 
-	std::shared_ptr<InventoryItem> itemById(const QString& id) const;
-	InventoryItem* itemAt(int col, int row) const;
+	InventoryItemHandler* itemById(const QString& id) const;
+	InventoryItemHandler* itemAt(int col, int row) const;
+	EntityView items() const;
 
 	// пространство заполнено этим же элементом
-	bool containsItem(const InventoryHandler& item) const;
+	bool containsItem(const InventoryItemMimeData& item) const;
 
 	void clear();
 
@@ -36,10 +49,10 @@ private:
 	void setupCells();
 
 signals:
-	void placeItemEvent(const InventoryHandler& item, int row, int col);
-	void removeItemEvent(const InventoryHandler& item, int row, int col);
-	void moveItemEvent(const InventoryHandler& item, int row, int col, int newCol, int newRow);
-	void itemCountChanged(const InventoryHandler& item);
+	void placeItemEvent(const InventoryItemMimeData& item, int row, int col);
+	void removeItemEvent(const InventoryItemMimeData& item, int row, int col);
+	void moveItemEvent(const InventoryItemMimeData& item, int row, int col, int newCol, int newRow);
+	void itemCountChanged(const InventoryItemMimeData& item);
 
 private:
 	class Private;

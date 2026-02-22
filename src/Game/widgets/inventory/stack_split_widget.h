@@ -1,27 +1,28 @@
 #pragma once
-#include "DataFormat/proto/inventory_item.h"
 #include <QWidget>
 
 class InventoryGrid;
+class InventoryItemHandler;
+class InventoryItemMimeData;
 
 class StackSplitWidget : public QWidget {
 	Q_OBJECT
 
 public:
-	explicit StackSplitWidget(const InventoryHandler& item, InventoryGrid* grid, QWidget* parent = nullptr);
+	explicit StackSplitWidget(const InventoryItemHandler& item, InventoryGrid* grid, QWidget* parent = nullptr);
 	~StackSplitWidget() override;
 
 	int selectedCount() const;
-	const InventoryHandler& originalItem() const;
+	const InventoryItemHandler& originalItem() const;
 	void positionNearWidget(QWidget* targetWidget);
 
 	// Создать временный предмет для дропа с выбранным количеством
-	InventoryHandler createSplitItem() const;
+	InventoryItemHandler createSplitItem() const;
 
 signals:
 	void splitConfirmed(int count);
 	void splitCancelled();
-	void splitDragStarted(const InventoryHandler& splitItem);
+	void splitDragStarted(const InventoryItemMimeData& splitItem);
 
 protected:
 	void mousePressEvent(QMouseEvent* event) override;

@@ -3,7 +3,8 @@
 #include <QString>
 #include <list>
 
-struct ItemsDataProvider {
+class ItemsDataProvider {
+public:
 	virtual ~ItemsDataProvider() = default;
 
 	virtual bool loadEntitiesIds(std::list<QString>& list) const = 0;

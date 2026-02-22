@@ -1,6 +1,8 @@
 #include "Game/widgets/inventory/inventory_item_widget.h"
 #include "Game/widgets/inventory/inventory_grid.h"
 #include "Game/widgets/inventory/stack_split_widget.h"
+#include "ApplicationLayer/inventory/inventory_item_handler.h"
+#include "ApplicationLayer/inventory/inventory_item_mime_data.h"
 #include <QApplication>
 #include <QVBoxLayout>
 #include <QLabel>
@@ -9,6 +11,7 @@
 #include <QMimeData>
 #include <QToolTip>
 #include <QTimer>
+#include <QMouseEvent>
 
 
 class InventoryItemWidget::Private {
@@ -19,7 +22,7 @@ public:
 
 	InventoryItemWidget* q;
 
-	InventoryItem item; // Данные предмета
+	InventoryItemHandler item; // Данные предмета
 	InventoryGrid* grid; // Родительская сетка
 	QPoint gridPos{ -1, -1 }; // Позиция в сетке (-1,-1 = не размещён)
 	QPoint dragStartPos; // Позиция начала драга для порога срабатывания
@@ -28,7 +31,7 @@ public:
 	QLabel* countLabel; // Счётчик для стеков (может быть nullptr)
 };
 
-InventoryItemWidget::InventoryItemWidget(const InventoryItem& item, InventoryGrid* grid, QWidget* parent)
+InventoryItemWidget::InventoryItemWidget(const InventoryItemHandler& item, InventoryGrid* grid, QWidget* parent)
 	: d(std::make_unique<Private>(this))
 	, QFrame(parent) {
 	auto* layout = new QVBoxLayout(this);
@@ -38,14 +41,14 @@ InventoryItemWidget::InventoryItemWidget(const InventoryItem& item, InventoryGri
 	d->item = item;
 	d->grid = grid;
 
-	setFixedSize(item.width * CELL_SIZE, item.height * CELL_SIZE);
+	setFixedSize(item.entity->width * CELL_SIZE, item.entity->height * CELL_SIZE);
 	setObjectName(newObjectName());
 
 	// Иконка
 	d->iconLabel = new QLabel(this);
-	d->iconLabel->setPixmap(item.icon.scaled(
-		item.width * CELL_SIZE - 4,
-		item.height * CELL_SIZE - 4,
+	d->iconLabel->setPixmap(item.entity->icon.scaled(
+		item.entity->width * CELL_SIZE - 4,
+		item.entity->height * CELL_SIZE - 4,
 		Qt::KeepAspectRatio,
 		Qt::SmoothTransformation
 	));
@@ -53,7 +56,7 @@ InventoryItemWidget::InventoryItemWidget(const InventoryItem& item, InventoryGri
 	layout->addWidget(d->iconLabel, 1);
 
 	// Счётчик для стеков
-	if (item.maxStack > 1) {
+	if (item.entity->maxStack > 1) {
 		d->countLabel = new QLabel(QString::number(item.count), this);
 		d->countLabel->setStyleSheet("color: white; font-weight: bold; background-color: rgba(0,0,0,120); border-radius: 6px;");
 		d->countLabel->setAlignment(Qt::AlignBottom | Qt::AlignRight);
@@ -80,7 +83,7 @@ QString InventoryItemWidget::newObjectName() {
 	return name;
 }
 
-const InventoryItem& InventoryItemWidget::item() const {
+const InventoryItemHandler& InventoryItemWidget::item() const {
 	return d->item;
 }
 
@@ -95,11 +98,11 @@ void InventoryItemWidget::setGridPosition(const QPoint& pos) {
 }
 
 void InventoryItemWidget::setCount(int count) {
-	if (d->item.maxStack <= 1) {
+	if (d->item.entity->maxStack <= 1) {
 		return;
 	}
 
-	d->item.count = qMin(count, d->item.maxStack);
+	d->item.count = qMin(count, d->item.entity->maxStack);
 	if (d->countLabel) {
 		d->countLabel->setText(QString::number(d->item.count));
 	}
@@ -111,15 +114,15 @@ int InventoryItemWidget::count() const {
 }
 
 bool InventoryItemWidget::isContainer() const {
-	return d->item.type == InventoryItemType::Container;
+	return d->item.entity->type == ItemType::Container;
 }
 
 bool InventoryItemWidget::isEquipment() const {
-	return d->item.type == InventoryItemType::Equipment;
+	return d->item.entity->type == ItemType::Equipment;
 }
 
 bool InventoryItemWidget::isStackable() const {
-	return d->item.maxStack > 1;
+	return d->item.entity->maxStack > 1;
 }
 
 void InventoryItemWidget::startDrag() {
@@ -128,17 +131,17 @@ void InventoryItemWidget::startDrag() {
 
 	mimeData->setData("application/x-game-item", d->item.toMimeData());
 	mimeData->setData("application/x-game-item-source-inventory-id", d->grid->inventoryId().toUtf8());
-	mimeData->setText(d->item.name);
+	mimeData->setText(d->item.entity->name);
 
 	// Иконка для курсора
 	QPixmap dragPixmap;
-	if (d->item.icon.isNull()) {
+	if (d->item.entity->icon.isNull()) {
 		dragPixmap = QPixmap(CELL_SIZE, CELL_SIZE);
 		dragPixmap.fill(Qt::darkCyan);
 	}
 	else
 	{
-		dragPixmap = d->item.icon.scaled(CELL_SIZE, CELL_SIZE, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+		dragPixmap = d->item.entity->icon.scaled(CELL_SIZE, CELL_SIZE, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 	}
 
 	drag->setMimeData(mimeData);
@@ -211,7 +214,7 @@ void InventoryItemWidget::mouseDoubleClickEvent(QMouseEvent* event) {
 				});
 
 			// Обработка успешного разделения
-			connect(splitWidget, &StackSplitWidget::splitDragStarted, this, [this](const InventoryHandler& splitItem) {
+			connect(splitWidget, &StackSplitWidget::splitDragStarted, this, [this](const InventoryItemMimeData& splitItem) {
 				// Обновляем количество в исходном предмете
 				int remaining = d->item.count - splitItem.count;
 				if (remaining > 0) {
@@ -240,21 +243,21 @@ void InventoryItemWidget::dragEnterEvent(QDragEnterEvent* event) {
 		return;
 	}
 
-	auto droppedItem = InventoryItem::fromMimeData(event->mimeData()->data("application/x-game-item"));
+	auto droppedItem = InventoryItemMimeData::fromMimeData(event->mimeData()->data("application/x-game-item"));
 	if (droppedItem.id == d->item.id &&
-		d->item.count <= d->item.maxStack) {
+		d->item.count <= d->item.entity->maxStack) {
 		event->acceptProposedAction();
 		return;
 	}	
 }
 
 void InventoryItemWidget::dropEvent(QDropEvent* event) {
-	if (d->item.type != InventoryItemType::Resource) {
+	if (d->item.entity->type != ItemType::Resource) {
 		event->ignore();
 		return;
 	}
 
-	auto droppedItem = InventoryItem::fromMimeData(event->mimeData()->data("application/x-game-item"));
+	auto droppedItem = InventoryItemMimeData::fromMimeData(event->mimeData()->data("application/x-game-item"));
 	if (droppedItem.id != d->item.id) {
 		event->ignore();
 		return;
@@ -262,14 +265,14 @@ void InventoryItemWidget::dropEvent(QDropEvent* event) {
 
 	// Объединение стеков
 	int total = d->item.count + droppedItem.count;
-	int added = qMin(total, d->item.maxStack) - d->item.count;
+	int added = qMin(total, d->item.entity->maxStack) - d->item.count;
 
 	if (added > 0) {
 		setCount(d->item.count + added);
 		event->acceptProposedAction();
 
 		// Если предмет полностью поглощён, удаляем его источник
-		if (total <= d->item.maxStack) {
+		if (total <= d->item.entity->maxStack) {
 			emit removedFromGrid(nullptr); // Сигнал для удаления исходного виджета
 		}
 	}
@@ -282,7 +285,7 @@ void InventoryItemWidget::paintEvent(QPaintEvent* event) {
 	QWidget::paintEvent(event);
 
 	// Визуальная граница для мульти-ячеечных предметов
-	if (d->item.width > 1 || d->item.height > 1) {
+	if (d->item.entity->width > 1 || d->item.entity->height > 1) {
 		QPainter painter(this);
 		painter.setRenderHint(QPainter::Antialiasing);
 		painter.setPen(QPen(QColor(100, 116, 139, 200), 2));

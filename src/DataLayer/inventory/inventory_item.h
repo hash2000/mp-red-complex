@@ -1,18 +1,24 @@
 #pragma once
+#include "DataLayer/items/item.h"
 #include <QString>
 #include <list>
+#include <map>
+#include <memory>
 
-struct InventoryItemRaw {
-	QString entityId;
+class InventoryItem {
+public:
 	QString id;
 	int x;
 	int y;
+	int count;
 };
 
-struct InventoryRaw {
+class Inventory {
+public:
 	QString id;
 	QString name;
 	int rows;
 	int cols;
-	std::list<InventoryItemRaw> items;
+	std::list<InventoryItem> items;
 };
+
