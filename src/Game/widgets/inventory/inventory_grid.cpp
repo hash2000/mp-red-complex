@@ -3,6 +3,9 @@
 #include "Game/widgets/inventory/drop_preview_widget.h"
 #include "ApplicationLayer/inventory/inventory_service.h"
 #include "ApplicationLayer/inventory/inventories_service.h"
+#include "ApplicationLayer/inventory/inventory_item_handler.h"
+#include "ApplicationLayer/inventory/inventory_item_mime_data.h"
+
 #include <QPoint>
 #include <QLayoutItem>
 #include <QLayout>
@@ -32,11 +35,11 @@ public:
 };
 
 QString InventoryGrid::inventoryId() const {
-	return d->inventory ? d->inventory->inventory()->id : QString();
+	return d->inventory ? d->inventory->inventoryId() : QString();
 }
 
 QString InventoryGrid::inventoryName() const {
-	return d->inventory ? d->inventory->inventory()->name : QString();
+	return d->inventory ? d->inventory->inventoryName() : QString();
 }
 
 QString InventoryGrid::newObjectName() {
@@ -91,8 +94,8 @@ void InventoryGrid::setInventoryService(InventoriesService* inventories, const Q
 
 		// Инициализируем виджеты из текущего состояния сервиса
 		updateGridSize();
-		for (auto item : d->inventory->items()) {
-			createWidgetForItem(*item);
+		for (const auto &item : d->inventory->items()) {
+			createWidgetForItem(item);
 		}
 	}
 
@@ -104,15 +107,15 @@ void InventoryGrid::updateGridSize() {
 		return;
 	}
 
-	int width = d->inventory->inventory()->cols * Private::CELL_SIZE;
-	int height = d->inventory->inventory()->rows * Private::CELL_SIZE;
+	int width = d->inventory->cols() * Private::CELL_SIZE;
+	int height = d->inventory->rows() * Private::CELL_SIZE;
 	setFixedSize(width, height);
 
 	// Синхронизируем размер оверлея
 	d->dropPreview->setFixedSize(size());
 }
 
-void InventoryGrid::onItemPlaced(const InventoryHandler& item, int row, int col) {
+void InventoryGrid::onItemPlaced(const InventoryItemMimeData& item, int row, int col) {
 	Q_UNUSED(row);
 	Q_UNUSED(col);
 
@@ -120,7 +123,7 @@ void InventoryGrid::onItemPlaced(const InventoryHandler& item, int row, int col)
 	createWidgetForItem(item);
 }
 
-void InventoryGrid::onItemRemoved(const InventoryHandler& item, int row, int col) {
+void InventoryGrid::onItemRemoved(const InventoryItemMimeData& item, int row, int col) {
 	Q_UNUSED(row);
 	Q_UNUSED(col);
 
@@ -128,7 +131,7 @@ void InventoryGrid::onItemRemoved(const InventoryHandler& item, int row, int col
 	removeWidgetForItem(item);
 }
 
-void InventoryGrid::onItemMoved(const InventoryHandler& item, int oldCol, int oldRow, int newCol, int newRow) {
+void InventoryGrid::onItemMoved(const InventoryItemMimeData& item, int oldCol, int oldRow, int newCol, int newRow) {
 	Q_UNUSED(oldRow);
 	Q_UNUSED(oldCol);
 
@@ -136,18 +139,18 @@ void InventoryGrid::onItemMoved(const InventoryHandler& item, int oldCol, int ol
 	moveWidgetForItem(item, newCol, newRow);
 }
 
-void InventoryGrid::onItemCountChanged(const InventoryHandler& item) {
+void InventoryGrid::onItemCountChanged(const InventoryItemMimeData& item) {
 
 
 	changeItemStackCount(item);
 }
 
-void InventoryGrid::createWidgetForItem(const InventoryHandler& item) {
+void InventoryGrid::createWidgetForItem(const InventoryItemMimeData& item) {
 	if (d->widgets.contains(item.id)) {
 		return;
 	}
 
-	auto itemPtr = d->inventory->itemById(item.id);
+	const auto itemPtr = d->inventory->itemById(item.id);
 	if (!itemPtr) {
 		return;
 	}
@@ -171,7 +174,7 @@ void InventoryGrid::createWidgetForItem(const InventoryHandler& item) {
 	d->widgets[item.id] = widget;
 }
 
-void InventoryGrid::changeItemStackCount(const InventoryHandler& item) {
+void InventoryGrid::changeItemStackCount(const InventoryItemMimeData& item) {
 	if (!d->widgets.contains(item.id)) {
 		return;
 	}
@@ -182,7 +185,7 @@ void InventoryGrid::changeItemStackCount(const InventoryHandler& item) {
 	}
 }
 
-void InventoryGrid::removeWidgetForItem(const InventoryHandler& item) {
+void InventoryGrid::removeWidgetForItem(const InventoryItemMimeData& item) {
 	if (!d->widgets.contains(item.id)) {
 		return;
 	}
@@ -194,7 +197,7 @@ void InventoryGrid::removeWidgetForItem(const InventoryHandler& item) {
 	}
 }
 
-void InventoryGrid::moveWidgetForItem(const InventoryHandler& item, int newCol, int newRow) {
+void InventoryGrid::moveWidgetForItem(const InventoryItemMimeData& item, int newCol, int newRow) {
 	if (!d->widgets.contains(item.id)) {
 		return;
 	}
@@ -225,11 +228,11 @@ InventoryItemWidget* InventoryGrid::widgetAt(int col, int row) const {
 }
 
 int InventoryGrid::rows() const {
-	return d->inventory ? d->inventory->inventory()->rows : 0;
+	return d->inventory ? d->inventory->rows() : 0;
 }
 
 int InventoryGrid::cols() const {
-	return d->inventory ? d->inventory->inventory()->cols : 0;
+	return d->inventory ? d->inventory->cols() : 0;
 }
 
 void InventoryGrid::dragEnterEvent(QDragEnterEvent* event) {
@@ -247,7 +250,7 @@ void InventoryGrid::dragMoveEvent(QDragMoveEvent* event) {
 		return;
 	}
 
-	auto item = InventoryItem::fromMimeData(event->mimeData()->data("application/x-game-item"));
+	auto item = InventoryItemMimeData::fromMimeData(event->mimeData()->data("application/x-game-item"));
 	const auto sourceInventoryId = QString::fromUtf8(event->mimeData()->data("application/x-game-item-source-inventory-id"));
 	const auto currentInventoryId = inventoryId();
 	const auto isSameGrid = (sourceInventoryId == currentInventoryId);
@@ -280,7 +283,7 @@ void InventoryGrid::dropEvent(QDropEvent* event) {
 	}
 
 	QByteArray data = event->mimeData()->data("application/x-game-item");
-	const auto item = InventoryItem::fromMimeData(data);
+	const auto item = InventoryItemMimeData::fromMimeData(data);
 
 	// Определяем целевую позицию
 	QPoint pos = event->position().toPoint();
@@ -336,12 +339,12 @@ void InventoryGrid::paintEvent(QPaintEvent* event) {
 	painter.fillRect(rect(), QColor(30, 41, 59));
 
 	// Сетка
-	for (int col = 0; col <= d->inventory->inventory()->cols; ++col) {
+	for (int col = 0; col <= d->inventory->cols(); ++col) {
 		int x = col * Private::CELL_SIZE;
 		painter.setPen(QColor(66, 73, 83));
 		painter.drawLine(x, 0, x, height());
 	}
-	for (int row = 0; row <= d->inventory->inventory()->rows; ++row) {
+	for (int row = 0; row <= d->inventory->rows(); ++row) {
 		int y = row * Private::CELL_SIZE;
 		painter.setPen(QColor(66, 73, 83));
 		painter.drawLine(0, y, width(), y);

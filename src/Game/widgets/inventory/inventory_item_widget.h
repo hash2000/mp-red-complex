@@ -1,24 +1,21 @@
 #pragma once
-#include "DataFormat/proto/inventory_item.h"
-#include <QWidget>
-#include <QPoint>
-#include <QMouseEvent>
+#include "Game/widgets/items/items_styles.h"
 #include <QFrame>
-#include <memory>
 
 class InventoryGrid;
-class QLabel;
+class InventoryItemHandler;
+class InventoryItemWidget;
 
 class InventoryItemWidget : public QFrame {
 	Q_OBJECT
 public:
-	static constexpr int CELL_SIZE = 38;
+	static constexpr int CELL_SIZE = ItemsStyles::CELL_SIZE;
 
 public:
-	explicit InventoryItemWidget(const InventoryItem& item, InventoryGrid* grid, QWidget* parent = nullptr);
+	explicit InventoryItemWidget(const InventoryItemHandler& item, InventoryGrid* grid, QWidget* parent = nullptr);
 	~InventoryItemWidget() override;
 
-	const InventoryItem& item() const;
+	const InventoryItemHandler& item() const;
 
 	// Позиция в сетке (координаты ячейки [0,0] предмета)
 	QPoint gridPosition() const;
