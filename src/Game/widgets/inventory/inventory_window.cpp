@@ -1,7 +1,6 @@
 #include "Game/widgets/inventory/inventory_window.h"
 #include "Game/widgets/inventory/inventory_grid_view.h"
 #include "Game/widgets/inventory/inventory_grid.h"
-#include "ApplicationLayer/inventory/inventories_controller.h"
 #include "ApplicationLayer/inventory/inventories_service.h"
 #include <QVBoxLayout>
 #include <QUuid>
@@ -39,17 +38,11 @@ bool InventoryWindow::handleCommand(const QString& commandName, const QStringLis
 		if (target.isNull()) {
 			return false;
 		}
-
-		if (!d->service->controller()->postInventoryLoad(target)) {
-			return false;
-		}
-
 		if (!d->widget->load(target)) {
 			return false;
 		}
 
 		d->inventoryName = d->widget->grid()->inventoryName();
-		d->service->controller()->postInventoryLoaded(target);
 
 		return true;
 	}
@@ -63,6 +56,5 @@ QString InventoryWindow::windowTitle() const {
 
 void InventoryWindow::closeEvent(QCloseEvent* closeEvent) {
 	const auto target = QUuid::fromString(d->widget->grid()->inventoryId());
-	d->service->controller()->postInventoryUnloaded(target);
 	QMdiSubWindow::closeEvent(closeEvent);
 }

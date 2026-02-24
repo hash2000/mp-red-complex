@@ -17,6 +17,5 @@ target_link_libraries(DataLayer
 
 		Base
 		DataStream
-		DataFormat
 		Resources
 )

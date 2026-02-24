@@ -1,5 +1,4 @@
 #pragma once
-#include "DataFormat/proto/inventory_item.h"
 #include <QWidget>
 #include <QVector>
 #include <QMap>
@@ -9,6 +8,8 @@ class InventoryCell;
 class InventoryItemWidget;
 class InventoriesService;
 class InventoryService;
+class InventoryItemHandler;
+class InventoryItemMimeData;
 
 class InventoryGrid : public QWidget {
 	friend class InventoryItemWidget;
@@ -33,8 +34,8 @@ protected:
 	QString newObjectName();
 
 signals:
-	void itemDroppedForEquipment(const InventoryItem& item);
-	void containerOpened(const InventoryItem& container);
+	void itemDroppedForEquipment(const InventoryItemMimeData& item);
+	void containerOpened(const InventoryItemMimeData& container);
 
 protected:
 	void paintEvent(QPaintEvent* event) override;
@@ -45,18 +46,18 @@ protected:
 	void resizeEvent(QResizeEvent* event) override;
 
 private:
-	void onItemPlaced(const InventoryHandler& item, int row, int col);
-	void onItemRemoved(const InventoryHandler& item, int row, int col);
-	void onItemMoved(const InventoryHandler& item, int oldCol, int oldRow, int newCol, int newRow);
-	void onItemCountChanged(const InventoryHandler& item);
+	void onItemPlaced(const InventoryItemMimeData& item, int row, int col);
+	void onItemRemoved(const InventoryItemMimeData& item, int row, int col);
+	void onItemMoved(const InventoryItemMimeData& item, int oldCol, int oldRow, int newCol, int newRow);
+	void onItemCountChanged(const InventoryItemMimeData& item);
 
-	void createWidgetForItem(const InventoryHandler& item);
-	void removeWidgetForItem(const InventoryHandler& item);
-	void moveWidgetForItem(const InventoryHandler& item, int newCol, int newRow);
+	void createWidgetForItem(const InventoryItemMimeData& item);
+	void removeWidgetForItem(const InventoryItemMimeData& item);
+	void moveWidgetForItem(const InventoryItemMimeData& item, int newCol, int newRow);
 	void updateGridSize();
 	void showDropPreview(int col, int row, int width, int height, bool canPlace);
 	void hideDropPreview();
-	void changeItemStackCount(const InventoryHandler& item);
+	void changeItemStackCount(const InventoryItemMimeData& item);
 
 private:
 	class Private;
