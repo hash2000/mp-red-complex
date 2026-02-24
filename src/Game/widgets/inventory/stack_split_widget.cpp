@@ -254,7 +254,7 @@ void StackSplitWidget::onStartDrag() {
 	d->iconLabel->setCursor(Qt::OpenHandCursor);
 
 	if (dropAction == Qt::MoveAction) {
-		emit splitDragStarted(InventoryItemMimeData(splitItem));
+		emit splitDropStarted(InventoryItemMimeData(splitItem));
 		close(); // Закрываем виджет после успешного дропа
 	}
 }
@@ -302,5 +302,6 @@ bool StackSplitWidget::eventFilter(QObject* watched, QEvent* event) {
 			return true;
 		}
 	}
+
 	return QWidget::eventFilter(watched, event);
 }

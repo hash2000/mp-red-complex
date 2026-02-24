@@ -213,19 +213,6 @@ void InventoryItemWidget::mouseDoubleClickEvent(QMouseEvent* event) {
 				splitWidget->positionNearWidget(this);
 				});
 
-			// Обработка успешного разделения
-			connect(splitWidget, &StackSplitWidget::splitDragStarted, this, [this](const InventoryItemMimeData& splitItem) {
-				// Обновляем количество в исходном предмете
-				int remaining = d->item.count - splitItem.count;
-				if (remaining > 0) {
-					setCount(remaining);
-				}
-				else {
-					// Если всё вынесено — удаляем предмет
-					emit removedFromGrid(this);
-				}
-				});
-
 			// Обработка отмены
 			connect(splitWidget, &StackSplitWidget::splitCancelled, splitWidget, &QWidget::deleteLater);
 

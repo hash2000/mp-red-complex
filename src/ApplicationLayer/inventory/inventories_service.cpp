@@ -1,5 +1,6 @@
 #include "ApplicationLayer/inventory/inventories_service.h"
 #include "ApplicationLayer/inventory/inventory_service.h"
+#include "ApplicationLayer/inventory/inventory_item_handler.h"
 #include "ApplicationLayer/inventory/inventory_item_mime_data.h"
 #include "DataLayer/inventory/inventory_data_provider.h"
 #include "DataLayer/inventory/inventory_item.h"
@@ -51,7 +52,6 @@ InventoryService* InventoriesService::inventoryService(const QUuid& id, bool loa
 }
 
 bool InventoriesService::crossInventoryMove(const InventoryItemMimeData& item, int col, int row, const QUuid& fromInventoryId, const QUuid& toInventoryId) {
-	// 1. Получаем сервисы инвентарей
 	auto fromService = inventoryService(fromInventoryId, false);
 	auto toService = inventoryService(toInventoryId, false);
 
@@ -61,70 +61,28 @@ bool InventoriesService::crossInventoryMove(const InventoryItemMimeData& item, i
 		return false;
 	}
 
-	// 2. Находим полный предмет в ИСХОДНОМ инвентаре по ID
-	auto itemPtr = fromService->itemById(item.id);
-	if (!itemPtr) {
-		qWarning() << "crossInventoryMove: item not found in source inventory" << item.id;
+	// в предыдущем инвентаре изменяем количество элементов в стопке, если она есть
+	// если элементов станет 0, то из этого инвентаря элемент удалится
+
+	InventoryItemMimeData changedItem = item;
+	if (!fromService->changeItemsCount(changedItem)) {
 		return false;
 	}
 
-	//// 3. Проверяем возможность размещения в ЦЕЛЕВОМ инвентаре
-	//const auto count = toService->canPlaceItem(item, col, row, false);
-	//if (count == 0) {
-	//	return false;
-	//}
+	if (changedItem.count == 0) {
+		return true;
+	}
 
-	//std::shared_ptr<InventoryItem> itemToMove;
+	InventoryItemMimeData toItem = item;
+	toItem.count = changedItem.count;
+	toItem.x = col;
+	toItem.y = row;
 
-	//{
-	//	// Блок для ограничения времени жизни итератора
-	//	auto& fromItems = fromService->inventory()->items;
-	//	auto it = fromItems.find(item.id);
-	//	if (it == fromItems.end()) {
-	//		qWarning() << "crossInventoryMove: item vanished during move" << item.id;
-	//		return false;
-	//	}
-
-	//	// Сохраняем владение перед удалением
-	//	itemToMove = it->second;
-
-	//	const auto remains = qMax(itemToMove->count - item.count, 0);
-	//	if (remains == 0) {
-	//		fromService->removeItem(item);
-	//	}
-	//	else {
-	//		// стопка выведена не полностью, поэтому исходную стопку оставляем
-	//		// и создаём новую
-	//		itemToMove->count = remains;
-	//		itemToMove = itemToMove->duplicate(true);
-	//		itemToMove->count = item.count;
-	//	}
-	//}
-
-	//itemToMove->x = col;
-	//itemToMove->y = row;
-
-	//// 5. Размещаем в целевом инвентаре
-	//toService->inventory()->items.emplace(itemToMove->id, itemToMove);
-
-	//bool placed = toService->placeItem(*itemToMove);
-
-	//if (!placed) {
-	//	qWarning() << "crossInventoryMove: failed to place item in target inventory" << item.id;
-	//	// Возвращаем предмет обратно в исходный инвентарь при ошибке
-	//	itemToMove->x = item.x; // Восстанавливаем оригинальные координаты
-	//	itemToMove->y = item.y;
-
-	//	fromService->inventory()->items.emplace(itemToMove->id, itemToMove);
-	//	if (!fromService->placeItem(*itemToMove)) {
-	//		qWarning() << "crossInventoryMove: failed to return back item in source inventory" << item.id;
-	//	}
-
-	//	return false;
-	//}
+	// во втором инвентаре нужно или добавить к соответствующей пачке
+	// или положить всю пачку в пустую ячейку 
+	toService->applyItem(toItem);
 
 	return true;
-
 }
 
 void InventoriesService::onInventoryClosed(const QUuid& id) {

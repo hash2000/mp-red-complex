@@ -150,7 +150,7 @@ void InventoryGrid::createWidgetForItem(const InventoryItemMimeData& item) {
 		return;
 	}
 
-	auto itemPtr = d->inventory->itemById(item.id);
+	const auto itemPtr = d->inventory->itemById(item.id);
 	if (!itemPtr) {
 		return;
 	}

@@ -22,7 +22,7 @@ public:
 signals:
 	void splitConfirmed(int count);
 	void splitCancelled();
-	void splitDragStarted(const InventoryItemMimeData& splitItem);
+	void splitDropStarted(const InventoryItemMimeData& splitItem);
 
 protected:
 	void mousePressEvent(QMouseEvent* event) override;

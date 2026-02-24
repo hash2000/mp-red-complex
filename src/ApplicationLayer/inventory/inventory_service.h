@@ -15,7 +15,6 @@ class InventoryService : public QObject {
 	Q_OBJECT
 public:
 	using EntityView = decltype(make_deref_view(std::declval<const std::map<QString, std::unique_ptr<InventoryItemHandler>>&>()));
-
 public:
 	InventoryService(ItemsService* itemsService);
 	~InventoryService() override;
@@ -34,16 +33,19 @@ public:
 	bool moveItem(const InventoryItemMimeData& item, int newCol, int newRow, bool checkItemPlace);
 	void removeItem(const InventoryItemMimeData& item);
 
-	bool splitStack(const QString& itemId, int newCol, int newRow, int splitCount);
-
 	InventoryItemHandler* itemById(const QString& id) const;
 	InventoryItemHandler* itemAt(int col, int row) const;
 	EntityView items() const;
 
-	// пространство заполнено этим же элементом
 	bool containsItem(const InventoryItemMimeData& item) const;
 
 	void clear();
+
+	bool applyItem(const InventoryItemMimeData& item);
+	bool attachItem(const InventoryItemMimeData& item);
+	bool detachItem(const InventoryItemMimeData& item);
+
+	bool changeItemsCount(const InventoryItemMimeData& item);
 
 private:
 	void setupCells();
