@@ -18,20 +18,14 @@ EquipmentWindow::EquipmentWindow(InventoriesService* inventoriesService, const Q
 	d->widget = new EquipmentWidget(this);
 	setWindowTitle("Equipment");
 
-	connect(d->widget, &EquipmentWidget::itemEquipped, [](const EquipmentItem& item, EquipmentSlotType slot) {
-		qDebug() << "Equipped" << item.name << "to slot" << static_cast<int>(slot);
-		});
+	//connect(d->widget, &EquipmentWidget::itemEquipped, [](const EquipmentItem& item, EquipmentSlotType slot) {
+	//	qDebug() << "Equipped" << item.entity->name << "to slot" << static_cast<int>(slot);
+	//	});
 
-	connect(d->widget, &EquipmentWidget::itemUnequipped, [](const EquipmentItem& item, EquipmentSlotType slot) {
-		qDebug() << "Unequipped" << item.name << "from slot" << static_cast<int>(slot);
-		});
+	//connect(d->widget, &EquipmentWidget::itemUnequipped, [](const EquipmentItem& item, EquipmentSlotType slot) {
+	//	qDebug() << "Unequipped" << item.entity->name << "from slot" << static_cast<int>(slot);
+	//	});
 
-	EquipmentItem sword{ "sword_001", "Rusty Sword",
-		EquipmentItemType::Weapon,
-		QPixmap(":/icons/sword.png"),
-		EquipmentItemRarityType::Common };
-
-	d->widget->equipItem(sword);
 	setWidget(d->widget);
 }
 
@@ -42,6 +36,10 @@ EquipmentWidget* EquipmentWindow::widget() const {
 }
 
 bool EquipmentWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) {
+	if (commandName == "create") {
 
-	return true;
+		return true;
+	}
+
+	return false;
 }

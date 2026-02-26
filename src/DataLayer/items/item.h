@@ -36,6 +36,7 @@ enum class ItemRarityType {
 	Unique,
 };
 
+// если этот предмет-экиперовка, сразу нежно знать куда эта экиперовка одевается
 enum class ItemEquipmentType {
 	Head,
 	Body,
@@ -45,21 +46,8 @@ enum class ItemEquipmentType {
 	Boots,
 	Ring,
 	Amulet,
-	Consumable,
 	Resource,
-};
-
-enum class ItemEquipmentSlotType {
-	Head,
-	Body,
-	WeaponLeft,
-	WeaponRight,
-	GlovesLeft,
-	GlovesRight,
-	Boots,
-	RingLeft,
-	RingRight,
-	Amulet,
+	Consumable,
 };
 
 // рецепты

@@ -42,13 +42,7 @@ public:
 	void clear();
 
 	bool applyItem(const InventoryItemMimeData& item);
-	bool attachItem(const InventoryItemMimeData& item);
-	bool detachItem(const InventoryItemMimeData& item);
-
 	bool changeItemsCount(const InventoryItemMimeData& item);
-
-private:
-	void setupCells();
 
 signals:
 	void placeItemEvent(const InventoryItemMimeData& item, int row, int col);

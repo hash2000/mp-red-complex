@@ -1,4 +1,5 @@
 #include "Game/widgets/equipment/equipment_widget.h"
+#include "Game/widgets/equipment/equipment_slot_widget.h"
 #include <QVBoxLayout>
 
 class EquipmentWidget::Private {

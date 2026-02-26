@@ -1,6 +1,5 @@
 #pragma once
-#include "DataFormat/proto/equipment_item.h"
-#include "DataFormat/proto/equipment_slot.h"
+#include "ApplicationLayer/equipment/equipment_item_handler.h"
 #include <QWidget>
 #include <QLabel>
 #include <QFrame>

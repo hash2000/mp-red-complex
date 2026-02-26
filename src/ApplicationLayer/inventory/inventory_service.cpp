@@ -41,6 +41,66 @@ public:
 		return result;
 	}
 
+	void setupCells() {
+		if (inventoryItems.empty()) {
+			cells.clear();
+			items.clear();
+		}
+
+		cells.resize(cols);
+		for (int col = 0; col < cols; col++) {
+			cells[col].resize(rows);
+			for (int row = 0; row < rows; row++) {
+				auto cell = std::make_unique<InventoryViewCell>();
+				cells[col][row] = std::move(cell);
+			}
+		}
+
+		items.clear();
+
+		for (const auto& itemIt : inventoryItems) {
+			auto item = itemIt.second.get();
+			if (!item) {
+				continue;
+			}
+
+			// Проверка валидности координат предмета
+			if (item->x < 0 || item->y < 0 ||
+				item->x + item->entity->width > cols ||
+				item->y + item->entity->height > rows) {
+				qWarning() << "InventoryService: item" << item->id
+					<< "has invalid position (" << item->x << "," << item->y
+					<< ") for grid" << cols << "x" << rows;
+				continue;
+			}
+
+			// Занимаем ячейки предметом
+			bool occupiedConflict = false;
+			for (int dy = 0; dy < item->entity->height && !occupiedConflict; dy++) {
+				for (int dx = 0; dx < item->entity->width && !occupiedConflict; dx++) {
+					int cellCol = item->x + dx;
+					int cellRow = item->y + dy;
+
+					if (cells[cellCol][cellRow]->occupied) {
+						qWarning() << "InventoryService: cell conflict at" << cellCol << "," << cellRow
+							<< "for item" << item->id;
+						occupiedConflict = true;
+						break;
+					}
+
+					auto& cell = cells[cellCol][cellRow];
+					cell->occupied = true;
+					cell->item = item;
+				}
+			}
+
+			if (!occupiedConflict) {
+				// Добавляем предмет в хеш по позиции [0,0]
+				items[{item->x, item->y}] = item;
+			}
+		}
+	}
+
 	InventoryService* q;
 	ItemsService* itemsService;
 	QString inventoryId;
@@ -82,7 +142,7 @@ bool InventoryService::load(const Inventory& inventory) {
 		d->inventoryItems.emplace(invItem->id, std::move(invItem));
 	}
 
-	setupCells();
+	d->setupCells();
 	return true;
 }
 
@@ -104,66 +164,6 @@ int InventoryService::rows() const {
 
 int InventoryService::cols() const {
 	return d->cols;
-}
-
-void InventoryService::setupCells() {
-	if (d->inventoryItems.empty()) {
-		d->cells.clear();
-		d->items.clear();
-	}
-
-	d->cells.resize(d->cols);
-	for (int col = 0; col < d->cols; col++) {
-		d->cells[col].resize(d->rows);
-		for (int row = 0; row < d->rows; row++) {
-			auto cell = std::make_unique<InventoryViewCell>();
-			d->cells[col][row] = std::move(cell);
-		}
-	}
-
-	d->items.clear();
-
-	for (const auto& itemIt : d->inventoryItems) {
-		auto item = itemIt.second.get();
-		if (!item) {
-			continue;
-		}
-
-		// Проверка валидности координат предмета
-		if (item->x < 0 || item->y < 0 ||
-			item->x + item->entity->width > d->cols ||
-			item->y + item->entity->height > d->rows) {
-			qWarning() << "InventoryService: item" << item->id
-				<< "has invalid position (" << item->x << "," << item->y
-				<< ") for grid" << d->cols << "x" << d->rows;
-			continue;
-		}
-
-		// Занимаем ячейки предметом
-		bool occupiedConflict = false;
-		for (int dy = 0; dy < item->entity->height && !occupiedConflict; dy++) {
-			for (int dx = 0; dx < item->entity->width && !occupiedConflict; dx++) {
-				int cellCol = item->x + dx;
-				int cellRow = item->y + dy;
-
-				if (d->cells[cellCol][cellRow]->occupied) {
-					qWarning() << "InventoryService: cell conflict at" << cellCol << "," << cellRow
-						<< "for item" << item->id;
-					occupiedConflict = true;
-					break;
-				}
-
-				auto& cell = d->cells[cellCol][cellRow];
-				cell->occupied = true;
-				cell->item = item;
-			}
-		}
-
-		if (!occupiedConflict) {
-			// Добавляем предмет в хеш по позиции [0,0]
-			d->items[{item->x, item->y}] = item;
-		}
-	}
 }
 
 bool InventoryService::placeItem(const InventoryItemMimeData& item) {
@@ -513,43 +513,6 @@ InventoryItemHandler* InventoryService::itemById(const QString& id) const {
 	}
 
 	return nullptr;
-}
-
-bool InventoryService::attachItem(const InventoryItemMimeData& item) {
-	if (d->inventoryItems.contains(item.id)) {
-		return false;
-	}
-
-	auto itemPtr = d->itemsService->itemById(item.id);
-	if (!itemPtr) {
-		return false;
-	}
-
-	auto invItem = d->makeInventoryitem(itemPtr);
-	if (!invItem) {
-		return false;
-	}
-
-	invItem->x = item.x;
-	invItem->y = item.y;
-	invItem->count = item.count;	
-
-	return placeItem(item);
-}
-
-bool InventoryService::detachItem(const InventoryItemMimeData& item) {
-	if (item.x < 0 || item.y < 0 || item.x + item.width > d->cols || item.y + item.height > d->rows) {
-		return false;
-	}
-
-	// нельзя отсоединить элемент от инвенраря, если он занимает ячейку
-	const auto &cell = d->cells[item.x][item.y];
-	if (cell->occupied && cell->item->id == item.id) {
-		return false;
-	}
-
-	d->inventoryItems.erase(item.id);
-	return true;
 }
 
 bool InventoryService::changeItemsCount(const InventoryItemMimeData& item) {

@@ -97,9 +97,9 @@ bool EquipmentSlot::setItem(const EquipmentItem& item) {
 	}
 
 	d->item = item;
-	setPixmap(item.icon.scaled(size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
-	updateVisualState();
-	emit itemEquipped(item, this);
+	//setPixmap(item.entity->icon.scaled(size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+	//updateVisualState();
+	//emit itemEquipped(item, this);
 	return true;
 }
 
@@ -126,23 +126,23 @@ void EquipmentSlot::mousePressEvent(QMouseEvent* event) {
 }
 
 void EquipmentSlot::dragEnterEvent(QDragEnterEvent* event) {
-	if (event->mimeData()->hasFormat("application/x-game-item")) {
-		QByteArray itemData = event->mimeData()->data("application/x-game-item");
-		QDataStream stream(itemData);
-		QString id;
-		qint32 typeInt;
-		qint32 rarity;
-		stream >> id >> typeInt >> rarity;
+	//if (event->mimeData()->hasFormat("application/x-game-item")) {
+	//	QByteArray itemData = event->mimeData()->data("application/x-game-item");
+	//	QDataStream stream(itemData);
+	//	QString id;
+	//	qint32 typeInt;
+	//	qint32 rarity;
+	//	stream >> id >> typeInt >> rarity;
 
-		EquipmentItemType type = static_cast<EquipmentItemType>(typeInt);
-		EquipmentItem previewItem{ id, "Preview", type, QPixmap(), static_cast<EquipmentItemRarityType>(rarity) };
+	//	const auto type = static_cast<ItemEquipmentType>(typeInt);
+	//	EquipmentItem previewItem{ id, "Preview", type, QPixmap(), static_cast<EquipmentItemRarityType>(rarity) };
 
-		if (canAcceptItem(previewItem)) {
-			setHighlighted(true);
-			event->acceptProposedAction();
-			return;
-		}
-	}
+	//	if (canAcceptItem(previewItem)) {
+	//		setHighlighted(true);
+	//		event->acceptProposedAction();
+	//		return;
+	//	}
+	//}
 	event->ignore();
 }
 
@@ -154,30 +154,30 @@ void EquipmentSlot::dragLeaveEvent(QDragLeaveEvent* event) {
 void EquipmentSlot::dropEvent(QDropEvent* event) {
 	setHighlighted(false);
 
-	if (event->mimeData()->hasFormat("application/x-game-item")) {
-		QByteArray itemData = event->mimeData()->data("application/x-game-item");
-		QDataStream stream(itemData);
-		QString id;
-		qint32 typeInt;
-		qint32 rarity;
-		stream >> id >> typeInt >> rarity;
+	//if (event->mimeData()->hasFormat("application/x-game-item")) {
+	//	QByteArray itemData = event->mimeData()->data("application/x-game-item");
+	//	QDataStream stream(itemData);
+	//	QString id;
+	//	qint32 typeInt;
+	//	qint32 rarity;
+	//	stream >> id >> typeInt >> rarity;
 
-		// Здесь нужно получить полные данные предмета из вашей системы предметов
-		// Для примера создаём временный предмет:
-		EquipmentItem droppedItem{
-				id,
-				QString("Item %1").arg(id),
-				static_cast<EquipmentItemType>(typeInt),
-				QPixmap(64, 64), // Замените на реальную иконку
-				static_cast<EquipmentItemRarityType>(rarity)
-		};
-		droppedItem.icon.fill(Qt::transparent);
+	//	// Здесь нужно получить полные данные предмета из вашей системы предметов
+	//	// Для примера создаём временный предмет:
+	//	EquipmentItem droppedItem{
+	//			id,
+	//			QString("Item %1").arg(id),
+	//			static_cast<EquipmentItemType>(typeInt),
+	//			QPixmap(64, 64), // Замените на реальную иконку
+	//			static_cast<EquipmentItemRarityType>(rarity)
+	//	};
+	//	droppedItem.icon.fill(Qt::transparent);
 
-		if (setItem(droppedItem)) {
-			event->acceptProposedAction();
-			return;
-		}
-	}
+	//	if (setItem(droppedItem)) {
+	//		event->acceptProposedAction();
+	//		return;
+	//	}
+	//}
 
 	updateVisualState();
 	event->ignore();
@@ -187,62 +187,62 @@ void EquipmentSlot::paintEvent(QPaintEvent* event) {
 	QLabel::paintEvent(event);
 
 	// Добавляем визуальные метки типа слота (опционально)
-	if (!d->item.has_value() && !d->dragging) {
-		QPainter painter(this);
-		painter.setRenderHint(QPainter::Antialiasing);
-		painter.setPen(QColor(100, 116, 139));
+	//if (!d->item.has_value() && !d->dragging) {
+	//	QPainter painter(this);
+	//	painter.setRenderHint(QPainter::Antialiasing);
+	//	painter.setPen(QColor(100, 116, 139));
 
-		switch (d->type) {
-		case EquipmentSlotType::Head: painter.drawText(rect(), Qt::AlignCenter, "H"); break;
-		case EquipmentSlotType::Body: painter.drawText(rect(), Qt::AlignCenter, "B"); break;
-		case EquipmentSlotType::WeaponLeft: painter.drawText(rect(), Qt::AlignCenter, "L"); break;
-		case EquipmentSlotType::WeaponRight: painter.drawText(rect(), Qt::AlignCenter, "R"); break;
-		case EquipmentSlotType::GlovesLeft: painter.drawText(rect(), Qt::AlignCenter, "GL"); break;
-		case EquipmentSlotType::GlovesRight: painter.drawText(rect(), Qt::AlignCenter, "GR"); break;
-		case EquipmentSlotType::Boots: painter.drawText(rect(), Qt::AlignCenter, "F"); break;
-		case EquipmentSlotType::RingLeft: painter.drawText(rect(), Qt::AlignCenter, "RL"); break;
-		case EquipmentSlotType::RingRight: painter.drawText(rect(), Qt::AlignCenter, "RR"); break;
-		case EquipmentSlotType::Amulet: painter.drawText(rect(), Qt::AlignCenter, "A"); break;
-		}
-	}
+	//	switch (d->type) {
+	//	case EquipmentSlotType::Head: painter.drawText(rect(), Qt::AlignCenter, "H"); break;
+	//	case EquipmentSlotType::Body: painter.drawText(rect(), Qt::AlignCenter, "B"); break;
+	//	case EquipmentSlotType::WeaponLeft: painter.drawText(rect(), Qt::AlignCenter, "L"); break;
+	//	case EquipmentSlotType::WeaponRight: painter.drawText(rect(), Qt::AlignCenter, "R"); break;
+	//	case EquipmentSlotType::GlovesLeft: painter.drawText(rect(), Qt::AlignCenter, "GL"); break;
+	//	case EquipmentSlotType::GlovesRight: painter.drawText(rect(), Qt::AlignCenter, "GR"); break;
+	//	case EquipmentSlotType::Boots: painter.drawText(rect(), Qt::AlignCenter, "F"); break;
+	//	case EquipmentSlotType::RingLeft: painter.drawText(rect(), Qt::AlignCenter, "RL"); break;
+	//	case EquipmentSlotType::RingRight: painter.drawText(rect(), Qt::AlignCenter, "RR"); break;
+	//	case EquipmentSlotType::Amulet: painter.drawText(rect(), Qt::AlignCenter, "A"); break;
+	//	}
+	//}
 }
 
 bool EquipmentSlot::canAcceptItem(const EquipmentItem& item) const {
-	switch (d->type) {
-	case EquipmentSlotType::Head:
-		return item.type == EquipmentItemType::Head;
-	case EquipmentSlotType::Body:
-		return item.type == EquipmentItemType::Body;
-	case EquipmentSlotType::WeaponLeft:
-		return item.type == EquipmentItemType::Weapon || item.type == EquipmentItemType::Shield;
-	case EquipmentSlotType::WeaponRight:
-		return item.type == EquipmentItemType::Weapon; // Только оружие в правой
-	case EquipmentSlotType::GlovesLeft:
-	case EquipmentSlotType::GlovesRight:
-		return item.type == EquipmentItemType::Gloves;
-	case EquipmentSlotType::Boots:
-		return item.type == EquipmentItemType::Boots;
-	case EquipmentSlotType::RingLeft:
-	case EquipmentSlotType::RingRight:
-		return item.type == EquipmentItemType::Ring;
-	case EquipmentSlotType::Amulet:
-		return item.type == EquipmentItemType::Amulet;
-	}
+	//switch (d->type) {
+	//case EquipmentSlotType::Head:
+	//	return item.type == EquipmentItemType::Head;
+	//case EquipmentSlotType::Body:
+	//	return item.type == EquipmentItemType::Body;
+	//case EquipmentSlotType::WeaponLeft:
+	//	return item.type == EquipmentItemType::Weapon || item.type == EquipmentItemType::Shield;
+	//case EquipmentSlotType::WeaponRight:
+	//	return item.type == EquipmentItemType::Weapon; // Только оружие в правой
+	//case EquipmentSlotType::GlovesLeft:
+	//case EquipmentSlotType::GlovesRight:
+	//	return item.type == EquipmentItemType::Gloves;
+	//case EquipmentSlotType::Boots:
+	//	return item.type == EquipmentItemType::Boots;
+	//case EquipmentSlotType::RingLeft:
+	//case EquipmentSlotType::RingRight:
+	//	return item.type == EquipmentItemType::Ring;
+	//case EquipmentSlotType::Amulet:
+	//	return item.type == EquipmentItemType::Amulet;
+	//}
 
 	return false;
 }
 
 void EquipmentSlot::updateVisualState() {
-	setProperty("occupied", d->item.has_value());
-	setProperty("highlight", d->highlighted);
+	//setProperty("occupied", d->item.has_value());
+	//setProperty("highlight", d->highlighted);
 
-	// Для редкости предмета (опционально)
-	if (d->item.has_value()) {
-		setProperty("rarity", static_cast<int>(d->item->rarity));
-	}
-	else {
-		setProperty("rarity", -1);
-	}
+	//// Для редкости предмета (опционально)
+	//if (d->item.has_value()) {
+	//	setProperty("rarity", static_cast<int>(d->item->rarity));
+	//}
+	//else {
+	//	setProperty("rarity", -1);
+	//}
 
 	// Применяем изменения стиля
 	style()->unpolish(this);
@@ -255,34 +255,34 @@ void EquipmentSlot::startDrag() {
 		return;
 	}
 
-	QDrag* drag = new QDrag(this);
-	QMimeData* mimeData = new QMimeData();
-	QByteArray itemData;
-	QDataStream stream(&itemData, QIODevice::WriteOnly);
-	stream << d->item->id << static_cast<qint32>(d->item->type) << d->item->rarity;
+	//QDrag* drag = new QDrag(this);
+	//QMimeData* mimeData = new QMimeData();
+	//QByteArray itemData;
+	//QDataStream stream(&itemData, QIODevice::WriteOnly);
+	//stream << d->item->id << static_cast<qint32>(d->item->type) << d->item->rarity;
 
-	mimeData->setData("application/x-game-item", itemData);
-	mimeData->setText(d->item->name);
-	drag->setMimeData(mimeData);
-	drag->setPixmap(d->item->icon.scaled(48, 48, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-	drag->setHotSpot(QPoint(drag->pixmap().width() / 2, drag->pixmap().height() / 2));
+	//mimeData->setData("application/x-game-item", itemData);
+	//mimeData->setText(d->item->name);
+	//drag->setMimeData(mimeData);
+	//drag->setPixmap(d->item->icon.scaled(48, 48, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+	//drag->setHotSpot(QPoint(drag->pixmap().width() / 2, drag->pixmap().height() / 2));
 
-	// Визуальная обратная связь: временно очищаем слот во время драга
-	QPixmap currentPixmap = (!pixmap().isNull()) ? pixmap() : QPixmap();
-	clear();
-	d->dragging = true;
-	update();
+	//// Визуальная обратная связь: временно очищаем слот во время драга
+	//QPixmap currentPixmap = (!pixmap().isNull()) ? pixmap() : QPixmap();
+	//clear();
+	//d->dragging = true;
+	//update();
 
-	if (drag->exec(Qt::MoveAction) == Qt::IgnoreAction) {
-		// Отмена драга — возвращаем предмет
-		if (!currentPixmap.isNull()) {
-			setPixmap(currentPixmap);
-			d->dragging = false;
-			updateVisualState();
-		}
-	}
-	else {
-		clearItem();
-	}
+	//if (drag->exec(Qt::MoveAction) == Qt::IgnoreAction) {
+	//	// Отмена драга — возвращаем предмет
+	//	if (!currentPixmap.isNull()) {
+	//		setPixmap(currentPixmap);
+	//		d->dragging = false;
+	//		updateVisualState();
+	//	}
+	//}
+	//else {
+	//	clearItem();
+	//}
 }
 

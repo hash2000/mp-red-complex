@@ -1,7 +1,5 @@
 #pragma once
-#include <QList>
 #include <QUuid>
-#include <memory>
 
 class Inventory;
 

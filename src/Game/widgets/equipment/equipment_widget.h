@@ -1,8 +1,11 @@
 #pragma once
-#include "Game/widgets/equipment/equipment_slot_widget.h"
+#include "ApplicationLayer/equipment/equipment_item_handler.h"
+#include <QFrame>
 #include <QWidget>
 #include <optional>
 #include <memory>
+
+class EquipmentSlot;
 
 class EquipmentWidget : public QFrame {
 	Q_OBJECT
