@@ -7,7 +7,7 @@
 
 class WidgetsFactory {
 public:
-	WidgetsFactory(std::shared_ptr<Resources> resources, const QVariantMap& params);
+	WidgetsFactory(Resources* resources, const QVariantMap& params);
 
 	BaseTabWidget* create(QWidget* parent = nullptr) const;
 
@@ -17,5 +17,5 @@ private:
 
 private:
 	const QVariantMap& _params;
-	std::shared_ptr<Resources> _resources;
+	Resources* _resources;
 };

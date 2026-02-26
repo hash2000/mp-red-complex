@@ -12,7 +12,7 @@ public:
 protected:
 	virtual std::unique_ptr<MainFrame> createMainFrame() = 0;
 
-	std::shared_ptr<Resources> resources();
+	Resources* resources();
 
 public:
 	int run(int &argc, char **argv);

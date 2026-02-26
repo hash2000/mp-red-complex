@@ -4,7 +4,7 @@
 #include <QSplitter>
 #include <QHBoxLayout>
 
-MapEditorWidget::MapEditorWidget(std::shared_ptr<Resources> resources, const QVariantMap& params,
+MapEditorWidget::MapEditorWidget(Resources* resources, const QVariantMap& params,
 	QWidget* parent)
 : BaseTabWidget(resources, params, parent) {
 	auto view = new MapView;

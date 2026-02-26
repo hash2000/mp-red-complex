@@ -10,7 +10,7 @@ class PalleteExplorerWidget : public BaseTabWidget {
   Q_OBJECT
 
 public:
-	PalleteExplorerWidget(std::shared_ptr<Resources> resources, const QVariantMap& params,
+	PalleteExplorerWidget(Resources* resources, const QVariantMap& params,
 		QWidget* parent = nullptr);
 	virtual ~PalleteExplorerWidget() = default;
 

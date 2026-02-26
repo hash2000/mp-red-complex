@@ -14,7 +14,7 @@ public:
 
 	Application* q;
 	std::shared_ptr<Config> config;
-	std::shared_ptr<Resources> resources;
+	std::unique_ptr<Resources> resources;
 };
 
 Application::Application()
@@ -37,7 +37,7 @@ int Application::run(int &argc, char **argv) {
 
 int Application::tryRun(int &argc, char **argv) {
 	d->config = std::make_shared<Config>(Config::getDefult());
-	d->resources = std::make_shared<Resources>();
+	d->resources = std::make_unique<Resources>();
 
 	QSurfaceFormat fmt;
   fmt.setVersion(3, 3);
@@ -55,7 +55,7 @@ int Application::tryRun(int &argc, char **argv) {
 
 	Engine engine(argc, argv);
 	engine.configure(d->config);
-	engine.setup(d->config, d->resources);
+	engine.setup(d->config, resources());
 
 	installMessageHandler();
 
@@ -80,6 +80,6 @@ void Application::installMessageHandler() {
 			});
 }
 
-std::shared_ptr<Resources> Application::resources() {
-	return d->resources;
+Resources* Application::resources() {
+	return d->resources.get();
 }

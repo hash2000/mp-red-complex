@@ -4,7 +4,7 @@
 #include "Base/scoped_timer.h"
 
 AssetsModelBuilderLinear::AssetsModelBuilderLinear(QStandardItem* parent,
-	const std::shared_ptr<Resources>& resources)
+	const Resources* resources)
 	: _parent(parent)
 	, _resources(resources) {
 }

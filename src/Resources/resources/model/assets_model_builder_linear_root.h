@@ -5,7 +5,7 @@
 
 class AssetsModelBuilderLinearRoot {
 public:
-	AssetsModelBuilderLinearRoot(QStandardItem* parent, const std::shared_ptr<Resources>& resources);
+	AssetsModelBuilderLinearRoot(QStandardItem* parent, const Resources* resources);
 
 	void build();
 
@@ -14,5 +14,5 @@ private:
 
 private:
 	QStandardItem* _parent;
-	const std::shared_ptr<Resources> _resources;
+	const Resources* _resources;
 };

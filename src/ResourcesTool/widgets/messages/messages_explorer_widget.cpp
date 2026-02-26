@@ -7,7 +7,7 @@
 #include <QVBoxLayout>
 
 
-MessagesExplorerWidget::MessagesExplorerWidget(std::shared_ptr<Resources> resources, const QVariantMap& params,
+MessagesExplorerWidget::MessagesExplorerWidget(Resources* resources, const QVariantMap& params,
 	QWidget* parent)
 : BaseTabWidget(resources, params, parent)
   , _model(new MessagesTableModel(this))

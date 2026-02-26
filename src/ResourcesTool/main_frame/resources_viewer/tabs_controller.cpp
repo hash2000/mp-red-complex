@@ -3,7 +3,7 @@
 #include "ResourcesTool/main_frame/resources_viewer/widget_factory.h"
 #include <QGuiApplication>
 
-TabsController::TabsController(QTabWidget* tabs, std::shared_ptr<Resources> resources)
+TabsController::TabsController(QTabWidget* tabs, Resources* resources)
 : _tabs(tabs)
 , _resources(resources)
 {

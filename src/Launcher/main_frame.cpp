@@ -2,7 +2,7 @@
 #include <QSplitter>
 #include <QTabWidget>
 
-LauncherMainFrame::LauncherMainFrame(std::shared_ptr<Resources> resources)
+LauncherMainFrame::LauncherMainFrame(Resources* resources)
 : _resources(resources) {
 	_legendWidget = new LegendWidget;
 	_actionsWidget = new ActionsWidget;

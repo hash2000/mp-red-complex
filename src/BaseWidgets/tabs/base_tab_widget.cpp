@@ -3,7 +3,7 @@
 #include <QMimeData>
 #include <QJsonDocument>
 
-BaseTabWidget::BaseTabWidget(std::shared_ptr<Resources> resources, const QVariantMap& params, QWidget* parent)
+BaseTabWidget::BaseTabWidget(Resources* resources, const QVariantMap& params, QWidget* parent)
 : QWidget(parent)
 , _resources(resources)
 , _params(params) {

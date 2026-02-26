@@ -13,7 +13,7 @@ class ProcedureExplorerWidget : public BaseTabWidget {
   Q_OBJECT
 
 public:
-  explicit ProcedureExplorerWidget(std::shared_ptr<Resources> resources, const QVariantMap& params,
+  explicit ProcedureExplorerWidget(Resources* resources, const QVariantMap& params,
 		QWidget* parent = nullptr);
   ~ProcedureExplorerWidget() override = default;
 

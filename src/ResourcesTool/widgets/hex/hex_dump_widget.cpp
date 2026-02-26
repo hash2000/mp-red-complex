@@ -4,7 +4,7 @@
 #include <QHBoxLayout>
 #include <QSplitter>
 
-HexDumpWidget::HexDumpWidget(std::shared_ptr<Resources> resources, const QVariantMap& params, QWidget *parent)
+HexDumpWidget::HexDumpWidget(Resources* resources, const QVariantMap& params, QWidget *parent)
 : BaseTabWidget(resources, params, parent) {
 	const auto containerName = params.value("container.name").toString();
 	const auto containerPath = params.value("container.path").toString();

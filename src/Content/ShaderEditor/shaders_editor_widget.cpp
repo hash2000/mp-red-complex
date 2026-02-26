@@ -5,7 +5,7 @@
 #include <QSplitter>
 #include <QHBoxLayout>
 
-ShadersEditorWidget::ShadersEditorWidget(std::shared_ptr<Resources> resources, const QVariantMap& params,
+ShadersEditorWidget::ShadersEditorWidget(Resources* resources, const QVariantMap& params,
 	QWidget* parent)
 : BaseTabWidget(resources, params, parent) {
 	auto view = new ShaderView(params);

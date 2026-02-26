@@ -8,7 +8,7 @@
 #include <QVBoxLayout>
 
 
-ProcedureExplorerWidget::ProcedureExplorerWidget(std::shared_ptr<Resources> resources, const QVariantMap& params,
+ProcedureExplorerWidget::ProcedureExplorerWidget(Resources* resources, const QVariantMap& params,
 	QWidget* parent)
 : BaseTabWidget(resources, params, parent)
 , _model(new ProcedureTableModel(this))

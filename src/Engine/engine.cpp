@@ -12,7 +12,7 @@ void Engine::configure(const std::shared_ptr<Config> &config) {
 	styleHints()->setColorScheme(config->color_scheme);
 }
 
-void Engine::setup(std::shared_ptr<Config> &config, std::shared_ptr<Resources> &resources) {
+void Engine::setup(std::shared_ptr<Config> &config, Resources* resources) {
 	config->setupPath();
 	config->loadSettings();
 	resources->configure(config);

@@ -2,7 +2,7 @@
 #include "DataFormat/data_format/pal/data_reader.h"
 #include <QVBoxLayout>
 
-PalleteExplorerWidget::PalleteExplorerWidget(std::shared_ptr<Resources> resources, const QVariantMap& params,
+PalleteExplorerWidget::PalleteExplorerWidget(Resources* resources, const QVariantMap& params,
 	QWidget *parent)
 : BaseTabWidget(resources, params, parent) {
 

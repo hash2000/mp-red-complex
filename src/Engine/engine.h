@@ -18,7 +18,7 @@ public:
 
 	void configure(const std::shared_ptr<Config> &config) override;
 
-	void setup(std::shared_ptr<Config> &config, std::shared_ptr<Resources> &resources);
+	void setup(std::shared_ptr<Config> &config, Resources* resources);
 
 	void setupMainFrame(std::unique_ptr<MainFrame> &&mainFrame);
 
