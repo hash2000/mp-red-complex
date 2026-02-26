@@ -12,6 +12,54 @@ public:
 		: q(parent) {
 	}
 
+	int tryRun(int& argc, char** argv) {
+		config = std::make_unique<Config>(Config::getDefult());
+		resources = std::make_unique<Resources>();
+		auto pCfg = config.get();
+		auto pRes = resources.get();
+
+		QSurfaceFormat fmt;
+		fmt.setVersion(3, 3);
+		fmt.setProfile(QSurfaceFormat::CoreProfile);
+		fmt.setDepthBufferSize(24);
+		fmt.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
+		fmt.setSamples(4);
+		fmt.setStencilBufferSize(8);
+		fmt.setStereo(true);
+
+		QSurfaceFormat::setDefaultFormat(fmt);
+
+		QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+		QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
+
+
+		Engine engine(argc, argv);
+		engine.configure(pCfg);
+		engine.setup(pCfg, pRes);
+
+		installMessageHandler();
+
+		auto mainFrame = q->createMainFrame(pRes);
+		mainFrame->configure(pCfg);
+		engine.setupMainFrame(std::move(mainFrame));
+
+		return engine.exec();
+	}
+
+	void installMessageHandler() {
+		static QtMessageHandler originalMessageHandler = nullptr;
+		originalMessageHandler = qInstallMessageHandler([](QtMsgType type,
+			const QMessageLogContext& context,
+			const QString& message) {
+				if (originalMessageHandler) {
+					originalMessageHandler(type, context, message);
+				}
+
+				const auto msg = qFormatLogMessage(type, context, message);
+
+			});
+	}
+
 	Application* q;
 	std::unique_ptr<Config> config;
 	std::unique_ptr<Resources> resources;
@@ -26,64 +74,11 @@ Application::~Application() = default;
 
 int Application::run(int &argc, char **argv) {
 	try {
-		return tryRun(argc, argv);
+		return d->tryRun(argc, argv);
 	}
 	catch(std::exception &ex) {
 		qFatal() << "Application fatal exception: " << ex.what();
 	}
 
 	return 0;
-}
-
-int Application::tryRun(int &argc, char **argv) {
-	d->config = std::make_unique<Config>(Config::getDefult());
-	d->resources = std::make_unique<Resources>();
-
-	QSurfaceFormat fmt;
-  fmt.setVersion(3, 3);
-  fmt.setProfile(QSurfaceFormat::CoreProfile);
-  fmt.setDepthBufferSize(24);
-  fmt.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
-	fmt.setSamples(4);
-	fmt.setStencilBufferSize(8);
-	fmt.setStereo(true);
-
-  QSurfaceFormat::setDefaultFormat(fmt);
-
-	QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-	QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
-
-	Engine engine(argc, argv);
-	engine.configure(config());
-	engine.setup(config(), resources());
-
-	installMessageHandler();
-
-	auto mainFrame = createMainFrame();
-	mainFrame->configure(config());
-	engine.setupMainFrame(std::move(mainFrame));
-
-	return engine.exec();
-}
-
-void Application::installMessageHandler() {
-	static QtMessageHandler originalMessageHandler = nullptr;
-	originalMessageHandler = qInstallMessageHandler([](QtMsgType type,
-			const QMessageLogContext &context,
-			const QString &message) {
-				if (originalMessageHandler) {
-					originalMessageHandler(type, context, message);
-				}
-
-				const auto msg = qFormatLogMessage(type, context, message);
-
-			});
-}
-
-Resources* Application::resources() {
-	return d->resources.get();
-}
-
-Config* Application::config() {
-	return d->config.get();
 }

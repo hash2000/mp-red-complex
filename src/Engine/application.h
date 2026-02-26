@@ -11,18 +11,10 @@ public:
 	virtual ~Application();
 
 protected:
-	virtual std::unique_ptr<MainFrame> createMainFrame() = 0;
-
-	Resources* resources();
-	Config* config();
+	virtual std::unique_ptr<MainFrame> createMainFrame(Resources* resources) = 0;
 
 public:
 	int run(int &argc, char **argv);
-
-private:
-	int tryRun(int &argc, char **argv);
-
-	void installMessageHandler();
 
 private:
 	class Private;
