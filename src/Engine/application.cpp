@@ -1,8 +1,27 @@
 #include "Engine/application.h"
-#include "Engine/application/application_session.h"
-#include "Engine/application/application_exception.h"
 #include "Engine/engine.h"
+#include "Engine/main_frame.h"
+#include "Base/config.h"
+#include "Resources/resources.h"
 #include <QSurfaceFormat>
+#include <QApplication>
+
+class Application::Private {
+public:
+	Private(Application* parent)
+		: q(parent) {
+	}
+
+	Application* q;
+	std::shared_ptr<Config> config;
+	std::shared_ptr<Resources> resources;
+};
+
+Application::Application()
+	: d(std::make_unique<Private>(this)) {
+}
+
+Application::~Application() = default;
 
 
 int Application::run(int &argc, char **argv) {
@@ -17,8 +36,8 @@ int Application::run(int &argc, char **argv) {
 }
 
 int Application::tryRun(int &argc, char **argv) {
-	_config = std::make_shared<Config>(Config::getDefult());
-	_resources = std::make_shared<Resources>();
+	d->config = std::make_shared<Config>(Config::getDefult());
+	d->resources = std::make_shared<Resources>();
 
 	QSurfaceFormat fmt;
   fmt.setVersion(3, 3);
@@ -35,16 +54,13 @@ int Application::tryRun(int &argc, char **argv) {
 	QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
 
 	Engine engine(argc, argv);
-	engine.configure(_config);
-	engine.setup(_config, _resources);
+	engine.configure(d->config);
+	engine.setup(d->config, d->resources);
 
 	installMessageHandler();
 
-	const auto session = From<AppSession>::from(_config->app_session)
-		.value_or(AppSession::Test);
-
 	auto mainFrame = createMainFrame();
-	mainFrame->configure(_config);
+	mainFrame->configure(d->config);
 	engine.setupMainFrame(std::move(mainFrame));
 
 	return engine.exec();
@@ -65,5 +81,5 @@ void Application::installMessageHandler() {
 }
 
 std::shared_ptr<Resources> Application::resources() {
-	return _resources;
+	return d->resources;
 }

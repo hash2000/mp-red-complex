@@ -10,10 +10,12 @@ public:
 	}
 
 	EquipmentDataProviderJsonImpl* q;
+	Resources* resources;
 };
 
 EquipmentDataProviderJsonImpl::EquipmentDataProviderJsonImpl(Resources* resources)
 	: d(std::make_unique<Private>(this)) {
+	d->resources = resources;
 }
 
 EquipmentDataProviderJsonImpl::~EquipmentDataProviderJsonImpl() = default;
