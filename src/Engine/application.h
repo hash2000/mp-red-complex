@@ -3,6 +3,7 @@
 
 class MainFrame;
 class Resources;
+class Config;
 
 class Application {
 public:
@@ -13,6 +14,7 @@ protected:
 	virtual std::unique_ptr<MainFrame> createMainFrame() = 0;
 
 	Resources* resources();
+	Config* config();
 
 public:
 	int run(int &argc, char **argv);

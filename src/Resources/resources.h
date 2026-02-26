@@ -14,7 +14,7 @@ public:
 	virtual ~Resources() = default;
 
 public:
-	void configure(const std::shared_ptr<Config>& config) override;
+	void configure(const Config* config) override;
 	void load();
 
 	auto items() const {

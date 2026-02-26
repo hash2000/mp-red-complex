@@ -13,7 +13,7 @@ public:
 	}
 
 	Application* q;
-	std::shared_ptr<Config> config;
+	std::unique_ptr<Config> config;
 	std::unique_ptr<Resources> resources;
 };
 
@@ -36,7 +36,7 @@ int Application::run(int &argc, char **argv) {
 }
 
 int Application::tryRun(int &argc, char **argv) {
-	d->config = std::make_shared<Config>(Config::getDefult());
+	d->config = std::make_unique<Config>(Config::getDefult());
 	d->resources = std::make_unique<Resources>();
 
 	QSurfaceFormat fmt;
@@ -54,13 +54,13 @@ int Application::tryRun(int &argc, char **argv) {
 	QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
 
 	Engine engine(argc, argv);
-	engine.configure(d->config);
-	engine.setup(d->config, resources());
+	engine.configure(config());
+	engine.setup(config(), resources());
 
 	installMessageHandler();
 
 	auto mainFrame = createMainFrame();
-	mainFrame->configure(d->config);
+	mainFrame->configure(config());
 	engine.setupMainFrame(std::move(mainFrame));
 
 	return engine.exec();
@@ -82,4 +82,8 @@ void Application::installMessageHandler() {
 
 Resources* Application::resources() {
 	return d->resources.get();
+}
+
+Config* Application::config() {
+	return d->config.get();
 }
