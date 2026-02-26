@@ -33,8 +33,8 @@ public:
 	bool moveItem(const InventoryItemMimeData& item, int newCol, int newRow, bool checkItemPlace);
 	void removeItem(const InventoryItemMimeData& item);
 
-	InventoryItemHandler* itemById(const QString& id) const;
-	InventoryItemHandler* itemAt(int col, int row) const;
+	const InventoryItemHandler* itemById(const QString& id) const;
+	const InventoryItemHandler* itemAt(int col, int row) const;
 	EntityView items() const;
 
 	bool containsItem(const InventoryItemMimeData& item) const;

@@ -101,6 +101,24 @@ public:
 		}
 	}
 
+
+	InventoryItemHandler* itemAt(int col, int row) const {
+		if (col < 0 || row < 0 || col >= cols || row >= rows) {
+			return nullptr;
+		}
+
+		return cells[col][row]->item;
+	}
+
+	InventoryItemHandler* itemById(const QString& id) const {
+		const auto it = inventoryItems.find(id);
+		if (it != inventoryItems.end()) {
+			return it->second.get();
+		}
+
+		return nullptr;
+	}
+
 	InventoryService* q;
 	ItemsService* itemsService;
 	QString inventoryId;
@@ -166,8 +184,16 @@ int InventoryService::cols() const {
 	return d->cols;
 }
 
+const InventoryItemHandler* InventoryService::itemAt(int col, int row) const {
+	return d->itemAt(col, row);
+}
+
+const InventoryItemHandler* InventoryService::itemById(const QString& id) const {
+	return d->itemById(id);
+}
+
 bool InventoryService::placeItem(const InventoryItemMimeData& item) {
-	auto itemPtr = itemById(item.id);
+	auto itemPtr = d->itemById(item.id);
 	if (!itemPtr) {
 		return false;
 	}
@@ -277,14 +303,6 @@ std::optional<QPoint> InventoryService::findFreeSpace(const InventoryItemMimeDat
 	return std::nullopt;
 }
 
-InventoryItemHandler* InventoryService::itemAt(int col, int row) const {
-	if (col < 0 || row < 0 || col >= d->cols || row >= d->rows) {
-		return nullptr;
-	}
-
-	return d->cells[col][row]->item;
-}
-
 void InventoryService::clear() {
 	auto keys = d->items.keys();
 	for (const auto& pos : keys) {
@@ -337,7 +355,7 @@ void InventoryService::removeItem(const InventoryItemMimeData& item) {
 
 bool InventoryService::moveItem(const InventoryItemMimeData& item, int newCol, int newRow, bool checkItemPlace) {
 	// Получаем полный предмет из инвентаря по ID
-	auto itemPtr = itemById(item.id);
+	auto itemPtr = d->itemById(item.id);
 	if (!itemPtr) {
 		return false;
 	}
@@ -492,7 +510,7 @@ bool InventoryService::moveItem(const InventoryItemMimeData& item, int newCol, i
 }
 
 bool InventoryService::containsItem(const InventoryItemMimeData& item) const {
-	auto itemPtr = itemById(item.id);
+	auto itemPtr = d->itemById(item.id);
 	if (!itemPtr) {
 		return false;
 	}
@@ -506,17 +524,9 @@ bool InventoryService::containsItem(const InventoryItemMimeData& item) const {
 	return cellItem->compare(*itemPtr);
 }
 
-InventoryItemHandler* InventoryService::itemById(const QString& id) const {
-	const auto it = d->inventoryItems.find(id);
-	if (it != d->inventoryItems.end()) {
-		return it->second.get();
-	}
-
-	return nullptr;
-}
 
 bool InventoryService::changeItemsCount(const InventoryItemMimeData& item) {
-	auto itemPtr = itemById(item.id);
+	auto itemPtr = d->itemById(item.id);
 	if (!itemPtr) {		
 		return false;
 	}
