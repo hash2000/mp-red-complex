@@ -1,4 +1,5 @@
 #include "Game/widgets/equipment/equipment_slot_widget.h"
+#include "ApplicationLayer/equipment/equipment_service.h"
 #include <QMouseEvent>
 #include <QDragEnterEvent>
 #include <QDropEvent>
@@ -17,18 +18,20 @@ public:
 
 	EquipmentSlotType type;
   EquipmentWidget* parentWidget;
+	EquipmentService* equipmentService;
   std::optional<EquipmentItem> item;
   bool highlighted = false;
   bool dragging = false;
 };
 
-EquipmentSlot::EquipmentSlot(EquipmentSlotType type, EquipmentWidget* parentWidget, QWidget* parent)
+EquipmentSlot::EquipmentSlot(EquipmentService* equipmentService, EquipmentSlotType type, EquipmentWidget* parentWidget, QWidget* parent)
   : d(std::make_unique<Private>(this))
 	, QLabel(parent) {
 	setAcceptDrops(true);
 	setAlignment(Qt::AlignCenter);
 	setFixedSize(64, 64);
 
+	d->equipmentService = equipmentService;
 	d->type = type;
 	d->parentWidget = parentWidget;
 

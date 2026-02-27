@@ -6,12 +6,13 @@
 #include <memory>
 
 class EquipmentSlot;
+class EquipmentService;
 
 class EquipmentWidget : public QFrame {
 	Q_OBJECT
 
 public:
-	explicit EquipmentWidget(QWidget* parent = nullptr);
+	explicit EquipmentWidget(EquipmentService* equipmentService, QWidget* parent = nullptr);
 	~EquipmentWidget() override;
 
 	// Получить предмет из слота
@@ -30,10 +31,6 @@ public:
 signals:
 	void itemEquipped(const EquipmentItem& item, EquipmentSlotType slot);
 	void itemUnequipped(const EquipmentItem& item, EquipmentSlotType slot);
-
-private:
-	void setupLayout();
-	EquipmentSlot* findCompatibleSlot(const EquipmentItem& item) const;
 
 private:
 	class Private;

@@ -8,11 +8,12 @@
 #include <memory>
 
 class EquipmentWidget;
+class EquipmentService;
 
 class EquipmentSlot : public QLabel {
   Q_OBJECT
 public:
-  explicit EquipmentSlot(EquipmentSlotType type, EquipmentWidget* parentWidget, QWidget* parent = nullptr);
+  explicit EquipmentSlot(EquipmentService* equipmentService, EquipmentSlotType type, EquipmentWidget* parentWidget, QWidget* parent = nullptr);
   ~EquipmentSlot() override;
 
 	bool isOccupied() const;

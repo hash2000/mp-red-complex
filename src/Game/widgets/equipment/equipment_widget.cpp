@@ -8,17 +8,118 @@ public:
 	: q(parent) {
 
 	}
+
+	void setupLayout(EquipmentService* equipmentService) {
+		auto mainLayout = new QVBoxLayout(q);
+		mainLayout->setContentsMargins(10, 10, 10, 10);
+		mainLayout->setSpacing(12);
+
+		// === Верхний ряд: оружие/щит + голова ===
+		auto topRow = new QHBoxLayout();
+		topRow->setSpacing(16);
+		topRow->addStretch();
+
+		auto leftWeaponSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::WeaponLeft, q);
+		allSlots[EquipmentSlotType::WeaponLeft] = leftWeaponSlot;
+		topRow->addWidget(leftWeaponSlot);
+
+		auto headSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::Head, q);
+		allSlots[EquipmentSlotType::Head] = headSlot;
+		topRow->addWidget(headSlot);
+
+		auto rightWeaponSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::WeaponRight, q);
+		allSlots[EquipmentSlotType::WeaponRight] = rightWeaponSlot;
+		topRow->addWidget(rightWeaponSlot);
+
+		topRow->addStretch();
+		mainLayout->addLayout(topRow);
+
+		// === Центр: тело ===
+		auto bodyRow = new QHBoxLayout();
+		bodyRow->addStretch();
+
+		auto bodySlot = new EquipmentSlot(equipmentService, EquipmentSlotType::Body, q);
+		allSlots[EquipmentSlotType::Body] = bodySlot;
+		bodyRow->addWidget(bodySlot);
+
+		bodyRow->addStretch();
+		mainLayout->addLayout(bodyRow);
+
+		// === Нижний ряд: перчатки + обувь + кольца/амулет ===
+		auto bottomRow = new QHBoxLayout();
+		bottomRow->setSpacing(16);
+		bottomRow->addStretch();
+
+		// Левые перчатки
+		auto glovesLeftSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::GlovesLeft, q);
+		allSlots[EquipmentSlotType::GlovesLeft] = glovesLeftSlot;
+		bottomRow->addWidget(glovesLeftSlot);
+
+		// Обувь
+		auto bootsSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::Boots, q);
+		allSlots[EquipmentSlotType::Boots] = bootsSlot;
+		bottomRow->addWidget(bootsSlot);
+
+		// Правые перчатки
+		auto glovesRightSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::GlovesRight, q);
+		allSlots[EquipmentSlotType::GlovesRight] = glovesRightSlot;
+		bottomRow->addWidget(glovesRightSlot);
+
+		bottomRow->addSpacing(24);
+
+		// Аксессуары (вертикальная колонка)
+		auto accessoriesLayout = new QVBoxLayout();
+		accessoriesLayout->setSpacing(8);
+
+		auto amuletSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::Amulet, q);
+		allSlots[EquipmentSlotType::Amulet] = amuletSlot;
+		accessoriesLayout->addWidget(amuletSlot);
+
+		auto ringLeftSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::RingLeft, q);
+		allSlots[EquipmentSlotType::RingLeft] = ringLeftSlot;
+		accessoriesLayout->addWidget(ringLeftSlot);
+
+		auto ringRightSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::RingRight, q);
+		allSlots[EquipmentSlotType::RingRight] = ringRightSlot;
+		accessoriesLayout->addWidget(ringRightSlot);
+
+		bottomRow->addLayout(accessoriesLayout);
+		bottomRow->addStretch();
+
+		mainLayout->addLayout(bottomRow);
+		mainLayout->addStretch();
+	}
+
+	EquipmentSlot* findCompatibleSlot(const EquipmentItem& item) const {
+		for (auto it = allSlots.cbegin(); it != allSlots.cend(); ++it) {
+			if (it.value()->canAcceptItem(item)) {
+				return it.value();
+			}
+		}
+		return nullptr;
+	}
+
 	EquipmentWidget* q;
 	QMap<EquipmentSlotType, EquipmentSlot*> allSlots;
 };
 
-EquipmentWidget::EquipmentWidget(QWidget* parent)
+EquipmentWidget::EquipmentWidget(EquipmentService* equipmentService, QWidget* parent)
 : d(std::make_unique<Private>(this)) {
 	setObjectName("EquipmentWidget");
 	setFrameStyle(QFrame::StyledPanel | QFrame::Plain);
 	setLineWidth(1);
 
-	setupLayout();
+	d->setupLayout(equipmentService);
+
+	// Подключаем сигналы слотов к виджету
+	for (auto slot : d->allSlots) {
+		connect(slot, &EquipmentSlot::itemEquipped, this, [this, slot](const EquipmentItem& item) {
+			emit itemEquipped(item, slot->slotType());
+			});
+		connect(slot, &EquipmentSlot::itemRemoved, this, [this, slot](const EquipmentItem& item) {
+			emit itemUnequipped(item, slot->slotType());
+			});
+	}
 
 	setStyleSheet(R"(
         #EquipmentWidget {
@@ -32,97 +133,6 @@ EquipmentWidget::EquipmentWidget(QWidget* parent)
 
 EquipmentWidget::~EquipmentWidget() = default;
 
-void EquipmentWidget::setupLayout() {
-	auto mainLayout = new QVBoxLayout(this);
-	mainLayout->setContentsMargins(10, 10, 10, 10);
-	mainLayout->setSpacing(12);
-
-	// === Верхний ряд: оружие/щит + голова ===
-	auto topRow = new QHBoxLayout();
-	topRow->setSpacing(16);
-	topRow->addStretch();
-
-	auto leftWeaponSlot = new EquipmentSlot(EquipmentSlotType::WeaponLeft, this);
-	d->allSlots[EquipmentSlotType::WeaponLeft] = leftWeaponSlot;
-	topRow->addWidget(leftWeaponSlot);
-
-	auto headSlot = new EquipmentSlot(EquipmentSlotType::Head, this);
-	d->allSlots[EquipmentSlotType::Head] = headSlot;
-	topRow->addWidget(headSlot);
-
-	auto rightWeaponSlot = new EquipmentSlot(EquipmentSlotType::WeaponRight, this);
-	d->allSlots[EquipmentSlotType::WeaponRight] = rightWeaponSlot;
-	topRow->addWidget(rightWeaponSlot);
-
-	topRow->addStretch();
-	mainLayout->addLayout(topRow);
-
-	// === Центр: тело ===
-	auto bodyRow = new QHBoxLayout();
-	bodyRow->addStretch();
-
-	auto bodySlot = new EquipmentSlot(EquipmentSlotType::Body, this);
-	d->allSlots[EquipmentSlotType::Body] = bodySlot;
-	bodyRow->addWidget(bodySlot);
-
-	bodyRow->addStretch();
-	mainLayout->addLayout(bodyRow);
-
-	// === Нижний ряд: перчатки + обувь + кольца/амулет ===
-	auto bottomRow = new QHBoxLayout();
-	bottomRow->setSpacing(16);
-	bottomRow->addStretch();
-
-	// Левые перчатки
-	auto glovesLeftSlot = new EquipmentSlot(EquipmentSlotType::GlovesLeft, this);
-	d->allSlots[EquipmentSlotType::GlovesLeft] = glovesLeftSlot;
-	bottomRow->addWidget(glovesLeftSlot);
-
-	// Обувь
-	auto bootsSlot = new EquipmentSlot(EquipmentSlotType::Boots, this);
-	d->allSlots[EquipmentSlotType::Boots] = bootsSlot;
-	bottomRow->addWidget(bootsSlot);
-
-	// Правые перчатки
-	auto glovesRightSlot = new EquipmentSlot(EquipmentSlotType::GlovesRight, this);
-	d->allSlots[EquipmentSlotType::GlovesRight] = glovesRightSlot;
-	bottomRow->addWidget(glovesRightSlot);
-
-	bottomRow->addSpacing(24);
-
-	// Аксессуары (вертикальная колонка)
-	auto accessoriesLayout = new QVBoxLayout();
-	accessoriesLayout->setSpacing(8);
-
-	auto amuletSlot = new EquipmentSlot(EquipmentSlotType::Amulet, this);
-	d->allSlots[EquipmentSlotType::Amulet] = amuletSlot;
-	accessoriesLayout->addWidget(amuletSlot);
-
-	auto ringLeftSlot = new EquipmentSlot(EquipmentSlotType::RingLeft, this);
-	d->allSlots[EquipmentSlotType::RingLeft] = ringLeftSlot;
-	accessoriesLayout->addWidget(ringLeftSlot);
-
-	auto ringRightSlot = new EquipmentSlot(EquipmentSlotType::RingRight, this);
-	d->allSlots[EquipmentSlotType::RingRight] = ringRightSlot;
-	accessoriesLayout->addWidget(ringRightSlot);
-
-	bottomRow->addLayout(accessoriesLayout);
-	bottomRow->addStretch();
-
-	mainLayout->addLayout(bottomRow);
-	mainLayout->addStretch();
-
-	// Подключаем сигналы слотов к виджету
-	for (auto slot : d->allSlots) {
-		connect(slot, &EquipmentSlot::itemEquipped, this, [this, slot](const EquipmentItem& item) {
-			emit itemEquipped(item, slot->slotType());
-			});
-		connect(slot, &EquipmentSlot::itemRemoved, this, [this, slot](const EquipmentItem& item) {
-			emit itemUnequipped(item, slot->slotType());
-			});
-	}
-}
-
 std::optional<EquipmentItem> EquipmentWidget::getItem(EquipmentSlotType slot) const {
 	if (d->allSlots.contains(slot) && d->allSlots[slot]->isOccupied()) {
 		return d->allSlots[slot]->item();
@@ -131,7 +141,7 @@ std::optional<EquipmentItem> EquipmentWidget::getItem(EquipmentSlotType slot) co
 }
 
 bool EquipmentWidget::equipItem(const EquipmentItem& item) {
-	EquipmentSlot* slot = findCompatibleSlot(item);
+	EquipmentSlot* slot = d->findCompatibleSlot(item);
 	if (slot && !slot->isOccupied()) {
 		return slot->setItem(item);
 	}
@@ -154,11 +164,4 @@ QMap<EquipmentSlotType, EquipmentSlot*> EquipmentWidget::allSlots() const {
 	return d->allSlots;
 }
 
-EquipmentSlot* EquipmentWidget::findCompatibleSlot(const EquipmentItem& item) const {
-	for (auto it = d->allSlots.cbegin(); it != d->allSlots.cend(); ++it) {
-		if (it.value()->canAcceptItem(item)) {
-			return it.value();
-		}
-	}
-	return nullptr;
-}
+

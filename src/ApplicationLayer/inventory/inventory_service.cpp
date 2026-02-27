@@ -20,7 +20,7 @@ public:
 	}
 
 	InventoryItemHandler* duplicateItem(const QString& id) {
-		auto newItemDuplicate = itemsService->duplicate(id);
+		auto newItemDuplicate = itemsService->duplicate(id, ItemOwner::Inventory);
 		return makeInventoryitem(newItemDuplicate);
 	}
 
@@ -44,7 +44,6 @@ public:
 	void setupCells() {
 		if (inventoryItems.empty()) {
 			cells.clear();
-			items.clear();
 		}
 
 		cells.resize(cols);
@@ -144,7 +143,7 @@ bool InventoryService::load(const Inventory& inventory) {
 	d->inventoryName = inventory.name;
 
 	for (const auto &it : inventory.items) {
-		const auto item = d->itemsService->itemById(it.id);
+		const auto item = d->itemsService->itemById(it.id, ItemOwner::Inventory);
 		if (!item) {
 			qDebug() << "InventoryService::load" << d->inventoryName << d->inventoryId << "can't load item" << item->id;
 			continue;

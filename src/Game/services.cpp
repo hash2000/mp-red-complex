@@ -5,6 +5,8 @@
 #include "ApplicationLayer/inventory/inventories_service.h"
 #include "DataLayer/items/items_data_provider_json_impl.h"
 #include "ApplicationLayer/items/items_service.h"
+#include "DataLayer/equipment/equipment_data_provider_json_impl.h"
+#include "ApplicationLayer/equipment/equipment_service.h"
 #include <list>
 
 class Services::Private {
@@ -20,6 +22,8 @@ public:
 	std::unique_ptr<InventoriesService> inventoriesService;
 	std::unique_ptr<ItemsDataProvider> itemsDataProvider;
 	std::unique_ptr<ItemsService> itemsService;
+	std::unique_ptr<EquipmentDataProvider> equipmentDataProvider;
+	std::unique_ptr<EquipmentService> equipmentService;
 };
 
 
@@ -27,6 +31,8 @@ Services::Services(Resources* resources)
 : d(std::make_unique<Private>(this)) {
 	d->inventoryDataProvider = std::make_unique<InventoryDataProviderJsonImpl>(resources);
 	d->itemsDataProvider = std::make_unique<ItemsDataProviderJsonImpl>(resources);
+	d->equipmentDataProvider = std::make_unique<EquipmentDataProviderJsonImpl>(resources);
+
 	d->timeService = std::make_unique<TimeService>();
 
 	d->worldService = std::make_unique<WorldService>();
@@ -35,6 +41,10 @@ Services::Services(Resources* resources)
 	
 	d->inventoriesService = std::make_unique<InventoriesService>(
 		d->inventoryDataProvider.get(),
+		d->itemsService.get());
+
+	d->equipmentService = std::make_unique<EquipmentService>(
+		d->equipmentDataProvider.get(),
 		d->itemsService.get());
 }
 
@@ -67,4 +77,8 @@ InventoriesService* Services::inventoriesService() const {
 
 ItemsService* Services::itemsService() const {
 	return d->itemsService.get();
+}
+
+EquipmentService* Services::equipmentService() const {
+	return d->equipmentService.get();
 }

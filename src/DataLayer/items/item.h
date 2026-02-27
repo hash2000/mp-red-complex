@@ -50,6 +50,11 @@ enum class ItemEquipmentType {
 	Consumable,
 };
 
+enum class ItemOwner {
+	Inventory,
+	Equipment,
+};
+
 // рецепты
 class  ItemRecipe {
 public:
@@ -81,6 +86,7 @@ public:
 	int maxStack = 1;
 
 	ItemRarityType rarity = ItemRarityType::Common;
+
 	// если это экипировка, то какая
 	std::optional<ItemEquipmentType> equipmentType;
 	// рецепт
@@ -93,5 +99,8 @@ class Item {
 public:
 	QString id;
 	QString entityId;
+
+	std::optional<ItemOwner> owner;
+
 	const ItemEntity* entity;
 };
