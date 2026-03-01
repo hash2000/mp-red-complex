@@ -6,14 +6,16 @@
 #include <memory>
 
 class EquipmentSlot;
-class EquipmentService;
+class EquipmentsService;
 
 class EquipmentWidget : public QFrame {
 	Q_OBJECT
 
 public:
-	explicit EquipmentWidget(EquipmentService* equipmentService, QWidget* parent = nullptr);
+	explicit EquipmentWidget(EquipmentsService* equipmentsService, QWidget* parent = nullptr);
 	~EquipmentWidget() override;
+
+	bool setInventoryService(const QUuid& id);
 
 	// Получить предмет из слота
 	std::optional<EquipmentItem> getItem(EquipmentSlotType slot) const;

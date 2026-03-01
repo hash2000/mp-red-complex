@@ -2,13 +2,13 @@
 #include "Game/mdi_child_window.h"
 
 class EquipmentWidget;
-class EquipmentService;
+class EquipmentsService;
 
 class EquipmentWindow : public MdiChildWindow {
 	Q_OBJECT
 
 public:
-	EquipmentWindow(EquipmentService* equipmentService, const QString& id, QWidget* parent = nullptr);
+	EquipmentWindow(EquipmentsService* equipmentsService, const QString& id, QWidget* parent = nullptr);
 	~EquipmentWindow() override;
 
 	QString windowType() const override { return "equipment"; }

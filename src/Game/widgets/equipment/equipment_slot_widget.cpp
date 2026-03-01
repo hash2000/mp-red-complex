@@ -1,5 +1,6 @@
 #include "Game/widgets/equipment/equipment_slot_widget.h"
 #include "ApplicationLayer/equipment/equipment_service.h"
+#include "ApplicationLayer/items/item_mime_data.h"
 #include <QMouseEvent>
 #include <QDragEnterEvent>
 #include <QDropEvent>
@@ -16,7 +17,7 @@ public:
 
   EquipmentSlot* q;
 
-	EquipmentSlotType type;
+	EquipmentSlotType slot;
   EquipmentWidget* parentWidget;
 	EquipmentService* equipmentService;
   std::optional<EquipmentItem> item;
@@ -32,7 +33,7 @@ EquipmentSlot::EquipmentSlot(EquipmentService* equipmentService, EquipmentSlotTy
 	setFixedSize(64, 64);
 
 	d->equipmentService = equipmentService;
-	d->type = type;
+	d->slot = type;
 	d->parentWidget = parentWidget;
 
 	// Специальные размеры для некоторых слотов
@@ -91,7 +92,7 @@ const std::optional<EquipmentItem>& EquipmentSlot::item() const {
 }
 
 EquipmentSlotType EquipmentSlot::slotType() const {
-  return d->type;
+  return d->slot;
 }
 
 bool EquipmentSlot::setItem(const EquipmentItem& item) {
@@ -100,9 +101,13 @@ bool EquipmentSlot::setItem(const EquipmentItem& item) {
 	}
 
 	d->item = item;
-	//setPixmap(item.entity->icon.scaled(size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
-	//updateVisualState();
-	//emit itemEquipped(item, this);
+
+	// const auto itemPtr = d->equipmentService->
+
+	// setPixmap(item.entity->icon.scaled(size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+
+	updateVisualState();
+	emit itemEquipped(item, this);
 	return true;
 }
 
@@ -125,27 +130,25 @@ void EquipmentSlot::mousePressEvent(QMouseEvent* event) {
 			emit slotClicked(this);
 		}
 	}
+
 	QLabel::mousePressEvent(event);
 }
 
 void EquipmentSlot::dragEnterEvent(QDragEnterEvent* event) {
-	//if (event->mimeData()->hasFormat("application/x-game-item")) {
-	//	QByteArray itemData = event->mimeData()->data("application/x-game-item");
-	//	QDataStream stream(itemData);
-	//	QString id;
-	//	qint32 typeInt;
-	//	qint32 rarity;
-	//	stream >> id >> typeInt >> rarity;
+	if (!event->mimeData()->hasFormat("application/x-game-item")) {
+		event->ignore();
+		return;
+	}
 
-	//	const auto type = static_cast<ItemEquipmentType>(typeInt);
-	//	EquipmentItem previewItem{ id, "Preview", type, QPixmap(), static_cast<EquipmentItemRarityType>(rarity) };
+	QByteArray data = event->mimeData()->data("application/x-game-item");
+	const auto item = ItemMimeData::fromMimeData(data);
 
-	//	if (canAcceptItem(previewItem)) {
-	//		setHighlighted(true);
-	//		event->acceptProposedAction();
-	//		return;
-	//	}
-	//}
+	if (d->equipmentService->canAcceptItem(item, d->slot)) {
+		setHighlighted(true);
+		event->acceptProposedAction();
+		return;
+	}
+
 	event->ignore();
 }
 
@@ -210,34 +213,9 @@ void EquipmentSlot::paintEvent(QPaintEvent* event) {
 	//}
 }
 
-bool EquipmentSlot::canAcceptItem(const EquipmentItem& item) const {
-	//switch (d->type) {
-	//case EquipmentSlotType::Head:
-	//	return item.type == EquipmentItemType::Head;
-	//case EquipmentSlotType::Body:
-	//	return item.type == EquipmentItemType::Body;
-	//case EquipmentSlotType::WeaponLeft:
-	//	return item.type == EquipmentItemType::Weapon || item.type == EquipmentItemType::Shield;
-	//case EquipmentSlotType::WeaponRight:
-	//	return item.type == EquipmentItemType::Weapon; // Только оружие в правой
-	//case EquipmentSlotType::GlovesLeft:
-	//case EquipmentSlotType::GlovesRight:
-	//	return item.type == EquipmentItemType::Gloves;
-	//case EquipmentSlotType::Boots:
-	//	return item.type == EquipmentItemType::Boots;
-	//case EquipmentSlotType::RingLeft:
-	//case EquipmentSlotType::RingRight:
-	//	return item.type == EquipmentItemType::Ring;
-	//case EquipmentSlotType::Amulet:
-	//	return item.type == EquipmentItemType::Amulet;
-	//}
-
-	return false;
-}
-
 void EquipmentSlot::updateVisualState() {
-	//setProperty("occupied", d->item.has_value());
-	//setProperty("highlight", d->highlighted);
+	setProperty("occupied", d->item.has_value());
+	setProperty("highlight", d->highlighted);
 
 	//// Для редкости предмета (опционально)
 	//if (d->item.has_value()) {
@@ -251,6 +229,10 @@ void EquipmentSlot::updateVisualState() {
 	style()->unpolish(this);
 	style()->polish(this);
 	update();
+}
+
+bool EquipmentSlot::canAcceptItem(const EquipmentItem& item) const {
+	return false; // d->equipmentService->canAcceptItem(item, d->slot);
 }
 
 void EquipmentSlot::startDrag() {

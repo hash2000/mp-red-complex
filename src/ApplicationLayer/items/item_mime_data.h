@@ -3,7 +3,7 @@
 
 class InventoryItemHandler;
 
-class InventoryItemMimeData {
+class ItemMimeData {
 public:
 	QString id;
 	QString name;
@@ -14,10 +14,11 @@ public:
 	int count;
 	int maxStack;
 	int type;
+	int equipmentType;
 
 public:
-	InventoryItemMimeData();
-	InventoryItemMimeData(const InventoryItemHandler& item);
+	ItemMimeData();
+	ItemMimeData(const InventoryItemHandler& item);
 
-	static InventoryItemMimeData fromMimeData(const QByteArray& data);
+	static ItemMimeData fromMimeData(const QByteArray& data);
 };

@@ -1,6 +1,7 @@
 #include "Game/widgets/equipment/equipment_window.h"
 #include "Game/widgets/equipment/equipment_widget.h"
 #include <QVBoxLayout>
+#include <QUuid>
 
 class EquipmentWindow::Private {
 public:
@@ -9,13 +10,13 @@ public:
 	}
 	EquipmentWindow* q;
 	EquipmentWidget* widget;
-	EquipmentService* equipmentService;
+	EquipmentsService* equipmentService;
 };
 
-EquipmentWindow::EquipmentWindow(EquipmentService* equipmentService, const QString& id, QWidget* parent)
+EquipmentWindow::EquipmentWindow(EquipmentsService* equipmenstService, const QString& id, QWidget* parent)
 	: d(std::make_unique<Private>(this))
 	, MdiChildWindow(id, parent) {
-	d->widget = new EquipmentWidget(equipmentService, this);
+	d->widget = new EquipmentWidget(equipmenstService, this);
 	setWindowTitle("Equipment");
 
 	//connect(d->widget, &EquipmentWidget::itemEquipped, [](const EquipmentItem& item, EquipmentSlotType slot) {
@@ -37,6 +38,14 @@ EquipmentWidget* EquipmentWindow::widget() const {
 
 bool EquipmentWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) {
 	if (commandName == "create") {
+		const auto target = QUuid::fromString(windowId());
+		if (target.isNull()) {
+			return false;
+		}
+
+		if (!d->widget->setInventoryService(target)) {
+			return false;
+		}
 
 		return true;
 	}

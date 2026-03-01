@@ -6,7 +6,7 @@
 #include "DataLayer/items/items_data_provider_json_impl.h"
 #include "ApplicationLayer/items/items_service.h"
 #include "DataLayer/equipment/equipment_data_provider_json_impl.h"
-#include "ApplicationLayer/equipment/equipment_service.h"
+#include "ApplicationLayer/equipment/equipments_service.h"
 #include <list>
 
 class Services::Private {
@@ -23,7 +23,7 @@ public:
 	std::unique_ptr<ItemsDataProvider> itemsDataProvider;
 	std::unique_ptr<ItemsService> itemsService;
 	std::unique_ptr<EquipmentDataProvider> equipmentDataProvider;
-	std::unique_ptr<EquipmentService> equipmentService;
+	std::unique_ptr<EquipmentsService> equipmentsService;
 };
 
 
@@ -43,7 +43,7 @@ Services::Services(Resources* resources)
 		d->inventoryDataProvider.get(),
 		d->itemsService.get());
 
-	d->equipmentService = std::make_unique<EquipmentService>(
+	d->equipmentsService = std::make_unique<EquipmentsService>(
 		d->equipmentDataProvider.get(),
 		d->itemsService.get());
 }
@@ -79,6 +79,6 @@ ItemsService* Services::itemsService() const {
 	return d->itemsService.get();
 }
 
-EquipmentService* Services::equipmentService() const {
-	return d->equipmentService.get();
+EquipmentsService* Services::equipmentsService() const {
+	return d->equipmentsService.get();
 }

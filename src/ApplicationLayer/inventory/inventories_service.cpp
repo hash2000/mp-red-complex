@@ -1,7 +1,7 @@
 #include "ApplicationLayer/inventory/inventories_service.h"
 #include "ApplicationLayer/inventory/inventory_service.h"
 #include "ApplicationLayer/inventory/inventory_item_handler.h"
-#include "ApplicationLayer/inventory/inventory_item_mime_data.h"
+#include "ApplicationLayer/items/item_mime_data.h"
 #include "DataLayer/inventory/inventory_data_provider.h"
 #include "DataLayer/inventory/inventory_item.h"
 #include <QDebug>
@@ -51,7 +51,7 @@ InventoryService* InventoriesService::inventoryService(const QUuid& id, bool loa
 	return d->inventories[id].get();
 }
 
-bool InventoriesService::crossInventoryMove(const InventoryItemMimeData& item, int col, int row, const QUuid& fromInventoryId, const QUuid& toInventoryId) {
+bool InventoriesService::crossInventoryMove(const ItemMimeData& item, int col, int row, const QUuid& fromInventoryId, const QUuid& toInventoryId) {
 	auto fromService = inventoryService(fromInventoryId, false);
 	auto toService = inventoryService(toInventoryId, false);
 
@@ -64,7 +64,7 @@ bool InventoriesService::crossInventoryMove(const InventoryItemMimeData& item, i
 	// в предыдущем инвентаре изменяем количество элементов в стопке, если она есть
 	// если элементов станет 0, то из этого инвентаря элемент удалится
 
-	InventoryItemMimeData changedItem = item;
+	ItemMimeData changedItem = item;
 	if (!fromService->changeItemsCount(changedItem)) {
 		return false;
 	}
@@ -73,7 +73,7 @@ bool InventoriesService::crossInventoryMove(const InventoryItemMimeData& item, i
 		return true;
 	}
 
-	InventoryItemMimeData toItem = item;
+	ItemMimeData toItem = item;
 	toItem.count = changedItem.count;
 	toItem.x = col;
 	toItem.y = row;

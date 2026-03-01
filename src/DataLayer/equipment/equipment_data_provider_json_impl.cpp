@@ -2,6 +2,7 @@
 #include "DataLayer/equipment/equipment.h"
 #include "DataStream/format/json/data_reader.h"
 #include "Resources/resources.h"
+#include <QJsonArray>
 
 class EquipmentDataProviderJsonImpl::Private {
 public:
@@ -34,4 +35,32 @@ bool EquipmentDataProviderJsonImpl::loadEquipment(const QUuid& id, Equipment& eq
 	if (!reader.read(json)) {
 		return false;
 	}
+
+	equipment.id = id
+		.toString(QUuid::StringFormat::WithoutBraces)
+		.toLower();
+
+	const QJsonArray items = json["items"]
+		.toArray();
+
+	for (const QJsonValue& item : items) {
+		EquipmentItem eqItem;
+		eqItem.id = item["id"].toString();
+		const auto slot = item["slot"].toString();
+		if (slot == "Head") eqItem.slot = EquipmentSlotType::Head;
+		else if (slot == "Body") eqItem.slot = EquipmentSlotType::Body;
+		else if (slot == "WeaponLeft") eqItem.slot = EquipmentSlotType::WeaponLeft;
+		else if (slot == "GlovesLeft") eqItem.slot = EquipmentSlotType::GlovesLeft;
+		else if (slot == "GlovesRight") eqItem.slot = EquipmentSlotType::GlovesRight;
+		else if (slot == "Boots") eqItem.slot = EquipmentSlotType::Boots;
+		else if (slot == "RingLeft") eqItem.slot = EquipmentSlotType::RingLeft;
+		else if (slot == "Amulet") eqItem.slot = EquipmentSlotType::Amulet;
+		else {
+			qWarning() << "loadEquipment: equipment from" << equipment.id << "item" << eqItem.id << "unknown slot" << slot;
+			continue;
+		}
+
+		equipment.items.push_back(eqItem);
+	}
+
 }

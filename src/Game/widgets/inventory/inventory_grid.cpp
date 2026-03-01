@@ -4,7 +4,7 @@
 #include "ApplicationLayer/inventory/inventory_service.h"
 #include "ApplicationLayer/inventory/inventories_service.h"
 #include "ApplicationLayer/inventory/inventory_item_handler.h"
-#include "ApplicationLayer/inventory/inventory_item_mime_data.h"
+#include "ApplicationLayer/items/item_mime_data.h"
 
 #include <QPoint>
 #include <QLayoutItem>
@@ -76,7 +76,7 @@ void InventoryGrid::setInventoryService(InventoriesService* inventories, const Q
 	if (d->inventory) {
 		disconnect(d->inventory, nullptr, this, nullptr);
 		// Очищаем все виджеты
-		for (auto* widget : d->widgets) {
+		for (auto widget : d->widgets) {
 			widget->deleteLater();
 		}
 		d->widgets.clear();
@@ -115,7 +115,7 @@ void InventoryGrid::updateGridSize() {
 	d->dropPreview->setFixedSize(size());
 }
 
-void InventoryGrid::onItemPlaced(const InventoryItemMimeData& item, int row, int col) {
+void InventoryGrid::onItemPlaced(const ItemMimeData& item, int row, int col) {
 	Q_UNUSED(row);
 	Q_UNUSED(col);
 
@@ -123,7 +123,7 @@ void InventoryGrid::onItemPlaced(const InventoryItemMimeData& item, int row, int
 	createWidgetForItem(item);
 }
 
-void InventoryGrid::onItemRemoved(const InventoryItemMimeData& item, int row, int col) {
+void InventoryGrid::onItemRemoved(const ItemMimeData& item, int row, int col) {
 	Q_UNUSED(row);
 	Q_UNUSED(col);
 
@@ -131,7 +131,7 @@ void InventoryGrid::onItemRemoved(const InventoryItemMimeData& item, int row, in
 	removeWidgetForItem(item);
 }
 
-void InventoryGrid::onItemMoved(const InventoryItemMimeData& item, int oldCol, int oldRow, int newCol, int newRow) {
+void InventoryGrid::onItemMoved(const ItemMimeData& item, int oldCol, int oldRow, int newCol, int newRow) {
 	Q_UNUSED(oldRow);
 	Q_UNUSED(oldCol);
 
@@ -139,13 +139,13 @@ void InventoryGrid::onItemMoved(const InventoryItemMimeData& item, int oldCol, i
 	moveWidgetForItem(item, newCol, newRow);
 }
 
-void InventoryGrid::onItemCountChanged(const InventoryItemMimeData& item) {
+void InventoryGrid::onItemCountChanged(const ItemMimeData& item) {
 
 
 	changeItemStackCount(item);
 }
 
-void InventoryGrid::createWidgetForItem(const InventoryItemMimeData& item) {
+void InventoryGrid::createWidgetForItem(const ItemMimeData& item) {
 	if (d->widgets.contains(item.id)) {
 		return;
 	}
@@ -174,7 +174,7 @@ void InventoryGrid::createWidgetForItem(const InventoryItemMimeData& item) {
 	d->widgets[item.id] = widget;
 }
 
-void InventoryGrid::changeItemStackCount(const InventoryItemMimeData& item) {
+void InventoryGrid::changeItemStackCount(const ItemMimeData& item) {
 	if (!d->widgets.contains(item.id)) {
 		return;
 	}
@@ -185,7 +185,7 @@ void InventoryGrid::changeItemStackCount(const InventoryItemMimeData& item) {
 	}
 }
 
-void InventoryGrid::removeWidgetForItem(const InventoryItemMimeData& item) {
+void InventoryGrid::removeWidgetForItem(const ItemMimeData& item) {
 	if (!d->widgets.contains(item.id)) {
 		return;
 	}
@@ -197,7 +197,7 @@ void InventoryGrid::removeWidgetForItem(const InventoryItemMimeData& item) {
 	}
 }
 
-void InventoryGrid::moveWidgetForItem(const InventoryItemMimeData& item, int newCol, int newRow) {
+void InventoryGrid::moveWidgetForItem(const ItemMimeData& item, int newCol, int newRow) {
 	if (!d->widgets.contains(item.id)) {
 		return;
 	}
@@ -250,7 +250,7 @@ void InventoryGrid::dragMoveEvent(QDragMoveEvent* event) {
 		return;
 	}
 
-	auto item = InventoryItemMimeData::fromMimeData(event->mimeData()->data("application/x-game-item"));
+	auto item = ItemMimeData::fromMimeData(event->mimeData()->data("application/x-game-item"));
 	const auto sourceInventoryId = QString::fromUtf8(event->mimeData()->data("application/x-game-item-source-inventory-id"));
 	const auto currentInventoryId = inventoryId();
 	const auto isSameGrid = (sourceInventoryId == currentInventoryId);
@@ -283,7 +283,7 @@ void InventoryGrid::dropEvent(QDropEvent* event) {
 	}
 
 	QByteArray data = event->mimeData()->data("application/x-game-item");
-	const auto item = InventoryItemMimeData::fromMimeData(data);
+	const auto item = ItemMimeData::fromMimeData(data);
 
 	// Определяем целевую позицию
 	QPoint pos = event->position().toPoint();

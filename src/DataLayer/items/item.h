@@ -38,6 +38,7 @@ enum class ItemRarityType {
 
 // если этот предмет-экиперовка, сразу нежно знать куда эта экиперовка одевается
 enum class ItemEquipmentType {
+	None,
 	Head,
 	Body,
 	Weapon,
@@ -88,7 +89,8 @@ public:
 	ItemRarityType rarity = ItemRarityType::Common;
 
 	// если это экипировка, то какая
-	std::optional<ItemEquipmentType> equipmentType;
+	ItemEquipmentType equipmentType;
+
 	// рецепт
 	std::optional<ItemRecipe> recipe;
 	// контейнер

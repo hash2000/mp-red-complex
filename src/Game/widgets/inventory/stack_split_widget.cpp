@@ -2,7 +2,7 @@
 #include "Game/widgets/inventory/inventory_item_widget.h"
 #include "Game/widgets/inventory/inventory_grid.h"
 #include "ApplicationLayer/inventory/inventory_item_handler.h"
-#include "ApplicationLayer/inventory/inventory_item_mime_data.h"
+#include "ApplicationLayer/items/item_mime_data.h"
 #include "BaseWidgets/clicable_label.h"
 #include <QSlider>
 #include <QLineEdit>
@@ -254,7 +254,7 @@ void StackSplitWidget::onStartDrag() {
 	d->iconLabel->setCursor(Qt::OpenHandCursor);
 
 	if (dropAction == Qt::MoveAction) {
-		emit splitDropStarted(InventoryItemMimeData(splitItem));
+		emit splitDropStarted(ItemMimeData(splitItem));
 		close(); // Закрываем виджет после успешного дропа
 	}
 }

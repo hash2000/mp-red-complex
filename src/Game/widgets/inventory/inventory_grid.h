@@ -9,7 +9,7 @@ class InventoryItemWidget;
 class InventoriesService;
 class InventoryService;
 class InventoryItemHandler;
-class InventoryItemMimeData;
+class ItemMimeData;
 
 class InventoryGrid : public QWidget {
 	friend class InventoryItemWidget;
@@ -34,8 +34,8 @@ protected:
 	QString newObjectName();
 
 signals:
-	void itemDroppedForEquipment(const InventoryItemMimeData& item);
-	void containerOpened(const InventoryItemMimeData& container);
+	void itemDroppedForEquipment(const ItemMimeData& item);
+	void containerOpened(const ItemMimeData& container);
 
 protected:
 	void paintEvent(QPaintEvent* event) override;
@@ -46,18 +46,18 @@ protected:
 	void resizeEvent(QResizeEvent* event) override;
 
 private:
-	void onItemPlaced(const InventoryItemMimeData& item, int row, int col);
-	void onItemRemoved(const InventoryItemMimeData& item, int row, int col);
-	void onItemMoved(const InventoryItemMimeData& item, int oldCol, int oldRow, int newCol, int newRow);
-	void onItemCountChanged(const InventoryItemMimeData& item);
+	void onItemPlaced(const ItemMimeData& item, int row, int col);
+	void onItemRemoved(const ItemMimeData& item, int row, int col);
+	void onItemMoved(const ItemMimeData& item, int oldCol, int oldRow, int newCol, int newRow);
+	void onItemCountChanged(const ItemMimeData& item);
 
-	void createWidgetForItem(const InventoryItemMimeData& item);
-	void removeWidgetForItem(const InventoryItemMimeData& item);
-	void moveWidgetForItem(const InventoryItemMimeData& item, int newCol, int newRow);
+	void createWidgetForItem(const ItemMimeData& item);
+	void removeWidgetForItem(const ItemMimeData& item);
+	void moveWidgetForItem(const ItemMimeData& item, int newCol, int newRow);
 	void updateGridSize();
 	void showDropPreview(int col, int row, int width, int height, bool canPlace);
 	void hideDropPreview();
-	void changeItemStackCount(const InventoryItemMimeData& item);
+	void changeItemStackCount(const ItemMimeData& item);
 
 private:
 	class Private;

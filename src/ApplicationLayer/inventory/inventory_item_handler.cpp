@@ -18,12 +18,13 @@ bool InventoryItemHandler::canMergeWith(const InventoryItemHandler& other) const
 		entity->type == other.entity->type;
 }
 
-
 QByteArray InventoryItemHandler::toMimeData() const {
 	QByteArray data;
 	QDataStream stream(&data, QIODevice::WriteOnly);
 
-	stream << id << entity->name << x << y << entity->width << entity->height << count << entity->maxStack << static_cast<qint32>(entity->type);
+	stream << id << entity->name << x << y << entity->width << entity->height << count << entity->maxStack
+		<< static_cast<qint32>(entity->type)
+		<< static_cast<qint32>(entity->equipmentType);
 
 	return data;
 }

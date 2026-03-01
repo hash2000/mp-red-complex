@@ -2,7 +2,7 @@
 #include "Game/widgets/inventory/inventory_grid.h"
 #include "Game/widgets/inventory/stack_split_widget.h"
 #include "ApplicationLayer/inventory/inventory_item_handler.h"
-#include "ApplicationLayer/inventory/inventory_item_mime_data.h"
+#include "ApplicationLayer/items/item_mime_data.h"
 #include <QApplication>
 #include <QVBoxLayout>
 #include <QLabel>
@@ -230,7 +230,7 @@ void InventoryItemWidget::dragEnterEvent(QDragEnterEvent* event) {
 		return;
 	}
 
-	auto droppedItem = InventoryItemMimeData::fromMimeData(event->mimeData()->data("application/x-game-item"));
+	auto droppedItem = ItemMimeData::fromMimeData(event->mimeData()->data("application/x-game-item"));
 	if (droppedItem.id == d->item.id &&
 		d->item.count <= d->item.entity->maxStack) {
 		event->acceptProposedAction();
@@ -244,7 +244,7 @@ void InventoryItemWidget::dropEvent(QDropEvent* event) {
 		return;
 	}
 
-	auto droppedItem = InventoryItemMimeData::fromMimeData(event->mimeData()->data("application/x-game-item"));
+	auto droppedItem = ItemMimeData::fromMimeData(event->mimeData()->data("application/x-game-item"));
 	if (droppedItem.id != d->item.id) {
 		event->ignore();
 		return;

@@ -6,12 +6,18 @@
 #include <QJsonObject>
 #include <QJsonArray>
 
-namespace {
+class ItemsDataProviderJsonImpl::Private {
+public:
+	Private(ItemsDataProviderJsonImpl* paren)
+		: q(paren) {
+	}
+
 	void itemEntityFromJson(const QJsonObject& json, ItemEntity& entity) {
 		entity.id = json["id"].toString();
 		entity.name = json["name"].toString();
 		entity.description = json["description"].toString();
 		entity.iconPath = json["icon"].toString();
+		entity.equipmentType = ItemEquipmentType::None;
 
 		// Тип предмета
 		QString typeStr = json["type"].toString().toLower();
@@ -63,14 +69,27 @@ namespace {
 			}
 		}
 	}
-}
 
+	QPixmap loadIcon(const ItemEntity& entity) {
+		const auto path = QString("items/%1")
+			.arg(entity.iconPath);
 
+		QPixmap pixmap;
+		Format::Pixmap::DataReader reader(resources, "assets", path);
+		if (!reader.read(pixmap)) {
+			return loadEmptyStubIcon(entity.id);
+		}
 
-class ItemsDataProviderJsonImpl::Private {
-public:
-	Private(ItemsDataProviderJsonImpl* paren)
-		: q(paren) {
+		return pixmap;
+	}
+
+	QPixmap loadEmptyStubIcon(const QString& id) {
+		QPixmap result = QPixmap(64, 64);
+		result.fill(Qt::darkGray);
+		QPainter painter(&result);
+		painter.setPen(Qt::white);
+		painter.drawText(result.rect(), Qt::AlignCenter, id.left(2));
+		return result;
 	}
 
 	ItemsDataProviderJsonImpl* q;
@@ -94,33 +113,11 @@ bool ItemsDataProviderJsonImpl::loadEntity(const QString& id, ItemEntity& entity
 		return false;
 	}
 
-	itemEntityFromJson(json, entity);
+	d->itemEntityFromJson(json, entity);
 
-	entity.icon = loadIcon(entity);
+	entity.icon = d->loadIcon(entity);
 
 	return true;
-}
-
-QPixmap ItemsDataProviderJsonImpl::loadIcon(const ItemEntity& entity) const {
-	const auto path = QString("items/%1")
-		.arg(entity.iconPath);
-
-	QPixmap pixmap;
-	Format::Pixmap::DataReader reader(d->resources, "assets", path);
-	if (!reader.read(pixmap)) {
-		return loadEmptyStubIcon(entity.id);
-	}
-
-	return pixmap;
-}
-
-QPixmap ItemsDataProviderJsonImpl::loadEmptyStubIcon(const QString& id) {
-	QPixmap result = QPixmap(64, 64);
-	result.fill(Qt::darkGray);
-	QPainter painter(&result);
-	painter.setPen(Qt::white);
-	painter.drawText(result.rect(), Qt::AlignCenter, id.left(2));
-	return result;
 }
 
 bool ItemsDataProviderJsonImpl::loadEntitiesIds(std::list<QString>& list) const {

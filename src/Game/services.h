@@ -7,7 +7,7 @@ class TimeService;
 class WorldService;
 class InventoriesService;
 class ItemsService;
-class EquipmentService;
+class EquipmentsService;
 
 class Services: public QObject {
 	Q_OBJECT
@@ -23,7 +23,7 @@ public:
 
 	ItemsService* itemsService() const;
 
-	EquipmentService* equipmentService() const;
+	EquipmentsService* equipmentsService() const;
 
 	void run();
 

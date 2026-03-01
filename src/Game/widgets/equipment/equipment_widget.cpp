@@ -1,5 +1,7 @@
 #include "Game/widgets/equipment/equipment_widget.h"
 #include "Game/widgets/equipment/equipment_slot_widget.h"
+#include "ApplicationLayer/equipment/equipments_service.h"
+#include "ApplicationLayer/equipment/equipment_service.h"
 #include <QVBoxLayout>
 
 class EquipmentWidget::Private {
@@ -92,34 +94,26 @@ public:
 
 	EquipmentSlot* findCompatibleSlot(const EquipmentItem& item) const {
 		for (auto it = allSlots.cbegin(); it != allSlots.cend(); ++it) {
-			if (it.value()->canAcceptItem(item)) {
-				return it.value();
-			}
+			//if (it.value()->canAcceptItem(item)) {
+			//	return it.value();
+			//}
 		}
 		return nullptr;
 	}
 
 	EquipmentWidget* q;
 	QMap<EquipmentSlotType, EquipmentSlot*> allSlots;
+	EquipmentsService* equipmentsService = nullptr;
+	EquipmentService* equipmentService = nullptr;
 };
 
-EquipmentWidget::EquipmentWidget(EquipmentService* equipmentService, QWidget* parent)
+EquipmentWidget::EquipmentWidget(EquipmentsService* equipmentsService, QWidget* parent)
 : d(std::make_unique<Private>(this)) {
+	d->equipmentsService = equipmentsService;
+
 	setObjectName("EquipmentWidget");
 	setFrameStyle(QFrame::StyledPanel | QFrame::Plain);
 	setLineWidth(1);
-
-	d->setupLayout(equipmentService);
-
-	// Подключаем сигналы слотов к виджету
-	for (auto slot : d->allSlots) {
-		connect(slot, &EquipmentSlot::itemEquipped, this, [this, slot](const EquipmentItem& item) {
-			emit itemEquipped(item, slot->slotType());
-			});
-		connect(slot, &EquipmentSlot::itemRemoved, this, [this, slot](const EquipmentItem& item) {
-			emit itemUnequipped(item, slot->slotType());
-			});
-	}
 
 	setStyleSheet(R"(
         #EquipmentWidget {
@@ -132,6 +126,38 @@ EquipmentWidget::EquipmentWidget(EquipmentService* equipmentService, QWidget* pa
 }
 
 EquipmentWidget::~EquipmentWidget() = default;
+
+bool EquipmentWidget::setInventoryService(const QUuid& id) {
+	auto equipmentService = d->equipmentsService->equipment(id, true);
+	if (!equipmentService) {
+		return false;
+	}
+
+	if (d->equipmentService) {
+		disconnect(d->equipmentService, nullptr, this, nullptr);
+
+		for (auto widget : d->allSlots) {
+			widget->clearItem();
+		}
+	}
+	else {
+		d->setupLayout(equipmentService);
+	}
+
+	d->equipmentService = equipmentService;
+
+	// Подключаем сигналы слотов к виджету
+	for (auto slot : d->allSlots) {
+		connect(slot, &EquipmentSlot::itemEquipped, this, [this, slot](const EquipmentItem& item) {
+			emit itemEquipped(item, slot->slotType());
+			});
+		connect(slot, &EquipmentSlot::itemRemoved, this, [this, slot](const EquipmentItem& item) {
+			emit itemUnequipped(item, slot->slotType());
+			});
+	}
+
+	return true;
+}
 
 std::optional<EquipmentItem> EquipmentWidget::getItem(EquipmentSlotType slot) const {
 	if (d->allSlots.contains(slot) && d->allSlots[slot]->isOccupied()) {

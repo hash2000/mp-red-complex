@@ -34,7 +34,7 @@ MdiChildWindow* WindowsBuilder::build(const QString& name, const QString& id) {
 	}
 	else if (name == "equipment") {
 		return new EquipmentWindow(
-			d->appController->services()->equipmentService(),
+			d->appController->services()->equipmentsService(),
 			id);
 	}
 	else if (name == "inventory") {

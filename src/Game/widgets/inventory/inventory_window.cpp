@@ -38,6 +38,7 @@ bool InventoryWindow::handleCommand(const QString& commandName, const QStringLis
 		if (target.isNull()) {
 			return false;
 		}
+
 		if (!d->widget->load(target)) {
 			return false;
 		}

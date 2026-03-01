@@ -1,7 +1,7 @@
 #include "ApplicationLayer/inventory/inventory_service.h"
 #include "ApplicationLayer/inventory/inventories_service.h"
 #include "ApplicationLayer/inventory/inventory_item_handler.h"
-#include "ApplicationLayer/inventory/inventory_item_mime_data.h"
+#include "ApplicationLayer/items/item_mime_data.h"
 #include "ApplicationLayer/items/items_service.h"
 #include <QHash>
 #include <QDebug>
@@ -191,7 +191,7 @@ const InventoryItemHandler* InventoryService::itemById(const QString& id) const 
 	return d->itemById(id);
 }
 
-bool InventoryService::placeItem(const InventoryItemMimeData& item) {
+bool InventoryService::placeItem(const ItemMimeData& item) {
 	auto itemPtr = d->itemById(item.id);
 	if (!itemPtr) {
 		return false;
@@ -250,7 +250,7 @@ bool InventoryService::placeItem(const InventoryItemMimeData& item) {
 	return true;
 }
 
-int InventoryService::canPlaceItem(const InventoryItemMimeData& item, int col, int row, bool checkItemPlace) const {
+int InventoryService::canPlaceItem(const ItemMimeData& item, int col, int row, bool checkItemPlace) const {
 	// Проверка границ инвентаря целиком
 	if (col < 0 || row < 0 || col + item.width > d->cols || row + item.height > d->rows) {
 		return 0;
@@ -289,7 +289,7 @@ int InventoryService::canPlaceItem(const InventoryItemMimeData& item, int col, i
 	return item.count;
 }
 
-std::optional<QPoint> InventoryService::findFreeSpace(const InventoryItemMimeData& item, bool checkItemPlace) const {
+std::optional<QPoint> InventoryService::findFreeSpace(const ItemMimeData& item, bool checkItemPlace) const {
 	for (int row = 0; row < d->rows; row++) {
 		for (int col = 0; col < d->cols; col++) {
 			const auto count = canPlaceItem(item, col, row, checkItemPlace);
@@ -322,7 +322,7 @@ void InventoryService::clear() {
 	d->items.clear();
 }
 
-void InventoryService::removeItem(const InventoryItemMimeData& item) {
+void InventoryService::removeItem(const ItemMimeData& item) {
 	auto itemIt = d->inventoryItems.find(item.id);
 	if (itemIt == d->inventoryItems.end()) {
 		return;
@@ -352,7 +352,7 @@ void InventoryService::removeItem(const InventoryItemMimeData& item) {
 	emit removeItemEvent(item, itemPtr->y, itemPtr->x);
 }
 
-bool InventoryService::moveItem(const InventoryItemMimeData& item, int newCol, int newRow, bool checkItemPlace) {
+bool InventoryService::moveItem(const ItemMimeData& item, int newCol, int newRow, bool checkItemPlace) {
 	// Получаем полный предмет из инвентаря по ID
 	auto itemPtr = d->itemById(item.id);
 	if (!itemPtr) {
@@ -508,7 +508,7 @@ bool InventoryService::moveItem(const InventoryItemMimeData& item, int newCol, i
 	return true;
 }
 
-bool InventoryService::containsItem(const InventoryItemMimeData& item) const {
+bool InventoryService::containsItem(const ItemMimeData& item) const {
 	auto itemPtr = d->itemById(item.id);
 	if (!itemPtr) {
 		return false;
@@ -524,7 +524,7 @@ bool InventoryService::containsItem(const InventoryItemMimeData& item) const {
 }
 
 
-bool InventoryService::changeItemsCount(const InventoryItemMimeData& item) {
+bool InventoryService::changeItemsCount(const ItemMimeData& item) {
 	auto itemPtr = d->itemById(item.id);
 	if (!itemPtr) {		
 		return false;
@@ -536,13 +536,13 @@ bool InventoryService::changeItemsCount(const InventoryItemMimeData& item) {
 	}
 	else {
 		itemPtr->count = remains;
-		emit itemCountChanged(InventoryItemMimeData(*itemPtr));
+		emit itemCountChanged(ItemMimeData(*itemPtr));
 	}
 	
 	return true;
 }
 
-bool InventoryService::applyItem(const InventoryItemMimeData& item) {
+bool InventoryService::applyItem(const ItemMimeData& item) {
 	if (item.count == 0) {
 		return false;
 	}
@@ -556,7 +556,7 @@ bool InventoryService::applyItem(const InventoryItemMimeData& item) {
 	invItem->y = item.y;
 	invItem->count = item.count;
 
-	if (!placeItem(InventoryItemMimeData(*invItem))) {
+	if (!placeItem(ItemMimeData(*invItem))) {
 		return false;
 	}
 
