@@ -40,9 +40,27 @@ public:
 		auto bodyRow = new QHBoxLayout();
 		bodyRow->addStretch();
 
+		// Рюкзак
+		auto backpack = new EquipmentSlot(equipmentService, EquipmentSlotType::Backpack, q);
+		allSlots[EquipmentSlotType::Backpack] = backpack;
+		bodyRow->addWidget(backpack);
+
 		auto bodySlot = new EquipmentSlot(equipmentService, EquipmentSlotType::Body, q);
 		allSlots[EquipmentSlotType::Body] = bodySlot;
 		bodyRow->addWidget(bodySlot);
+
+		// колонка для подсумков
+		auto bagCol = new QVBoxLayout();
+
+		auto bag1Slot = new EquipmentSlot(equipmentService, EquipmentSlotType::Bag1, q);
+		allSlots[EquipmentSlotType::Bag1] = bag1Slot;
+		bagCol->addWidget(bag1Slot);
+
+		auto bag2Slot = new EquipmentSlot(equipmentService, EquipmentSlotType::Bag2, q);
+		allSlots[EquipmentSlotType::Bag2] = bag2Slot;
+		bagCol->addWidget(bag2Slot);
+
+		bodyRow->addLayout(bagCol);
 
 		bodyRow->addStretch();
 		mainLayout->addLayout(bodyRow);

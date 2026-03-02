@@ -38,14 +38,17 @@ EquipmentSlot::EquipmentSlot(EquipmentService* equipmentService, EquipmentSlotTy
 
 	// Специальные размеры для некоторых слотов
 	switch (type) {
+	case EquipmentSlotType::Backpack:
+	case EquipmentSlotType::Bag1:
+	case EquipmentSlotType::Bag2:
+		setFixedSize(48, 48);
+		break;
 	case EquipmentSlotType::WeaponLeft:
 	case EquipmentSlotType::WeaponRight:
 		setFixedSize(48, 96); // Вертикальное оружие
 		break;
 	case EquipmentSlotType::Body:
 		setFixedSize(64, 96); // Тело выше
-		break;
-	default:
 		break;
 	}
 
@@ -193,37 +196,32 @@ void EquipmentSlot::paintEvent(QPaintEvent* event) {
 	QLabel::paintEvent(event);
 
 	// Добавляем визуальные метки типа слота (опционально)
-	//if (!d->item.has_value() && !d->dragging) {
-	//	QPainter painter(this);
-	//	painter.setRenderHint(QPainter::Antialiasing);
-	//	painter.setPen(QColor(100, 116, 139));
+	if (!d->item.has_value() && !d->dragging) {
+		QPainter painter(this);
+		painter.setRenderHint(QPainter::Antialiasing);
+		painter.setPen(QColor(100, 116, 139));
 
-	//	switch (d->type) {
-	//	case EquipmentSlotType::Head: painter.drawText(rect(), Qt::AlignCenter, "H"); break;
-	//	case EquipmentSlotType::Body: painter.drawText(rect(), Qt::AlignCenter, "B"); break;
-	//	case EquipmentSlotType::WeaponLeft: painter.drawText(rect(), Qt::AlignCenter, "L"); break;
-	//	case EquipmentSlotType::WeaponRight: painter.drawText(rect(), Qt::AlignCenter, "R"); break;
-	//	case EquipmentSlotType::GlovesLeft: painter.drawText(rect(), Qt::AlignCenter, "GL"); break;
-	//	case EquipmentSlotType::GlovesRight: painter.drawText(rect(), Qt::AlignCenter, "GR"); break;
-	//	case EquipmentSlotType::Boots: painter.drawText(rect(), Qt::AlignCenter, "F"); break;
-	//	case EquipmentSlotType::RingLeft: painter.drawText(rect(), Qt::AlignCenter, "RL"); break;
-	//	case EquipmentSlotType::RingRight: painter.drawText(rect(), Qt::AlignCenter, "RR"); break;
-	//	case EquipmentSlotType::Amulet: painter.drawText(rect(), Qt::AlignCenter, "A"); break;
-	//	}
-	//}
+		switch (d->slot) {
+		case EquipmentSlotType::Head: painter.drawText(rect(), Qt::AlignCenter, "H"); break;
+		case EquipmentSlotType::Body: painter.drawText(rect(), Qt::AlignCenter, "B"); break;
+		case EquipmentSlotType::WeaponLeft: painter.drawText(rect(), Qt::AlignCenter, "L"); break;
+		case EquipmentSlotType::WeaponRight: painter.drawText(rect(), Qt::AlignCenter, "R"); break;
+		case EquipmentSlotType::GlovesLeft: painter.drawText(rect(), Qt::AlignCenter, "GL"); break;
+		case EquipmentSlotType::GlovesRight: painter.drawText(rect(), Qt::AlignCenter, "GR"); break;
+		case EquipmentSlotType::Boots: painter.drawText(rect(), Qt::AlignCenter, "F"); break;
+		case EquipmentSlotType::RingLeft: painter.drawText(rect(), Qt::AlignCenter, "RL"); break;
+		case EquipmentSlotType::RingRight: painter.drawText(rect(), Qt::AlignCenter, "RR"); break;
+		case EquipmentSlotType::Amulet: painter.drawText(rect(), Qt::AlignCenter, "A"); break;
+		case EquipmentSlotType::Backpack: painter.drawText(rect(), Qt::AlignCenter, "Bp"); break;
+		case EquipmentSlotType::Bag1: painter.drawText(rect(), Qt::AlignCenter, "B1"); break;
+		case EquipmentSlotType::Bag2: painter.drawText(rect(), Qt::AlignCenter, "B2"); break;
+		}
+	}
 }
 
 void EquipmentSlot::updateVisualState() {
 	setProperty("occupied", d->item.has_value());
 	setProperty("highlight", d->highlighted);
-
-	//// Для редкости предмета (опционально)
-	//if (d->item.has_value()) {
-	//	setProperty("rarity", static_cast<int>(d->item->rarity));
-	//}
-	//else {
-	//	setProperty("rarity", -1);
-	//}
 
 	// Применяем изменения стиля
 	style()->unpolish(this);

@@ -42,6 +42,12 @@ public:
 		}
 		else if (typeStr == "container") {
 			entity.type = ItemType::Container;
+
+			// контейнер тоже может быть частью экипировки, но только рюкзаком или подсумком
+			QString equipType = json["equipmentType"].toString().toLower();
+			if (equipType == "backpack") entity.equipmentType = ItemEquipmentType::Backpack;
+			else if (equipType == "bag") entity.equipmentType = ItemEquipmentType::Bag;
+
 			QJsonObject cap = json["container"].toObject();
 			entity.container = ItemContainer{
 				cap["rows"].toInt(4),

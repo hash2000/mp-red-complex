@@ -14,6 +14,9 @@ enum class EquipmentSlotType {
 	RingLeft,
 	RingRight,
 	Amulet,
+	Backpack,
+	Bag1,
+	Bag2,
 };
 
 class EquipmentItem {

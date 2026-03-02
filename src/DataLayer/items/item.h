@@ -49,6 +49,8 @@ enum class ItemEquipmentType {
 	Amulet,
 	Resource,
 	Consumable,
+	Backpack,
+	Bag,
 };
 
 enum class ItemOwner {

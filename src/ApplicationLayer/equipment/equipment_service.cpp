@@ -72,7 +72,12 @@ bool EquipmentService::canAcceptItem(const ItemMimeData& item, EquipmentSlotType
 		return equipmentType == ItemEquipmentType::Ring;
 	case EquipmentSlotType::Amulet:
 		return equipmentType == ItemEquipmentType::Amulet;
+	case EquipmentSlotType::Backpack:
+		return equipmentType == ItemEquipmentType::Backpack;
+	case EquipmentSlotType::Bag1:
+	case EquipmentSlotType::Bag2:
+		return equipmentType == ItemEquipmentType::Bag;
 	}
 
-	return true;
+	return false;
 }
