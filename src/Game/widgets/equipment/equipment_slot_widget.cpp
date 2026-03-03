@@ -1,6 +1,7 @@
 #include "Game/widgets/equipment/equipment_slot_widget.h"
 #include "ApplicationLayer/equipment/equipment_service.h"
 #include "ApplicationLayer/items/item_mime_data.h"
+#include "ApplicationLayer/equipment/equipment_item_handler.h"
 #include <QMouseEvent>
 #include <QDragEnterEvent>
 #include <QDropEvent>
@@ -20,7 +21,7 @@ public:
 	EquipmentSlotType slot;
   EquipmentWidget* parentWidget;
 	EquipmentService* equipmentService;
-  std::optional<EquipmentItem> item;
+	std::optional<const EquipmentItemHandler*> item;
   bool highlighted = false;
   bool dragging = false;
 };
@@ -90,37 +91,37 @@ void EquipmentSlot::setHighlighted(bool highlighted) {
 	}
 }
 
-const std::optional<EquipmentItem>& EquipmentSlot::item() const {
-  return d->item;
+const EquipmentItemHandler* EquipmentSlot::item() const {
+	if (!d->item.has_value()) {
+		return nullptr;
+	}
+
+  return d->item.value();
 }
 
 EquipmentSlotType EquipmentSlot::slotType() const {
   return d->slot;
 }
 
-bool EquipmentSlot::setItem(const EquipmentItem& item) {
-	if (!canAcceptItem(item)) {
-		return false;
-	}
-
-	d->item = item;
-
-	// const auto itemPtr = d->equipmentService->
-
-	// setPixmap(item.entity->icon.scaled(size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
-
-	updateVisualState();
-	emit itemEquipped(item, this);
-	return true;
-}
+//bool EquipmentSlot::setItem(const EquipmentItem& item) {
+//	if (!canAcceptItem(item)) {
+//		return false;
+//	}
+//
+//	d->equipmentService->equipItem()
+//
+//	// setPixmap(item.entity->icon.scaled(size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+//
+//	updateVisualState();
+//	emit itemEquipped(item, this);
+//	return true;
+//}
 
 void EquipmentSlot::clearItem() {
 	if (d->item.has_value()) {
-		EquipmentItem removed = *d->item;
 		d->item.reset();
 		clear();
 		updateVisualState();
-		emit itemRemoved(removed, this);
 	}
 }
 
@@ -130,7 +131,7 @@ void EquipmentSlot::mousePressEvent(QMouseEvent* event) {
 			startDrag();
 		}
 		else {
-			emit slotClicked(this);
+			//emit slotClicked(this);
 		}
 	}
 
@@ -163,33 +164,21 @@ void EquipmentSlot::dragLeaveEvent(QDragLeaveEvent* event) {
 void EquipmentSlot::dropEvent(QDropEvent* event) {
 	setHighlighted(false);
 
-	//if (event->mimeData()->hasFormat("application/x-game-item")) {
-	//	QByteArray itemData = event->mimeData()->data("application/x-game-item");
-	//	QDataStream stream(itemData);
-	//	QString id;
-	//	qint32 typeInt;
-	//	qint32 rarity;
-	//	stream >> id >> typeInt >> rarity;
+	if (!event->mimeData()->hasFormat("application/x-game-item")) {
+		event->ignore();
+		return;
+	}
 
-	//	// Здесь нужно получить полные данные предмета из вашей системы предметов
-	//	// Для примера создаём временный предмет:
-	//	EquipmentItem droppedItem{
-	//			id,
-	//			QString("Item %1").arg(id),
-	//			static_cast<EquipmentItemType>(typeInt),
-	//			QPixmap(64, 64), // Замените на реальную иконку
-	//			static_cast<EquipmentItemRarityType>(rarity)
-	//	};
-	//	droppedItem.icon.fill(Qt::transparent);
+	QByteArray data = event->mimeData()->data("application/x-game-item");
+	const auto item = ItemMimeData::fromMimeData(data);
 
-	//	if (setItem(droppedItem)) {
-	//		event->acceptProposedAction();
-	//		return;
-	//	}
-	//}
+	if (!d->equipmentService->equipItem(item, d->slot)) {
+		updateVisualState();
+		event->ignore();
+		return;
+	}
 
-	updateVisualState();
-	event->ignore();
+	event->acceptProposedAction();
 }
 
 void EquipmentSlot::paintEvent(QPaintEvent* event) {
@@ -228,10 +217,10 @@ void EquipmentSlot::updateVisualState() {
 	style()->polish(this);
 	update();
 }
-
-bool EquipmentSlot::canAcceptItem(const EquipmentItem& item) const {
-	return false; // d->equipmentService->canAcceptItem(item, d->slot);
-}
+//
+//bool EquipmentSlot::canAcceptItem(const EquipmentItem& item) const {
+//	return false; // d->equipmentService->canAcceptItem(item, d->slot);
+//}
 
 void EquipmentSlot::startDrag() {
 	if (!d->item.has_value()) {

@@ -23,6 +23,15 @@ EquipmentService::EquipmentService(ItemsService* itemsService, QObject* parent)
 
 EquipmentService::~EquipmentService() = default;
 
+const EquipmentItemHandler* EquipmentService::itemBySlot(EquipmentSlotType slot) const {
+	const auto& it = d->items.find(slot);
+	if (it == d->items.end()) {
+		return nullptr;
+	}
+
+	return it->second.get();
+}
+
 bool EquipmentService::load(const Equipment& equipment) {
 	d->equipmentId = equipment.id;
 
@@ -80,4 +89,49 @@ bool EquipmentService::canAcceptItem(const ItemMimeData& item, EquipmentSlotType
 	}
 
 	return false;
+}
+
+
+const EquipmentItemHandler* EquipmentService::equipItem(const ItemMimeData& item, EquipmentSlotType slot) {
+	// берём из инвентаря
+	const auto itemPtr = d->itemsService->itemById(item.id, ItemOwner::Inventory);
+	if (!itemPtr) {
+		return nullptr;
+	}
+
+	if (d->items.contains(slot)) {
+		// сначала нужно освободить слот
+		return NULL;
+	}
+
+	auto eq = std::make_unique<EquipmentItemHandler>();
+	eq->entity = itemPtr->entity;
+	eq->id = itemPtr->id;
+	eq->slot = slot;
+
+	d->itemsService->changeOwner(item.id, ItemOwner::Equipment);
+	const auto &emplaceResult = d->items.emplace(slot, std::move(eq));
+	
+	emit itemEquipped(*emplaceResult.first->second, slot);
+	return emplaceResult.first->second.get();
+}
+
+bool EquipmentService::unequipItem(const ItemMimeData& item, EquipmentSlotType slot) {
+	const auto itemPtr = d->itemsService->itemById(item.id, ItemOwner::Equipment);
+	if (!itemPtr) {
+		return false;
+	}
+
+	const auto& it = d->items.find(slot);
+	if (it == d->items.end()) {
+		return false;
+	}
+
+	const auto eqItem = std::move(it->second);
+
+	d->items.erase(slot);
+	d->itemsService->changeOwner(item.id, std::nullopt);
+
+	emit itemUnequipped(*eqItem, slot);
+	return true;
 }

@@ -1,12 +1,12 @@
 #pragma once
-#include "DataLayer/equipment/equipment.h"
 #include <QObject>
 #include <memory>
 
 class ItemsService;
 class Equipment;
-class EquipmentItem;
+class EquipmentItemHandler;
 class ItemMimeData;
+enum class EquipmentSlotType;
 
 class EquipmentService : public QObject {
 	Q_OBJECT
@@ -17,6 +17,16 @@ public:
 	bool load(const Equipment& equipment);
 
 	bool canAcceptItem(const ItemMimeData& item, EquipmentSlotType slot) const;
+
+	const EquipmentItemHandler* equipItem(const ItemMimeData& item, EquipmentSlotType slot);
+	bool unequipItem(const ItemMimeData& item, EquipmentSlotType slot);
+
+	const EquipmentItemHandler* itemBySlot(EquipmentSlotType slot) const;
+
+signals:
+	void itemEquipped(const EquipmentItemHandler& item, EquipmentSlotType slot);
+	void itemUnequipped(const EquipmentItemHandler& item, EquipmentSlotType slot);
+
 
 private:
 	class Private;

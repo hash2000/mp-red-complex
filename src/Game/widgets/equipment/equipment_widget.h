@@ -1,8 +1,6 @@
 #pragma once
 #include "ApplicationLayer/equipment/equipment_item_handler.h"
 #include <QFrame>
-#include <QWidget>
-#include <optional>
 #include <memory>
 
 class EquipmentSlot;
@@ -17,22 +15,9 @@ public:
 
 	bool setInventoryService(const QUuid& id);
 
-	// Получить предмет из слота
-	std::optional<EquipmentItem> getItem(EquipmentSlotType slot) const;
-
-	// Программное снаряжение/снятие
-	bool equipItem(const EquipmentItem& item);
-	void unequipItem(EquipmentSlotType slot);
-
-	// Очистить всё снаряжение
-	void clearAll();
-
-	// Получить все слоты для интеграции с инвентарем
-	QMap<EquipmentSlotType, EquipmentSlot*> allSlots() const;
-
-signals:
-	void itemEquipped(const EquipmentItem& item, EquipmentSlotType slot);
-	void itemUnequipped(const EquipmentItem& item, EquipmentSlotType slot);
+private slots:
+	void onItemEquipped(const EquipmentItemHandler& item, EquipmentSlotType slot);
+	void onItemUnequipped(const EquipmentItemHandler& item, EquipmentSlotType slot);
 
 private:
 	class Private;

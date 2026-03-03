@@ -1,5 +1,4 @@
 #pragma once
-#include "ApplicationLayer/equipment/equipment_item_handler.h"
 #include <QWidget>
 #include <QLabel>
 #include <QFrame>
@@ -9,6 +8,8 @@
 
 class EquipmentWidget;
 class EquipmentService;
+class EquipmentItemHandler;
+enum class EquipmentSlotType;
 
 class EquipmentSlot : public QLabel {
   Q_OBJECT
@@ -20,18 +21,13 @@ public:
 	bool isHighlighted() const;
   void setHighlighted(bool highlighted);
 
-	const std::optional<EquipmentItem>& item() const;
+	const EquipmentItemHandler* item() const;
 	EquipmentSlotType slotType() const;
+	void clearItem();
 
   // Публичный интерфейс для программного управления
-  bool setItem(const EquipmentItem& item);
-  void clearItem();
-  bool canAcceptItem(const EquipmentItem& item) const;
-
-signals:
-  void itemEquipped(const EquipmentItem& item, EquipmentSlot* slot);
-  void itemRemoved(const EquipmentItem& item, EquipmentSlot* slot);
-  void slotClicked(EquipmentSlot* slot);
+  //bool setItem(const EquipmentItem& item);
+  //bool canAcceptItem(const EquipmentItem& item) const;
 
 protected:
   void mousePressEvent(QMouseEvent* event) override;

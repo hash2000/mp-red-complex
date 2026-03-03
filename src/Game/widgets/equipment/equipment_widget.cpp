@@ -3,6 +3,7 @@
 #include "ApplicationLayer/equipment/equipments_service.h"
 #include "ApplicationLayer/equipment/equipment_service.h"
 #include <QVBoxLayout>
+#include <map>
 
 class EquipmentWidget::Private {
 public:
@@ -120,7 +121,7 @@ public:
 	}
 
 	EquipmentWidget* q;
-	QMap<EquipmentSlotType, EquipmentSlot*> allSlots;
+	std::map<EquipmentSlotType, EquipmentSlot*> allSlots;
 	EquipmentsService* equipmentsService = nullptr;
 	EquipmentService* equipmentService = nullptr;
 };
@@ -155,7 +156,7 @@ bool EquipmentWidget::setInventoryService(const QUuid& id) {
 		disconnect(d->equipmentService, nullptr, this, nullptr);
 
 		for (auto widget : d->allSlots) {
-			widget->clearItem();
+			//widget->clearItem();
 		}
 	}
 	else {
@@ -164,48 +165,27 @@ bool EquipmentWidget::setInventoryService(const QUuid& id) {
 
 	d->equipmentService = equipmentService;
 
-	// Подключаем сигналы слотов к виджету
-	for (auto slot : d->allSlots) {
-		connect(slot, &EquipmentSlot::itemEquipped, this, [this, slot](const EquipmentItem& item) {
-			emit itemEquipped(item, slot->slotType());
-			});
-		connect(slot, &EquipmentSlot::itemRemoved, this, [this, slot](const EquipmentItem& item) {
-			emit itemUnequipped(item, slot->slotType());
-			});
-	}
+	connect(d->equipmentService, &EquipmentService::itemEquipped,
+		this, &EquipmentWidget::onItemEquipped);
+
+	connect(d->equipmentService, &EquipmentService::itemUnequipped,
+		this, &EquipmentWidget::onItemUnequipped);
 
 	return true;
 }
 
-std::optional<EquipmentItem> EquipmentWidget::getItem(EquipmentSlotType slot) const {
-	if (d->allSlots.contains(slot) && d->allSlots[slot]->isOccupied()) {
-		return d->allSlots[slot]->item();
+void EquipmentWidget::onItemEquipped(const EquipmentItemHandler& item, EquipmentSlotType slot) {
+	const auto &it = d->allSlots.find(slot);
+	if (it == d->allSlots.end()) {
+		return;
 	}
-	return std::nullopt;
+
+	const auto widget = it->second;
+
+	widget->setPixmap(item.entity->icon.scaled(widget->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
 }
 
-bool EquipmentWidget::equipItem(const EquipmentItem& item) {
-	EquipmentSlot* slot = d->findCompatibleSlot(item);
-	if (slot && !slot->isOccupied()) {
-		return slot->setItem(item);
-	}
-	return false;
-}
+void EquipmentWidget::onItemUnequipped(const EquipmentItemHandler& item, EquipmentSlotType slot) {
 
-void EquipmentWidget::unequipItem(EquipmentSlotType slot) {
-	if (d->allSlots.contains(slot)) {
-		d->allSlots[slot]->clearItem();
-	}
 }
-
-void EquipmentWidget::clearAll() {
-	for (auto slot : d->allSlots) {
-		slot->clearItem();
-	}
-}
-
-QMap<EquipmentSlotType, EquipmentSlot*> EquipmentWidget::allSlots() const {
-	return d->allSlots;
-}
-
 

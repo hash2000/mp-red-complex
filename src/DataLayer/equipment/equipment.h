@@ -1,23 +1,7 @@
 #pragma once
+#include "DataLayer/equipment/equipment_slot.h"
 #include <QString>
 #include <list>
-
-// слот, на котором находится экиперовка
-enum class EquipmentSlotType {
-	Head,
-	Body,
-	WeaponLeft,
-	WeaponRight,
-	GlovesLeft,
-	GlovesRight,
-	Boots,
-	RingLeft,
-	RingRight,
-	Amulet,
-	Backpack,
-	Bag1,
-	Bag2,
-};
 
 class EquipmentItem {
 public:
