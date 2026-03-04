@@ -217,10 +217,6 @@ void EquipmentSlot::updateVisualState() {
 	style()->polish(this);
 	update();
 }
-//
-//bool EquipmentSlot::canAcceptItem(const EquipmentItem& item) const {
-//	return false; // d->equipmentService->canAcceptItem(item, d->slot);
-//}
 
 void EquipmentSlot::startDrag() {
 	if (!d->item.has_value()) {

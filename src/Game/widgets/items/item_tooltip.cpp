@@ -1,5 +1,5 @@
 #include "Game/widgets/items/item_tooltip.h"
-#include "Game/widgets/items/items_styles.h"
+#include "Game/styles/items_styles.h"
 #include <QLabel>
 #include <QVBoxLayout>
 #include <QTimer>

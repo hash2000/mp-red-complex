@@ -8,5 +8,4 @@ public:
 public:
 	bool compare(const InventoryItemHandler& item) const;
 	bool canMergeWith(const InventoryItemHandler& other) const;
-	QByteArray toMimeData() const;
 };

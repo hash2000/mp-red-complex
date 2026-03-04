@@ -1,6 +1,7 @@
 #include "Game/widgets/inventory/inventory_grid.h"
 #include "Game/widgets/inventory/inventory_item_widget.h"
 #include "Game/widgets/inventory/drop_preview_widget.h"
+#include "Game/styles/items_styles.h"
 #include "ApplicationLayer/inventory/inventory_service.h"
 #include "ApplicationLayer/inventory/inventories_service.h"
 #include "ApplicationLayer/inventory/inventory_item_handler.h"
@@ -30,8 +31,6 @@ public:
 	// Кэш виджетов по ID предмета
 	QHash<QString, InventoryItemWidget*> widgets; 
 	DropPreviewWidget* dropPreview = nullptr;
-
-	static constexpr int CELL_SIZE = InventoryItemWidget::CELL_SIZE;
 };
 
 QString InventoryGrid::inventoryId() const {
@@ -55,7 +54,7 @@ InventoryGrid::InventoryGrid(QWidget* parent)
 	setAttribute(Qt::WA_NoSystemBackground, false);
 
 	// Создаём оверлей для подсветки дропа
-	d->dropPreview = new DropPreviewWidget(Private::CELL_SIZE, this);
+	d->dropPreview = new DropPreviewWidget(ItemsStyles::CELL_SIZE, this);
 	d->dropPreview->hide();
 }
 
@@ -107,8 +106,8 @@ void InventoryGrid::updateGridSize() {
 		return;
 	}
 
-	int width = d->inventory->cols() * Private::CELL_SIZE;
-	int height = d->inventory->rows() * Private::CELL_SIZE;
+	int width = d->inventory->cols() * ItemsStyles::CELL_SIZE;
+	int height = d->inventory->rows() * ItemsStyles::CELL_SIZE;
 	setFixedSize(width, height);
 
 	// Синхронизируем размер оверлея
@@ -156,8 +155,8 @@ void InventoryGrid::createWidgetForItem(const ItemMimeData& item) {
 	}
 
 	auto widget = new InventoryItemWidget(*itemPtr, this, this);
-	widget->setFixedSize(item.width * Private::CELL_SIZE, item.height * Private::CELL_SIZE);
-	widget->move(item.x * Private::CELL_SIZE, item.y * Private::CELL_SIZE);
+	widget->setFixedSize(item.width * ItemsStyles::CELL_SIZE, item.height * ItemsStyles::CELL_SIZE);
+	widget->move(item.x * ItemsStyles::CELL_SIZE, item.y * ItemsStyles::CELL_SIZE);
 	widget->show();
 
 	// Подключаем сигнал удаления (для перемещения между сетками)
@@ -208,7 +207,7 @@ void InventoryGrid::moveWidgetForItem(const ItemMimeData& item, int newCol, int 
 	}
 
 	// Обновляем позицию виджета
-	widget->move(newCol * Private::CELL_SIZE, newRow * Private::CELL_SIZE);
+	widget->move(newCol * ItemsStyles::CELL_SIZE, newRow * ItemsStyles::CELL_SIZE);
 	widget->setGridPosition({ newCol, newRow });
 	widget->raise();
 	widget->update();
@@ -257,8 +256,8 @@ void InventoryGrid::dragMoveEvent(QDragMoveEvent* event) {
 
 	// Определяем целевую ячейку
 	QPoint pos = event->position().toPoint();
-	int col = pos.x() / Private::CELL_SIZE;
-	int row = pos.y() / Private::CELL_SIZE;
+	int col = pos.x() / ItemsStyles::CELL_SIZE;
+	int row = pos.y() / ItemsStyles::CELL_SIZE;
 
 	// Проверяем возможность размещения
 	const auto count = d->inventory->canPlaceItem(item, col, row, isSameGrid);
@@ -287,8 +286,8 @@ void InventoryGrid::dropEvent(QDropEvent* event) {
 
 	// Определяем целевую позицию
 	QPoint pos = event->position().toPoint();
-	int col = pos.x() / Private::CELL_SIZE;
-	int row = pos.y() / Private::CELL_SIZE;
+	int col = pos.x() / ItemsStyles::CELL_SIZE;
+	int row = pos.y() / ItemsStyles::CELL_SIZE;
 
 	// Получаем источник
 	if (!event->mimeData()->hasFormat("application/x-game-item-source-inventory-id")) {
@@ -340,12 +339,12 @@ void InventoryGrid::paintEvent(QPaintEvent* event) {
 
 	// Сетка
 	for (int col = 0; col <= d->inventory->cols(); ++col) {
-		int x = col * Private::CELL_SIZE;
+		int x = col * ItemsStyles::CELL_SIZE;
 		painter.setPen(QColor(66, 73, 83));
 		painter.drawLine(x, 0, x, height());
 	}
 	for (int row = 0; row <= d->inventory->rows(); ++row) {
-		int y = row * Private::CELL_SIZE;
+		int y = row * ItemsStyles::CELL_SIZE;
 		painter.setPen(QColor(66, 73, 83));
 		painter.drawLine(0, y, width(), y);
 	}
@@ -353,10 +352,10 @@ void InventoryGrid::paintEvent(QPaintEvent* event) {
 
 void InventoryGrid::showDropPreview(int col, int row, int width, int height, bool canPlace) {
 	QRect previewRect(
-		col * Private::CELL_SIZE,
-		row * Private::CELL_SIZE,
-		width * Private::CELL_SIZE,
-		height * Private::CELL_SIZE
+		col * ItemsStyles::CELL_SIZE,
+		row * ItemsStyles::CELL_SIZE,
+		width * ItemsStyles::CELL_SIZE,
+		height * ItemsStyles::CELL_SIZE
 	);
 
 	// Ограничиваем прямоугольник границами сетки

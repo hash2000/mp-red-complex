@@ -1,5 +1,5 @@
 #include "Game/widgets/items/entty_entry_widget.h"
-#include "Game/widgets/items/items_styles.h"
+#include "Game/styles/items_styles.h"
 #include "Game/widgets/items/item_tooltip.h"
 #include <QApplication>
 #include <QScrollArea>
