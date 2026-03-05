@@ -59,6 +59,10 @@ bool EquipmentService::load(const Equipment& equipment) {
 	return true;
 }
 
+QString EquipmentService::equipmentId() const {
+	return d->equipmentId;
+}
+
 bool EquipmentService::canAcceptItem(const ItemMimeData& item, EquipmentSlotType slot) const {
 	const auto equipmentType = static_cast<ItemEquipmentType>(item.equipmentType);
 
@@ -92,7 +96,7 @@ bool EquipmentService::canAcceptItem(const ItemMimeData& item, EquipmentSlotType
 }
 
 
-const EquipmentItemHandler* EquipmentService::equipItem(const ItemMimeData& item, EquipmentSlotType slot) {
+const EquipmentItemHandler* EquipmentService::equipItem(const ItemMimeData& item, EquipmentSlotType slot, const QString& inventoryId) {
 	// берём из инвентаря
 	const auto itemPtr = d->itemsService->itemById(item.id, ItemOwner::Inventory);
 	if (!itemPtr) {
@@ -112,7 +116,7 @@ const EquipmentItemHandler* EquipmentService::equipItem(const ItemMimeData& item
 	d->itemsService->changeOwner(item.id, ItemOwner::Equipment);
 	const auto &emplaceResult = d->items.emplace(slot, std::move(eq));
 	
-	emit itemEquipped(*emplaceResult.first->second, slot);
+	emit itemEquipped(*emplaceResult.first->second, slot, inventoryId);
 	return emplaceResult.first->second.get();
 }
 

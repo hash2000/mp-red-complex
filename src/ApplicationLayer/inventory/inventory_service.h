@@ -42,7 +42,7 @@ public:
 	void clear();
 
 	bool applyItem(const ItemMimeData& item);
-	bool changeItemsCount(const ItemMimeData& item);
+	bool removeItemsFromStack(const ItemMimeData& item);
 
 signals:
 	void placeItemEvent(const ItemMimeData& item, int row, int col);

@@ -156,7 +156,7 @@ void InventoryGrid::createWidgetForItem(const ItemMimeData& item) {
 
 	auto widget = new InventoryItemWidget(*itemPtr, this, this);
 	widget->setFixedSize(item.width * ItemsStyles::CELL_SIZE, item.height * ItemsStyles::CELL_SIZE);
-	widget->move(item.x * ItemsStyles::CELL_SIZE, item.y * ItemsStyles::CELL_SIZE);
+	widget->move(item.coord.pos.x * ItemsStyles::CELL_SIZE, item.coord.pos.y * ItemsStyles::CELL_SIZE);
 	widget->show();
 
 	// Подключаем сигнал удаления (для перемещения между сетками)

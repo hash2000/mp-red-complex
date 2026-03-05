@@ -65,7 +65,7 @@ bool InventoriesService::crossInventoryMove(const ItemMimeData& item, int col, i
 	// если элементов станет 0, то из этого инвентаря элемент удалится
 
 	ItemMimeData changedItem = item;
-	if (!fromService->changeItemsCount(changedItem)) {
+	if (!fromService->removeItemsFromStack(changedItem)) {
 		return false;
 	}
 
@@ -75,8 +75,8 @@ bool InventoriesService::crossInventoryMove(const ItemMimeData& item, int col, i
 
 	ItemMimeData toItem = item;
 	toItem.count = changedItem.count;
-	toItem.x = col;
-	toItem.y = row;
+	toItem.coord.pos.x = col;
+	toItem.coord.pos.y = row;
 
 	// во втором инвентаре нужно или добавить к соответствующей пачке
 	// или положить всю пачку в пустую ячейку 

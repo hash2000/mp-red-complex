@@ -1,7 +1,9 @@
 #include "Game/widgets/equipment/equipment_slot_widget.h"
+#include "Game/dragndrop/drag_event_builder.h"
 #include "ApplicationLayer/equipment/equipment_service.h"
 #include "ApplicationLayer/items/item_mime_data.h"
 #include "ApplicationLayer/equipment/equipment_item_handler.h"
+
 #include <QMouseEvent>
 #include <QDragEnterEvent>
 #include <QDropEvent>
@@ -21,7 +23,7 @@ public:
 	EquipmentSlotType slot;
   EquipmentWidget* parentWidget;
 	EquipmentService* equipmentService;
-	std::optional<const EquipmentItemHandler*> item;
+	std::optional<EquipmentItemHandler> item;
   bool highlighted = false;
   bool dragging = false;
 };
@@ -91,34 +93,24 @@ void EquipmentSlot::setHighlighted(bool highlighted) {
 	}
 }
 
-const EquipmentItemHandler* EquipmentSlot::item() const {
-	if (!d->item.has_value()) {
-		return nullptr;
-	}
-
-  return d->item.value();
-}
-
 EquipmentSlotType EquipmentSlot::slotType() const {
   return d->slot;
 }
 
-//bool EquipmentSlot::setItem(const EquipmentItem& item) {
-//	if (!canAcceptItem(item)) {
-//		return false;
-//	}
-//
-//	d->equipmentService->equipItem()
-//
-//	// setPixmap(item.entity->icon.scaled(size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
-//
-//	updateVisualState();
-//	emit itemEquipped(item, this);
-//	return true;
-//}
+void EquipmentSlot::setItem(const EquipmentItemHandler& item) {
+	if (!d->equipmentService->canAcceptItem(item, d->slot)) {
+		return;
+	}
+
+	d->item = item;
+
+	setPixmap(item.entity->icon.scaled(size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+	updateVisualState();
+}
 
 void EquipmentSlot::clearItem() {
 	if (d->item.has_value()) {
+		d->equipmentService->unequipItem(d->item.value(), d->slot);
 		d->item.reset();
 		clear();
 		updateVisualState();
@@ -127,12 +119,7 @@ void EquipmentSlot::clearItem() {
 
 void EquipmentSlot::mousePressEvent(QMouseEvent* event) {
 	if (event->button() == Qt::LeftButton) {
-		if (d->item.has_value()) {
-			startDrag();
-		}
-		else {
-			//emit slotClicked(this);
-		}
+		startDrag();
 	}
 
 	QLabel::mousePressEvent(event);
@@ -161,6 +148,28 @@ void EquipmentSlot::dragLeaveEvent(QDragLeaveEvent* event) {
 	QLabel::dragLeaveEvent(event);
 }
 
+void EquipmentSlot::startDrag() {
+	if (!d->item.has_value()) {
+		return;
+	}
+
+	const auto itemPtr = d->item.value();
+
+	DragEventBuilder builder(this, ItemMimeData(itemPtr), *itemPtr.entity, d->equipmentService->equipmentId());
+
+	const auto dropAction = builder.ExecDrag(Qt::MoveAction);
+
+	if (dropAction == Qt::IgnoreAction) {
+		QPixmap currentPixmap = (!pixmap().isNull()) ? pixmap() : QPixmap();
+		setPixmap(currentPixmap);
+		d->dragging = false;
+		updateVisualState();
+	}
+	else {
+		clearItem();
+	}
+}
+
 void EquipmentSlot::dropEvent(QDropEvent* event) {
 	setHighlighted(false);
 
@@ -169,10 +178,17 @@ void EquipmentSlot::dropEvent(QDropEvent* event) {
 		return;
 	}
 
-	QByteArray data = event->mimeData()->data("application/x-game-item");
+	// в экипировку предмет может попасть только из инвентаря
+	const auto inventoryId = QString::fromUtf8(event->mimeData()->data("application/x-game-item-source-inventory-id"));
+	if (inventoryId.isEmpty()) {
+		event->ignore();
+		return;
+	}
+
+	const auto data = event->mimeData()->data("application/x-game-item");
 	const auto item = ItemMimeData::fromMimeData(data);
 
-	if (!d->equipmentService->equipItem(item, d->slot)) {
+	if (!d->equipmentService->equipItem(item, d->slot, inventoryId)) {
 		updateVisualState();
 		event->ignore();
 		return;
@@ -218,39 +234,4 @@ void EquipmentSlot::updateVisualState() {
 	update();
 }
 
-void EquipmentSlot::startDrag() {
-	if (!d->item.has_value()) {
-		return;
-	}
-
-	//QDrag* drag = new QDrag(this);
-	//QMimeData* mimeData = new QMimeData();
-	//QByteArray itemData;
-	//QDataStream stream(&itemData, QIODevice::WriteOnly);
-	//stream << d->item->id << static_cast<qint32>(d->item->type) << d->item->rarity;
-
-	//mimeData->setData("application/x-game-item", itemData);
-	//mimeData->setText(d->item->name);
-	//drag->setMimeData(mimeData);
-	//drag->setPixmap(d->item->icon.scaled(48, 48, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-	//drag->setHotSpot(QPoint(drag->pixmap().width() / 2, drag->pixmap().height() / 2));
-
-	//// Визуальная обратная связь: временно очищаем слот во время драга
-	//QPixmap currentPixmap = (!pixmap().isNull()) ? pixmap() : QPixmap();
-	//clear();
-	//d->dragging = true;
-	//update();
-
-	//if (drag->exec(Qt::MoveAction) == Qt::IgnoreAction) {
-	//	// Отмена драга — возвращаем предмет
-	//	if (!currentPixmap.isNull()) {
-	//		setPixmap(currentPixmap);
-	//		d->dragging = false;
-	//		updateVisualState();
-	//	}
-	//}
-	//else {
-	//	clearItem();
-	//}
-}
 

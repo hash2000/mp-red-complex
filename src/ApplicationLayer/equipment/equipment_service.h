@@ -16,17 +16,18 @@ public:
 
 	bool load(const Equipment& equipment);
 
+	QString equipmentId() const;
+
 	bool canAcceptItem(const ItemMimeData& item, EquipmentSlotType slot) const;
 
-	const EquipmentItemHandler* equipItem(const ItemMimeData& item, EquipmentSlotType slot);
+	const EquipmentItemHandler* equipItem(const ItemMimeData& item, EquipmentSlotType slot, const QString& inventoryId);
 	bool unequipItem(const ItemMimeData& item, EquipmentSlotType slot);
 
 	const EquipmentItemHandler* itemBySlot(EquipmentSlotType slot) const;
 
 signals:
-	void itemEquipped(const EquipmentItemHandler& item, EquipmentSlotType slot);
+	void itemEquipped(const EquipmentItemHandler& item, EquipmentSlotType slot, const QString& inventoryId);
 	void itemUnequipped(const EquipmentItemHandler& item, EquipmentSlotType slot);
-
 
 private:
 	class Private;

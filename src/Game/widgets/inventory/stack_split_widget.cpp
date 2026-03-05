@@ -237,7 +237,7 @@ void StackSplitWidget::onStartDrag() {
 	// Визуальная обратная связь
 	d->iconLabel->setCursor(Qt::ClosedHandCursor);
 
-	Qt::DropAction dropAction = builder.ExecDrag(Qt::MoveAction);
+	const auto dropAction = builder.ExecDrag(Qt::MoveAction);
 
 	d->iconLabel->setCursor(Qt::OpenHandCursor);
 

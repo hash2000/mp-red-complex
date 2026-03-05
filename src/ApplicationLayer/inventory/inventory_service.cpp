@@ -206,7 +206,7 @@ bool InventoryService::placeItem(const ItemMimeData& item) {
 	}
 
 	int moveCount = qMin(itemPtr->count, availableSpace);
-	auto& targetCell = d->cells[item.x][item.y];
+	auto& targetCell = d->cells[row][col];
 	if (targetCell->occupied) {
 		bool canMerge = (
 			targetCell->item &&
@@ -268,8 +268,8 @@ int InventoryService::canPlaceItem(const ItemMimeData& item, int col, int row, b
 			if (cell->occupied) {
 				// Случай 1: это та же самая ячейка исходного предмета (при перемещении внутри себя)
 				if (checkItemPlace && cell->item && cell->item->id == item.id &&
-					checkX >= item.x && checkX < item.x + item.width &&
-					checkY >= item.y && checkY < item.y + item.height) {
+					checkX >= row && checkX < row + item.width &&
+					checkY >= col && checkY < col + item.height) {
 					continue; // Пропускаем ячейки самого предмета
 				}
 
@@ -514,7 +514,7 @@ bool InventoryService::containsItem(const ItemMimeData& item) const {
 		return false;
 	}
 
-	QPoint pos(item.x, item.y);
+	QPoint pos(item.coord.pos.x, item.coord.pos.y);
 	if (!d->items.contains(pos)) {
 		return false;
 	}
@@ -524,7 +524,7 @@ bool InventoryService::containsItem(const ItemMimeData& item) const {
 }
 
 
-bool InventoryService::changeItemsCount(const ItemMimeData& item) {
+bool InventoryService::removeItemsFromStack(const ItemMimeData& item) {
 	auto itemPtr = d->itemById(item.id);
 	if (!itemPtr) {		
 		return false;
@@ -552,8 +552,8 @@ bool InventoryService::applyItem(const ItemMimeData& item) {
 		return false;
 	}
 
-	invItem->x = item.x;
-	invItem->y = item.y;
+	invItem->x = item.coord.pos.x;
+	invItem->y = item.coord.pos.y;
 	invItem->count = item.count;
 
 	if (!placeItem(ItemMimeData(*invItem))) {

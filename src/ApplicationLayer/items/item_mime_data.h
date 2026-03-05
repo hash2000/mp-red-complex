@@ -9,14 +9,23 @@ class ItemMimeData {
 public:
 	QString id;
 	QString name;
-	int x;
-	int y;
+	int owner;
 	int width;
 	int height;
 	int count;
 	int maxStack;
 	int type;
 	int equipmentType;
+
+	struct Position {
+		int x;
+		int y;
+	};
+
+	union Coord {
+		Position pos;
+		int slot;
+	} coord;
 
 public:
 	ItemMimeData();

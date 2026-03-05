@@ -2,7 +2,11 @@
 #include "Game/widgets/equipment/equipment_slot_widget.h"
 #include "ApplicationLayer/equipment/equipments_service.h"
 #include "ApplicationLayer/equipment/equipment_service.h"
+#include "ApplicationLayer/inventory/inventories_service.h"
+#include "ApplicationLayer/inventory/inventory_service.h"
+#include "ApplicationLayer/items/item_mime_data.h"
 #include <QVBoxLayout>
+#include <QUuid>
 #include <map>
 
 class EquipmentWidget::Private {
@@ -12,7 +16,7 @@ public:
 
 	}
 
-	void setupLayout(EquipmentService* equipmentService) {
+	void setupLayout() {
 		auto mainLayout = new QVBoxLayout(q);
 		mainLayout->setContentsMargins(10, 10, 10, 10);
 		mainLayout->setSpacing(12);
@@ -111,24 +115,18 @@ public:
 		mainLayout->addStretch();
 	}
 
-	EquipmentSlot* findCompatibleSlot(const EquipmentItem& item) const {
-		for (auto it = allSlots.cbegin(); it != allSlots.cend(); ++it) {
-			//if (it.value()->canAcceptItem(item)) {
-			//	return it.value();
-			//}
-		}
-		return nullptr;
-	}
-
 	EquipmentWidget* q;
+
 	std::map<EquipmentSlotType, EquipmentSlot*> allSlots;
 	EquipmentsService* equipmentsService = nullptr;
 	EquipmentService* equipmentService = nullptr;
+	InventoriesService* inventoriesService = nullptr;
 };
 
-EquipmentWidget::EquipmentWidget(EquipmentsService* equipmentsService, QWidget* parent)
+EquipmentWidget::EquipmentWidget(EquipmentsService* equipmentsService, InventoriesService* inventoriesService, QWidget* parent)
 : d(std::make_unique<Private>(this)) {
 	d->equipmentsService = equipmentsService;
+	d->inventoriesService = inventoriesService;
 
 	setObjectName("EquipmentWidget");
 	setFrameStyle(QFrame::StyledPanel | QFrame::Plain);
@@ -146,7 +144,7 @@ EquipmentWidget::EquipmentWidget(EquipmentsService* equipmentsService, QWidget* 
 
 EquipmentWidget::~EquipmentWidget() = default;
 
-bool EquipmentWidget::setInventoryService(const QUuid& id) {
+bool EquipmentWidget::setEquipmentService(const QUuid& id) {
 	auto equipmentService = d->equipmentsService->equipment(id, true);
 	if (!equipmentService) {
 		return false;
@@ -156,14 +154,12 @@ bool EquipmentWidget::setInventoryService(const QUuid& id) {
 		disconnect(d->equipmentService, nullptr, this, nullptr);
 
 		for (auto widget : d->allSlots) {
-			//widget->clearItem();
+			widget.second->clearItem();
 		}
-	}
-	else {
-		d->setupLayout(equipmentService);
 	}
 
 	d->equipmentService = equipmentService;
+	d->setupLayout();
 
 	connect(d->equipmentService, &EquipmentService::itemEquipped,
 		this, &EquipmentWidget::onItemEquipped);
@@ -174,15 +170,18 @@ bool EquipmentWidget::setInventoryService(const QUuid& id) {
 	return true;
 }
 
-void EquipmentWidget::onItemEquipped(const EquipmentItemHandler& item, EquipmentSlotType slot) {
+void EquipmentWidget::onItemEquipped(const EquipmentItemHandler& item, EquipmentSlotType slot, const QString& inventoryId) {
 	const auto &it = d->allSlots.find(slot);
 	if (it == d->allSlots.end()) {
 		return;
 	}
 
-	const auto widget = it->second;
+	auto inventory = d->inventoriesService->inventoryService(QUuid::fromString(inventoryId), false);
+	assert(inventory != nullptr);
 
-	widget->setPixmap(item.entity->icon.scaled(widget->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+	inventory->removeItem(ItemMimeData(item));
+
+	it->second->setItem(item);
 }
 
 void EquipmentWidget::onItemUnequipped(const EquipmentItemHandler& item, EquipmentSlotType slot) {

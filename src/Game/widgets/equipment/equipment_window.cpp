@@ -13,20 +13,11 @@ public:
 	EquipmentsService* equipmentService;
 };
 
-EquipmentWindow::EquipmentWindow(EquipmentsService* equipmenstService, const QString& id, QWidget* parent)
+EquipmentWindow::EquipmentWindow(EquipmentsService* equipmenstService, InventoriesService* inventoriesService, const QString& id, QWidget* parent)
 	: d(std::make_unique<Private>(this))
 	, MdiChildWindow(id, parent) {
-	d->widget = new EquipmentWidget(equipmenstService, this);
+	d->widget = new EquipmentWidget(equipmenstService, inventoriesService, this);
 	setWindowTitle("Equipment");
-
-	//connect(d->widget, &EquipmentWidget::itemEquipped, [](const EquipmentItem& item, EquipmentSlotType slot) {
-	//	qDebug() << "Equipped" << item.entity->name << "to slot" << static_cast<int>(slot);
-	//	});
-
-	//connect(d->widget, &EquipmentWidget::itemUnequipped, [](const EquipmentItem& item, EquipmentSlotType slot) {
-	//	qDebug() << "Unequipped" << item.entity->name << "from slot" << static_cast<int>(slot);
-	//	});
-
 	setWidget(d->widget);
 }
 
@@ -43,7 +34,7 @@ bool EquipmentWindow::handleCommand(const QString& commandName, const QStringLis
 			return false;
 		}
 
-		if (!d->widget->setInventoryService(target)) {
+		if (!d->widget->setEquipmentService(target)) {
 			return false;
 		}
 

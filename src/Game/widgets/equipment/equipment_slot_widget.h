@@ -21,9 +21,9 @@ public:
 	bool isHighlighted() const;
   void setHighlighted(bool highlighted);
 
-	const EquipmentItemHandler* item() const;
 	EquipmentSlotType slotType() const;
 	void clearItem();
+	void setItem(const EquipmentItemHandler& item);
 
   // Публичный интерфейс для программного управления
   //bool setItem(const EquipmentItem& item);

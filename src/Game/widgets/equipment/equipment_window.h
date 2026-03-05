@@ -3,12 +3,13 @@
 
 class EquipmentWidget;
 class EquipmentsService;
+class InventoriesService;
 
 class EquipmentWindow : public MdiChildWindow {
 	Q_OBJECT
 
 public:
-	EquipmentWindow(EquipmentsService* equipmentsService, const QString& id, QWidget* parent = nullptr);
+	EquipmentWindow(EquipmentsService* equipmentsService, InventoriesService* inventoriesService, const QString& id, QWidget* parent = nullptr);
 	~EquipmentWindow() override;
 
 	QString windowType() const override { return "equipment"; }
