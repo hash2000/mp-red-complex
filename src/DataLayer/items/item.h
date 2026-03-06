@@ -51,6 +51,8 @@ enum class ItemEquipmentType {
 	Consumable,
 	Backpack,
 	Bag,
+
+	LastSlot,
 };
 
 // рецепты

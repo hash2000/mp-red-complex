@@ -11,5 +11,7 @@ public:
 
 public:
 	QPoint slotToPosition() const;
+
 	static QPoint convertSlotToPosition(EquipmentSlotType slot);
+	static EquipmentSlotType convertPositionToSlot(int col, int row);
 };

@@ -80,7 +80,7 @@ bool InventoriesService::crossInventoryMove(const ItemMimeData& item, int col, i
 
 	// во втором инвентаре нужно или добавить к соответствующей пачке
 	// или положить всю пачку в пустую ячейку 
-	toService->applyItem(toItem);
+	toService->applyDublicateFromItem(toItem);
 
 	return true;
 }

@@ -28,7 +28,6 @@ public:
 	int rows() const override;
 	int cols() const override;
 
-	bool placeItem(const ItemMimeData& item) override;
 	int canPlaceItem(const ItemMimeData& item, int col, int row, bool checkItemPlace) const override;
 	std::optional<QPoint> findFreeSpace(const ItemMimeData& item, bool checkItemPlace) const override;
 
@@ -43,8 +42,11 @@ public:
 
 	void clear() override;
 
-	bool applyItem(const ItemMimeData& item) override;
+	bool applyDublicateFromItem(const ItemMimeData& item) override;
 	bool removeItemsFromStack(const ItemMimeData& item) override;
+
+private:
+	bool placeItem(const ItemMimeData& item);
 
 signals:
 	void placeItemEvent(const ItemMimeData& item, int row, int col);

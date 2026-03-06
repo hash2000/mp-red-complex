@@ -59,42 +59,64 @@ bool EquipmentService::load(const Equipment& equipment) {
 	return true;
 }
 
-QString EquipmentService::equipmentId() const {
+QString EquipmentService::placementId() const {
 	return d->equipmentId;
 }
 
-bool EquipmentService::canAcceptItem(const ItemMimeData& item, EquipmentSlotType slot) const {
+int EquipmentService::canPlaceItem(const ItemMimeData& item, int col, int row, bool checkItemPlace) const {
 	const auto equipmentType = static_cast<ItemEquipmentType>(item.equipmentType);
+	const auto slot = EquipmentItemHandler::convertPositionToSlot(col, row);
 
 	switch (slot) {
 	case EquipmentSlotType::Head:
-		return equipmentType == ItemEquipmentType::Head;
+		return equipmentType == ItemEquipmentType::Head ? 1 : 0;
 	case EquipmentSlotType::Body:
-		return equipmentType == ItemEquipmentType::Body;
+		return equipmentType == ItemEquipmentType::Body ? 1 : 0;
 	case EquipmentSlotType::WeaponLeft:
-		return equipmentType == ItemEquipmentType::Weapon || equipmentType == ItemEquipmentType::Shield;
+		return (equipmentType == ItemEquipmentType::Weapon || equipmentType == ItemEquipmentType::Shield) ? 1 : 0;
 	case EquipmentSlotType::WeaponRight:
-		return equipmentType == ItemEquipmentType::Weapon;
+		return equipmentType == ItemEquipmentType::Weapon ? 1 : 0;
 	case EquipmentSlotType::GlovesLeft:
 	case EquipmentSlotType::GlovesRight:
-		return equipmentType == ItemEquipmentType::Gloves;
+		return equipmentType == ItemEquipmentType::Gloves ? 1 : 0;
 	case EquipmentSlotType::Boots:
-		return equipmentType == ItemEquipmentType::Boots;
+		return equipmentType == ItemEquipmentType::Boots ? 1 : 0;
 	case EquipmentSlotType::RingLeft:
 	case EquipmentSlotType::RingRight:
-		return equipmentType == ItemEquipmentType::Ring;
+		return equipmentType == ItemEquipmentType::Ring ? 1 : 0;
 	case EquipmentSlotType::Amulet:
-		return equipmentType == ItemEquipmentType::Amulet;
+		return equipmentType == ItemEquipmentType::Amulet ? 1 : 0;
 	case EquipmentSlotType::Backpack:
-		return equipmentType == ItemEquipmentType::Backpack;
+		return equipmentType == ItemEquipmentType::Backpack ? 1 : 0;
 	case EquipmentSlotType::Bag1:
 	case EquipmentSlotType::Bag2:
-		return equipmentType == ItemEquipmentType::Bag;
+		return equipmentType == ItemEquipmentType::Bag ? 1 : 0;
 	}
 
-	return false;
+	return 0;
 }
 
+std::optional<QPoint> EquipmentService::findFreeSpace(const ItemMimeData& item, bool checkItemPlace) const {
+	return std::nullopt;
+}
+
+int EquipmentService::rows() const {
+	return 1;
+}
+
+int EquipmentService::cols() const {
+	return static_cast<qint32>(ItemEquipmentType::LastSlot);
+}
+
+bool EquipmentService::containsItem(const ItemMimeData& item) const { return false; }
+
+bool EquipmentService::moveItem(const ItemMimeData& item, int newCol, int newRow, bool checkItemPlace) { return false; }
+void EquipmentService::removeItem(const ItemMimeData& item) {}
+
+void EquipmentService::clear() {}
+
+bool EquipmentService::applyDublicateFromItem(const ItemMimeData& item) { return false; }
+bool EquipmentService::removeItemsFromStack(const ItemMimeData& item) { return false; }
 
 const EquipmentItemHandler* EquipmentService::equipItem(const ItemMimeData& item, EquipmentSlotType slot, const QString& inventoryId) {
 	// берём из инвентаря

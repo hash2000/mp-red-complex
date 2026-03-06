@@ -542,7 +542,7 @@ bool InventoryService::removeItemsFromStack(const ItemMimeData& item) {
 	return true;
 }
 
-bool InventoryService::applyItem(const ItemMimeData& item) {
+bool InventoryService::applyDublicateFromItem(const ItemMimeData& item) {
 	if (item.count == 0) {
 		return false;
 	}

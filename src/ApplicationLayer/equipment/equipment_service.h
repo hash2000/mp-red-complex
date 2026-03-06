@@ -1,4 +1,5 @@
 #pragma once
+#include "ApplicationLayer/items_placement_service.h"
 #include <QObject>
 #include <memory>
 
@@ -8,7 +9,7 @@ class EquipmentItemHandler;
 class ItemMimeData;
 enum class EquipmentSlotType;
 
-class EquipmentService : public QObject {
+class EquipmentService : public QObject, public ItemPlacementAbstraction {
 	Q_OBJECT
 public:
 	EquipmentService(ItemsService* itemsService, QObject* parent = nullptr);
@@ -16,9 +17,24 @@ public:
 
 	bool load(const Equipment& equipment);
 
-	QString equipmentId() const;
+	QString placementId() const override;
 
-	bool canAcceptItem(const ItemMimeData& item, EquipmentSlotType slot) const;
+	int canPlaceItem(const ItemMimeData& item, int col, int row, bool checkItemPlace) const override;
+	std::optional<QPoint> findFreeSpace(const ItemMimeData& item, bool checkItemPlace) const override;
+
+	bool containsItem(const ItemMimeData& item) const override;
+
+	bool moveItem(const ItemMimeData& item, int newCol, int newRow, bool checkItemPlace) override;
+	void removeItem(const ItemMimeData& item) override;
+
+	int rows() const override;
+	int cols() const override;
+
+	void clear() override;
+
+	bool applyDublicateFromItem(const ItemMimeData& item) override;
+	bool removeItemsFromStack(const ItemMimeData& item) override;
+
 
 	const EquipmentItemHandler* equipItem(const ItemMimeData& item, EquipmentSlotType slot, const QString& inventoryId);
 	bool unequipItem(const ItemMimeData& item, EquipmentSlotType slot);

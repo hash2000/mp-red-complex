@@ -98,7 +98,8 @@ EquipmentSlotType EquipmentSlot::slotType() const {
 }
 
 void EquipmentSlot::setItem(const EquipmentItemHandler& item) {
-	if (!d->equipmentService->canAcceptItem(item, d->slot)) {
+	const auto position = EquipmentItemHandler::convertSlotToPosition(d->slot);
+	if (!d->equipmentService->canPlaceItem(item, position.y(), position.x(), false)) {
 		return;
 	}
 
@@ -133,8 +134,9 @@ void EquipmentSlot::dragEnterEvent(QDragEnterEvent* event) {
 
 	QByteArray data = event->mimeData()->data("application/x-game-item");
 	const auto item = ItemMimeData::fromMimeData(data);
+	const auto position = EquipmentItemHandler::convertSlotToPosition(d->slot);
 
-	if (d->equipmentService->canAcceptItem(item, d->slot)) {
+	if (d->equipmentService->canPlaceItem(item, position.y(), position.x(), false)) {
 		setHighlighted(true);
 		event->acceptProposedAction();
 		return;
@@ -155,7 +157,7 @@ void EquipmentSlot::startDrag() {
 
 	const auto itemPtr = d->item.value();
 
-	DragEventBuilder builder(this, ItemMimeData(itemPtr), *itemPtr.entity, d->equipmentService->equipmentId());
+	DragEventBuilder builder(this, ItemMimeData(itemPtr), *itemPtr.entity, d->equipmentService->placementId());
 
 	const auto dropAction = builder.ExecDrag(Qt::MoveAction);
 
