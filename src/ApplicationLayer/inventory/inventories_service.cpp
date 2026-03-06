@@ -75,8 +75,8 @@ bool InventoriesService::crossInventoryMove(const ItemMimeData& item, int col, i
 
 	ItemMimeData toItem = item;
 	toItem.count = changedItem.count;
-	toItem.coord.pos.x = col;
-	toItem.coord.pos.y = row;
+	toItem.x = col;
+	toItem.y = row;
 
 	// во втором инвентаре нужно или добавить к соответствующей пачке
 	// или положить всю пачку в пустую ячейку 

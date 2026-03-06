@@ -29,14 +29,9 @@ public:
 		return nullptr;
 	}
 
-	Item* makeItem(const QString& id, ItemOwner owner) {
+	Item* makeItem(const QString& id) {
 		auto item = itemById(id);
 		if (item) {
-			if (item->owner != std::nullopt && item->owner != owner) {
-				qWarning() << "ItemsService::itemById: Item id " << id << "belongs to another owner";
-				return nullptr;
-			}
-
 			return item;
 		}
 
@@ -45,7 +40,6 @@ public:
 			return nullptr;
 		}
 
-		newItem->owner = owner;
 		newItem->entity = entityById(newItem->entityId);
 
 		const auto& emplaceResult = items.emplace(newItem->id, std::move(newItem));
@@ -92,11 +86,11 @@ ItemsService::EntityView ItemsService::entities() const {
 	return make_deref_view(d->itemEntities);
 }
 
-const Item* ItemsService::itemById(const QString& id, ItemOwner owner) {
-	return d->makeItem(id, owner);
+const Item* ItemsService::itemById(const QString& id) {
+	return d->makeItem(id);
 }
 
-const Item* ItemsService::duplicate(const QString& id, ItemOwner owner) {
+const Item* ItemsService::duplicate(const QString& id) {
 	const auto from = d->itemById(id);
 	if (!from) {
 		return nullptr;
@@ -105,7 +99,6 @@ const Item* ItemsService::duplicate(const QString& id, ItemOwner owner) {
 	auto item = std::make_unique<Item>();
 	item->entity = from->entity;
 	item->entityId = from->entityId;
-	item->owner = owner;
 	item->id = QUuid::createUuid()
 		.toString(QUuid::StringFormat::WithoutBraces);
 
@@ -114,12 +107,5 @@ const Item* ItemsService::duplicate(const QString& id, ItemOwner owner) {
 	return emplaceResult.first->second.get();
 }
 
-void ItemsService::changeOwner(const QString& id, std::optional<ItemOwner> owner) {
-	const auto& it = d->items.find(id);
-	if (it == d->items.end()) {
-		return;
-	}
 
-	it->second->owner = owner;
-}
 

@@ -18,9 +18,8 @@ public:
 	using EntityView = decltype(make_deref_view(std::declval<const std::map<QString, std::unique_ptr<ItemEntity>>&>()));
 	EntityView entities() const;
 
-	const Item* itemById(const QString& id, ItemOwner owner);
-	const Item* duplicate(const QString& id, ItemOwner owner);
-	void changeOwner(const QString& id, std::optional<ItemOwner> owner);
+	const Item* itemById(const QString& id);
+	const Item* duplicate(const QString& id);
 
 private:
 	class Private;

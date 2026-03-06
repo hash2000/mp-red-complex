@@ -53,11 +53,6 @@ enum class ItemEquipmentType {
 	Bag,
 };
 
-enum class ItemOwner {
-	Inventory,
-	Equipment,
-};
-
 // рецепты
 class  ItemRecipe {
 public:
@@ -103,8 +98,6 @@ class Item {
 public:
 	QString id;
 	QString entityId;
-
-	std::optional<ItemOwner> owner;
 
 	const ItemEntity* entity;
 };

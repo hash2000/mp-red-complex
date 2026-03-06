@@ -5,6 +5,11 @@ class ItemEntity;
 class InventoryItemHandler;
 class EquipmentItemHandler;
 
+enum class ItemOwner {
+	Inventory,
+	Equipment,
+};
+
 class ItemMimeData {
 public:
 	QString id;
@@ -16,16 +21,8 @@ public:
 	int maxStack;
 	int type;
 	int equipmentType;
-
-	struct Position {
-		int x;
-		int y;
-	};
-
-	union Coord {
-		Position pos;
-		int slot;
-	} coord;
+	int x;
+	int y;
 
 public:
 	ItemMimeData();

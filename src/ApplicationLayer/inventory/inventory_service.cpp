@@ -20,7 +20,7 @@ public:
 	}
 
 	InventoryItemHandler* duplicateItem(const QString& id) {
-		auto newItemDuplicate = itemsService->duplicate(id, ItemOwner::Inventory);
+		auto newItemDuplicate = itemsService->duplicate(id);
 		return makeInventoryitem(newItemDuplicate);
 	}
 
@@ -120,7 +120,7 @@ public:
 
 	InventoryService* q;
 	ItemsService* itemsService;
-	QString inventoryId;
+	QString placementId;
 	QString inventoryName;
 	int rows;
 	int cols;
@@ -139,13 +139,13 @@ InventoryService::~InventoryService() = default;
 bool InventoryService::load(const Inventory& inventory) {
 	d->rows = inventory.rows;
 	d->cols = inventory.cols;
-	d->inventoryId = inventory.id;
+	d->placementId = inventory.id;
 	d->inventoryName = inventory.name;
 
 	for (const auto &it : inventory.items) {
-		const auto item = d->itemsService->itemById(it.id, ItemOwner::Inventory);
+		const auto item = d->itemsService->itemById(it.id);
 		if (!item) {
-			qDebug() << "InventoryService::load" << d->inventoryName << d->inventoryId << "can't load item" << item->id;
+			qDebug() << "InventoryService::load" << d->inventoryName << d->placementId << "can't load item" << item->id;
 			continue;
 		}
 
@@ -163,8 +163,8 @@ bool InventoryService::load(const Inventory& inventory) {
 	return true;
 }
 
-QString InventoryService::inventoryId() const {
-	return d->inventoryId;
+QString InventoryService::placementId() const {
+	return d->placementId;
 }
 
 QString InventoryService::inventoryName() const {
@@ -514,7 +514,7 @@ bool InventoryService::containsItem(const ItemMimeData& item) const {
 		return false;
 	}
 
-	QPoint pos(item.coord.pos.x, item.coord.pos.y);
+	QPoint pos(item.x, item.y);
 	if (!d->items.contains(pos)) {
 		return false;
 	}
@@ -552,8 +552,8 @@ bool InventoryService::applyItem(const ItemMimeData& item) {
 		return false;
 	}
 
-	invItem->x = item.coord.pos.x;
-	invItem->y = item.coord.pos.y;
+	invItem->x = item.x;
+	invItem->y = item.y;
 	invItem->count = item.count;
 
 	if (!placeItem(ItemMimeData(*invItem))) {
