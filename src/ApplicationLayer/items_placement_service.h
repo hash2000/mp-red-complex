@@ -5,7 +5,7 @@
 
 class ItemMimeData;
 
-class ItemPlacementAbstraction {
+class ItemPlacementService {
 public:
 
 	/// <summary>

@@ -2,11 +2,9 @@
 #include "Game/services/time_service/time_service.h"
 #include "Game/services/world_service/world_service.h"
 #include "DataLayer/inventory/inventory_data_provider_json_impl.h"
-#include "ApplicationLayer/inventory/inventories_service.h"
 #include "DataLayer/items/items_data_provider_json_impl.h"
 #include "ApplicationLayer/items/items_service.h"
 #include "DataLayer/equipment/equipment_data_provider_json_impl.h"
-#include "ApplicationLayer/equipment/equipments_service.h"
 #include <list>
 
 class Services::Private {
@@ -23,7 +21,6 @@ public:
 	std::unique_ptr<ItemsDataProvider> itemsDataProvider;
 	std::unique_ptr<ItemsService> itemsService;
 	std::unique_ptr<EquipmentDataProvider> equipmentDataProvider;
-	std::unique_ptr<EquipmentsService> equipmentsService;
 };
 
 
@@ -39,13 +36,13 @@ Services::Services(Resources* resources)
 
 	d->itemsService = std::make_unique<ItemsService>(d->itemsDataProvider.get());
 	
-	d->inventoriesService = std::make_unique<InventoriesService>(
-		d->inventoryDataProvider.get(),
-		d->itemsService.get());
+	//d->inventoriesService = std::make_unique<InventoriesService>(
+	//	d->inventoryDataProvider.get(),
+	//	d->itemsService.get());
 
-	d->equipmentsService = std::make_unique<EquipmentsService>(
-		d->equipmentDataProvider.get(),
-		d->itemsService.get());
+	//d->equipmentsService = std::make_unique<EquipmentsService>(
+	//	d->equipmentDataProvider.get(),
+	//	d->itemsService.get());
 }
 
 Services::~Services() = default;
@@ -71,14 +68,14 @@ WorldService* Services::worldService() const {
 	return d->worldService.get();
 }
 
-InventoriesService* Services::inventoriesService() const {
-	return d->inventoriesService.get();
-}
-
 ItemsService* Services::itemsService() const {
 	return d->itemsService.get();
 }
-
-EquipmentsService* Services::equipmentsService() const {
-	return d->equipmentsService.get();
-}
+//
+//InventoriesService* Services::inventoriesService() const {
+//	return d->inventoriesService.get();
+//}
+//
+//EquipmentsService* Services::equipmentsService() const {
+//	return d->equipmentsService.get();
+//}

@@ -9,7 +9,7 @@ class EquipmentItemHandler;
 class ItemMimeData;
 enum class EquipmentSlotType;
 
-class EquipmentService : public QObject, public ItemPlacementAbstraction {
+class EquipmentService : public QObject, public ItemPlacementService {
 	Q_OBJECT
 public:
 	EquipmentService(ItemsService* itemsService, QObject* parent = nullptr);
@@ -44,6 +44,7 @@ public:
 signals:
 	void itemEquipped(const EquipmentItemHandler& item, EquipmentSlotType slot, const QString& inventoryId);
 	void itemUnequipped(const EquipmentItemHandler& item, EquipmentSlotType slot);
+	void removeItemEvent(const ItemMimeData& item, int row, int col);
 
 private:
 	class Private;

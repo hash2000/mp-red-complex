@@ -108,15 +108,72 @@ int EquipmentService::cols() const {
 	return static_cast<qint32>(ItemEquipmentType::LastSlot);
 }
 
-bool EquipmentService::containsItem(const ItemMimeData& item) const { return false; }
+bool EquipmentService::containsItem(const ItemMimeData& item) const {
+	const auto slot = EquipmentItemHandler::convertPositionToSlot(item.x, item.y);
+	const auto it = d->items.find(slot);
+	if (it == d->items.end()) {
+		return false;
+	}
+	return it->second->id == item.id;
+}
 
-bool EquipmentService::moveItem(const ItemMimeData& item, int newCol, int newRow, bool checkItemPlace) { return false; }
-void EquipmentService::removeItem(const ItemMimeData& item) {}
+bool EquipmentService::moveItem(const ItemMimeData& item, int newCol, int newRow, bool checkItemPlace) {
+	Q_UNUSED(item);
+	Q_UNUSED(newCol);
+	Q_UNUSED(newRow);
+	Q_UNUSED(checkItemPlace);
+	return false;
+}
+void EquipmentService::removeItem(const ItemMimeData& item) {
+	const auto slot = EquipmentItemHandler::convertPositionToSlot(item.x, item.y);
+	const auto it = d->items.find(slot);
+	if (it != d->items.end()) {
+		const auto pos = it->second->slotToPosition();
+		emit removeItemEvent(item, pos.y(), pos.x());
+		d->items.erase(it);
+	}
+}
 
-void EquipmentService::clear() {}
+void EquipmentService::clear() {
+	d->items.clear();
+}
 
-bool EquipmentService::applyDublicateFromItem(const ItemMimeData& item) { return false; }
-bool EquipmentService::removeItemsFromStack(const ItemMimeData& item) { return false; }
+bool EquipmentService::applyDublicateFromItem(const ItemMimeData& item) {
+	if (item.equipmentType == 0) {
+		return false;
+	}
+
+	const auto slot = static_cast<EquipmentSlotType>(item.equipmentType);
+	if (d->items.contains(slot)) {
+		return false;
+	}
+
+	const auto itemPtr = d->itemsService->itemById(item.id);
+	if (!itemPtr) {
+		return false;
+	}
+
+	auto eq = std::make_unique<EquipmentItemHandler>();
+	eq->entity = itemPtr->entity;
+	eq->id = itemPtr->id;
+	eq->slot = slot;
+
+	d->items.emplace(slot, std::move(eq));
+	emit itemEquipped(*d->items.at(slot), slot, QString());
+	return true;
+}
+
+bool EquipmentService::removeItemsFromStack(const ItemMimeData& item) {
+	const auto slot = EquipmentItemHandler::convertPositionToSlot(item.x, item.y);
+	const auto it = d->items.find(slot);
+	if (it == d->items.end()) {
+		return false;
+	}
+
+	emit itemUnequipped(*it->second, slot);
+	d->items.erase(it);
+	return true;
+}
 
 const EquipmentItemHandler* EquipmentService::equipItem(const ItemMimeData& item, EquipmentSlotType slot, const QString& inventoryId) {
 	// берём из инвентаря

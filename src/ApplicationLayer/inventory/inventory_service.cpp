@@ -1,5 +1,4 @@
 #include "ApplicationLayer/inventory/inventory_service.h"
-#include "ApplicationLayer/inventory/inventories_service.h"
 #include "ApplicationLayer/inventory/inventory_item_handler.h"
 #include "ApplicationLayer/items/item_mime_data.h"
 #include "ApplicationLayer/items/items_service.h"

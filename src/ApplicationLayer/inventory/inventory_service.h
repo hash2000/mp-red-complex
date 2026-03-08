@@ -1,6 +1,6 @@
 #pragma once
-#include "Base/container_view.h"
 #include "ApplicationLayer/items_placement_service.h"
+#include "Base/container_view.h"
 #include <QObject>
 #include <QUuid>
 #include <memory>
@@ -12,7 +12,7 @@ class InventoryItem;
 class InventoryItemHandler;
 class ItemMimeData;
 
-class InventoryService : public QObject, public ItemPlacementAbstraction {
+class InventoryService : public QObject, public ItemPlacementService {
 	Q_OBJECT
 public:
 	using EntityView = decltype(make_deref_view(std::declval<const std::map<QString, std::unique_ptr<InventoryItemHandler>>&>()));
