@@ -8,6 +8,7 @@ class ItemMimeData;
 class ItemPlacementService;
 class InventoriesDataProvider;
 class InventoryDataProvider;
+class EquipmentDataProvider;
 class ItemsService;
 
 class InventoriesService : public QObject {
@@ -16,6 +17,7 @@ public:
 	InventoriesService(
 		InventoriesDataProvider* inventoriesDataProvider,
 		InventoryDataProvider* inventoryDataProvider,
+		EquipmentDataProvider* equipmentDataProvider,
 		ItemsService* itemsService,
 		QObject* parent = nullptr);
 
