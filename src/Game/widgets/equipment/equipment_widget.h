@@ -4,14 +4,13 @@
 #include <memory>
 
 class EquipmentSlot;
-class EquipmentsService;
 class InventoriesService;
 
 class EquipmentWidget : public QFrame {
 	Q_OBJECT
 
 public:
-	explicit EquipmentWidget(EquipmentsService* equipmentsService, InventoriesService* inventoriesService, QWidget* parent = nullptr);
+	explicit EquipmentWidget(InventoriesService* inventoriesService, QWidget* parent = nullptr);
 	~EquipmentWidget() override;
 
 	bool setEquipmentService(const QUuid& id);

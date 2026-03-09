@@ -32,12 +32,11 @@ MdiChildWindow* WindowsBuilder::build(const QString& name, const QString& id) {
 			d->appController->services()->timeService(),
 			id);
 	}
-	//else if (name == "equipment") {
-	//	return new EquipmentWindow(
-	//		d->appController->services()->equipmentsService(),
-	//		d->appController->services()->inventoriesService(),
-	//		id);
-	//}
+	else if (name == "equipment") {
+		return new EquipmentWindow(
+			d->appController->services()->inventoriesService(),
+			id);
+	}
 	else if (name == "inventory") {
 		return new InventoryWindow(
 			d->appController->services()->inventoriesService(),

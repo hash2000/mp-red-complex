@@ -2,6 +2,7 @@
 #include "Game/widgets/equipment/equipment_slot_widget.h"
 #include "ApplicationLayer/equipment/equipment_service.h"
 #include "ApplicationLayer/inventory/inventory_service.h"
+#include "ApplicationLayer/inventories_service.h"
 #include "ApplicationLayer/items/item_mime_data.h"
 #include <QVBoxLayout>
 #include <QUuid>
@@ -116,14 +117,12 @@ public:
 	EquipmentWidget* q;
 
 	std::map<EquipmentSlotType, EquipmentSlot*> allSlots;
-	EquipmentsService* equipmentsService = nullptr;
 	EquipmentService* equipmentService = nullptr;
 	InventoriesService* inventoriesService = nullptr;
 };
 
-EquipmentWidget::EquipmentWidget(EquipmentsService* equipmentsService, InventoriesService* inventoriesService, QWidget* parent)
+EquipmentWidget::EquipmentWidget(InventoriesService* inventoriesService, QWidget* parent)
 : d(std::make_unique<Private>(this)) {
-	d->equipmentsService = equipmentsService;
 	d->inventoriesService = inventoriesService;
 
 	setObjectName("EquipmentWidget");
@@ -143,43 +142,40 @@ EquipmentWidget::EquipmentWidget(EquipmentsService* equipmentsService, Inventori
 EquipmentWidget::~EquipmentWidget() = default;
 
 bool EquipmentWidget::setEquipmentService(const QUuid& id) {
-	//auto equipmentService = d->equipmentsService->equipment(id, true);
-	//if (!equipmentService) {
-	//	return false;
-	//}
+	auto equipmentService = static_cast<EquipmentService*>(d->inventoriesService->placementService(id, true));
+	if (!equipmentService) {
+		return false;
+	}
 
-	//if (d->equipmentService) {
-	//	disconnect(d->equipmentService, nullptr, this, nullptr);
+	if (d->equipmentService) {
+		disconnect(d->equipmentService, nullptr, this, nullptr);
 
-	//	for (auto widget : d->allSlots) {
-	//		widget.second->clearItem();
-	//	}
-	//}
+		for (auto widget : d->allSlots) {
+			widget.second->clearItem();
+		}
+	}
 
-	//d->equipmentService = equipmentService;
-	//d->setupLayout();
+	d->equipmentService = equipmentService;
+	d->setupLayout();
 
-	//connect(d->equipmentService, &EquipmentService::itemEquipped,
-	//	this, &EquipmentWidget::onItemEquipped);
-
-	//connect(d->equipmentService, &EquipmentService::itemUnequipped,
-	//	this, &EquipmentWidget::onItemUnequipped);
+	connect(d->equipmentService, &EquipmentService::itemEquipped, this, &EquipmentWidget::onItemEquipped);
+	connect(d->equipmentService, &EquipmentService::itemUnequipped, this, &EquipmentWidget::onItemUnequipped);
 
 	return true;
 }
 
 void EquipmentWidget::onItemEquipped(const EquipmentItemHandler& item, EquipmentSlotType slot, const QString& inventoryId) {
-	//const auto &it = d->allSlots.find(slot);
-	//if (it == d->allSlots.end()) {
-	//	return;
-	//}
+	const auto &it = d->allSlots.find(slot);
+	if (it == d->allSlots.end()) {
+		return;
+	}
 
-	//auto inventory = d->inventoriesService->inventoryService(QUuid::fromString(inventoryId), false);
-	//assert(inventory != nullptr);
+	auto inventory = d->inventoriesService->placementService(QUuid::fromString(inventoryId), false);
+	assert(inventory != nullptr);
 
-	//inventory->removeItem(ItemMimeData(item));
+	inventory->removeItem(ItemMimeData(item));
 
-	//it->second->setItem(item);
+	it->second->setItem(item);
 }
 
 void EquipmentWidget::onItemUnequipped(const EquipmentItemHandler& item, EquipmentSlotType slot) {

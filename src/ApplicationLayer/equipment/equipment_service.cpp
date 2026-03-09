@@ -159,12 +159,12 @@ bool EquipmentService::applyDublicateFromItem(const ItemMimeData& item) {
 	eq->slot = slot;
 
 	d->items.emplace(slot, std::move(eq));
-	emit itemEquipped(*d->items.at(slot), slot, QString());
+	emit itemEquipped(*d->items.at(slot), slot, placementId());
 	return true;
 }
 
 bool EquipmentService::removeItemsFromStack(const ItemMimeData& item) {
-	const auto slot = EquipmentItemHandler::convertPositionToSlot(item.x, item.y);
+	const auto slot = EquipmentItemHandler::convertPositionToSlot(item.y, item.x);
 	const auto it = d->items.find(slot);
 	if (it == d->items.end()) {
 		return false;

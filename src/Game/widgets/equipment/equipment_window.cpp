@@ -10,13 +10,12 @@ public:
 	}
 	EquipmentWindow* q;
 	EquipmentWidget* widget;
-	EquipmentsService* equipmentService;
 };
 
-EquipmentWindow::EquipmentWindow(EquipmentsService* equipmenstService, InventoriesService* inventoriesService, const QString& id, QWidget* parent)
+EquipmentWindow::EquipmentWindow(InventoriesService* inventoriesService, const QString& id, QWidget* parent)
 	: d(std::make_unique<Private>(this))
 	, MdiChildWindow(id, parent) {
-	d->widget = new EquipmentWidget(equipmenstService, inventoriesService, this);
+	d->widget = new EquipmentWidget(inventoriesService, this);
 	setWindowTitle("Equipment");
 	setWidget(d->widget);
 }

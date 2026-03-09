@@ -92,6 +92,9 @@ bool InventoriesService::moveItem(const ItemMimeData& item, int col, int row, co
 		return true;
 	}
 
+	changedItem.x = col;
+	changedItem.y = row;
+
 	if (!toService->applyDublicateFromItem(changedItem)) {
 		return false;
 	}
