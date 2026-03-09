@@ -3,7 +3,7 @@
 #include "Game/widgets/inventory/drop_preview_widget.h"
 #include "Game/styles/items_styles.h"
 #include "ApplicationLayer/inventory/inventory_service.h"
-#include "ApplicationLayer/inventory/inventories_service.h"
+#include "ApplicationLayer/inventories_service.h"
 #include "ApplicationLayer/inventory/inventory_item_handler.h"
 #include "ApplicationLayer/items/item_mime_data.h"
 
@@ -65,38 +65,38 @@ InventoryService* InventoryGrid::inventoryService() const {
 }
 
 void InventoryGrid::setInventoryService(InventoriesService* inventories, const QUuid& id) {
-	auto service = inventories->inventoryService(id, true);
+	//auto service = inventories->inventoryService(id, true);
 
-	if (d->inventory == service) {
-		return;
-	}
+	//if (d->inventory == service) {
+	//	return;
+	//}
 
-	// Отписываемся от старого сервиса
-	if (d->inventory) {
-		disconnect(d->inventory, nullptr, this, nullptr);
-		// Очищаем все виджеты
-		for (auto widget : d->widgets) {
-			widget->deleteLater();
-		}
-		d->widgets.clear();
-	}
+	//// Отписываемся от старого сервиса
+	//if (d->inventory) {
+	//	disconnect(d->inventory, nullptr, this, nullptr);
+	//	// Очищаем все виджеты
+	//	for (auto widget : d->widgets) {
+	//		widget->deleteLater();
+	//	}
+	//	d->widgets.clear();
+	//}
 
-	d->inventory = service;
-	d->inventories = inventories;
+	//d->inventory = service;
+	//d->inventories = inventories;
 
-	if (d->inventory) {
-		// Подписываемся на события сервиса
-		connect(d->inventory, &InventoryService::placeItemEvent, this, &InventoryGrid::onItemPlaced);
-		connect(d->inventory, &InventoryService::removeItemEvent, this, &InventoryGrid::onItemRemoved);
-		connect(d->inventory, &InventoryService::moveItemEvent, this, &InventoryGrid::onItemMoved);
-		connect(d->inventory, &InventoryService::itemCountChanged, this, &InventoryGrid::onItemCountChanged);
+	//if (d->inventory) {
+	//	// Подписываемся на события сервиса
+	//	connect(d->inventory, &InventoryService::placeItemEvent, this, &InventoryGrid::onItemPlaced);
+	//	connect(d->inventory, &InventoryService::removeItemEvent, this, &InventoryGrid::onItemRemoved);
+	//	connect(d->inventory, &InventoryService::moveItemEvent, this, &InventoryGrid::onItemMoved);
+	//	connect(d->inventory, &InventoryService::itemCountChanged, this, &InventoryGrid::onItemCountChanged);
 
-		// Инициализируем виджеты из текущего состояния сервиса
-		updateGridSize();
-		for (const auto &item : d->inventory->items()) {
-			createWidgetForItem(item);
-		}
-	}
+	//	// Инициализируем виджеты из текущего состояния сервиса
+	//	updateGridSize();
+	//	for (const auto &item : d->inventory->items()) {
+	//		createWidgetForItem(item);
+	//	}
+	//}
 
 	setObjectName(newObjectName());
 }
@@ -314,7 +314,7 @@ void InventoryGrid::dropEvent(QDropEvent* event) {
 	}
 
 	// нужно извлечь из инвентаря источника, и переместить в текущий инвентарь
-	if (d->inventories && d->inventories->crossInventoryMove(item, col, row,
+	if (d->inventories && d->inventories->moveItem(item, col, row,
 		QUuid::fromString(sourceInventoryId),
 		QUuid::fromString(currentInventoryId))) {
 		event->acceptProposedAction();
