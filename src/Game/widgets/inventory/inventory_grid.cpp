@@ -65,38 +65,41 @@ InventoryService* InventoryGrid::inventoryService() const {
 }
 
 void InventoryGrid::setInventoryService(InventoriesService* inventories, const QUuid& id) {
-	//auto service = inventories->inventoryService(id, true);
+	auto service = static_cast<InventoryService*>(inventories->placementService(id, true));
+	if (!service) {
+		return;
+	}
 
-	//if (d->inventory == service) {
-	//	return;
-	//}
+	if (d->inventory == service) {
+		return;
+	}
 
-	//// Отписываемся от старого сервиса
-	//if (d->inventory) {
-	//	disconnect(d->inventory, nullptr, this, nullptr);
-	//	// Очищаем все виджеты
-	//	for (auto widget : d->widgets) {
-	//		widget->deleteLater();
-	//	}
-	//	d->widgets.clear();
-	//}
+	// Отписываемся от старого сервиса
+	if (d->inventory) {
+		disconnect(d->inventory, nullptr, this, nullptr);
+		// Очищаем все виджеты
+		for (auto widget : d->widgets) {
+			widget->deleteLater();
+		}
+		d->widgets.clear();
+	}
 
-	//d->inventory = service;
-	//d->inventories = inventories;
+	d->inventory = service;
+	d->inventories = inventories;
 
-	//if (d->inventory) {
-	//	// Подписываемся на события сервиса
-	//	connect(d->inventory, &InventoryService::placeItemEvent, this, &InventoryGrid::onItemPlaced);
-	//	connect(d->inventory, &InventoryService::removeItemEvent, this, &InventoryGrid::onItemRemoved);
-	//	connect(d->inventory, &InventoryService::moveItemEvent, this, &InventoryGrid::onItemMoved);
-	//	connect(d->inventory, &InventoryService::itemCountChanged, this, &InventoryGrid::onItemCountChanged);
+	if (d->inventory) {
+		// Подписываемся на события сервиса
+		connect(d->inventory, &InventoryService::placeItemEvent, this, &InventoryGrid::onItemPlaced);
+		connect(d->inventory, &InventoryService::removeItemEvent, this, &InventoryGrid::onItemRemoved);
+		connect(d->inventory, &InventoryService::moveItemEvent, this, &InventoryGrid::onItemMoved);
+		connect(d->inventory, &InventoryService::itemCountChanged, this, &InventoryGrid::onItemCountChanged);
 
-	//	// Инициализируем виджеты из текущего состояния сервиса
-	//	updateGridSize();
-	//	for (const auto &item : d->inventory->items()) {
-	//		createWidgetForItem(item);
-	//	}
-	//}
+		// Инициализируем виджеты из текущего состояния сервиса
+		updateGridSize();
+		for (const auto &item : d->inventory->items()) {
+			createWidgetForItem(item);
+		}
+	}
 
 	setObjectName(newObjectName());
 }
@@ -114,7 +117,7 @@ void InventoryGrid::updateGridSize() {
 	d->dropPreview->setFixedSize(size());
 }
 
-void InventoryGrid::onItemPlaced(const ItemMimeData& item, int row, int col) {
+void InventoryGrid::onItemPlaced(const ItemMimeData& item, int col, int row) {
 	Q_UNUSED(row);
 	Q_UNUSED(col);
 
@@ -122,7 +125,7 @@ void InventoryGrid::onItemPlaced(const ItemMimeData& item, int row, int col) {
 	createWidgetForItem(item);
 }
 
-void InventoryGrid::onItemRemoved(const ItemMimeData& item, int row, int col) {
+void InventoryGrid::onItemRemoved(const ItemMimeData& item, int col, int row) {
 	Q_UNUSED(row);
 	Q_UNUSED(col);
 

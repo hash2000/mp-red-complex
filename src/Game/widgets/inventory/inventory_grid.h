@@ -46,8 +46,8 @@ protected:
 	void resizeEvent(QResizeEvent* event) override;
 
 private:
-	void onItemPlaced(const ItemMimeData& item, int row, int col);
-	void onItemRemoved(const ItemMimeData& item, int row, int col);
+	void onItemPlaced(const ItemMimeData& item, int col, int row);
+	void onItemRemoved(const ItemMimeData& item, int col, int row);
 	void onItemMoved(const ItemMimeData& item, int oldCol, int oldRow, int newCol, int newRow);
 	void onItemCountChanged(const ItemMimeData& item);
 

@@ -27,7 +27,11 @@ InventoryStoreImpl::~InventoryStoreImpl() = default;
 
 ItemPlacementService* InventoryStoreImpl::load(const QUuid& id, bool loadIfNotExists) {
 	const auto& it = d->services.find(id);
-	if (it == d->services.end() && !loadIfNotExists) {
+	if (it != d->services.end()) {
+		return it->second.get();
+	}
+
+	if (!loadIfNotExists) {
 		return nullptr;
 	}
 

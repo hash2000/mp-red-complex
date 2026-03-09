@@ -205,7 +205,7 @@ bool InventoryService::placeItem(const ItemMimeData& item) {
 	}
 
 	int moveCount = qMin(itemPtr->count, availableSpace);
-	auto& targetCell = d->cells[row][col];
+	auto& targetCell = d->cells[col][row];
 	if (targetCell->occupied) {
 		bool canMerge = (
 			targetCell->item &&
@@ -244,7 +244,7 @@ bool InventoryService::placeItem(const ItemMimeData& item) {
 	itemPtr->x = col;
 	itemPtr->y = row;
 
-	emit placeItemEvent(item, row, col);
+	emit placeItemEvent(item, col, row);
 
 	return true;
 }
@@ -413,7 +413,7 @@ bool InventoryService::moveItem(const ItemMimeData& item, int newCol, int newRow
 				}
 
 				// Отправляем сигналы
-				emit removeItemEvent(*itemPtr, oldPos.x(), oldPos.y());
+				emit removeItemEvent(*itemPtr, oldPos.y(), oldPos.x());
 
 				// Удаляем из хеша позиций
 				d->items.remove(oldPos);
@@ -460,7 +460,7 @@ bool InventoryService::moveItem(const ItemMimeData& item, int newCol, int newRow
 			}
 		}
 
-		emit moveItemEvent(item, oldPos.x(), oldPos.y(), newCol, newRow);
+		emit moveItemEvent(item, oldPos.y(), oldPos.x(), newCol, newRow);
 
 		// Обновляем позицию в хеш-таблице
 		d->items.remove(oldPos);
@@ -502,7 +502,7 @@ bool InventoryService::moveItem(const ItemMimeData& item, int newCol, int newRow
 	emit itemCountChanged(*itemPtr);
 
 	// Отправляем сигналы
-	emit placeItemEvent(*newItemPtr, newRow, newCol); // Новый предмет создан
+	emit placeItemEvent(*newItemPtr, newCol, newRow); // Новый предмет создан
 	// Исходный предмет обновлён (количество уменьшено) — позиция не изменилась
 	return true;
 }

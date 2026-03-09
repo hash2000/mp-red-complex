@@ -49,9 +49,9 @@ private:
 	bool placeItem(const ItemMimeData& item);
 
 signals:
-	void placeItemEvent(const ItemMimeData& item, int row, int col);
-	void removeItemEvent(const ItemMimeData& item, int row, int col);
-	void moveItemEvent(const ItemMimeData& item, int row, int col, int newCol, int newRow);
+	void placeItemEvent(const ItemMimeData& item, int col, int row);
+	void removeItemEvent(const ItemMimeData& item, int col, int row);
+	void moveItemEvent(const ItemMimeData& item, int col, int row, int newCol, int newRow);
 	void itemCountChanged(const ItemMimeData& item);
 
 private:

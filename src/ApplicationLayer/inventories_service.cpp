@@ -92,13 +92,7 @@ bool InventoriesService::moveItem(const ItemMimeData& item, int col, int row, co
 		return true;
 	}
 
-	ItemMimeData toItem = item;
-	toItem.count = changedItem.count;
-	toItem.x = col;
-	toItem.y = row;
-
-	if (!toService->applyDublicateFromItem(toItem)) {
-		fromService->applyDublicateFromItem(item);
+	if (!toService->applyDublicateFromItem(changedItem)) {
 		return false;
 	}
 
