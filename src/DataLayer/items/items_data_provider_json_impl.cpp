@@ -127,7 +127,7 @@ bool ItemsDataProviderJsonImpl::loadEntity(const QString& id, ItemEntity& entity
 }
 
 bool ItemsDataProviderJsonImpl::loadEntitiesIds(std::list<QString>& list) const {
-	const auto path = QString("items/items_ids.json");
+	const auto path = QString("items/entities_ids.json");
 
 	QJsonObject json;
 	Format::Json::DataReader reader(d->resources, "assets", path);
