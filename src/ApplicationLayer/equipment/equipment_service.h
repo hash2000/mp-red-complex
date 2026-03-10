@@ -41,6 +41,9 @@ public:
 
 	const EquipmentItemHandler* itemBySlot(EquipmentSlotType slot) const;
 
+	using ItemsMap = const std::map<EquipmentSlotType, std::unique_ptr<EquipmentItemHandler>>&;
+	ItemsMap items() const;
+
 signals:
 	void itemEquipped(const EquipmentItemHandler& item, EquipmentSlotType slot, const QString& inventoryId);
 	void itemUnequipped(const EquipmentItemHandler& item, EquipmentSlotType slot);

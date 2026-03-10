@@ -3,6 +3,7 @@
 #include "ApplicationLayer/items/items_service.h"
 #include "ApplicationLayer/items/item_mime_data.h"
 #include <QDebug>
+#include <map>
 
 class EquipmentService::Private {
 public:
@@ -30,6 +31,10 @@ const EquipmentItemHandler* EquipmentService::itemBySlot(EquipmentSlotType slot)
 	}
 
 	return it->second.get();
+}
+
+EquipmentService::ItemsMap EquipmentService::items() const {
+	return d->items;
 }
 
 bool EquipmentService::load(const Equipment& equipment) {
