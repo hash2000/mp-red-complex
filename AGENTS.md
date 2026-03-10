@@ -1,5 +1,10 @@
 # AGENTS.md - Development Guide for RedComplex
 
+Это пет-проект, представляет собой игру с оконным интерфейсом, который написан на C++ Qt.
+
+## Code Standards
+- эталонная локаль - русская (ru)
+
 ## Build Commands
 
 ### Requirements
@@ -42,6 +47,7 @@ cmake --build build --target RunTests
 ```
 
 ---
+
 
 ## Code Style Guidelines
 
@@ -163,14 +169,14 @@ src/
 ├── BaseWidgets/    # Reusable UI components
 ├── ApplicationLayer/ # Application orchestration
 ├── Content/        # Content editors (Map, Shader, Particles)
-├── DataFormat/     # Data format definitions. Legacy. 
+├── DataFormat/     # Data format definitions. Legacy.
 ├── DataLayer/      # Data access layer
 ├── DataStream/     # Stream I/O (DAT, RAW formats).
 ├── Engine/         # Core engine
 ├── Game/           # Main game application
-├── Launcher/       # Launcher application. Legacy. 
+├── Launcher/       # Launcher application. Legacy.
 ├── Resources/      # Resource management
-└── ResourcesTool/  # Resource viewer/editor tool. Legacy. 
+└── ResourcesTool/  # Resource viewer/editor tool. Legacy.
 ```
 
 ### Common Patterns
@@ -189,6 +195,44 @@ signals:
 ```cpp
 Q_PROPERTY(int count READ count WRITE setCount NOTIFY countChanged)
 ```
+
+### Architecture and Design
+
+#### Core Application Flow
+1. **Engine Layer**: The application starts in `main.cpp` where `GameApplication` inherits from `Application`. This base class handles core initialization like the Qt application, configuration loading, and resource setup.
+2. **Main Window Creation**: `Application::run()` calls `createMainFrame()` (pure virtual). In `GameApplication`, this returns a `GameMainFrame`.
+3. **Application Layer**: `GameApplication` is created first, then it instantiates `ApplicationController` in `GameMainFrame`'s Private class. This controller orchestrates high-level application logic.
+
+#### Key Components
+
+**ApplicationController** (`src/Game/app_controller.*`)
+- The central coordinator. Owns and manages:
+  - `CommandProcessor`: Parses and executes text commands.
+  - `Services`: Holds core game services (time, world, inventory, items).
+  - `Controllers`: Manages UI controllers (e.g., `WindowsController`).
+- Uses the PIMPL pattern with a `Private` class for encapsulation.
+
+**Services** (`src/Game/services.*`)
+- A container for all major game systems.
+- Key services include:
+  - `TimeService`: A precise timer for game ticks and scheduled events.
+  - `InventoriesService`: The core logic for managing inventories and equipment.
+  - `ItemsService`: Manages item definitions and creation.
+- Initialized with data providers (e.g., `ItemsDataProviderJsonImpl`) for loading game data from JSON files.
+
+**Inventory and Equipment System**
+- **Data Layer** (`src/DataLayer`): Provides raw data access.
+  - `ItemsDataProviderJsonImpl`: Loads item definitions (`items.json`, `items_ids.json`) and icons from the assets folder.
+  - `InventoryDataProviderJsonImpl` / `EquipmentDataProviderJsonImpl`: Load inventory and equipment state from JSON files in the data folder.
+  - `InventoriesDataProviderJsonImpl`: Discovers which inventory and equipment files exist.
+- **Application Layer** (`src/ApplicationLayer`): Implements business logic.
+  - `ItemsService`: Loads all item entities and can create instances (`duplicate` method).
+  - `InventoriesService`: The central hub. It uses `ItemPlacementStore` to load `ItemPlacementService` instances for specific inventories or equipment.
+    - `InventoryStoreImpl` -> `InventoryService`: For regular inventories.
+    - `EquipmentStoreImpl` -> `EquipmentService`: For equipment slots.
+  - `ItemMimeData`: A data transfer object used for drag-and-drop operations between containers.
+  - `ItemPlacementService`: An abstract interface (`pure virtual`) defining operations like `canPlaceItem`, `moveItem`, `applyDublicateFromItem`. Both `InventoryService` and `EquipmentService` implement this.
+- This design allows the `InventoriesService` to handle moves between any two containers (inventory-to-inventory, inventory-to-equipment) by treating them all as `ItemPlacementService` instances.
 
 ---
 
