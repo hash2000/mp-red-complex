@@ -144,7 +144,7 @@ bool InventoryService::load(const Inventory& inventory) {
 	for (const auto &it : inventory.items) {
 		const auto item = d->itemsService->itemById(it.id);
 		if (!item) {
-			qDebug() << "InventoryService::load" << d->inventoryName << d->placementId << "can't load item" << item->id;
+			qDebug() << "InventoryService::load" << d->inventoryName << d->placementId << "can't load item" << it.id;
 			continue;
 		}
 
@@ -292,7 +292,7 @@ std::optional<QPoint> InventoryService::findFreeSpace(const ItemMimeData& item, 
 	for (int row = 0; row < d->rows; row++) {
 		for (int col = 0; col < d->cols; col++) {
 			const auto count = canPlaceItem(item, col, row, checkItemPlace);
-			if (count == item.count) {
+			if (count >= item.count) {
 				return QPoint(col, row);
 			}
 		}

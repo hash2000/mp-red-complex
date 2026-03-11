@@ -41,10 +41,32 @@ public:
 		}
 
 		newItem->entity = entityById(newItem->entityId);
+		if (!newItem->entity) {
+			qWarning() << "Unknown item entity" << newItem->entityId;
+			return nullptr;
+		}
 
 		const auto& emplaceResult = items.emplace(newItem->id, std::move(newItem));
 
 		return emplaceResult.first->second.get();
+	}
+
+	Item* createItemByEntity(const QString& entityId) {
+		auto newItem = std::make_unique<Item>();
+		newItem->entity = entityById(entityId);
+		if (!newItem->entity) {
+			qWarning() << "Unknown item entity" << entityId;
+			return nullptr;
+		}
+
+		newItem->id = QUuid::createUuid()
+			.toString(QUuid::StringFormat::WithoutBraces);
+		newItem->entityId = entityId;
+
+		const auto& emplaceResult = items.emplace(newItem->id, std::move(newItem));
+
+		return emplaceResult.first->second.get();
+
 	}
 
 	ItemsService* q;
@@ -111,5 +133,8 @@ const Item* ItemsService::duplicate(const QString& id) {
 	return emplaceResult.first->second.get();
 }
 
+const Item* ItemsService::createItemByEntity(const QString& entityId) {
+	return d->createItemByEntity(entityId);
+}
 
 

@@ -1,9 +1,6 @@
 #include "Game/widgets/items/item_create_widget.h"
-#include "Game/dragndrop/drag_event_builder.h"
 #include "Game/styles/items_styles.h"
 #include "ApplicationLayer/items/items_service.h"
-#include "ApplicationLayer/items/item_mime_data.h"
-#include <QApplication>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -11,8 +8,6 @@
 #include <QHeaderView>
 #include <QPushButton>
 #include <QPainter>
-#include <QMouseEvent>
-#include <QDrag>
 
 class ItemCreateWidget::Private {
 public:
@@ -23,26 +18,20 @@ public:
 	ItemCreateWidget* q;
 	ItemEntity entity;
 	ItemsService* itemsService;
-	QString targetInventoryId;
 
 	QLabel* imageLabel = nullptr;
 	QTableWidget* paramsTable = nullptr;
 	QPushButton* createButton = nullptr;
-
-	QPoint dragStartPos;
-	bool isDragging = false;
 };
 
 ItemCreateWidget::ItemCreateWidget(
 	const ItemEntity& entity,
 	ItemsService* itemsService,
-	const QString& targetInventoryId,
 	QWidget* parent)
 	: d(std::make_unique<Private>(this))
 	, QWidget(parent) {
 	d->entity = entity;
 	d->itemsService = itemsService;
-	d->targetInventoryId = targetInventoryId;
 
 	setWindowTitle("Создание предмета");
 	setWindowFlags(Qt::Dialog | Qt::WindowCloseButtonHint);
@@ -85,13 +74,7 @@ void ItemCreateWidget::setupLayout() {
 		}
 	)");
 
-	// Подсказка для пользователя
-	auto dragHintLabel = new QLabel("Перетащите предмет\nв инвентарь");
-	dragHintLabel->setAlignment(Qt::AlignCenter);
-	dragHintLabel->setStyleSheet("color: #94a3b8; font-size: 11px;");
-
 	leftLayout->addWidget(d->imageLabel);
-	leftLayout->addWidget(dragHintLabel);
 	leftLayout->addStretch();
 
 	mainLayout->addLayout(leftLayout);
@@ -252,44 +235,4 @@ void ItemCreateWidget::populateParamsTable() {
 	case ItemRarityType::Unique: rarityText = "Уникальное"; break;
 	}
 	addRow("Редкость", rarityText);
-}
-
-void ItemCreateWidget::mousePressEvent(QMouseEvent* event) {
-	if (event->button() == Qt::LeftButton) {
-		d->dragStartPos = event->pos();
-	}
-	QWidget::mousePressEvent(event);
-}
-
-void ItemCreateWidget::mouseMoveEvent(QMouseEvent* event) {
-	if (!(event->buttons() & Qt::LeftButton)) {
-		QWidget::mouseMoveEvent(event);
-		return;
-	}
-
-	// Проверяем, начали ли перетаскивание
-	if ((event->pos() - d->dragStartPos).manhattanLength() < QApplication::startDragDistance()) {
-		QWidget::mouseMoveEvent(event);
-		return;
-	}
-
-	// Создаём ItemMimeData для перетаскивания
-	ItemMimeData mimeData;
-	mimeData.id = d->entity.id;
-	mimeData.name = d->entity.name;
-	mimeData.width = d->entity.width;
-	mimeData.height = d->entity.height;
-	mimeData.count = 1;
-	mimeData.maxStack = d->entity.maxStack;
-	mimeData.type = static_cast<int>(d->entity.type);
-	mimeData.equipmentType = static_cast<int>(d->entity.equipmentType);
-	mimeData.owner = static_cast<int>(ItemOwner::Inventory);
-	mimeData.x = 0;
-	mimeData.y = 0;
-
-	// Используем DragEventBuilder для создания drag-and-drop операции
-	DragEventBuilder builder(this, mimeData, d->entity, d->targetInventoryId);
-	builder.ExecDrag(Qt::MoveAction);
-
-	QWidget::mouseMoveEvent(event);
 }

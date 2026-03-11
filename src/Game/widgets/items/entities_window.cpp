@@ -2,9 +2,12 @@
 #include "Game/widgets/items/entities_widget.h"
 #include "Game/widgets/items/item_create_widget.h"
 #include "Game/app_controller.h"
-#include "Game/services.h"
 #include "Game/commands/command_context.h"
 #include "Game/commands/command_processor.h"
+#include "Game/controllers/windows_controller.h"
+#include "Game/mdi_child_window.h"
+#include "Game/services.h"
+#include "Game/controllers.h"
 #include "ApplicationLayer/items/items_service.h"
 #include "ApplicationLayer/inventory/inventory_service.h"
 #include "ApplicationLayer/inventories_service.h"
@@ -64,24 +67,39 @@ void EntitiesWindow::onItemCreateRequested(const QString& itemId) {
 		return;
 	}
 
-	// Получаем ID целевого инвентаря (например, первый доступный или активный)
-	// В будущем можно сделать выбор инвентаря через UI
+	// Получаем активный инвентарь через WindowsController
 	const auto services = d->controller->services();
 	const auto inventoriesService = services->inventoriesService();
-	const auto inventories = inventoriesService->getAllIds();
+	const auto windowsController = d->controller->controllers()->windowsController();
+
+	// Получаем все окна и находим последнее активное окно типа "inventory"
+	QString targetInventoryId;
+	const auto windows = windowsController->windowEntries();
 	
-	if (inventories.empty()) {
-		qWarning() << "EntitiesWindow::onItemCreateRequested: no inventories available";
-		return;
+	// Ищем последнее окно типа inventory (последнее = самое верхнее в стеке MDI)
+	for (auto it = windows.rbegin(); it != windows.rend(); ++it) {
+		const auto window = it->first.data();
+		if (window && window->windowType() == "inventory") {
+			targetInventoryId = window->windowId();
+			break;
+		}
+	}
+	
+	if (targetInventoryId.isEmpty()) {
+		// Если нет активных окон инвентаря, пробуем получить первый доступный инвентарь
+		const auto inventories = inventoriesService->getAllIds();
+		if (inventories.empty()) {
+			qWarning() << "EntitiesWindow::onItemCreateRequested: no inventories available";
+			return;
+		}
+		targetInventoryId = QString::fromUtf8(inventories.front().toByteArray());
 	}
 
-	const QString targetInventoryId = QString::fromUtf8(inventories.front().toByteArray());
-
 	// Создаём и показываем диалог создания предмета
-	auto createDialog = new ItemCreateWidget(*entity, d->service, targetInventoryId, this);
+	auto createDialog = new ItemCreateWidget(*entity, d->service, this);
 	connect(createDialog, &ItemCreateWidget::itemCreated, this, [this, inventoriesService, targetInventoryId](const QString& entityId) {
 		// Создаём предмет в инвентаре через сервис
-		const auto newItem = d->service->duplicate(entityId);
+		const auto newItem = d->service->createItemByEntity(entityId);
 		if (!newItem) {
 			qWarning() << "Failed to create item:" << entityId;
 			return;
