@@ -3,6 +3,7 @@
 #include "Base/container_view.h"
 #include <QObject>
 #include <memory>
+#include <map>
 #include <ranges>
 
 struct ItemsDataProvider;
