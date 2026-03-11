@@ -63,9 +63,10 @@ bool EquipmentDataWriterJsonImpl::saveEquipment(const QUuid& id, const Equipment
 	QJsonDocument doc(json);
 
 	// Получаем путь к директории data из Resources
-	auto dataDir = d->resources->Variables.get("data_dir");
+	auto dataDir = d->resources->Variables.get("Resources.Path", "")
+		.toString();
 	if (dataDir.isEmpty()) {
-		qWarning() << "EquipmentDataWriterJsonImpl: data_dir not found in variables";
+		qWarning() << "EquipmentDataWriterJsonImpl: Resources.Path not found in variables";
 		return false;
 	}
 
@@ -74,7 +75,7 @@ bool EquipmentDataWriterJsonImpl::saveEquipment(const QUuid& id, const Equipment
 		dir.mkpath("equipment");
 	}
 
-	QFile file(dir.filePath("equipment/" + id.toString(QUuid::StringFormat::WithoutBraces).toLower() + ".json"));
+	QFile file(dir.filePath("data/equipment/" + id.toString(QUuid::StringFormat::WithoutBraces).toLower() + ".json"));
 	if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
 		qWarning() << "EquipmentDataWriterJsonImpl: can't open file for writing:" << file.fileName();
 		return false;

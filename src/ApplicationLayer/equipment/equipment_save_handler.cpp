@@ -1,5 +1,6 @@
 #include "ApplicationLayer/equipment/equipment_save_handler.h"
 #include "ApplicationLayer/equipment/equipment_service.h"
+#include "ApplicationLayer/equipment/equipment_item_handler.h"
 #include "DataLayer/equipment/equipment_data_writer.h"
 #include "DataLayer/equipment/equipment.h"
 #include <QDebug>

@@ -1,6 +1,7 @@
 #pragma once
 #include "ApplicationLayer/items_placement_service.h"
 #include <QObject>
+#include <map>
 #include <memory>
 
 class ItemsService;

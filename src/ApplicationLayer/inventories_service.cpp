@@ -2,12 +2,15 @@
 #include "ApplicationLayer/items_placement_store.h"
 #include "ApplicationLayer/items_placement_service.h"
 #include "ApplicationLayer/inventory/inventory_store_impl.h"
+#include "ApplicationLayer/inventory/inventory_service.h"
 #include "ApplicationLayer/equipment/equipment_store_impl.h"
+#include "ApplicationLayer/equipment/equipment_service.h"
 #include "ApplicationLayer/items/item_mime_data.h"
 #include "DataLayer/inventories/inventories_data_provider.h"
 #include "DataLayer/inventory/inventory_data_provider.h"
 #include "DataLayer/items/items_data_provider.h"
 #include <QDebug>
+#include <map>
 
 class InventoriesService::Private {
 public:
@@ -101,4 +104,46 @@ bool InventoriesService::moveItem(const ItemMimeData& item, int col, int row, co
 
 	emit itemMoved(item, fromId, toId);
 	return true;
+}
+
+std::list<QUuid> InventoriesService::getAllIds() const {
+	std::list<QUuid> ids;
+	for (const auto& [id, store] : d->stores) {
+		ids.push_back(id);
+	}
+	return ids;
+}
+
+InventoryService* InventoriesService::getInventoryService(const QUuid& id) const {
+	const auto& it = d->stores.find(id);
+	if (it == d->stores.end()) {
+		return nullptr;
+	}
+
+	// Проверяем, что это InventoryStoreImpl
+	auto inventoryStore = dynamic_cast<InventoryStoreImpl*>(it->second.get());
+	if (!inventoryStore) {
+		return nullptr;
+	}
+
+	// Загружаем сервис (если ещё не загружен)
+	auto service = inventoryStore->load(id, false);
+	return dynamic_cast<InventoryService*>(service);
+}
+
+EquipmentService* InventoriesService::getEquipmentService(const QUuid& id) const {
+	const auto& it = d->stores.find(id);
+	if (it == d->stores.end()) {
+		return nullptr;
+	}
+
+	// Проверяем, что это EquipmentStoreImpl
+	auto equipmentStore = dynamic_cast<EquipmentStoreImpl*>(it->second.get());
+	if (!equipmentStore) {
+		return nullptr;
+	}
+
+	// Загружаем сервис (если ещё не загружен)
+	auto service = equipmentStore->load(id, false);
+	return dynamic_cast<EquipmentService*>(service);
 }

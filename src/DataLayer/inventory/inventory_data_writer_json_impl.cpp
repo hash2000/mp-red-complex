@@ -48,9 +48,10 @@ bool InventoryDataWriterJsonImpl::saveInventory(const QUuid& id, const Inventory
 	QJsonDocument doc(json);
 
 	// Получаем путь к директории data из Resources
-	auto dataDir = d->resources->Variables.get("data_dir");
+	auto dataDir = d->resources->Variables.get("Resources.Path", "")
+		.toString();
 	if (dataDir.isEmpty()) {
-		qWarning() << "InventoryDataWriterJsonImpl: data_dir not found in variables";
+		qWarning() << "InventoryDataWriterJsonImpl: Resources.Path not found in variables";
 		return false;
 	}
 
@@ -59,7 +60,7 @@ bool InventoryDataWriterJsonImpl::saveInventory(const QUuid& id, const Inventory
 		dir.mkpath("inventory");
 	}
 
-	QFile file(dir.filePath("inventory/" + id.toString(QUuid::StringFormat::WithoutBraces).toLower() + ".json"));
+	QFile file(dir.filePath("data/inventory/" + id.toString(QUuid::StringFormat::WithoutBraces).toLower() + ".json"));
 	if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
 		qWarning() << "InventoryDataWriterJsonImpl: can't open file for writing:" << file.fileName();
 		return false;

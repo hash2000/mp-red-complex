@@ -114,6 +114,16 @@ public:
 		mainLayout->addStretch();
 	}
 
+	void populateSlots() {
+		// Инициализируем слоты предметами из загруженной экипировки
+		for (const auto& [slot, item] : equipmentService->items()) {
+			const auto it = allSlots.find(slot);
+			if (it != allSlots.end() && item) {
+				it->second->setItem(*item);
+			}
+		}
+	}
+
 	EquipmentWidget* q;
 
 	std::map<EquipmentSlotType, EquipmentSlot*> allSlots;
@@ -157,6 +167,7 @@ bool EquipmentWidget::setEquipmentService(const QUuid& id) {
 
 	d->equipmentService = equipmentService;
 	d->setupLayout();
+	d->populateSlots();
 
 	connect(d->equipmentService, &EquipmentService::itemEquipped, this, &EquipmentWidget::onItemEquipped);
 	connect(d->equipmentService, &EquipmentService::itemUnequipped, this, &EquipmentWidget::onItemUnequipped);
@@ -171,9 +182,9 @@ void EquipmentWidget::onItemEquipped(const EquipmentItemHandler& item, Equipment
 	}
 
 	auto inventory = d->inventoriesService->placementService(QUuid::fromString(inventoryId), false);
-	assert(inventory != nullptr);
-
-	inventory->removeItem(ItemMimeData(item));
+	if (inventory) {
+		inventory->removeItem(ItemMimeData(item));
+	}
 
 	it->second->setItem(item);
 }

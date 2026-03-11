@@ -1,5 +1,6 @@
 #include "ApplicationLayer/inventory/inventory_save_handler.h"
 #include "ApplicationLayer/inventory/inventory_service.h"
+#include "ApplicationLayer/inventory/inventory_item_handler.h"
 #include "DataLayer/inventory/inventory_data_writer.h"
 #include "DataLayer/inventory/inventory_item.h"
 #include <QDebug>
@@ -19,10 +20,10 @@ public:
 
 		for (const auto& item : service->items()) {
 			InventoryItem invItem;
-			invItem.id = item->id;
-			invItem.x = item->x;
-			invItem.y = item->y;
-			invItem.count = item->count;
+			invItem.id = item.id;
+			invItem.x = item.x;
+			invItem.y = item.y;
+			invItem.count = item.count;
 			inventory.items.push_back(invItem);
 		}
 

@@ -55,6 +55,8 @@ bool EquipmentDataProviderJsonImpl::loadEquipment(const QUuid& id, Equipment& eq
 		else if (slot == "Boots") eqItem.slot = EquipmentSlotType::Boots;
 		else if (slot == "RingLeft") eqItem.slot = EquipmentSlotType::RingLeft;
 		else if (slot == "Amulet") eqItem.slot = EquipmentSlotType::Amulet;
+		else if (slot == "Bag1") eqItem.slot = EquipmentSlotType::Bag1;
+		else if (slot == "Bag2") eqItem.slot = EquipmentSlotType::Bag2;
 		else {
 			qWarning() << "loadEquipment: equipment from" << equipment.id << "item" << eqItem.id << "unknown slot" << slot;
 			continue;
