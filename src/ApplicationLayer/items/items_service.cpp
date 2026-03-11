@@ -116,6 +116,10 @@ const Item* ItemsService::itemById(const QString& id) {
 	return d->makeItem(id);
 }
 
+ItemsService::ItemView ItemsService::items() const {
+	return make_deref_view(d->items);
+}
+
 const Item* ItemsService::duplicate(const QString& id) {
 	const auto from = d->itemById(id);
 	if (!from) {
