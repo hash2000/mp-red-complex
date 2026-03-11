@@ -7,6 +7,7 @@
 #include <QTableWidget>
 #include <QHeaderView>
 #include <QPushButton>
+#include <QSpinBox>
 #include <QPainter>
 
 class ItemCreateWidget::Private {
@@ -22,6 +23,7 @@ public:
 	QLabel* imageLabel = nullptr;
 	QTableWidget* paramsTable = nullptr;
 	QPushButton* createButton = nullptr;
+	QSpinBox* countSpinBox = nullptr;
 };
 
 ItemCreateWidget::ItemCreateWidget(
@@ -43,7 +45,8 @@ ItemCreateWidget::ItemCreateWidget(
 
 	// Подключаем кнопку создания
 	connect(d->createButton, &QPushButton::clicked, this, [this]() {
-		emit itemCreated(d->entity.id);
+		const int count = d->countSpinBox->value();
+		emit itemCreated(d->entity.id, count);
 		close();
 		});
 }
@@ -117,6 +120,35 @@ void ItemCreateWidget::setupLayout() {
 
 	rightLayout->addWidget(d->paramsTable);
 	rightLayout->addStretch();
+
+	// Выбор количества
+	auto countRow = new QHBoxLayout();
+	countRow->addWidget(new QLabel("Количество:"));
+	
+	d->countSpinBox = new QSpinBox();
+	d->countSpinBox->setRange(1, d->entity.maxStack);
+	d->countSpinBox->setValue(1);
+	d->countSpinBox->setFixedWidth(80);
+	d->countSpinBox->setStyleSheet(R"(
+		QSpinBox {
+			background-color: rgba(30, 41, 59, 200);
+			border: 1px solid #4a5568;
+			border-radius: 4px;
+			color: #e2e8f0;
+			padding: 4px 8px;
+		}
+		QSpinBox::up-button, QSpinBox::down-button {
+			border: none;
+			background-color: #4a5568;
+			width: 16px;
+		}
+		QSpinBox::up-button:hover, QSpinBox::down-button:hover {
+			background-color: #64748b;
+		}
+	)");
+	countRow->addStretch();
+	countRow->addWidget(d->countSpinBox);
+	rightLayout->addLayout(countRow);
 
 	// Кнопка "Создать"
 	d->createButton = new QPushButton("Создать предмет");

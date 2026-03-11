@@ -97,8 +97,8 @@ void EntitiesWindow::onItemCreateRequested(const QString& itemId) {
 
 	// Создаём и показываем диалог создания предмета
 	auto createDialog = new ItemCreateWidget(*entity, d->service, this);
-	connect(createDialog, &ItemCreateWidget::itemCreated, this, [this, inventoriesService, targetInventoryId](const QString& entityId) {
-		// Создаём предмет в инвентаре через сервис
+	connect(createDialog, &ItemCreateWidget::itemCreated, this, [this, inventoriesService, targetInventoryId](const QString& entityId, int count) {
+		// Создаём предметы в инвентаре через сервис
 		const auto newItem = d->service->createItemByEntity(entityId);
 		if (!newItem) {
 			qWarning() << "Failed to create item:" << entityId;
@@ -108,7 +108,7 @@ void EntitiesWindow::onItemCreateRequested(const QString& itemId) {
 		// Получаем сервис инвентаря
 		auto inventoryService = static_cast<InventoryService*>(
 			inventoriesService->placementService(QUuid::fromString(targetInventoryId), false));
-		
+
 		if (!inventoryService) {
 			qWarning() << "Failed to get inventory service for:" << targetInventoryId;
 			return;
@@ -116,7 +116,8 @@ void EntitiesWindow::onItemCreateRequested(const QString& itemId) {
 
 		// Создаём ItemMimeData для нового предмета
 		ItemMimeData mimeData(*newItem);
-		
+		mimeData.count = count;
+
 		// Пытаемся найти свободное место в инвентаре
 		const auto freeSpace = inventoryService->findFreeSpace(mimeData, true);
 		if (!freeSpace.has_value()) {
@@ -127,13 +128,14 @@ void EntitiesWindow::onItemCreateRequested(const QString& itemId) {
 		// Размещаем предмет в инвентаре
 		mimeData.x = freeSpace->x();
 		mimeData.y = freeSpace->y();
-		
+
 		if (inventoryService->applyDublicateFromItem(mimeData)) {
 			qInfo() << "Item placed in inventory:" << newItem->id << "at" << mimeData.x << "," << mimeData.y;
 		}
 		else {
 			qWarning() << "Failed to place item in inventory:" << newItem->id;
 		}
+
 		});
 
 	createDialog->show();

@@ -7,6 +7,7 @@ class ItemsService;
 class QLabel;
 class QTableWidget;
 class QPushButton;
+class QSpinBox;
 
 /// Виджет создания нового предмета
 /// Отображает информацию о предмете и позволяет создать его в инвентаре
@@ -21,7 +22,7 @@ public:
 
 signals:
 	/// Сигнал о создании предмета (когда пользователь подтверждает создание)
-	void itemCreated(const QString& entityId);
+	void itemCreated(const QString& entityId, int count);
 
 private:
 	void setupLayout();
