@@ -1,6 +1,7 @@
 #include "ApplicationLayer/items/item_mime_data.h"
 #include "ApplicationLayer/inventory/inventory_item_handler.h"
 #include "ApplicationLayer/equipment/equipment_item_handler.h"
+#include "DataLayer/items/item.h"
 #include <QIODevice>
 #include <QPainter>
 
@@ -9,22 +10,33 @@ ItemMimeData::ItemMimeData() {
 
 ItemMimeData::ItemMimeData(const InventoryItemHandler& item) {
 	id = item.id;
+	setEntity(*item.entity);
+
 	count = item.count;
 	owner = static_cast<qint32>(ItemOwner::Inventory);
 	x = item.x;
 	y = item.y;
-	setEntity(*item.entity);
 }
 
 ItemMimeData::ItemMimeData(const EquipmentItemHandler& item) {
 	id = item.id;
+	setEntity(*item.entity);
+
 	count = 1;
 	owner = static_cast<qint32>(ItemOwner::Equipment);
 
 	const auto position = item.slotToPosition();
 	x = position.x();
 	y = position.y();
+}
+
+ItemMimeData::ItemMimeData(const Item& item) {
+	id = item.id;
 	setEntity(*item.entity);
+	count = 1;
+	owner = static_cast<qint32>(ItemOwner::Unknown);
+	x = 0;
+	y = 0;
 }
 
 void ItemMimeData::setEntity(const ItemEntity& entity) {

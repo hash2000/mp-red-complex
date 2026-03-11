@@ -1,11 +1,13 @@
 #pragma once
 #include <QString>
 
+class Item;
 class ItemEntity;
 class InventoryItemHandler;
 class EquipmentItemHandler;
 
 enum class ItemOwner {
+	Unknown,
 	Inventory,
 	Equipment,
 };
@@ -28,6 +30,7 @@ public:
 	ItemMimeData();
 	ItemMimeData(const InventoryItemHandler& item);
 	ItemMimeData(const EquipmentItemHandler& item);
+	ItemMimeData(const Item& item);
 
 	static ItemMimeData fromMimeData(const QByteArray& data);
 	QByteArray toMimeData() const;

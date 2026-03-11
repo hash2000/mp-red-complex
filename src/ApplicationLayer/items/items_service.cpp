@@ -86,6 +86,10 @@ ItemsService::EntityView ItemsService::entities() const {
 	return make_deref_view(d->itemEntities);
 }
 
+const ItemEntity* ItemsService::entityById(const QString& id) const {
+	return d->entityById(id);
+}
+
 const Item* ItemsService::itemById(const QString& id) {
 	return d->makeItem(id);
 }
