@@ -4,12 +4,14 @@
 #include "DataLayer/inventory/inventory_data_provider_json_impl.h"
 #include "DataLayer/inventory/inventory_data_writer_json_impl.h"
 #include "DataLayer/items/items_data_provider_json_impl.h"
+#include "DataLayer/items/items_data_writer_json_impl.h"
 #include "DataLayer/equipment/equipment_data_provider_json_impl.h"
 #include "DataLayer/equipment/equipment_data_writer_json_impl.h"
 #include "DataLayer/inventories/inventories_data_provider_json_impl.h"
 #include "ApplicationLayer/items/items_service.h"
 #include "ApplicationLayer/inventories_service.h"
 #include "ApplicationLayer/inventories_save_manager.h"
+#include "ApplicationLayer/items_save_manager.h"
 #include <list>
 
 class Services::Private {
@@ -26,7 +28,9 @@ public:
 	std::unique_ptr<InventoriesService> inventoriesService;
 	std::unique_ptr<InventoriesSaveManager> inventoriesSaveManager;
 	std::unique_ptr<ItemsDataProvider> itemsDataProvider;
+	std::unique_ptr<ItemsDataWriter> itemsDataWriter;
 	std::unique_ptr<ItemsService> itemsService;
+	std::unique_ptr<ItemsSaveManager> itemsSaveManager;
 	std::unique_ptr<EquipmentDataProvider> equipmentDataProvider;
 	std::unique_ptr<EquipmentDataWriter> equipmentDataWriter;
 	std::unique_ptr<InventoriesDataProvider> inventoriesDataProvider;
@@ -40,6 +44,7 @@ Services::Services(Resources* resources)
 	d->equipmentDataProvider = std::make_unique<EquipmentDataProviderJsonImpl>(resources);
 	d->inventoryDataWriter = std::make_unique<InventoryDataWriterJsonImpl>(resources);
 	d->equipmentDataWriter = std::make_unique<EquipmentDataWriterJsonImpl>(resources);
+	d->itemsDataWriter = std::make_unique<ItemsDataWriterJsonImpl>(resources);
 
 	d->timeService = std::make_unique<TimeService>();
 
@@ -58,9 +63,15 @@ Services::Services(Resources* resources)
 		d->inventoryDataWriter.get(),
 		d->equipmentDataWriter.get());
 
+	d->itemsSaveManager = std::make_unique<ItemsSaveManager>(
+		d->itemsService.get(),
+		d->itemsDataWriter.get());
+
 	// Подключаем сохранение к сигналу save()
 	connect(this, &Services::save,
 		d->inventoriesSaveManager.get(), &InventoriesSaveManager::saveAll);
+	connect(this, &Services::save,
+		d->itemsSaveManager.get(), &ItemsSaveManager::saveAll);
 }
 
 Services::~Services() = default;
