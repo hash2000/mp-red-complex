@@ -2,6 +2,7 @@
 #include "ApplicationLayer/inventory/inventory_item_handler.h"
 #include "ApplicationLayer/items/item_mime_data.h"
 #include "ApplicationLayer/items/items_service.h"
+#include "DataLayer/items/item.h"
 #include <QHash>
 #include <QDebug>
 #include <vector>
@@ -99,7 +100,6 @@ public:
 		}
 	}
 
-
 	InventoryItemHandler* itemAt(int col, int row) const {
 		if (col < 0 || row < 0 || col >= cols || row >= rows) {
 			return nullptr;
@@ -148,9 +148,7 @@ bool InventoryService::load(const Inventory& inventory) {
 			continue;
 		}
 
-		auto invItem = std::make_unique<InventoryItemHandler>();
-		invItem->id = item->id;
-		invItem->entity = item->entity;
+		auto invItem = d->makeInventoryitem(item);
 		invItem->x = it.x;
 		invItem->y = it.y;
 		invItem->count = it.count;
@@ -210,6 +208,7 @@ bool InventoryService::placeItem(const ItemMimeData& item) {
 		bool canMerge = (
 			targetCell->item &&
 			targetCell->item->entity->type == itemPtr->entity->type &&
+			targetCell->item->entity->id == itemPtr->entity->id &&
 			targetCell->item->id != item.id &&
 			itemPtr->entity->maxStack > 1);
 
@@ -273,7 +272,10 @@ int InventoryService::canPlaceItem(const ItemMimeData& item, int col, int row, b
 				}
 
 				// Случай 2: совместимый стекируемый предмет
-				if (cell->item && cell->item->entity->type == static_cast<ItemType>(item.type) && item.maxStack > 1) {
+				if (cell->item &&
+					cell->item->entity->type == static_cast<ItemType>(item.type) &&
+					cell->item->entity->id == item.entityId &&
+					item.maxStack > 1) {
 					// Возвращаем свободное место в стеке
 					return qMax(cell->item->entity->maxStack - cell->item->count, 0);
 				}
@@ -381,6 +383,7 @@ bool InventoryService::moveItem(const ItemMimeData& item, int newCol, int newRow
 	bool canMerge = (targetCell->occupied &&
 		targetCell->item &&
 		targetCell->item->entity->type == itemPtr->entity->type &&
+		targetCell->item->entity->id == itemPtr->entity->id &&
 		itemPtr->entity->maxStack > 1);
 
 	// === СЛУЧАЙ 1: Объединение стеков (полное или частичное) ===
@@ -541,8 +544,12 @@ bool InventoryService::removeItemsFromStack(const ItemMimeData& item) {
 	return true;
 }
 
-bool InventoryService::applyDublicateFromItem(const ItemMimeData& item) {
+bool InventoryService::duplicateItem(const ItemMimeData& item) {
 	if (item.count == 0) {
+		return false;
+	}
+
+	if (!placeItem(item)) {
 		return false;
 	}
 
@@ -555,9 +562,86 @@ bool InventoryService::applyDublicateFromItem(const ItemMimeData& item) {
 	invItem->y = item.y;
 	invItem->count = item.count;
 
-	if (!placeItem(ItemMimeData(*invItem))) {
+	return true;
+}
+
+bool InventoryService::transferItem(const ItemMimeData& item, int newCol, int newRow) {
+	// Этот метод предназначен для добавления предмета с указанным ID в текущий инвентарь
+	// (предмет берётся из ItemsService по ID)
+	
+	// Получаем предмет из ItemsService
+	const auto* itemEntity = d->itemsService->itemById(item.id);
+	if (!itemEntity) {
+		// Предмет ещё не существует в ItemsService - это нормально, предмет может быть из другого инвентаря
+		// В этом случае мы просто создаём новый InventoryItemHandler с указанным ID
+	}
+
+	// Проверяем возможность размещения
+	int availableSpace = canPlaceItem(item, newCol, newRow, false);
+	if (availableSpace == 0) {
 		return false;
 	}
+
+	// Проверяем возможность объединения с существующим стеком в целевой ячейке
+	auto targetCellItem = d->itemAt(newCol, newRow);
+	bool canMerge = (targetCellItem &&
+		targetCellItem->entity->type == static_cast<ItemType>(item.type) &&
+		item.maxStack > 1);
+
+	// СЛУЧАЙ 1: Объединение с другим стеком
+	if (canMerge) {
+		int spaceInTarget = targetCellItem->entity->maxStack - targetCellItem->count;
+		int actualMergeCount = qMin(item.count, spaceInTarget);
+
+		if (actualMergeCount > 0) {
+			// Обновляем целевой стек
+			targetCellItem->count += actualMergeCount;
+			emit itemCountChanged(*targetCellItem);
+			return true;
+		}
+
+		return false;
+	}
+
+	// СЛУЧАЙ 2: Размещение нового предмета с указанным ID
+	
+	// Находим свободное место
+	auto freeSpace = findFreeSpace(item, false);
+	if (!freeSpace.has_value()) {
+		return false;
+	}
+
+	int targetCol = freeSpace->x();
+	int targetRow = freeSpace->y();
+
+	// Создаём новый InventoryItemHandler с указанным ID
+	auto newItemPtr = std::make_unique<InventoryItemHandler>();
+	newItemPtr->id = item.id;  // Сохраняем оригинальный ID!
+	newItemPtr->entity = itemEntity ? itemEntity->entity : nullptr;
+	newItemPtr->count = item.count;
+	newItemPtr->x = targetCol;
+	newItemPtr->y = targetRow;
+
+	auto* resultPtr = newItemPtr.get();
+
+	// Размещаем в ячейках
+	for (int dy = 0; dy < newItemPtr->entity->height; ++dy) {
+		for (int dx = 0; dx < newItemPtr->entity->width; ++dx) {
+			int x = targetCol + dx;
+			int y = targetRow + dy;
+			if (x < d->cols && y < d->rows) {
+				auto& cell = d->cells[x][y];
+				cell->occupied = true;
+				cell->item = resultPtr;
+			}
+		}
+	}
+
+	// Добавляем в хранилище
+	d->items[{targetCol, targetRow}] = resultPtr;
+	d->inventoryItems.emplace(newItemPtr->id, std::move(newItemPtr));
+
+	emit placeItemEvent(item, targetRow, targetCol);
 
 	return true;
 }

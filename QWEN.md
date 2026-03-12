@@ -38,12 +38,21 @@ cmake --build build --target Launcher
 ./build/src/Launcher/Launcher
 ```
 
-### Single Test Execution
-**No test framework is currently configured.** To add tests:
+### Running Tests
 ```bash
-# If GoogleTest is added later:
+# Build tests target
 cmake --build build --target RunTests
-./build/tests/YourTest --gtest_filter=TestName.Filter
+
+# Run all tests
+cmake --build build --target run_tests
+
+# Or directly via ctest
+cd build
+ctest --output-on-failure
+
+# Run specific test function
+./build/tests/RunTests -testfunction testLoadEntities
+./build/tests/RunTests -testfunction testMoveFullStack_PreservesItemId
 ```
 
 ---
@@ -175,7 +184,8 @@ src/
 ├── Game/           # Main game application
 ├── Launcher/       # Launcher application. Legacy.
 ├── Resources/      # Resource management
-└── ResourcesTool/  # Resource viewer/editor tool. Legacy.
+├── ResourcesTool/  # Resource viewer/editor tool. Legacy.
+└── tests/          # Unit tests (Qt Test Framework)
 ```
 
 ### Common Patterns
@@ -194,6 +204,44 @@ signals:
 ```cpp
 Q_PROPERTY(int count READ count WRITE setCount NOTIFY countChanged)
 ```
+
+#### Unit Testing (Qt Test Framework)
+Tests are located in `tests/` directory and use Qt Test Framework.
+
+**Test file structure:**
+```cpp
+#include <QtTest/QtTest>
+#include "ApplicationLayer/items/items_service.h"
+
+class TestMyClass : public QObject {
+    Q_OBJECT
+
+private slots:
+    void init();              // Before each test
+    void cleanup();           // After each test
+    void testMyFunction();    // Test function
+};
+
+void TestMyClass::testMyFunction() {
+    // Arrange
+    ItemsService service(dataProvider);
+    
+    // Act
+    const auto* item = service.duplicate("item-id");
+    
+    // Assert
+    QVERIFY(item != nullptr);
+    QCOMPARE(item->entityId, QString("item-id"));
+}
+
+QTEST_MAIN(TestMyClass)
+#include "test_all.moc"
+```
+
+**Key test macros:**
+- `QVERIFY(condition)` — Check condition is true
+- `QCOMPARE(actual, expected)` — Compare values
+- `QTEST_MAIN(TestClass)` — Main entry point for tests
 
 ### Architecture and Design
 
@@ -233,12 +281,31 @@ Q_PROPERTY(int count READ count WRITE setCount NOTIFY countChanged)
   - `ItemPlacementService`: An abstract interface (`pure virtual`) defining operations like `canPlaceItem`, `moveItem`, `applyDublicateFromItem`. Both `InventoryService` and `EquipmentService` implement this.
 - This design allows the `InventoriesService` to handle moves between any two containers (inventory-to-inventory, inventory-to-equipment) by treating them all as `ItemPlacementService` instances.
 
+**Item Stack Management (Пачки предметов)**
+- Items can be stacked if `entity->maxStack > 1`
+- When moving a **full stack** between inventories, the item ID is preserved (no duplicate created)
+- When moving a **partial stack**, a new item is created with a new ID for the moved quantity
+- `InventoryService::transferItem()` — Move/add item with preserved ID
+- `InventoriesService::moveItem()` — Handles full/partial stack logic automatically
+
+**Item Creation Widget**
+- `ItemCreateWidget` (`src/Game/widgets/items/item_create_widget.*`) — Dialog for creating new items
+- Allows selecting quantity (1 to maxStack)
+- Creates items in the last active inventory window
+- Uses `ItemsService::createItemByEntity()` to instantiate items from entity definitions
+
+**Item Save System**
+- `ItemsSaveManager` (`src/ApplicationLayer/items_save_manager.*`) — Saves all created items
+- `ItemsDataWriterJsonImpl` — JSON writer for item persistence
+- Items are saved to `data/items/{uuid}.json`
+- Connected to `Services::save` signal alongside inventory/equipment saving
+
 ---
 
 ## Development Workflow
 
 1. **Create feature branch**: `git checkout -b feature/your-feature`
 2. **Make changes** following the code style above
-3. **Build and test** manually (no automated tests yet)
+3. **Build and test** — Use Qt Test Framework for automated testing
 4. **Commit with clear messages**: `git commit -m "Description of changes"`
 5. **Push and create PR** when ready

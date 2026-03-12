@@ -78,7 +78,7 @@ public:
 	/// </summary>
 	/// <param name="item"></param>
 	/// <returns></returns>
-	virtual bool applyDublicateFromItem(const ItemMimeData& item) = 0;
+	virtual bool duplicateItem(const ItemMimeData& item) = 0;
 
 	/// <summary>
 	/// Remove item.

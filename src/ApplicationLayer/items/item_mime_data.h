@@ -16,6 +16,7 @@ class ItemMimeData {
 public:
 	QString id;
 	QString name;
+	QString entityId;
 	int owner;
 	int width;
 	int height;

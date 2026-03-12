@@ -33,7 +33,7 @@ public:
 
 	void clear() override;
 
-	bool applyDublicateFromItem(const ItemMimeData& item) override;
+	bool duplicateItem(const ItemMimeData& item) override;
 	bool removeItemsFromStack(const ItemMimeData& item) override;
 
 

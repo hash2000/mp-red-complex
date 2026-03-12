@@ -3,6 +3,7 @@
 #include "ApplicationLayer/items_placement_service.h"
 #include "ApplicationLayer/inventory/inventory_store_impl.h"
 #include "ApplicationLayer/inventory/inventory_service.h"
+#include "ApplicationLayer/inventory/inventory_item_handler.h"
 #include "ApplicationLayer/equipment/equipment_store_impl.h"
 #include "ApplicationLayer/equipment/equipment_service.h"
 #include "ApplicationLayer/items/item_mime_data.h"
@@ -85,6 +86,58 @@ bool InventoriesService::moveItem(const ItemMimeData& item, int col, int row, co
 		return false;
 	}
 
+	// Получаем исходный предмет для проверки количества
+	auto fromInventoryService = dynamic_cast<InventoryService*>(fromService);
+	auto toInventoryService = dynamic_cast<InventoryService*>(toService);
+
+	if (!fromInventoryService || !toInventoryService) {
+		qWarning() << "moveItem: services are not InventoryService";
+		return false;
+	}
+
+	// Получаем исходный предмет из инвентаря
+	const auto* sourceItem = fromInventoryService->itemById(item.id);
+	if (!sourceItem) {
+		qWarning() << "moveItem: source item not found" << item.id;
+		return false;
+	}
+
+	// Проверяем, перемещаем ли мы весь предмет или часть пачки
+	bool isFullStackMove = (sourceItem->count == item.count);
+
+	if (isFullStackMove) {
+		// Перемещаем весь предмет с сохранением ID (без создания копии)
+		
+		// Находим свободное место в целевом инвентаре
+		auto freeSpace = toInventoryService->findFreeSpace(item, false);
+		if (!freeSpace.has_value()) {
+			qWarning() << "moveItem: no free space in target inventory for item" << item.id;
+			return false;
+		}
+
+		int targetCol = freeSpace->x();
+		int targetRow = freeSpace->y();
+
+		// Размещаем предмет в целевом инвентаре с сохранением ID
+		ItemMimeData toItemData = item;
+		toItemData.x = targetCol;
+		toItemData.y = targetRow;
+
+		// Используем метод transferItem для размещения с сохранением ID
+		if (!toInventoryService->transferItem(toItemData, targetCol, targetRow)) {
+			qWarning() << "moveItem: failed to place item in target inventory" << item.id;
+			return false;
+		}
+
+		// Удаляем из исходного инвентаря
+		fromInventoryService->removeItem(item);
+
+		// Отправляем событие о перемещении
+		emit itemMoved(item, fromId, toId);
+		return true;
+	}
+
+	// Для частичного перемещения создаём новую копию (старое поведение)
 	ItemMimeData changedItem = item;
 	if (!fromService->removeItemsFromStack(changedItem)) {
 		return false;
@@ -98,7 +151,7 @@ bool InventoriesService::moveItem(const ItemMimeData& item, int col, int row, co
 	changedItem.x = col;
 	changedItem.y = row;
 
-	if (!toService->applyDublicateFromItem(changedItem)) {
+	if (!toService->duplicateItem(changedItem)) {
 		return false;
 	}
 

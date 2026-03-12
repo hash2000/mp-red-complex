@@ -143,7 +143,7 @@ void EquipmentService::clear() {
 	d->items.clear();
 }
 
-bool EquipmentService::applyDublicateFromItem(const ItemMimeData& item) {
+bool EquipmentService::duplicateItem(const ItemMimeData& item) {
 	if (item.equipmentType == 0) {
 		return false;
 	}

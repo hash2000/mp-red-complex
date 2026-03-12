@@ -129,7 +129,7 @@ void EntitiesWindow::onItemCreateRequested(const QString& itemId) {
 		mimeData.x = freeSpace->x();
 		mimeData.y = freeSpace->y();
 
-		if (inventoryService->applyDublicateFromItem(mimeData)) {
+		if (inventoryService->duplicateItem(mimeData)) {
 			qInfo() << "Item placed in inventory:" << newItem->id << "at" << mimeData.x << "," << mimeData.y;
 		}
 		else {

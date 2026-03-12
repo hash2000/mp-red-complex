@@ -46,13 +46,14 @@ void ItemMimeData::setEntity(const ItemEntity& entity) {
 	maxStack = entity.maxStack;
 	type = static_cast<qint32>(entity.type);
 	equipmentType = static_cast<qint32>(entity.equipmentType);
+	entityId = entity.id;
 }
 
 QByteArray ItemMimeData::toMimeData() const {
 	QByteArray data;
 	QDataStream stream(&data, QIODevice::WriteOnly);
 
-	stream << id << name << x << y << width << height << count << maxStack
+	stream << id << entityId << name << x << y << width << height << count << maxStack
 		<< type
 		<< equipmentType
 		<< owner;
@@ -64,7 +65,9 @@ ItemMimeData ItemMimeData::fromMimeData(const QByteArray& data) {
 	QDataStream stream(data);
 	ItemMimeData item;
 
-	stream >> item.id >> item.name >> item.x >> item.y >> item.width >> item.height >> item.count >> item.maxStack
+	stream >> item.id >> item.entityId >> item.name
+		>> item.x >> item.y >> item.width >> item.height
+		>> item.count >> item.maxStack
 		>> item.type
 		>> item.equipmentType
 		>> item.owner;

@@ -42,8 +42,12 @@ public:
 
 	void clear() override;
 
-	bool applyDublicateFromItem(const ItemMimeData& item) override;
+	bool duplicateItem(const ItemMimeData& item) override;
 	bool removeItemsFromStack(const ItemMimeData& item) override;
+
+	/// Переместить предмет в другой инвентарь с сохранением ID (без создания копии)
+	/// Используется для перемещения между инвентарями, а не для разделения пачки
+	bool transferItem(const ItemMimeData& item, int newCol, int newRow);
 
 private:
 	bool placeItem(const ItemMimeData& item);
@@ -57,4 +61,6 @@ signals:
 private:
 	class Private;
 	std::unique_ptr<Private> d;
+
+	friend class TestInventoriesService;  // Для юнит-тестов
 };

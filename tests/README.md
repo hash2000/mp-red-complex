@@ -27,15 +27,17 @@ ctest --output-on-failure
 
 # Запуск тестов по имени (фильтрация)
 ./build/tests/RunTests -testfunction testLoadEntities
+./build/tests/RunTests -testfunction testMoveFullStack_PreservesItemId
 ```
 
 ## Структура тестов
 
 ```
 tests/
-├── CMakeLists.txt              # Конфигурация сборки тестов
-├── mock_items_data_provider.*  # Моковые данные для тестов
-└── test_items_service.cpp      # Тесты для ItemsService
+├── CMakeLists.txt                  # Конфигурация сборки тестов
+├── mock_items_data_provider.*      # Моковые данные для тестов
+├── test_all.cpp                    # Все тесты (ItemsService, InventoriesService)
+└── README.md                       # Эта документация
 ```
 
 ## Написание тестов
@@ -68,7 +70,7 @@ void TestMyClass::testMyFunction() {
 }
 
 QTEST_MAIN(TestMyClass)
-#include "test_myclass.moc"
+#include "test_all.moc"
 ```
 
 ### Основные макросы проверок
