@@ -19,11 +19,6 @@ public:
 	: q(parent) {
 	}
 
-	InventoryItemHandler* duplicateItem(const QString& id) {
-		auto newItemDuplicate = itemsService->duplicate(id);
-		return makeInventoryitem(newItemDuplicate);
-	}
-
 	InventoryItemHandler* makeInventoryitem(const Item* item) {
 		if (!item) {
 			return nullptr;
@@ -189,28 +184,40 @@ const InventoryItemHandler* InventoryService::itemById(const QString& id) const 
 }
 
 bool InventoryService::placeItem(const ItemMimeData& item) {
-	auto itemPtr = d->itemById(item.id);
+	int col = item.x;
+	int row = item.y;
+
+	const auto availableSpace = canPlaceItem(item, col, row, true);
+	if (availableSpace < item.count) {
+		return false;
+	}
+
+	const auto itemPtr = d->itemsService->itemById(item.id);
 	if (!itemPtr) {
 		return false;
 	}
 
-	int col = itemPtr->x;
-	int row = itemPtr->y;
+	auto invItemPtr = d->itemById(item.id);
+	if (!invItemPtr) {
+		invItemPtr = d->makeInventoryitem(itemPtr);
+		if (!invItemPtr) {
+			return false;
+		}
 
-	const auto availableSpace = canPlaceItem(item, col, row, true);
-	if (availableSpace == 0) {
-		return false;
+		invItemPtr->count = item.count;
+		invItemPtr->x = item.x;
+		invItemPtr->y = item.y;
 	}
 
-	int moveCount = qMin(itemPtr->count, availableSpace);
+	int moveCount = qMin(invItemPtr->count, availableSpace);
 	auto& targetCell = d->cells[col][row];
 	if (targetCell->occupied) {
 		bool canMerge = (
 			targetCell->item &&
-			targetCell->item->entity->type == itemPtr->entity->type &&
-			targetCell->item->entity->id == itemPtr->entity->id &&
+			targetCell->item->entity->type == invItemPtr->entity->type &&
+			targetCell->item->entity->id == invItemPtr->entity->id &&
 			targetCell->item->id != item.id &&
-			itemPtr->entity->maxStack > 1);
+			invItemPtr->entity->maxStack > 1);
 
 		if (canMerge) {
 			int spaceInTarget = targetCell->item->entity->maxStack - targetCell->item->count;
@@ -228,20 +235,20 @@ bool InventoryService::placeItem(const ItemMimeData& item) {
 		return false;
 	}
 
-	for (int dy = 0; dy < itemPtr->entity->height; dy++) {
-		for (int dx = 0; dx < itemPtr->entity->width; dx++) {
+	for (int dy = 0; dy < invItemPtr->entity->height; dy++) {
+		for (int dx = 0; dx < invItemPtr->entity->width; dx++) {
 			// занимаем все ячейки обласи предмета
 			// в каждой ячейке занимаемой предметом ссылка на этот предмет,
 			auto& cell = d->cells[col + dx][row + dy];
 			cell->occupied = true;
-			cell->item = itemPtr;
+			cell->item = invItemPtr;
 		}
 	}
 
-	d->items[{col, row}] = itemPtr;
+	d->items[{col, row}] = invItemPtr;
 
-	itemPtr->x = col;
-	itemPtr->y = row;
+	invItemPtr->x = col;
+	invItemPtr->y = row;
 
 	emit placeItemEvent(item, col, row);
 
@@ -478,7 +485,12 @@ bool InventoryService::moveItem(const ItemMimeData& item, int newCol, int newRow
 	// === СЛУЧАЙ 3: Частичное перемещение без объединения (создаём новый предмет) ===
 
 	// Создаём новый предмет для перемещённой части
-	auto newItemPtr = d->duplicateItem(itemPtr->id);
+	const auto newItem = d->itemsService->duplicate(itemPtr->id);
+	if (!newItem) {
+		return false;
+	}
+
+	auto newItemPtr = d->makeInventoryitem(newItem);
 	newItemPtr->count = moveCount;
 	newItemPtr->x = newCol;
 	newItemPtr->y = newRow;
@@ -541,107 +553,5 @@ bool InventoryService::removeItemsFromStack(const ItemMimeData& item) {
 		emit itemCountChanged(ItemMimeData(*itemPtr));
 	}
 	
-	return true;
-}
-
-bool InventoryService::duplicateItem(const ItemMimeData& item) {
-	if (item.count == 0) {
-		return false;
-	}
-
-	if (!placeItem(item)) {
-		return false;
-	}
-
-	auto invItem = d->duplicateItem(item.id);
-	if (!invItem) {
-		return false;
-	}
-
-	invItem->x = item.x;
-	invItem->y = item.y;
-	invItem->count = item.count;
-
-	return true;
-}
-
-bool InventoryService::transferItem(const ItemMimeData& item, int newCol, int newRow) {
-	// Этот метод предназначен для добавления предмета с указанным ID в текущий инвентарь
-	// (предмет берётся из ItemsService по ID)
-	
-	// Получаем предмет из ItemsService
-	const auto* itemEntity = d->itemsService->itemById(item.id);
-	if (!itemEntity) {
-		// Предмет ещё не существует в ItemsService - это нормально, предмет может быть из другого инвентаря
-		// В этом случае мы просто создаём новый InventoryItemHandler с указанным ID
-	}
-
-	// Проверяем возможность размещения
-	int availableSpace = canPlaceItem(item, newCol, newRow, false);
-	if (availableSpace == 0) {
-		return false;
-	}
-
-	// Проверяем возможность объединения с существующим стеком в целевой ячейке
-	auto targetCellItem = d->itemAt(newCol, newRow);
-	bool canMerge = (targetCellItem &&
-		targetCellItem->entity->type == static_cast<ItemType>(item.type) &&
-		item.maxStack > 1);
-
-	// СЛУЧАЙ 1: Объединение с другим стеком
-	if (canMerge) {
-		int spaceInTarget = targetCellItem->entity->maxStack - targetCellItem->count;
-		int actualMergeCount = qMin(item.count, spaceInTarget);
-
-		if (actualMergeCount > 0) {
-			// Обновляем целевой стек
-			targetCellItem->count += actualMergeCount;
-			emit itemCountChanged(*targetCellItem);
-			return true;
-		}
-
-		return false;
-	}
-
-	// СЛУЧАЙ 2: Размещение нового предмета с указанным ID
-	
-	// Находим свободное место
-	auto freeSpace = findFreeSpace(item, false);
-	if (!freeSpace.has_value()) {
-		return false;
-	}
-
-	int targetCol = freeSpace->x();
-	int targetRow = freeSpace->y();
-
-	// Создаём новый InventoryItemHandler с указанным ID
-	auto newItemPtr = std::make_unique<InventoryItemHandler>();
-	newItemPtr->id = item.id;  // Сохраняем оригинальный ID!
-	newItemPtr->entity = itemEntity ? itemEntity->entity : nullptr;
-	newItemPtr->count = item.count;
-	newItemPtr->x = targetCol;
-	newItemPtr->y = targetRow;
-
-	auto* resultPtr = newItemPtr.get();
-
-	// Размещаем в ячейках
-	for (int dy = 0; dy < newItemPtr->entity->height; ++dy) {
-		for (int dx = 0; dx < newItemPtr->entity->width; ++dx) {
-			int x = targetCol + dx;
-			int y = targetRow + dy;
-			if (x < d->cols && y < d->rows) {
-				auto& cell = d->cells[x][y];
-				cell->occupied = true;
-				cell->item = resultPtr;
-			}
-		}
-	}
-
-	// Добавляем в хранилище
-	d->items[{targetCol, targetRow}] = resultPtr;
-	d->inventoryItems.emplace(newItemPtr->id, std::move(newItemPtr));
-
-	emit placeItemEvent(item, targetRow, targetCol);
-
 	return true;
 }

@@ -41,16 +41,8 @@ public:
 	bool containsItem(const ItemMimeData& item) const override;
 
 	void clear() override;
-
-	bool duplicateItem(const ItemMimeData& item) override;
-	bool removeItemsFromStack(const ItemMimeData& item) override;
-
-	/// Переместить предмет в другой инвентарь с сохранением ID (без создания копии)
-	/// Используется для перемещения между инвентарями, а не для разделения пачки
-	bool transferItem(const ItemMimeData& item, int newCol, int newRow);
-
-private:
 	bool placeItem(const ItemMimeData& item);
+	bool removeItemsFromStack(const ItemMimeData& item) override;
 
 signals:
 	void placeItemEvent(const ItemMimeData& item, int col, int row);

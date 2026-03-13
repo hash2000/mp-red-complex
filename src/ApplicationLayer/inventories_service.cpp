@@ -2,12 +2,11 @@
 #include "ApplicationLayer/items_placement_store.h"
 #include "ApplicationLayer/items_placement_service.h"
 #include "ApplicationLayer/inventory/inventory_store_impl.h"
+#include "ApplicationLayer/equipment/equipment_store_impl.h"
 #include "ApplicationLayer/inventory/inventory_service.h"
 #include "ApplicationLayer/inventory/inventory_item_handler.h"
-#include "ApplicationLayer/equipment/equipment_store_impl.h"
 #include "ApplicationLayer/equipment/equipment_service.h"
 #include "ApplicationLayer/items/item_mime_data.h"
-#include "DataLayer/inventories/inventories_data_provider.h"
 #include "DataLayer/inventory/inventory_data_provider.h"
 #include "DataLayer/items/items_data_provider.h"
 #include <QDebug>
@@ -19,24 +18,6 @@ public:
 		: q(parent) {
 	}
 
-	void loadInventories() {
-		std::list<QUuid> items;
-		inventoriesDataProvider->loadInventories(items);
-
-		for (const auto& item : items) {
-			stores.emplace(item, std::make_unique<InventoryStoreImpl>(inventoryDataProvider, itemsService));
-		}
-	}
-
-	void loadEquipments() {
-		std::list<QUuid> items;
-		inventoriesDataProvider->loadEquipments(items);
-
-		for (const auto& item : items) {
-			stores.emplace(item, std::make_unique<EquipmentStoreImpl>(equipmentDataProvider, itemsService));
-		}
-	}
-
 	InventoriesService* q;
 	std::map<QUuid, std::unique_ptr<ItemPlacementStore>> stores;
 	InventoriesDataProvider* inventoriesDataProvider;
@@ -46,13 +27,11 @@ public:
 };
 
 InventoriesService::InventoriesService(
-	InventoriesDataProvider* inventoriesDataProvider,
 	InventoryDataProvider* inventoryDataProvider,
 	EquipmentDataProvider* equipmentDataProvider,
 	ItemsService* itemsService,
 	QObject* parent)
 : d(std::make_unique<Private>(this)) {
-	d->inventoriesDataProvider = inventoriesDataProvider;
 	d->inventoryDataProvider = inventoryDataProvider;
 	d->equipmentDataProvider = equipmentDataProvider;
 	d->itemsService = itemsService;
@@ -60,9 +39,11 @@ InventoriesService::InventoriesService(
 
 InventoriesService::~InventoriesService() = default;
 
-void InventoriesService::load() {
-	d->loadInventories();
-	d->loadEquipments();
+
+bool InventoriesService::addStore(const QUuid& id, std::unique_ptr<ItemPlacementStore> store)
+{
+	const auto& result = d->stores.emplace(id, std::move(store));
+	return result.second;
 }
 
 ItemPlacementService* InventoriesService::placementService(const QUuid& id, bool loadIfNotExists) const {
@@ -124,7 +105,7 @@ bool InventoriesService::moveItem(const ItemMimeData& item, int col, int row, co
 		toItemData.y = targetRow;
 
 		// Используем метод transferItem для размещения с сохранением ID
-		if (!toInventoryService->transferItem(toItemData, targetCol, targetRow)) {
+		if (!toInventoryService->placeItem(toItemData)) {
 			qWarning() << "moveItem: failed to place item in target inventory" << item.id;
 			return false;
 		}
@@ -151,7 +132,7 @@ bool InventoriesService::moveItem(const ItemMimeData& item, int col, int row, co
 	changedItem.x = col;
 	changedItem.y = row;
 
-	if (!toService->duplicateItem(changedItem)) {
+	if (!toService->placeItem(changedItem)) {
 		return false;
 	}
 
@@ -165,38 +146,4 @@ std::list<QUuid> InventoriesService::getAllIds() const {
 		ids.push_back(id);
 	}
 	return ids;
-}
-
-InventoryService* InventoriesService::getInventoryService(const QUuid& id) const {
-	const auto& it = d->stores.find(id);
-	if (it == d->stores.end()) {
-		return nullptr;
-	}
-
-	// Проверяем, что это InventoryStoreImpl
-	auto inventoryStore = dynamic_cast<InventoryStoreImpl*>(it->second.get());
-	if (!inventoryStore) {
-		return nullptr;
-	}
-
-	// Загружаем сервис (если ещё не загружен)
-	auto service = inventoryStore->load(id, false);
-	return dynamic_cast<InventoryService*>(service);
-}
-
-EquipmentService* InventoriesService::getEquipmentService(const QUuid& id) const {
-	const auto& it = d->stores.find(id);
-	if (it == d->stores.end()) {
-		return nullptr;
-	}
-
-	// Проверяем, что это EquipmentStoreImpl
-	auto equipmentStore = dynamic_cast<EquipmentStoreImpl*>(it->second.get());
-	if (!equipmentStore) {
-		return nullptr;
-	}
-
-	// Загружаем сервис (если ещё не загружен)
-	auto service = equipmentStore->load(id, false);
-	return dynamic_cast<EquipmentService*>(service);
 }

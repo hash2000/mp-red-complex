@@ -20,7 +20,7 @@ InventoriesDataProviderJsonImpl::InventoriesDataProviderJsonImpl(Resources* reso
 InventoriesDataProviderJsonImpl::~InventoriesDataProviderJsonImpl() = default;
 
 
-void InventoriesDataProviderJsonImpl::loadInventories(std::list<QUuid>& inventories) {
+void InventoriesDataProviderJsonImpl::loadInventories(std::list<QUuid>& inventories) const {
 	const QString basePath = d->resources->Variables.get("Resources.Path", "").toString();
 	const QString path = QDir(basePath).filePath("data/inventory");
 
@@ -40,7 +40,7 @@ void InventoriesDataProviderJsonImpl::loadInventories(std::list<QUuid>& inventor
 	}
 }
 
-void InventoriesDataProviderJsonImpl::loadEquipments(std::list<QUuid>& equipments) {
+void InventoriesDataProviderJsonImpl::loadEquipments(std::list<QUuid>& equipments) const {
 	const QString basePath = d->resources->Variables.get("Resources.Path", "").toString();
 	const QString path = QDir(basePath).filePath("data/equipment");
 

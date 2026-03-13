@@ -8,9 +8,9 @@ public:
 	InventoriesDataProviderJsonImpl(Resources* resources);
 	~InventoriesDataProviderJsonImpl() override;
 
-	void loadInventories(std::list<QUuid>& inventories) override;
+	void loadInventories(std::list<QUuid>& inventories) const override;
 
-	void loadEquipments(std::list<QUuid>& equipments) override;
+	void loadEquipments(std::list<QUuid>& equipments) const override;
 
 private:
 	class Private;

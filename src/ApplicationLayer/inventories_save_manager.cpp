@@ -67,8 +67,10 @@ public:
 		const auto ids = inventoriesService->getAllIds();
 
 		for (const auto& id : ids) {
+			auto placementService = inventoriesService->placementService(id, false);
+
 			// Пробуем получить как инвентарь
-			auto inventoryService = inventoriesService->getInventoryService(id);
+			auto inventoryService = dynamic_cast<InventoryService*>(placementService);
 			if (inventoryService && inventoryDataWriter) {
 				auto inventoryData = toInventoryData(inventoryService);
 				if (!inventoryDataWriter->saveInventory(id, inventoryData)) {
@@ -82,7 +84,7 @@ public:
 			}
 
 			// Пробуем получить как экипировку
-			auto equipmentService = inventoriesService->getEquipmentService(id);
+			auto equipmentService = dynamic_cast<EquipmentService*>(placementService);
 			if (equipmentService && equipmentDataWriter) {
 				auto equipmentData = toEquipmentData(equipmentService);
 				if (!equipmentDataWriter->saveEquipment(id, equipmentData)) {

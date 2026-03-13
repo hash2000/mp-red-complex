@@ -74,11 +74,11 @@ public:
 	virtual void clear() = 0;
 
 	/// <summary>
-	/// Create duplicate from specified item and place it
+	/// Place item in container, in item.x and item.y space
 	/// </summary>
 	/// <param name="item"></param>
 	/// <returns></returns>
-	virtual bool duplicateItem(const ItemMimeData& item) = 0;
+	virtual bool placeItem(const ItemMimeData& item) = 0;
 
 	/// <summary>
 	/// Remove item.
