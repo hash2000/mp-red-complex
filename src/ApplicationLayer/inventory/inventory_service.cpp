@@ -183,6 +183,14 @@ const InventoryItemHandler* InventoryService::itemById(const QString& id) const 
 	return d->itemById(id);
 }
 
+ItemMimeData InventoryService::itemDataById(const QString& id) const {
+	const auto item = itemById(id);
+	if (!item) {
+		return ItemMimeData();
+	}
+	return ItemMimeData(*item);
+}
+
 bool InventoryService::placeItem(const ItemMimeData& item) {
 	int col = item.x;
 	int row = item.y;

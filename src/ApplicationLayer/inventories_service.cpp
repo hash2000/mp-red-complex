@@ -67,37 +67,33 @@ bool InventoriesService::moveItem(const ItemMimeData& item, int col, int row, co
 		return false;
 	}
 
-	// Получаем исходный предмет для проверки количества
-	auto fromInventoryService = dynamic_cast<InventoryService*>(fromService);
-	auto toInventoryService = dynamic_cast<InventoryService*>(toService);
-
-	if (!fromInventoryService || !toInventoryService) {
-		qWarning() << "moveItem: services are not InventoryService";
-		return false;
-	}
-
 	// Получаем исходный предмет из инвентаря
-	const auto* sourceItem = fromInventoryService->itemById(item.id);
-	if (!sourceItem) {
+	const auto sourceItem = fromService->itemDataById(item.id);
+	if (sourceItem.owner == static_cast<qint32>(ItemOwner::Unknown)) {
 		qWarning() << "moveItem: source item not found" << item.id;
 		return false;
 	}
 
 	// Проверяем, перемещаем ли мы весь предмет или часть пачки
-	bool isFullStackMove = (sourceItem->count == item.count);
-
+	bool isFullStackMove = (sourceItem.count == item.count);
 	if (isFullStackMove) {
 		// Перемещаем весь предмет с сохранением ID (без создания копии)
-		
-		// Находим свободное место в целевом инвентаре
-		auto freeSpace = toInventoryService->findFreeSpace(item, false);
-		if (!freeSpace.has_value()) {
-			qWarning() << "moveItem: no free space in target inventory for item" << item.id;
-			return false;
-		}
 
-		int targetCol = freeSpace->x();
-		int targetRow = freeSpace->y();
+		int targetCol = col;
+		int targetRow = row;
+
+		if (!toService->canPlaceItem(item, col, row, false)) {
+
+			// Находим свободное место в целевом инвентаре
+			auto freeSpace = toService->findFreeSpace(item, false);
+			if (!freeSpace.has_value()) {
+				qWarning() << "moveItem: no free space in target inventory for item" << item.id;
+				return false;
+			}
+
+			targetCol = freeSpace->x();
+			targetRow = freeSpace->y();
+		}
 
 		// Размещаем предмет в целевом инвентаре с сохранением ID
 		ItemMimeData toItemData = item;
@@ -105,13 +101,13 @@ bool InventoriesService::moveItem(const ItemMimeData& item, int col, int row, co
 		toItemData.y = targetRow;
 
 		// Используем метод transferItem для размещения с сохранением ID
-		if (!toInventoryService->placeItem(toItemData)) {
+		if (!toService->placeItem(toItemData)) {
 			qWarning() << "moveItem: failed to place item in target inventory" << item.id;
 			return false;
 		}
 
 		// Удаляем из исходного инвентаря
-		fromInventoryService->removeItem(item);
+		fromService->removeItem(item);
 
 		// Отправляем событие о перемещении
 		emit itemMoved(item, fromId, toId);

@@ -113,6 +113,16 @@ int EquipmentService::cols() const {
 	return static_cast<qint32>(ItemEquipmentType::LastSlot);
 }
 
+ItemMimeData EquipmentService::EquipmentService::itemDataById(const QString& id) const {
+	for (const auto& [itemType, item]:d->items) {
+		if (item->id == id) {
+			return ItemMimeData(*item);
+		}
+	}
+
+	return ItemMimeData();
+}
+
 bool EquipmentService::containsItem(const ItemMimeData& item) const {
 	const auto slot = EquipmentItemHandler::convertPositionToSlot(item.x, item.y);
 	const auto it = d->items.find(slot);

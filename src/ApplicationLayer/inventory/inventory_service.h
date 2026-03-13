@@ -44,6 +44,8 @@ public:
 	bool placeItem(const ItemMimeData& item);
 	bool removeItemsFromStack(const ItemMimeData& item) override;
 
+	ItemMimeData itemDataById(const QString& id) const override;
+
 signals:
 	void placeItemEvent(const ItemMimeData& item, int col, int row);
 	void removeItemEvent(const ItemMimeData& item, int col, int row);

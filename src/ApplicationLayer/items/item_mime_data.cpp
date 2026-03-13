@@ -6,6 +6,7 @@
 #include <QPainter>
 
 ItemMimeData::ItemMimeData() {
+	owner = static_cast<qint32>(ItemOwner::Unknown);
 }
 
 ItemMimeData::ItemMimeData(const InventoryItemHandler& item) {

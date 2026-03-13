@@ -1,5 +1,6 @@
 #pragma once
 #include <QString>
+#include <QString>
 #include <QPoint>
 #include <optional>
 
@@ -87,4 +88,11 @@ public:
 	/// <param name="item"></param>
 	/// <returns></returns>
 	virtual bool removeItemsFromStack(const ItemMimeData& item) = 0;
+
+	/// <summary>
+	/// Return item data by id
+	/// </summary>
+	/// <param name="id"></param>
+	/// <returns></returns>
+	virtual ItemMimeData itemDataById(const QString& id) const = 0;
 };

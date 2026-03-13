@@ -35,7 +35,7 @@ public:
 
 	bool placeItem(const ItemMimeData& item) override;
 	bool removeItemsFromStack(const ItemMimeData& item) override;
-
+	ItemMimeData itemDataById(const QString& id) const override;
 
 	const EquipmentItemHandler* equipItem(const ItemMimeData& item, EquipmentSlotType slot, const QString& inventoryId);
 	bool unequipItem(const ItemMimeData& item, EquipmentSlotType slot);
