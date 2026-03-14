@@ -12,14 +12,14 @@
 
 class LauncherMainFrame : public MainFrame {
 public:
-	LauncherMainFrame(std::shared_ptr<Resources> resources);
+	LauncherMainFrame(Resources* resources);
 
 	virtual ~LauncherMainFrame() = default;
 
 private:
 	TaskManager _taskManager;
 	QTimer _gameTimer;
-	std::shared_ptr<Resources> _resources;
+	Resources* _resources;
 
 	LegendWidget* _legendWidget;
 	ActionsWidget* _actionsWidget;

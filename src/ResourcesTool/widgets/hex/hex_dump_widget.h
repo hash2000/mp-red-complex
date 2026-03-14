@@ -9,5 +9,5 @@
 
 class HexDumpWidget : public BaseTabWidget {
 public:
-  explicit HexDumpWidget(std::shared_ptr<Resources> resources, const QVariantMap& params, QWidget *parent = nullptr);
+  explicit HexDumpWidget(Resources* resources, const QVariantMap& params, QWidget *parent = nullptr);
 };

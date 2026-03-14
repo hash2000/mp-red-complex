@@ -6,12 +6,18 @@
 #include <QJsonObject>
 #include <QJsonArray>
 
-namespace {
+class ItemsDataProviderJsonImpl::Private {
+public:
+	Private(ItemsDataProviderJsonImpl* paren)
+		: q(paren) {
+	}
+
 	void itemEntityFromJson(const QJsonObject& json, ItemEntity& entity) {
 		entity.id = json["id"].toString();
 		entity.name = json["name"].toString();
 		entity.description = json["description"].toString();
 		entity.iconPath = json["icon"].toString();
+		entity.equipmentType = ItemEquipmentType::None;
 
 		// Тип предмета
 		QString typeStr = json["type"].toString().toLower();
@@ -36,6 +42,12 @@ namespace {
 		}
 		else if (typeStr == "container") {
 			entity.type = ItemType::Container;
+
+			// контейнер тоже может быть частью экипировки, но только рюкзаком или подсумком
+			QString equipType = json["equipmentType"].toString().toLower();
+			if (equipType == "backpack") entity.equipmentType = ItemEquipmentType::Backpack;
+			else if (equipType == "bag") entity.equipmentType = ItemEquipmentType::Bag;
+
 			QJsonObject cap = json["container"].toObject();
 			entity.container = ItemContainer{
 				cap["rows"].toInt(4),
@@ -63,14 +75,27 @@ namespace {
 			}
 		}
 	}
-}
 
+	QPixmap loadIcon(const ItemEntity& entity) {
+		const auto path = QString("items/%1")
+			.arg(entity.iconPath);
 
+		QPixmap pixmap;
+		Format::Pixmap::DataReader reader(resources, "assets", path);
+		if (!reader.read(pixmap)) {
+			return loadEmptyStubIcon(entity.id);
+		}
 
-class ItemsDataProviderJsonImpl::Private {
-public:
-	Private(ItemsDataProviderJsonImpl* paren)
-		: q(paren) {
+		return pixmap;
+	}
+
+	QPixmap loadEmptyStubIcon(const QString& id) {
+		QPixmap result = QPixmap(64, 64);
+		result.fill(Qt::darkGray);
+		QPainter painter(&result);
+		painter.setPen(Qt::white);
+		painter.drawText(result.rect(), Qt::AlignCenter, id.left(2));
+		return result;
 	}
 
 	ItemsDataProviderJsonImpl* q;
@@ -94,37 +119,15 @@ bool ItemsDataProviderJsonImpl::loadEntity(const QString& id, ItemEntity& entity
 		return false;
 	}
 
-	itemEntityFromJson(json, entity);
+	d->itemEntityFromJson(json, entity);
 
-	entity.icon = loadIcon(entity);
+	entity.icon = d->loadIcon(entity);
 
 	return true;
 }
 
-QPixmap ItemsDataProviderJsonImpl::loadIcon(const ItemEntity& entity) const {
-	const auto path = QString("items/%1")
-		.arg(entity.iconPath);
-
-	QPixmap pixmap;
-	Format::Pixmap::DataReader reader(d->resources, "assets", path);
-	if (!reader.read(pixmap)) {
-		return loadEmptyStubIcon(entity.id);
-	}
-
-	return pixmap;
-}
-
-QPixmap ItemsDataProviderJsonImpl::loadEmptyStubIcon(const QString& id) {
-	QPixmap result = QPixmap(64, 64);
-	result.fill(Qt::darkGray);
-	QPainter painter(&result);
-	painter.setPen(Qt::white);
-	painter.drawText(result.rect(), Qt::AlignCenter, id.left(2));
-	return result;
-}
-
 bool ItemsDataProviderJsonImpl::loadEntitiesIds(std::list<QString>& list) const {
-	const auto path = QString("items/items_ids.json");
+	const auto path = QString("items/entities_ids.json");
 
 	QJsonObject json;
 	Format::Json::DataReader reader(d->resources, "assets", path);

@@ -13,7 +13,7 @@ class MessagesExplorerWidget : public BaseTabWidget {
   Q_OBJECT
 
 public:
-  explicit MessagesExplorerWidget(std::shared_ptr<Resources> resources, const QVariantMap& params,
+  explicit MessagesExplorerWidget(Resources* resources, const QVariantMap& params,
 		QWidget* parent = nullptr);
   ~MessagesExplorerWidget() override = default;
 

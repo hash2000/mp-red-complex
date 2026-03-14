@@ -1,7 +1,7 @@
 #include "Game/widgets/equipment/equipment_window.h"
 #include "Game/widgets/equipment/equipment_widget.h"
-#include "ApplicationLayer/inventory/inventories_service.h"
 #include <QVBoxLayout>
+#include <QUuid>
 
 class EquipmentWindow::Private {
 public:
@@ -15,23 +15,8 @@ public:
 EquipmentWindow::EquipmentWindow(InventoriesService* inventoriesService, const QString& id, QWidget* parent)
 	: d(std::make_unique<Private>(this))
 	, MdiChildWindow(id, parent) {
-	d->widget = new EquipmentWidget(this);
+	d->widget = new EquipmentWidget(inventoriesService, this);
 	setWindowTitle("Equipment");
-
-	connect(d->widget, &EquipmentWidget::itemEquipped, [](const EquipmentItem& item, EquipmentSlotType slot) {
-		qDebug() << "Equipped" << item.name << "to slot" << static_cast<int>(slot);
-		});
-
-	connect(d->widget, &EquipmentWidget::itemUnequipped, [](const EquipmentItem& item, EquipmentSlotType slot) {
-		qDebug() << "Unequipped" << item.name << "from slot" << static_cast<int>(slot);
-		});
-
-	EquipmentItem sword{ "sword_001", "Rusty Sword",
-		EquipmentItemType::Weapon,
-		QPixmap(":/icons/sword.png"),
-		EquipmentItemRarityType::Common };
-
-	d->widget->equipItem(sword);
 	setWidget(d->widget);
 }
 
@@ -42,6 +27,18 @@ EquipmentWidget* EquipmentWindow::widget() const {
 }
 
 bool EquipmentWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) {
+	if (commandName == "create") {
+		const auto target = QUuid::fromString(windowId());
+		if (target.isNull()) {
+			return false;
+		}
 
-	return true;
+		if (!d->widget->setEquipmentService(target)) {
+			return false;
+		}
+
+		return true;
+	}
+
+	return false;
 }

@@ -14,5 +14,5 @@ public:
 
 	virtual ~MainFrame() = default;
 
-	void configure(const std::shared_ptr<Config>& config) override;
+	void configure(const Config* config) override;
 };

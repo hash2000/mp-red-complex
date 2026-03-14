@@ -12,7 +12,7 @@
 #include <qnamespace.h>
 #include <QUuid>
 
-ResourcesViewerFrame::ResourcesViewerFrame(std::shared_ptr<Resources> resources)
+ResourcesViewerFrame::ResourcesViewerFrame(Resources* resources)
 	: _resources(resources)
 	, _assetsModel(new QStandardItemModel(this))
 	, _assetsView(new ResourcesTree)

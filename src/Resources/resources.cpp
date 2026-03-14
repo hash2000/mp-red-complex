@@ -7,7 +7,7 @@
 Resources::Resources() {
 }
 
-void Resources::configure(const std::shared_ptr<Config> &config) {
+void Resources::configure(const Config* config) {
 	_resources_path = QDir(config->resources_path);
 	_resources_path_raw = QDir(config->resources_path_raw);
 

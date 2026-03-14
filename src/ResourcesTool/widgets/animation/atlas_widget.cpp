@@ -5,7 +5,7 @@
 #include "DataFormat/data_format/pal/data_reader.h"
 #include <QSplitter>
 
-AtlasWidget::AtlasWidget(std::shared_ptr<Resources> resources, const QVariantMap& params, QWidget* parent)
+AtlasWidget::AtlasWidget(Resources* resources, const QVariantMap& params, QWidget* parent)
 : BaseTabWidget(resources, params, parent) {
 	auto view = new AtlasView;
 

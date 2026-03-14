@@ -1,4 +1,4 @@
-#include "Game/widgets/items/items_styles.h"
+#include "Game/styles/items_styles.h"
 
 namespace ItemsStyles {
 	QString rarityColor(ItemRarityType rarity) {

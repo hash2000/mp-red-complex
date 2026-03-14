@@ -5,7 +5,7 @@
 
 class MapEditorWidget : public BaseTabWidget {
 public:
-	explicit MapEditorWidget(std::shared_ptr<Resources> resources, const QVariantMap& params,
+	explicit MapEditorWidget(Resources* resources, const QVariantMap& params,
 		QWidget *parent = nullptr);
 
 	virtual ~MapEditorWidget() = default;

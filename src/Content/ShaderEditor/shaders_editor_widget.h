@@ -8,7 +8,7 @@ class ShaderControlPanel;
 
 class ShadersEditorWidget : public BaseTabWidget {
 public:
-	explicit ShadersEditorWidget(std::shared_ptr<Resources> resources, const QVariantMap& params,
+	explicit ShadersEditorWidget(Resources* resources, const QVariantMap& params,
 		QWidget* parent = nullptr);
 
 	virtual ~ShadersEditorWidget();
@@ -19,5 +19,4 @@ private slots:
 
 private:
 	ShaderControlPanel* _controlPanel;
-
 };

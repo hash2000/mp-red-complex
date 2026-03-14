@@ -18,9 +18,9 @@ public:
 
 	WorldService* worldService() const;
 
-	InventoriesService* inventoriesService() const;
-
 	ItemsService* itemsService() const;
+
+	InventoriesService* inventoriesService() const;
 
 	void run();
 

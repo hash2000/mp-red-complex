@@ -10,7 +10,7 @@ class HomePageWidget : public BaseTabWidget {
 	Q_OBJECT
 
 public:
-	HomePageWidget(std::shared_ptr<Resources> resources, const QVariantMap& params,
+	HomePageWidget(Resources* resources, const QVariantMap& params,
 		MainFrame *mainFrame, QWidget *parent = nullptr);
 
 private:

@@ -12,7 +12,7 @@ public:
 	explicit EntitiesWindow(ItemsService* service, const QString& id, QWidget* parent = nullptr);
 	~EntitiesWindow() override;
 
-	QString windowType() const override { return "items"; }
+	QString windowType() const override { return "entities"; }
 
 	QString windowTitle() const { return "Библиотека предметов"; }
 

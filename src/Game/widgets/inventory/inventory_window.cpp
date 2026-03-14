@@ -1,7 +1,7 @@
 #include "Game/widgets/inventory/inventory_window.h"
 #include "Game/widgets/inventory/inventory_grid_view.h"
 #include "Game/widgets/inventory/inventory_grid.h"
-#include "ApplicationLayer/inventory/inventories_service.h"
+#include "ApplicationLayer/inventories_service.h"
 #include <QVBoxLayout>
 #include <QUuid>
 #include <QMdiSubWindow>
@@ -38,6 +38,7 @@ bool InventoryWindow::handleCommand(const QString& commandName, const QStringLis
 		if (target.isNull()) {
 			return false;
 		}
+
 		if (!d->widget->load(target)) {
 			return false;
 		}

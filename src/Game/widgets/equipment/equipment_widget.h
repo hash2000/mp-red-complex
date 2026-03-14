@@ -1,36 +1,23 @@
 #pragma once
-#include "Game/widgets/equipment/equipment_slot_widget.h"
-#include <QWidget>
-#include <optional>
+#include "ApplicationLayer/equipment/equipment_item_handler.h"
+#include <QFrame>
 #include <memory>
+
+class EquipmentSlot;
+class InventoriesService;
 
 class EquipmentWidget : public QFrame {
 	Q_OBJECT
 
 public:
-	explicit EquipmentWidget(QWidget* parent = nullptr);
+	explicit EquipmentWidget(InventoriesService* inventoriesService, QWidget* parent = nullptr);
 	~EquipmentWidget() override;
 
-	// Получить предмет из слота
-	std::optional<EquipmentItem> getItem(EquipmentSlotType slot) const;
+	bool setEquipmentService(const QUuid& id);
 
-	// Программное снаряжение/снятие
-	bool equipItem(const EquipmentItem& item);
-	void unequipItem(EquipmentSlotType slot);
-
-	// Очистить всё снаряжение
-	void clearAll();
-
-	// Получить все слоты для интеграции с инвентарем
-	QMap<EquipmentSlotType, EquipmentSlot*> allSlots() const;
-
-signals:
-	void itemEquipped(const EquipmentItem& item, EquipmentSlotType slot);
-	void itemUnequipped(const EquipmentItem& item, EquipmentSlotType slot);
-
-private:
-	void setupLayout();
-	EquipmentSlot* findCompatibleSlot(const EquipmentItem& item) const;
+private slots:
+	void onItemEquipped(const EquipmentItemHandler& item, EquipmentSlotType slot, const QString& inventoryId);
+	void onItemUnequipped(const EquipmentItemHandler& item, EquipmentSlotType slot);
 
 private:
 	class Private;

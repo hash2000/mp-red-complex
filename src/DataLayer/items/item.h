@@ -36,7 +36,9 @@ enum class ItemRarityType {
 	Unique,
 };
 
+// если этот предмет-экиперовка, сразу нежно знать куда эта экиперовка одевается
 enum class ItemEquipmentType {
+	None,
 	Head,
 	Body,
 	Weapon,
@@ -45,21 +47,12 @@ enum class ItemEquipmentType {
 	Boots,
 	Ring,
 	Amulet,
-	Consumable,
 	Resource,
-};
+	Consumable,
+	Backpack,
+	Bag,
 
-enum class ItemEquipmentSlotType {
-	Head,
-	Body,
-	WeaponLeft,
-	WeaponRight,
-	GlovesLeft,
-	GlovesRight,
-	Boots,
-	RingLeft,
-	RingRight,
-	Amulet,
+	LastSlot,
 };
 
 // рецепты
@@ -93,8 +86,10 @@ public:
 	int maxStack = 1;
 
 	ItemRarityType rarity = ItemRarityType::Common;
+
 	// если это экипировка, то какая
-	std::optional<ItemEquipmentType> equipmentType;
+	ItemEquipmentType equipmentType;
+
 	// рецепт
 	std::optional<ItemRecipe> recipe;
 	// контейнер
@@ -105,5 +100,6 @@ class Item {
 public:
 	QString id;
 	QString entityId;
+
 	const ItemEntity* entity;
 };

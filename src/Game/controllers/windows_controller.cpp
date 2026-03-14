@@ -166,7 +166,6 @@ QList<QPair<QPointer<MdiChildWindow>, QString>> WindowsController::windowEntries
 		MdiChildWindow* rawPtr = it.key();
 		const QString& windowId = it.value();
 
-		// 🔑 КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: проверка сырого указателя на nullptr
 		if (rawPtr == nullptr) {
 			continue;
 		}

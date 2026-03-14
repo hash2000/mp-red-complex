@@ -16,7 +16,7 @@
 
 class ResourcesViewerFrame : public MainFrame {
 public:
-	ResourcesViewerFrame(std::shared_ptr<Resources> resources);
+	ResourcesViewerFrame(Resources* resources);
 
 	virtual ~ResourcesViewerFrame() = default;
 
@@ -42,9 +42,9 @@ private slots:
 	void onRequestTabCreation(const QVariantMap& params);
 
 private:
-	std::shared_ptr<Resources> _resources;
 	std::shared_ptr<StreamWidgetSelector> _selector;
 	std::shared_ptr<TabsController> _tabs;
+	Resources* _resources;
 	ResourcesTree*_assetsView;
 	QStandardItemModel *_assetsModel;
 	QListWidget *_actionsList;

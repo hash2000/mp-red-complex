@@ -5,7 +5,7 @@
 
 class TextWidget : public BaseTabWidget {
 public:
-	explicit TextWidget(std::shared_ptr<Resources> resources, const QVariantMap& params,
+	explicit TextWidget(Resources* resources, const QVariantMap& params,
 		QWidget* parent = nullptr);
 	~TextWidget() override = default;
 };

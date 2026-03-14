@@ -9,7 +9,7 @@
 #include "ResourcesTool/widgets/text/text_widget.h"
 #include "ResourcesTool/widgets/pallete/pallete_explorer_widget.h"
 
-WidgetsFactory::WidgetsFactory(std::shared_ptr<Resources> resources, const QVariantMap& params)
+WidgetsFactory::WidgetsFactory(Resources* resources, const QVariantMap& params)
 : _params(params)
 , _resources(resources) {
 }

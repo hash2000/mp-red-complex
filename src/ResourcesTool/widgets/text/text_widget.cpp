@@ -2,7 +2,7 @@
 #include "DataFormat/data_format/txt/data_reader.h"
 #include <QPlainTextEdit>
 
-TextWidget::TextWidget(std::shared_ptr<Resources> resources, const QVariantMap& params, QWidget* parent)
+TextWidget::TextWidget(Resources* resources, const QVariantMap& params, QWidget* parent)
 : BaseTabWidget(resources, params, parent) {
 	auto block = currentStream();
 	auto view = new QPlainTextEdit;

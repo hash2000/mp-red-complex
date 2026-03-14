@@ -5,10 +5,10 @@
 
 class AssetsModelBuilderLinear {
 public:
-	AssetsModelBuilderLinear(QStandardItem* parent, const std::shared_ptr<Resources>& resources);
+	AssetsModelBuilderLinear(QStandardItem* parent, const Resources* resources);
 	void build();
 
 private:
 	QStandardItem* _parent;
-	const std::shared_ptr<Resources> _resources;
+	const Resources* _resources;
 };

@@ -11,6 +11,64 @@ public:
 		: q(paren) {
 	}
 
+	const ItemEntity* entityById(const QString& id) const {
+		const auto& it = itemEntities.find(id);
+		if (it == itemEntities.end()) {
+			return nullptr;
+		}
+
+		return it->second.get();
+	}
+
+	Item* itemById(const QString& id) {
+		const auto& it = items.find(id);
+		if (it != items.end()) {
+			return it->second.get();
+		}
+
+		return nullptr;
+	}
+
+	Item* makeItem(const QString& id) {
+		auto item = itemById(id);
+		if (item) {
+			return item;
+		}
+
+		auto newItem = std::make_unique<Item>();
+		if (!dataProvider->loadItem(id, *newItem)) {
+			return nullptr;
+		}
+
+		newItem->entity = entityById(newItem->entityId);
+		if (!newItem->entity) {
+			qWarning() << "Unknown item entity" << newItem->entityId;
+			return nullptr;
+		}
+
+		const auto& emplaceResult = items.emplace(newItem->id, std::move(newItem));
+
+		return emplaceResult.first->second.get();
+	}
+
+	Item* createItemByEntity(const QString& entityId) {
+		auto newItem = std::make_unique<Item>();
+		newItem->entity = entityById(entityId);
+		if (!newItem->entity) {
+			qWarning() << "Unknown item entity" << entityId;
+			return nullptr;
+		}
+
+		newItem->id = QUuid::createUuid()
+			.toString(QUuid::StringFormat::WithoutBraces);
+		newItem->entityId = entityId;
+
+		const auto& emplaceResult = items.emplace(newItem->id, std::move(newItem));
+
+		return emplaceResult.first->second.get();
+
+	}
+
 	ItemsService* q;
 	ItemsDataProvider* dataProvider;
 	std::map<QString, std::unique_ptr<ItemEntity>> itemEntities;
@@ -51,52 +109,19 @@ ItemsService::EntityView ItemsService::entities() const {
 }
 
 const ItemEntity* ItemsService::entityById(const QString& id) const {
-	const auto& it = d->itemEntities.find(id);
-	if (it == d->itemEntities.end()) {
-		return nullptr;
-	}
-
-	return it->second.get();
+	return d->entityById(id);
 }
 
 const Item* ItemsService::itemById(const QString& id) {
-	const auto& it = d->items.find(id);
-	if (it != d->items.end()) {
-		return it->second.get();
-	}
-
-	auto item = std::make_unique<Item>();
-	if (!d->dataProvider->loadItem(id, *item)) {
-		return nullptr;
-	}
-
-	item->entity = entityById(item->entityId);
-
-	const auto& emplaceResult = d->items.emplace(item->id, std::move(item));
-
-	return emplaceResult.first->second.get();
+	return d->makeItem(id);
 }
 
-const Item* ItemsService::createItem(const QString& entittyId) {
-	const auto entity = entityById(entittyId);
-	if (!entity) {
-		return nullptr;
-	}
-
-	auto item = std::make_unique<Item>();
-	item->entityId = entittyId;
-	item->entity = entity;
-	item->id = QUuid::createUuid()
-		.toString(QUuid::StringFormat::WithoutBraces)
-		.toLower();
-
-	const auto& emplaceResult = d->items.emplace(item->id, std::move(item));
-
-	return emplaceResult.first->second.get();
+ItemsService::ItemView ItemsService::items() const {
+	return make_deref_view(d->items);
 }
 
 const Item* ItemsService::duplicate(const QString& id) {
-	const auto from = itemById(id);
+	const auto from = d->itemById(id);
 	if (!from) {
 		return nullptr;
 	}
@@ -111,3 +136,9 @@ const Item* ItemsService::duplicate(const QString& id) {
 
 	return emplaceResult.first->second.get();
 }
+
+const Item* ItemsService::createItemByEntity(const QString& entityId) {
+	return d->createItemByEntity(entityId);
+}
+
+

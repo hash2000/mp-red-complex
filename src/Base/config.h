@@ -38,6 +38,6 @@ class Configurable {
 public:
 	virtual ~Configurable() = default;
 
-	virtual void configure(const std::shared_ptr<Config> &config) = 0;
+	virtual void configure(const Config* config) = 0;
 };
 

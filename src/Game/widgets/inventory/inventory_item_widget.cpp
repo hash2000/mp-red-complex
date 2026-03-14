@@ -1,8 +1,10 @@
 #include "Game/widgets/inventory/inventory_item_widget.h"
 #include "Game/widgets/inventory/inventory_grid.h"
 #include "Game/widgets/inventory/stack_split_widget.h"
+#include "Game/styles/items_styles.h"
+#include "Game/dragndrop/drag_event_builder.h"
 #include "ApplicationLayer/inventory/inventory_item_handler.h"
-#include "ApplicationLayer/inventory/inventory_item_mime_data.h"
+#include "ApplicationLayer/items/item_mime_data.h"
 #include <QApplication>
 #include <QVBoxLayout>
 #include <QLabel>
@@ -41,14 +43,16 @@ InventoryItemWidget::InventoryItemWidget(const InventoryItemHandler& item, Inven
 	d->item = item;
 	d->grid = grid;
 
-	setFixedSize(item.entity->width * CELL_SIZE, item.entity->height * CELL_SIZE);
+	setFixedSize(
+		item.entity->width * ItemsStyles::CELL_SIZE,
+		item.entity->height * ItemsStyles::CELL_SIZE);
 	setObjectName(newObjectName());
 
 	// Иконка
 	d->iconLabel = new QLabel(this);
 	d->iconLabel->setPixmap(item.entity->icon.scaled(
-		item.entity->width * CELL_SIZE - 4,
-		item.entity->height * CELL_SIZE - 4,
+		item.entity->width * ItemsStyles::CELL_SIZE - 4,
+		item.entity->height * ItemsStyles::CELL_SIZE - 4,
 		Qt::KeepAspectRatio,
 		Qt::SmoothTransformation
 	));
@@ -126,34 +130,9 @@ bool InventoryItemWidget::isStackable() const {
 }
 
 void InventoryItemWidget::startDrag() {
-	QDrag* drag = new QDrag(this);
-	QMimeData* mimeData = new QMimeData();
-
-	mimeData->setData("application/x-game-item", d->item.toMimeData());
-	mimeData->setData("application/x-game-item-source-inventory-id", d->grid->inventoryId().toUtf8());
-	mimeData->setText(d->item.entity->name);
-
-	// Иконка для курсора
-	QPixmap dragPixmap;
-	if (d->item.entity->icon.isNull()) {
-		dragPixmap = QPixmap(CELL_SIZE, CELL_SIZE);
-		dragPixmap.fill(Qt::darkCyan);
-	}
-	else
-	{
-		dragPixmap = d->item.entity->icon.scaled(CELL_SIZE, CELL_SIZE, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-	}
-
-	drag->setMimeData(mimeData);
-	drag->setPixmap(dragPixmap);
-	drag->setHotSpot(QPoint(dragPixmap.width() / 2, dragPixmap.height() / 2));
-
-	// Визуальная обратная связь: полупрозрачность во время драга
+	DragEventBuilder builder(this, ItemMimeData(d->item), *d->item.entity, d->grid->inventoryId());
 	setWindowOpacity(0.6);
-
-	Qt::DropAction dropAction = drag->exec(Qt::MoveAction);
-
-	// Восстанавливаем прозрачность
+	Qt::DropAction dropAction = builder.ExecDrag(Qt::MoveAction);
 	setWindowOpacity(1.0);
 }
 
@@ -230,7 +209,7 @@ void InventoryItemWidget::dragEnterEvent(QDragEnterEvent* event) {
 		return;
 	}
 
-	auto droppedItem = InventoryItemMimeData::fromMimeData(event->mimeData()->data("application/x-game-item"));
+	auto droppedItem = ItemMimeData::fromMimeData(event->mimeData()->data("application/x-game-item"));
 	if (droppedItem.id == d->item.id &&
 		d->item.count <= d->item.entity->maxStack) {
 		event->acceptProposedAction();
@@ -244,7 +223,7 @@ void InventoryItemWidget::dropEvent(QDropEvent* event) {
 		return;
 	}
 
-	auto droppedItem = InventoryItemMimeData::fromMimeData(event->mimeData()->data("application/x-game-item"));
+	auto droppedItem = ItemMimeData::fromMimeData(event->mimeData()->data("application/x-game-item"));
 	if (droppedItem.id != d->item.id) {
 		event->ignore();
 		return;

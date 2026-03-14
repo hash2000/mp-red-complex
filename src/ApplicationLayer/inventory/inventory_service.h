@@ -1,4 +1,5 @@
 #pragma once
+#include "ApplicationLayer/items_placement_service.h"
 #include "Base/container_view.h"
 #include <QObject>
 #include <QUuid>
@@ -9,9 +10,9 @@ class ItemsService;
 class Inventory;
 class InventoryItem;
 class InventoryItemHandler;
-class InventoryItemMimeData;
+class ItemMimeData;
 
-class InventoryService : public QObject {
+class InventoryService : public QObject, public ItemPlacementService {
 	Q_OBJECT
 public:
 	using EntityView = decltype(make_deref_view(std::declval<const std::map<QString, std::unique_ptr<InventoryItemHandler>>&>()));
@@ -21,42 +22,39 @@ public:
 
 	bool load(const Inventory& inventory);
 
-	QString inventoryId() const;
+	QString placementId() const override;
 	QString inventoryName() const;
-	int rows() const;
-	int cols() const;
 
-	bool placeItem(const InventoryItemMimeData& item);
-	int canPlaceItem(const InventoryItemMimeData& item, int col, int row, bool checkItemPlace) const;
-	std::optional<QPoint> findFreeSpace(const InventoryItemMimeData& item, bool checkItemPlace) const;
+	int rows() const override;
+	int cols() const override;
 
-	bool moveItem(const InventoryItemMimeData& item, int newCol, int newRow, bool checkItemPlace);
-	void removeItem(const InventoryItemMimeData& item);
+	int canPlaceItem(const ItemMimeData& item, int col, int row, bool checkItemPlace) const override;
+	std::optional<QPoint> findFreeSpace(const ItemMimeData& item, bool checkItemPlace) const override;
 
-	InventoryItemHandler* itemById(const QString& id) const;
-	InventoryItemHandler* itemAt(int col, int row) const;
+	bool moveItem(const ItemMimeData& item, int newCol, int newRow, bool checkItemPlace) override;
+	void removeItem(const ItemMimeData& item) override;
+
+	const InventoryItemHandler* itemById(const QString& id) const;
+	const InventoryItemHandler* itemAt(int col, int row) const;
 	EntityView items() const;
 
-	bool containsItem(const InventoryItemMimeData& item) const;
+	bool containsItem(const ItemMimeData& item) const override;
 
-	void clear();
+	void clear() override;
+	bool placeItem(const ItemMimeData& item);
+	bool removeItemsFromStack(const ItemMimeData& item) override;
 
-	bool applyItem(const InventoryItemMimeData& item);
-	bool attachItem(const InventoryItemMimeData& item);
-	bool detachItem(const InventoryItemMimeData& item);
-
-	bool changeItemsCount(const InventoryItemMimeData& item);
-
-private:
-	void setupCells();
+	ItemMimeData itemDataById(const QString& id) const override;
 
 signals:
-	void placeItemEvent(const InventoryItemMimeData& item, int row, int col);
-	void removeItemEvent(const InventoryItemMimeData& item, int row, int col);
-	void moveItemEvent(const InventoryItemMimeData& item, int row, int col, int newCol, int newRow);
-	void itemCountChanged(const InventoryItemMimeData& item);
+	void placeItemEvent(const ItemMimeData& item, int col, int row);
+	void removeItemEvent(const ItemMimeData& item, int col, int row);
+	void moveItemEvent(const ItemMimeData& item, int col, int row, int newCol, int newRow);
+	void itemCountChanged(const ItemMimeData& item);
 
 private:
 	class Private;
 	std::unique_ptr<Private> d;
+
+	friend class TestInventoriesService;  // Для юнит-тестов
 };

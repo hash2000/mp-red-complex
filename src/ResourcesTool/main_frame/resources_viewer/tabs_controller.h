@@ -8,7 +8,7 @@
 class TabsController : public QObject {
 	Q_OBJECT
 public:
-	TabsController(QTabWidget* tabs, std::shared_ptr<Resources> resources);
+	TabsController(QTabWidget* tabs, Resources* resources);
 
 	void closeByIndex(int index);
 
@@ -22,7 +22,7 @@ private slots:
 	void onTabChange(int index);
 
 private:
-	std::shared_ptr<Resources> _resources;
+	Resources* _resources;
 	QTabWidget* _tabs;
 	int _current = 0;
 };

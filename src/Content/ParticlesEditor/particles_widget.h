@@ -5,7 +5,7 @@
 
 class ParticlesWidget : public BaseTabWidget {
 public:
-	explicit ParticlesWidget(std::shared_ptr<Resources> resources, const QVariantMap& params,
+	explicit ParticlesWidget(Resources* resources, const QVariantMap& params,
 		QWidget *parent = nullptr);
 
 	virtual ~ParticlesWidget() = default;

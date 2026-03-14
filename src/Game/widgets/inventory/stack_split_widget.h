@@ -3,7 +3,7 @@
 
 class InventoryGrid;
 class InventoryItemHandler;
-class InventoryItemMimeData;
+class ItemMimeData;
 
 class StackSplitWidget : public QWidget {
 	Q_OBJECT
@@ -22,7 +22,7 @@ public:
 signals:
 	void splitConfirmed(int count);
 	void splitCancelled();
-	void splitDropStarted(const InventoryItemMimeData& splitItem);
+	void splitDropStarted(const ItemMimeData& splitItem);
 
 protected:
 	void mousePressEvent(QMouseEvent* event) override;

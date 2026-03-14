@@ -3,5 +3,5 @@
 MainFrame::MainFrame() {
 }
 
-void MainFrame::configure(const std::shared_ptr<Config> &config) {
+void MainFrame::configure(const Config* config) {
 }

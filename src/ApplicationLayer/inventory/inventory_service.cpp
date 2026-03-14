@@ -1,8 +1,8 @@
 #include "ApplicationLayer/inventory/inventory_service.h"
-#include "ApplicationLayer/inventory/inventories_service.h"
 #include "ApplicationLayer/inventory/inventory_item_handler.h"
-#include "ApplicationLayer/inventory/inventory_item_mime_data.h"
+#include "ApplicationLayer/items/item_mime_data.h"
 #include "ApplicationLayer/items/items_service.h"
+#include "DataLayer/items/item.h"
 #include <QHash>
 #include <QDebug>
 #include <vector>
@@ -17,11 +17,6 @@ class InventoryService::Private {
 public:
 	Private(InventoryService* parent)
 	: q(parent) {
-	}
-
-	InventoryItemHandler* duplicateItem(const QString& id) {
-		auto newItemDuplicate = itemsService->duplicate(id);
-		return makeInventoryitem(newItemDuplicate);
 	}
 
 	InventoryItemHandler* makeInventoryitem(const Item* item) {
@@ -41,9 +36,85 @@ public:
 		return result;
 	}
 
+	void setupCells() {
+		if (inventoryItems.empty()) {
+			cells.clear();
+		}
+
+		cells.resize(cols);
+		for (int col = 0; col < cols; col++) {
+			cells[col].resize(rows);
+			for (int row = 0; row < rows; row++) {
+				auto cell = std::make_unique<InventoryViewCell>();
+				cells[col][row] = std::move(cell);
+			}
+		}
+
+		items.clear();
+
+		for (const auto& itemIt : inventoryItems) {
+			auto item = itemIt.second.get();
+			if (!item) {
+				continue;
+			}
+
+			// Проверка валидности координат предмета
+			if (item->x < 0 || item->y < 0 ||
+				item->x + item->entity->width > cols ||
+				item->y + item->entity->height > rows) {
+				qWarning() << "InventoryService: item" << item->id
+					<< "has invalid position (" << item->x << "," << item->y
+					<< ") for grid" << cols << "x" << rows;
+				continue;
+			}
+
+			// Занимаем ячейки предметом
+			bool occupiedConflict = false;
+			for (int dy = 0; dy < item->entity->height && !occupiedConflict; dy++) {
+				for (int dx = 0; dx < item->entity->width && !occupiedConflict; dx++) {
+					int cellCol = item->x + dx;
+					int cellRow = item->y + dy;
+
+					if (cells[cellCol][cellRow]->occupied) {
+						qWarning() << "InventoryService: cell conflict at" << cellCol << "," << cellRow
+							<< "for item" << item->id;
+						occupiedConflict = true;
+						break;
+					}
+
+					auto& cell = cells[cellCol][cellRow];
+					cell->occupied = true;
+					cell->item = item;
+				}
+			}
+
+			if (!occupiedConflict) {
+				// Добавляем предмет в хеш по позиции [0,0]
+				items[{item->x, item->y}] = item;
+			}
+		}
+	}
+
+	InventoryItemHandler* itemAt(int col, int row) const {
+		if (col < 0 || row < 0 || col >= cols || row >= rows) {
+			return nullptr;
+		}
+
+		return cells[col][row]->item;
+	}
+
+	InventoryItemHandler* itemById(const QString& id) const {
+		const auto it = inventoryItems.find(id);
+		if (it != inventoryItems.end()) {
+			return it->second.get();
+		}
+
+		return nullptr;
+	}
+
 	InventoryService* q;
 	ItemsService* itemsService;
-	QString inventoryId;
+	QString placementId;
 	QString inventoryName;
 	int rows;
 	int cols;
@@ -62,19 +133,17 @@ InventoryService::~InventoryService() = default;
 bool InventoryService::load(const Inventory& inventory) {
 	d->rows = inventory.rows;
 	d->cols = inventory.cols;
-	d->inventoryId = inventory.id;
+	d->placementId = inventory.id;
 	d->inventoryName = inventory.name;
 
 	for (const auto &it : inventory.items) {
 		const auto item = d->itemsService->itemById(it.id);
 		if (!item) {
-			qDebug() << "InventoryService::load" << d->inventoryName << d->inventoryId << "can't load item" << item->id;
+			qDebug() << "InventoryService::load" << d->inventoryName << d->placementId << "can't load item" << it.id;
 			continue;
 		}
 
-		auto invItem = std::make_unique<InventoryItemHandler>();
-		invItem->id = item->id;
-		invItem->entity = item->entity;
+		auto invItem = d->makeInventoryitem(item);
 		invItem->x = it.x;
 		invItem->y = it.y;
 		invItem->count = it.count;
@@ -82,12 +151,12 @@ bool InventoryService::load(const Inventory& inventory) {
 		d->inventoryItems.emplace(invItem->id, std::move(invItem));
 	}
 
-	setupCells();
+	d->setupCells();
 	return true;
 }
 
-QString InventoryService::inventoryId() const {
-	return d->inventoryId;
+QString InventoryService::placementId() const {
+	return d->placementId;
 }
 
 QString InventoryService::inventoryName() const {
@@ -106,88 +175,57 @@ int InventoryService::cols() const {
 	return d->cols;
 }
 
-void InventoryService::setupCells() {
-	if (d->inventoryItems.empty()) {
-		d->cells.clear();
-		d->items.clear();
-	}
-
-	d->cells.resize(d->cols);
-	for (int col = 0; col < d->cols; col++) {
-		d->cells[col].resize(d->rows);
-		for (int row = 0; row < d->rows; row++) {
-			auto cell = std::make_unique<InventoryViewCell>();
-			d->cells[col][row] = std::move(cell);
-		}
-	}
-
-	d->items.clear();
-
-	for (const auto& itemIt : d->inventoryItems) {
-		auto item = itemIt.second.get();
-		if (!item) {
-			continue;
-		}
-
-		// Проверка валидности координат предмета
-		if (item->x < 0 || item->y < 0 ||
-			item->x + item->entity->width > d->cols ||
-			item->y + item->entity->height > d->rows) {
-			qWarning() << "InventoryService: item" << item->id
-				<< "has invalid position (" << item->x << "," << item->y
-				<< ") for grid" << d->cols << "x" << d->rows;
-			continue;
-		}
-
-		// Занимаем ячейки предметом
-		bool occupiedConflict = false;
-		for (int dy = 0; dy < item->entity->height && !occupiedConflict; dy++) {
-			for (int dx = 0; dx < item->entity->width && !occupiedConflict; dx++) {
-				int cellCol = item->x + dx;
-				int cellRow = item->y + dy;
-
-				if (d->cells[cellCol][cellRow]->occupied) {
-					qWarning() << "InventoryService: cell conflict at" << cellCol << "," << cellRow
-						<< "for item" << item->id;
-					occupiedConflict = true;
-					break;
-				}
-
-				auto& cell = d->cells[cellCol][cellRow];
-				cell->occupied = true;
-				cell->item = item;
-			}
-		}
-
-		if (!occupiedConflict) {
-			// Добавляем предмет в хеш по позиции [0,0]
-			d->items[{item->x, item->y}] = item;
-		}
-	}
+const InventoryItemHandler* InventoryService::itemAt(int col, int row) const {
+	return d->itemAt(col, row);
 }
 
-bool InventoryService::placeItem(const InventoryItemMimeData& item) {
-	auto itemPtr = itemById(item.id);
+const InventoryItemHandler* InventoryService::itemById(const QString& id) const {
+	return d->itemById(id);
+}
+
+ItemMimeData InventoryService::itemDataById(const QString& id) const {
+	const auto item = itemById(id);
+	if (!item) {
+		return ItemMimeData();
+	}
+	return ItemMimeData(*item);
+}
+
+bool InventoryService::placeItem(const ItemMimeData& item) {
+	int col = item.x;
+	int row = item.y;
+
+	const auto availableSpace = canPlaceItem(item, col, row, true);
+	if (availableSpace < item.count) {
+		return false;
+	}
+
+	const auto itemPtr = d->itemsService->itemById(item.id);
 	if (!itemPtr) {
 		return false;
 	}
 
-	int col = itemPtr->x;
-	int row = itemPtr->y;
+	auto invItemPtr = d->itemById(item.id);
+	if (!invItemPtr) {
+		invItemPtr = d->makeInventoryitem(itemPtr);
+		if (!invItemPtr) {
+			return false;
+		}
 
-	const auto availableSpace = canPlaceItem(item, col, row, true);
-	if (availableSpace == 0) {
-		return false;
+		invItemPtr->count = item.count;
+		invItemPtr->x = item.x;
+		invItemPtr->y = item.y;
 	}
 
-	int moveCount = qMin(itemPtr->count, availableSpace);
-	auto& targetCell = d->cells[item.x][item.y];
+	int moveCount = qMin(invItemPtr->count, availableSpace);
+	auto& targetCell = d->cells[col][row];
 	if (targetCell->occupied) {
 		bool canMerge = (
 			targetCell->item &&
-			targetCell->item->entity->type == itemPtr->entity->type &&
+			targetCell->item->entity->type == invItemPtr->entity->type &&
+			targetCell->item->entity->id == invItemPtr->entity->id &&
 			targetCell->item->id != item.id &&
-			itemPtr->entity->maxStack > 1);
+			invItemPtr->entity->maxStack > 1);
 
 		if (canMerge) {
 			int spaceInTarget = targetCell->item->entity->maxStack - targetCell->item->count;
@@ -205,27 +243,27 @@ bool InventoryService::placeItem(const InventoryItemMimeData& item) {
 		return false;
 	}
 
-	for (int dy = 0; dy < itemPtr->entity->height; dy++) {
-		for (int dx = 0; dx < itemPtr->entity->width; dx++) {
+	for (int dy = 0; dy < invItemPtr->entity->height; dy++) {
+		for (int dx = 0; dx < invItemPtr->entity->width; dx++) {
 			// занимаем все ячейки обласи предмета
 			// в каждой ячейке занимаемой предметом ссылка на этот предмет,
 			auto& cell = d->cells[col + dx][row + dy];
 			cell->occupied = true;
-			cell->item = itemPtr;
+			cell->item = invItemPtr;
 		}
 	}
 
-	d->items[{col, row}] = itemPtr;
+	d->items[{col, row}] = invItemPtr;
 
-	itemPtr->x = col;
-	itemPtr->y = row;
+	invItemPtr->x = col;
+	invItemPtr->y = row;
 
-	emit placeItemEvent(item, row, col);
+	emit placeItemEvent(item, col, row);
 
 	return true;
 }
 
-int InventoryService::canPlaceItem(const InventoryItemMimeData& item, int col, int row, bool checkItemPlace) const {
+int InventoryService::canPlaceItem(const ItemMimeData& item, int col, int row, bool checkItemPlace) const {
 	// Проверка границ инвентаря целиком
 	if (col < 0 || row < 0 || col + item.width > d->cols || row + item.height > d->rows) {
 		return 0;
@@ -243,13 +281,16 @@ int InventoryService::canPlaceItem(const InventoryItemMimeData& item, int col, i
 			if (cell->occupied) {
 				// Случай 1: это та же самая ячейка исходного предмета (при перемещении внутри себя)
 				if (checkItemPlace && cell->item && cell->item->id == item.id &&
-					checkX >= item.x && checkX < item.x + item.width &&
-					checkY >= item.y && checkY < item.y + item.height) {
+					checkX >= row && checkX < row + item.width &&
+					checkY >= col && checkY < col + item.height) {
 					continue; // Пропускаем ячейки самого предмета
 				}
 
 				// Случай 2: совместимый стекируемый предмет
-				if (cell->item && cell->item->entity->type == static_cast<ItemType>(item.type) && item.maxStack > 1) {
+				if (cell->item &&
+					cell->item->entity->type == static_cast<ItemType>(item.type) &&
+					cell->item->entity->id == item.entityId &&
+					item.maxStack > 1) {
 					// Возвращаем свободное место в стеке
 					return qMax(cell->item->entity->maxStack - cell->item->count, 0);
 				}
@@ -264,25 +305,17 @@ int InventoryService::canPlaceItem(const InventoryItemMimeData& item, int col, i
 	return item.count;
 }
 
-std::optional<QPoint> InventoryService::findFreeSpace(const InventoryItemMimeData& item, bool checkItemPlace) const {
+std::optional<QPoint> InventoryService::findFreeSpace(const ItemMimeData& item, bool checkItemPlace) const {
 	for (int row = 0; row < d->rows; row++) {
 		for (int col = 0; col < d->cols; col++) {
 			const auto count = canPlaceItem(item, col, row, checkItemPlace);
-			if (count == item.count) {
+			if (count >= item.count) {
 				return QPoint(col, row);
 			}
 		}
 	}
 
 	return std::nullopt;
-}
-
-InventoryItemHandler* InventoryService::itemAt(int col, int row) const {
-	if (col < 0 || row < 0 || col >= d->cols || row >= d->rows) {
-		return nullptr;
-	}
-
-	return d->cells[col][row]->item;
 }
 
 void InventoryService::clear() {
@@ -305,7 +338,7 @@ void InventoryService::clear() {
 	d->items.clear();
 }
 
-void InventoryService::removeItem(const InventoryItemMimeData& item) {
+void InventoryService::removeItem(const ItemMimeData& item) {
 	auto itemIt = d->inventoryItems.find(item.id);
 	if (itemIt == d->inventoryItems.end()) {
 		return;
@@ -335,9 +368,9 @@ void InventoryService::removeItem(const InventoryItemMimeData& item) {
 	emit removeItemEvent(item, itemPtr->y, itemPtr->x);
 }
 
-bool InventoryService::moveItem(const InventoryItemMimeData& item, int newCol, int newRow, bool checkItemPlace) {
+bool InventoryService::moveItem(const ItemMimeData& item, int newCol, int newRow, bool checkItemPlace) {
 	// Получаем полный предмет из инвентаря по ID
-	auto itemPtr = itemById(item.id);
+	auto itemPtr = d->itemById(item.id);
 	if (!itemPtr) {
 		return false;
 	}
@@ -365,6 +398,7 @@ bool InventoryService::moveItem(const InventoryItemMimeData& item, int newCol, i
 	bool canMerge = (targetCell->occupied &&
 		targetCell->item &&
 		targetCell->item->entity->type == itemPtr->entity->type &&
+		targetCell->item->entity->id == itemPtr->entity->id &&
 		itemPtr->entity->maxStack > 1);
 
 	// === СЛУЧАЙ 1: Объединение стеков (полное или частичное) ===
@@ -397,7 +431,7 @@ bool InventoryService::moveItem(const InventoryItemMimeData& item, int newCol, i
 				}
 
 				// Отправляем сигналы
-				emit removeItemEvent(*itemPtr, oldPos.x(), oldPos.y());
+				emit removeItemEvent(*itemPtr, oldPos.y(), oldPos.x());
 
 				// Удаляем из хеша позиций
 				d->items.remove(oldPos);
@@ -444,7 +478,7 @@ bool InventoryService::moveItem(const InventoryItemMimeData& item, int newCol, i
 			}
 		}
 
-		emit moveItemEvent(item, oldPos.x(), oldPos.y(), newCol, newRow);
+		emit moveItemEvent(item, oldPos.y(), oldPos.x(), newCol, newRow);
 
 		// Обновляем позицию в хеш-таблице
 		d->items.remove(oldPos);
@@ -459,7 +493,12 @@ bool InventoryService::moveItem(const InventoryItemMimeData& item, int newCol, i
 	// === СЛУЧАЙ 3: Частичное перемещение без объединения (создаём новый предмет) ===
 
 	// Создаём новый предмет для перемещённой части
-	auto newItemPtr = d->duplicateItem(itemPtr->id);
+	const auto newItem = d->itemsService->duplicate(itemPtr->id);
+	if (!newItem) {
+		return false;
+	}
+
+	auto newItemPtr = d->makeInventoryitem(newItem);
 	newItemPtr->count = moveCount;
 	newItemPtr->x = newCol;
 	newItemPtr->y = newRow;
@@ -486,13 +525,13 @@ bool InventoryService::moveItem(const InventoryItemMimeData& item, int newCol, i
 	emit itemCountChanged(*itemPtr);
 
 	// Отправляем сигналы
-	emit placeItemEvent(*newItemPtr, newRow, newCol); // Новый предмет создан
+	emit placeItemEvent(*newItemPtr, newCol, newRow); // Новый предмет создан
 	// Исходный предмет обновлён (количество уменьшено) — позиция не изменилась
 	return true;
 }
 
-bool InventoryService::containsItem(const InventoryItemMimeData& item) const {
-	auto itemPtr = itemById(item.id);
+bool InventoryService::containsItem(const ItemMimeData& item) const {
+	auto itemPtr = d->itemById(item.id);
 	if (!itemPtr) {
 		return false;
 	}
@@ -506,54 +545,9 @@ bool InventoryService::containsItem(const InventoryItemMimeData& item) const {
 	return cellItem->compare(*itemPtr);
 }
 
-InventoryItemHandler* InventoryService::itemById(const QString& id) const {
-	const auto it = d->inventoryItems.find(id);
-	if (it != d->inventoryItems.end()) {
-		return it->second.get();
-	}
 
-	return nullptr;
-}
-
-bool InventoryService::attachItem(const InventoryItemMimeData& item) {
-	if (d->inventoryItems.contains(item.id)) {
-		return false;
-	}
-
-	auto itemPtr = d->itemsService->itemById(item.id);
-	if (!itemPtr) {
-		return false;
-	}
-
-	auto invItem = d->makeInventoryitem(itemPtr);
-	if (!invItem) {
-		return false;
-	}
-
-	invItem->x = item.x;
-	invItem->y = item.y;
-	invItem->count = item.count;	
-
-	return placeItem(item);
-}
-
-bool InventoryService::detachItem(const InventoryItemMimeData& item) {
-	if (item.x < 0 || item.y < 0 || item.x + item.width > d->cols || item.y + item.height > d->rows) {
-		return false;
-	}
-
-	// нельзя отсоединить элемент от инвенраря, если он занимает ячейку
-	const auto &cell = d->cells[item.x][item.y];
-	if (cell->occupied && cell->item->id == item.id) {
-		return false;
-	}
-
-	d->inventoryItems.erase(item.id);
-	return true;
-}
-
-bool InventoryService::changeItemsCount(const InventoryItemMimeData& item) {
-	auto itemPtr = itemById(item.id);
+bool InventoryService::removeItemsFromStack(const ItemMimeData& item) {
+	auto itemPtr = d->itemById(item.id);
 	if (!itemPtr) {		
 		return false;
 	}
@@ -564,29 +558,8 @@ bool InventoryService::changeItemsCount(const InventoryItemMimeData& item) {
 	}
 	else {
 		itemPtr->count = remains;
-		emit itemCountChanged(InventoryItemMimeData(*itemPtr));
+		emit itemCountChanged(ItemMimeData(*itemPtr));
 	}
 	
-	return true;
-}
-
-bool InventoryService::applyItem(const InventoryItemMimeData& item) {
-	if (item.count == 0) {
-		return false;
-	}
-
-	auto invItem = d->duplicateItem(item.id);
-	if (!invItem) {
-		return false;
-	}
-
-	invItem->x = item.x;
-	invItem->y = item.y;
-	invItem->count = item.count;
-
-	if (!placeItem(InventoryItemMimeData(*invItem))) {
-		return false;
-	}
-
 	return true;
 }

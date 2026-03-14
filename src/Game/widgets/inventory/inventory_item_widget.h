@@ -1,5 +1,4 @@
 #pragma once
-#include "Game/widgets/items/items_styles.h"
 #include <QFrame>
 
 class InventoryGrid;
@@ -8,9 +7,6 @@ class InventoryItemWidget;
 
 class InventoryItemWidget : public QFrame {
 	Q_OBJECT
-public:
-	static constexpr int CELL_SIZE = ItemsStyles::CELL_SIZE;
-
 public:
 	explicit InventoryItemWidget(const InventoryItemHandler& item, InventoryGrid* grid, QWidget* parent = nullptr);
 	~InventoryItemWidget() override;

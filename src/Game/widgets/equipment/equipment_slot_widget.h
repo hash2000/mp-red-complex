@@ -1,6 +1,4 @@
 #pragma once
-#include "DataFormat/proto/equipment_item.h"
-#include "DataFormat/proto/equipment_slot.h"
 #include <QWidget>
 #include <QLabel>
 #include <QFrame>
@@ -9,29 +7,27 @@
 #include <memory>
 
 class EquipmentWidget;
+class EquipmentService;
+class EquipmentItemHandler;
+enum class EquipmentSlotType;
 
 class EquipmentSlot : public QLabel {
   Q_OBJECT
 public:
-  explicit EquipmentSlot(EquipmentSlotType type, EquipmentWidget* parentWidget, QWidget* parent = nullptr);
+  explicit EquipmentSlot(EquipmentService* equipmentService, EquipmentSlotType type, EquipmentWidget* parentWidget, QWidget* parent = nullptr);
   ~EquipmentSlot() override;
 
 	bool isOccupied() const;
 	bool isHighlighted() const;
   void setHighlighted(bool highlighted);
 
-	const std::optional<EquipmentItem>& item() const;
 	EquipmentSlotType slotType() const;
+	void clearItem();
+	void setItem(const EquipmentItemHandler& item);
 
   // Публичный интерфейс для программного управления
-  bool setItem(const EquipmentItem& item);
-  void clearItem();
-  bool canAcceptItem(const EquipmentItem& item) const;
-
-signals:
-  void itemEquipped(const EquipmentItem& item, EquipmentSlot* slot);
-  void itemRemoved(const EquipmentItem& item, EquipmentSlot* slot);
-  void slotClicked(EquipmentSlot* slot);
+  //bool setItem(const EquipmentItem& item);
+  //bool canAcceptItem(const EquipmentItem& item) const;
 
 protected:
   void mousePressEvent(QMouseEvent* event) override;

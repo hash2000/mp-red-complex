@@ -1,28 +1,22 @@
 #pragma once
-#include "Base/config.h"
-#include "Engine/main_frame.h"
-#include "Resources/resources.h"
-#include <QApplication>
 #include <memory>
+
+class MainFrame;
+class Resources;
+class Config;
 
 class Application {
 public:
-	virtual ~Application() = default;
+	Application();
+	virtual ~Application();
 
 protected:
-	virtual std::unique_ptr<MainFrame> createMainFrame() = 0;
-
-	std::shared_ptr<Resources> resources();
+	virtual std::unique_ptr<MainFrame> createMainFrame(Resources* resources) = 0;
 
 public:
 	int run(int &argc, char **argv);
 
 private:
-	int tryRun(int &argc, char **argv);
-
-	void installMessageHandler();
-
-private:
-	std::shared_ptr<Config> _config;
-	std::shared_ptr<Resources> _resources;
+	class Private;
+	std::unique_ptr<Private> d;
 };

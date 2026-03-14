@@ -1,8 +1,10 @@
 #include "Game/widgets/inventory/stack_split_widget.h"
 #include "Game/widgets/inventory/inventory_item_widget.h"
 #include "Game/widgets/inventory/inventory_grid.h"
+#include "Game/dragndrop/drag_event_builder.h"
+#include "Game/styles/items_styles.h"
 #include "ApplicationLayer/inventory/inventory_item_handler.h"
-#include "ApplicationLayer/inventory/inventory_item_mime_data.h"
+#include "ApplicationLayer/items/item_mime_data.h"
 #include "BaseWidgets/clicable_label.h"
 #include <QSlider>
 #include <QLineEdit>
@@ -230,31 +232,17 @@ void StackSplitWidget::onStartDrag() {
 	d->iconLabel->setCursor(Qt::ClosedHandCursor);
 	const auto splitItem = createSplitItem();
 
-	QDrag* drag = new QDrag(this);
-	QMimeData* mimeData = new QMimeData();
-
-	mimeData->setData("application/x-game-item", splitItem.toMimeData());
-	mimeData->setData("application/x-game-item-source-inventory-id", d->grid->inventoryId().toUtf8());
-	mimeData->setText(splitItem.entity->name);
-
-	// Иконка для курсора
-	QPixmap dragPixmap = splitItem.entity->icon.scaled(
-		InventoryItemWidget::CELL_SIZE,
-		InventoryItemWidget::CELL_SIZE,
-		Qt::KeepAspectRatio, Qt::SmoothTransformation);
-	drag->setMimeData(mimeData);
-	drag->setPixmap(dragPixmap);
-	drag->setHotSpot(dragPixmap.rect().center());
+	DragEventBuilder builder(this, ItemMimeData(splitItem), *splitItem.entity, d->grid->inventoryId());
 
 	// Визуальная обратная связь
 	d->iconLabel->setCursor(Qt::ClosedHandCursor);
 
-	Qt::DropAction dropAction = drag->exec(Qt::MoveAction);
+	const auto dropAction = builder.ExecDrag(Qt::MoveAction);
 
 	d->iconLabel->setCursor(Qt::OpenHandCursor);
 
 	if (dropAction == Qt::MoveAction) {
-		emit splitDropStarted(InventoryItemMimeData(splitItem));
+		emit splitDropStarted(ItemMimeData(splitItem));
 		close(); // Закрываем виджет после успешного дропа
 	}
 }

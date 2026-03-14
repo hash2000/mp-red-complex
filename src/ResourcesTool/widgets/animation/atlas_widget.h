@@ -5,6 +5,6 @@
 
 class AtlasWidget : public BaseTabWidget {
 public:
-	AtlasWidget(std::shared_ptr<Resources> resources, const QVariantMap& params, QWidget* parent = nullptr);
+	AtlasWidget(Resources* resources, const QVariantMap& params, QWidget* parent = nullptr);
 
 };

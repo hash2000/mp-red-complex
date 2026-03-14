@@ -1,60 +1,56 @@
 #include "Engine/application.h"
-#include "Engine/application/application_session.h"
-#include "Engine/application/application_exception.h"
 #include "Engine/engine.h"
+#include "Engine/main_frame.h"
+#include "Base/config.h"
+#include "Resources/resources.h"
 #include <QSurfaceFormat>
+#include <QApplication>
 
-
-int Application::run(int &argc, char **argv) {
-	try {
-		return tryRun(argc, argv);
-	}
-	catch(std::exception &ex) {
-		qFatal() << "Application fatal exception: " << ex.what();
+class Application::Private {
+public:
+	Private(Application* parent)
+		: q(parent) {
 	}
 
-	return 0;
-}
+	int tryRun(int& argc, char** argv) {
+		config = std::make_unique<Config>(Config::getDefult());
+		resources = std::make_unique<Resources>();
+		auto pCfg = config.get();
+		auto pRes = resources.get();
 
-int Application::tryRun(int &argc, char **argv) {
-	_config = std::make_shared<Config>(Config::getDefult());
-	_resources = std::make_shared<Resources>();
+		QSurfaceFormat fmt;
+		fmt.setVersion(3, 3);
+		fmt.setProfile(QSurfaceFormat::CoreProfile);
+		fmt.setDepthBufferSize(24);
+		fmt.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
+		fmt.setSamples(4);
+		fmt.setStencilBufferSize(8);
+		fmt.setStereo(true);
 
-	QSurfaceFormat fmt;
-  fmt.setVersion(3, 3);
-  fmt.setProfile(QSurfaceFormat::CoreProfile);
-  fmt.setDepthBufferSize(24);
-  fmt.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
-	fmt.setSamples(4);
-	fmt.setStencilBufferSize(8);
-	fmt.setStereo(true);
+		QSurfaceFormat::setDefaultFormat(fmt);
 
-  QSurfaceFormat::setDefaultFormat(fmt);
+		QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+		QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
 
-	QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-	QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
 
-	Engine engine(argc, argv);
-	engine.configure(_config);
-	engine.setup(_config, _resources);
+		Engine engine(argc, argv);
+		engine.configure(pCfg);
+		engine.setup(pCfg, pRes);
 
-	installMessageHandler();
+		installMessageHandler();
 
-	const auto session = From<AppSession>::from(_config->app_session)
-		.value_or(AppSession::Test);
+		auto mainFrame = q->createMainFrame(pRes);
+		mainFrame->configure(pCfg);
+		engine.setupMainFrame(std::move(mainFrame));
 
-	auto mainFrame = createMainFrame();
-	mainFrame->configure(_config);
-	engine.setupMainFrame(std::move(mainFrame));
+		return engine.exec();
+	}
 
-	return engine.exec();
-}
-
-void Application::installMessageHandler() {
-	static QtMessageHandler originalMessageHandler = nullptr;
-	originalMessageHandler = qInstallMessageHandler([](QtMsgType type,
-			const QMessageLogContext &context,
-			const QString &message) {
+	void installMessageHandler() {
+		static QtMessageHandler originalMessageHandler = nullptr;
+		originalMessageHandler = qInstallMessageHandler([](QtMsgType type,
+			const QMessageLogContext& context,
+			const QString& message) {
 				if (originalMessageHandler) {
 					originalMessageHandler(type, context, message);
 				}
@@ -62,8 +58,27 @@ void Application::installMessageHandler() {
 				const auto msg = qFormatLogMessage(type, context, message);
 
 			});
+	}
+
+	Application* q;
+	std::unique_ptr<Config> config;
+	std::unique_ptr<Resources> resources;
+};
+
+Application::Application()
+	: d(std::make_unique<Private>(this)) {
 }
 
-std::shared_ptr<Resources> Application::resources() {
-	return _resources;
+Application::~Application() = default;
+
+
+int Application::run(int &argc, char **argv) {
+	try {
+		return d->tryRun(argc, argv);
+	}
+	catch(std::exception &ex) {
+		qFatal() << "Application fatal exception: " << ex.what();
+	}
+
+	return 0;
 }

@@ -87,8 +87,7 @@ void EntitiesWidget::addItemEntity(const ItemEntity& entity) {
 	d->contentLayout->addStretch();
 
 	// Подключаем сигнал записи к сигналу окна
-	connect(entry, &EntityEntryWidget::createRequested,
-		this, &EntitiesWidget::itemCreateRequested);
+	connect(entry, &EntityEntryWidget::createRequested, this, &EntitiesWidget::itemCreateRequested);
 }
 
 void EntitiesWidget::clear() {

@@ -16,7 +16,6 @@ public:
 	void clear();
 
 signals:
-	// Сигнал, который вы сможете подключить к своему обработчику
 	void itemCreateRequested(const QString& itemId);
 
 private:

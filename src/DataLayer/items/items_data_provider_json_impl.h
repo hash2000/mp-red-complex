@@ -15,10 +15,6 @@ public:
 	bool loadItem(const QString& id, Item& item) const override;
 
 private:
-	QPixmap loadIcon(const ItemEntity& item) const;
-	static QPixmap loadEmptyStubIcon(const QString& id);
-
-private:
 	class Private;
 	std::unique_ptr<Private> d;
 };

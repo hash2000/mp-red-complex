@@ -3,8 +3,8 @@
 
 class GameApplication : public Application {
 protected:
-	virtual std::unique_ptr<MainFrame> createMainFrame() override {
-		return std::make_unique<GameMainFrame>(resources());
+	virtual std::unique_ptr<MainFrame> createMainFrame(Resources* resources) override {
+		return std::make_unique<GameMainFrame>(resources);
 	}
 };
 

@@ -1,5 +1,12 @@
 #include "Game/widgets/equipment/equipment_widget.h"
+#include "Game/widgets/equipment/equipment_slot_widget.h"
+#include "ApplicationLayer/equipment/equipment_service.h"
+#include "ApplicationLayer/inventory/inventory_service.h"
+#include "ApplicationLayer/inventories_service.h"
+#include "ApplicationLayer/items/item_mime_data.h"
 #include <QVBoxLayout>
+#include <QUuid>
+#include <map>
 
 class EquipmentWidget::Private {
 public:
@@ -7,17 +14,130 @@ public:
 	: q(parent) {
 
 	}
+
+	void setupLayout() {
+		auto mainLayout = new QVBoxLayout(q);
+		mainLayout->setContentsMargins(10, 10, 10, 10);
+		mainLayout->setSpacing(12);
+
+		// === Верхний ряд: оружие/щит + голова ===
+		auto topRow = new QHBoxLayout();
+		topRow->setSpacing(16);
+		topRow->addStretch();
+
+		auto leftWeaponSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::WeaponLeft, q);
+		allSlots[EquipmentSlotType::WeaponLeft] = leftWeaponSlot;
+		topRow->addWidget(leftWeaponSlot);
+
+		auto headSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::Head, q);
+		allSlots[EquipmentSlotType::Head] = headSlot;
+		topRow->addWidget(headSlot);
+
+		auto rightWeaponSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::WeaponRight, q);
+		allSlots[EquipmentSlotType::WeaponRight] = rightWeaponSlot;
+		topRow->addWidget(rightWeaponSlot);
+
+		topRow->addStretch();
+		mainLayout->addLayout(topRow);
+
+		// === Центр: тело ===
+		auto bodyRow = new QHBoxLayout();
+		bodyRow->addStretch();
+
+		// Рюкзак
+		auto backpack = new EquipmentSlot(equipmentService, EquipmentSlotType::Backpack, q);
+		allSlots[EquipmentSlotType::Backpack] = backpack;
+		bodyRow->addWidget(backpack);
+
+		auto bodySlot = new EquipmentSlot(equipmentService, EquipmentSlotType::Body, q);
+		allSlots[EquipmentSlotType::Body] = bodySlot;
+		bodyRow->addWidget(bodySlot);
+
+		// колонка для подсумков
+		auto bagCol = new QVBoxLayout();
+
+		auto bag1Slot = new EquipmentSlot(equipmentService, EquipmentSlotType::Bag1, q);
+		allSlots[EquipmentSlotType::Bag1] = bag1Slot;
+		bagCol->addWidget(bag1Slot);
+
+		auto bag2Slot = new EquipmentSlot(equipmentService, EquipmentSlotType::Bag2, q);
+		allSlots[EquipmentSlotType::Bag2] = bag2Slot;
+		bagCol->addWidget(bag2Slot);
+
+		bodyRow->addLayout(bagCol);
+
+		bodyRow->addStretch();
+		mainLayout->addLayout(bodyRow);
+
+		// === Нижний ряд: перчатки + обувь + кольца/амулет ===
+		auto bottomRow = new QHBoxLayout();
+		bottomRow->setSpacing(16);
+		bottomRow->addStretch();
+
+		// Левые перчатки
+		auto glovesLeftSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::GlovesLeft, q);
+		allSlots[EquipmentSlotType::GlovesLeft] = glovesLeftSlot;
+		bottomRow->addWidget(glovesLeftSlot);
+
+		// Обувь
+		auto bootsSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::Boots, q);
+		allSlots[EquipmentSlotType::Boots] = bootsSlot;
+		bottomRow->addWidget(bootsSlot);
+
+		// Правые перчатки
+		auto glovesRightSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::GlovesRight, q);
+		allSlots[EquipmentSlotType::GlovesRight] = glovesRightSlot;
+		bottomRow->addWidget(glovesRightSlot);
+
+		bottomRow->addSpacing(24);
+
+		// Аксессуары (вертикальная колонка)
+		auto accessoriesLayout = new QVBoxLayout();
+		accessoriesLayout->setSpacing(8);
+
+		auto amuletSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::Amulet, q);
+		allSlots[EquipmentSlotType::Amulet] = amuletSlot;
+		accessoriesLayout->addWidget(amuletSlot);
+
+		auto ringLeftSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::RingLeft, q);
+		allSlots[EquipmentSlotType::RingLeft] = ringLeftSlot;
+		accessoriesLayout->addWidget(ringLeftSlot);
+
+		auto ringRightSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::RingRight, q);
+		allSlots[EquipmentSlotType::RingRight] = ringRightSlot;
+		accessoriesLayout->addWidget(ringRightSlot);
+
+		bottomRow->addLayout(accessoriesLayout);
+		bottomRow->addStretch();
+
+		mainLayout->addLayout(bottomRow);
+		mainLayout->addStretch();
+	}
+
+	void populateSlots() {
+		// Инициализируем слоты предметами из загруженной экипировки
+		for (const auto& [slot, item] : equipmentService->items()) {
+			const auto it = allSlots.find(slot);
+			if (it != allSlots.end() && item) {
+				it->second->setItem(*item);
+			}
+		}
+	}
+
 	EquipmentWidget* q;
-	QMap<EquipmentSlotType, EquipmentSlot*> allSlots;
+
+	std::map<EquipmentSlotType, EquipmentSlot*> allSlots;
+	EquipmentService* equipmentService = nullptr;
+	InventoriesService* inventoriesService = nullptr;
 };
 
-EquipmentWidget::EquipmentWidget(QWidget* parent)
+EquipmentWidget::EquipmentWidget(InventoriesService* inventoriesService, QWidget* parent)
 : d(std::make_unique<Private>(this)) {
+	d->inventoriesService = inventoriesService;
+
 	setObjectName("EquipmentWidget");
 	setFrameStyle(QFrame::StyledPanel | QFrame::Plain);
 	setLineWidth(1);
-
-	setupLayout();
 
 	setStyleSheet(R"(
         #EquipmentWidget {
@@ -31,133 +151,45 @@ EquipmentWidget::EquipmentWidget(QWidget* parent)
 
 EquipmentWidget::~EquipmentWidget() = default;
 
-void EquipmentWidget::setupLayout() {
-	auto mainLayout = new QVBoxLayout(this);
-	mainLayout->setContentsMargins(10, 10, 10, 10);
-	mainLayout->setSpacing(12);
-
-	// === Верхний ряд: оружие/щит + голова ===
-	auto topRow = new QHBoxLayout();
-	topRow->setSpacing(16);
-	topRow->addStretch();
-
-	auto leftWeaponSlot = new EquipmentSlot(EquipmentSlotType::WeaponLeft, this);
-	d->allSlots[EquipmentSlotType::WeaponLeft] = leftWeaponSlot;
-	topRow->addWidget(leftWeaponSlot);
-
-	auto headSlot = new EquipmentSlot(EquipmentSlotType::Head, this);
-	d->allSlots[EquipmentSlotType::Head] = headSlot;
-	topRow->addWidget(headSlot);
-
-	auto rightWeaponSlot = new EquipmentSlot(EquipmentSlotType::WeaponRight, this);
-	d->allSlots[EquipmentSlotType::WeaponRight] = rightWeaponSlot;
-	topRow->addWidget(rightWeaponSlot);
-
-	topRow->addStretch();
-	mainLayout->addLayout(topRow);
-
-	// === Центр: тело ===
-	auto bodyRow = new QHBoxLayout();
-	bodyRow->addStretch();
-
-	auto bodySlot = new EquipmentSlot(EquipmentSlotType::Body, this);
-	d->allSlots[EquipmentSlotType::Body] = bodySlot;
-	bodyRow->addWidget(bodySlot);
-
-	bodyRow->addStretch();
-	mainLayout->addLayout(bodyRow);
-
-	// === Нижний ряд: перчатки + обувь + кольца/амулет ===
-	auto bottomRow = new QHBoxLayout();
-	bottomRow->setSpacing(16);
-	bottomRow->addStretch();
-
-	// Левые перчатки
-	auto glovesLeftSlot = new EquipmentSlot(EquipmentSlotType::GlovesLeft, this);
-	d->allSlots[EquipmentSlotType::GlovesLeft] = glovesLeftSlot;
-	bottomRow->addWidget(glovesLeftSlot);
-
-	// Обувь
-	auto bootsSlot = new EquipmentSlot(EquipmentSlotType::Boots, this);
-	d->allSlots[EquipmentSlotType::Boots] = bootsSlot;
-	bottomRow->addWidget(bootsSlot);
-
-	// Правые перчатки
-	auto glovesRightSlot = new EquipmentSlot(EquipmentSlotType::GlovesRight, this);
-	d->allSlots[EquipmentSlotType::GlovesRight] = glovesRightSlot;
-	bottomRow->addWidget(glovesRightSlot);
-
-	bottomRow->addSpacing(24);
-
-	// Аксессуары (вертикальная колонка)
-	auto accessoriesLayout = new QVBoxLayout();
-	accessoriesLayout->setSpacing(8);
-
-	auto amuletSlot = new EquipmentSlot(EquipmentSlotType::Amulet, this);
-	d->allSlots[EquipmentSlotType::Amulet] = amuletSlot;
-	accessoriesLayout->addWidget(amuletSlot);
-
-	auto ringLeftSlot = new EquipmentSlot(EquipmentSlotType::RingLeft, this);
-	d->allSlots[EquipmentSlotType::RingLeft] = ringLeftSlot;
-	accessoriesLayout->addWidget(ringLeftSlot);
-
-	auto ringRightSlot = new EquipmentSlot(EquipmentSlotType::RingRight, this);
-	d->allSlots[EquipmentSlotType::RingRight] = ringRightSlot;
-	accessoriesLayout->addWidget(ringRightSlot);
-
-	bottomRow->addLayout(accessoriesLayout);
-	bottomRow->addStretch();
-
-	mainLayout->addLayout(bottomRow);
-	mainLayout->addStretch();
-
-	// Подключаем сигналы слотов к виджету
-	for (auto slot : d->allSlots) {
-		connect(slot, &EquipmentSlot::itemEquipped, this, [this, slot](const EquipmentItem& item) {
-			emit itemEquipped(item, slot->slotType());
-			});
-		connect(slot, &EquipmentSlot::itemRemoved, this, [this, slot](const EquipmentItem& item) {
-			emit itemUnequipped(item, slot->slotType());
-			});
+bool EquipmentWidget::setEquipmentService(const QUuid& id) {
+	auto equipmentService = static_cast<EquipmentService*>(d->inventoriesService->placementService(id, true));
+	if (!equipmentService) {
+		return false;
 	}
-}
 
-std::optional<EquipmentItem> EquipmentWidget::getItem(EquipmentSlotType slot) const {
-	if (d->allSlots.contains(slot) && d->allSlots[slot]->isOccupied()) {
-		return d->allSlots[slot]->item();
-	}
-	return std::nullopt;
-}
+	if (d->equipmentService) {
+		disconnect(d->equipmentService, nullptr, this, nullptr);
 
-bool EquipmentWidget::equipItem(const EquipmentItem& item) {
-	EquipmentSlot* slot = findCompatibleSlot(item);
-	if (slot && !slot->isOccupied()) {
-		return slot->setItem(item);
-	}
-	return false;
-}
-
-void EquipmentWidget::unequipItem(EquipmentSlotType slot) {
-	if (d->allSlots.contains(slot)) {
-		d->allSlots[slot]->clearItem();
-	}
-}
-
-void EquipmentWidget::clearAll() {
-	for (auto slot : d->allSlots) {
-		slot->clearItem();
-	}
-}
-
-QMap<EquipmentSlotType, EquipmentSlot*> EquipmentWidget::allSlots() const {
-	return d->allSlots;
-}
-
-EquipmentSlot* EquipmentWidget::findCompatibleSlot(const EquipmentItem& item) const {
-	for (auto it = d->allSlots.cbegin(); it != d->allSlots.cend(); ++it) {
-		if (it.value()->canAcceptItem(item)) {
-			return it.value();
+		for (auto widget : d->allSlots) {
+			widget.second->clearItem();
 		}
 	}
-	return nullptr;
+
+	d->equipmentService = equipmentService;
+	d->setupLayout();
+	d->populateSlots();
+
+	connect(d->equipmentService, &EquipmentService::itemEquipped, this, &EquipmentWidget::onItemEquipped);
+	connect(d->equipmentService, &EquipmentService::itemUnequipped, this, &EquipmentWidget::onItemUnequipped);
+
+	return true;
 }
+
+void EquipmentWidget::onItemEquipped(const EquipmentItemHandler& item, EquipmentSlotType slot, const QString& inventoryId) {
+	const auto &it = d->allSlots.find(slot);
+	if (it == d->allSlots.end()) {
+		return;
+	}
+
+	auto inventory = d->inventoriesService->placementService(QUuid::fromString(inventoryId), false);
+	if (inventory) {
+		inventory->removeItem(ItemMimeData(item));
+	}
+
+	it->second->setItem(item);
+}
+
+void EquipmentWidget::onItemUnequipped(const EquipmentItemHandler& item, EquipmentSlotType slot) {
+
+}
+

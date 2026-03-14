@@ -1,9 +1,17 @@
 #include "Game/widgets/items/entities_window.h"
 #include "Game/widgets/items/entities_widget.h"
+#include "Game/widgets/items/item_create_widget.h"
 #include "Game/app_controller.h"
 #include "Game/commands/command_context.h"
 #include "Game/commands/command_processor.h"
+#include "Game/controllers/windows_controller.h"
+#include "Game/mdi_child_window.h"
+#include "Game/services.h"
+#include "Game/controllers.h"
 #include "ApplicationLayer/items/items_service.h"
+#include "ApplicationLayer/inventory/inventory_service.h"
+#include "ApplicationLayer/inventories_service.h"
+#include "ApplicationLayer/items/item_mime_data.h"
 
 
 class EntitiesWindow::Private {
@@ -15,7 +23,7 @@ public:
 	EntitiesWindow* q;
 	ItemsService* service;
 	EntitiesWidget* widget;
-	CommandProcessor* cmds = nullptr;
+	ApplicationController* controller = nullptr;
 };
 
 EntitiesWindow::EntitiesWindow(ItemsService* service, const QString& id, QWidget* parent)
@@ -39,7 +47,7 @@ bool EntitiesWindow::handleCommand(const QString& commandName, const QStringList
 			d->widget->addItemEntity(item);
 		}
 
-		d->cmds = context->applicationController()->commandProcessor();
+		d->controller = context->applicationController();
 
 		return true;
 	}
@@ -48,7 +56,87 @@ bool EntitiesWindow::handleCommand(const QString& commandName, const QStringList
 }
 
 void EntitiesWindow::onItemCreateRequested(const QString& itemId) {
-	if (!d->cmds) {
+	if (!d->controller) {
 		return;
 	}
+
+	// Получаем сущность предмета по ID
+	const auto entity = d->service->entityById(itemId);
+	if (!entity) {
+		qWarning() << "EntitiesWindow::onItemCreateRequested: entity not found:" << itemId;
+		return;
+	}
+
+	// Получаем активный инвентарь через WindowsController
+	const auto services = d->controller->services();
+	const auto inventoriesService = services->inventoriesService();
+	const auto windowsController = d->controller->controllers()->windowsController();
+
+	// Получаем все окна и находим последнее активное окно типа "inventory"
+	QString targetInventoryId;
+	const auto windows = windowsController->windowEntries();
+	
+	// Ищем последнее окно типа inventory (последнее = самое верхнее в стеке MDI)
+	for (auto it = windows.rbegin(); it != windows.rend(); ++it) {
+		const auto window = it->first.data();
+		if (window && window->windowType() == "inventory") {
+			targetInventoryId = window->windowId();
+			break;
+		}
+	}
+	
+	if (targetInventoryId.isEmpty()) {
+		// Если нет активных окон инвентаря, пробуем получить первый доступный инвентарь
+		const auto inventories = inventoriesService->getAllIds();
+		if (inventories.empty()) {
+			qWarning() << "EntitiesWindow::onItemCreateRequested: no inventories available";
+			return;
+		}
+		targetInventoryId = QString::fromUtf8(inventories.front().toByteArray());
+	}
+
+	// Создаём и показываем диалог создания предмета
+	auto createDialog = new ItemCreateWidget(*entity, d->service, this);
+	connect(createDialog, &ItemCreateWidget::itemCreated, this, [this, inventoriesService, targetInventoryId](const QString& entityId, int count) {
+		// Получаем сервис инвентаря
+		auto inventoryService = static_cast<InventoryService*>(
+			inventoriesService->placementService(QUuid::fromString(targetInventoryId), false));
+
+		if (!inventoryService) {
+			qWarning() << "Failed to get inventory service for:" << targetInventoryId;
+			return;
+		}
+
+		// Создаём предметы в инвентаре через сервис
+		const auto newItem = d->service->createItemByEntity(entityId);
+		if (!newItem) {
+			qWarning() << "Failed to create item:" << entityId;
+			return;
+		}
+
+		// Создаём ItemMimeData для нового предмета
+		ItemMimeData mimeData(*newItem);
+		mimeData.count = count;
+
+		// Пытаемся найти свободное место в инвентаре
+		const auto freeSpace = inventoryService->findFreeSpace(mimeData, true);
+		if (!freeSpace.has_value()) {
+			qWarning() << "No free space in inventory for item:" << entityId;
+			return;
+		}
+
+		// Размещаем предмет в инвентаре
+		mimeData.x = freeSpace->x();
+		mimeData.y = freeSpace->y();
+
+		if (inventoryService->placeItem(mimeData)) {
+			qInfo() << "Item placed in inventory:" << newItem->id << "at" << mimeData.x << "," << mimeData.y;
+		}
+		else {
+			qWarning() << "Failed to place item in inventory:" << newItem->id;
+		}
+
+		});
+
+	createDialog->show();
 }
