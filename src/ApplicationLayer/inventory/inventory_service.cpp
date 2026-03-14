@@ -159,7 +159,7 @@ QString InventoryService::placementId() const {
 	return d->placementId;
 }
 
-QString InventoryService::inventoryName() const {
+QString InventoryService::placementName() const {
 	return d->inventoryName;
 }
 

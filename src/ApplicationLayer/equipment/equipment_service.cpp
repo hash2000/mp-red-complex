@@ -68,6 +68,10 @@ QString EquipmentService::placementId() const {
 	return d->equipmentId;
 }
 
+QString EquipmentService::placementName() const {
+	return QString("Equipment");
+}
+
 int EquipmentService::canPlaceItem(const ItemMimeData& item, int col, int row, bool checkItemPlace) const {
 	const auto equipmentType = static_cast<ItemEquipmentType>(item.equipmentType);
 	const auto slot = EquipmentItemHandler::convertPositionToSlot(col, row);

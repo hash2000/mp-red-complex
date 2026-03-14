@@ -1,6 +1,5 @@
 #pragma once
 #include <QString>
-#include <QString>
 #include <QPoint>
 #include <optional>
 
@@ -8,6 +7,12 @@ class ItemMimeData;
 
 class ItemPlacementService {
 public:
+
+	/// <summary>
+	/// Сщтефштук Тфьу
+	/// </summary>
+	/// <returns></returns>
+	virtual QString placementName() const = 0;
 
 	/// <summary>
 	/// Container id

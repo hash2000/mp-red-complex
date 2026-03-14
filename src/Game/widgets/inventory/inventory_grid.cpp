@@ -38,7 +38,7 @@ QString InventoryGrid::inventoryId() const {
 }
 
 QString InventoryGrid::inventoryName() const {
-	return d->inventory ? d->inventory->inventoryName() : QString();
+	return d->inventory ? d->inventory->placementName() : QString();
 }
 
 QString InventoryGrid::newObjectName() {

@@ -23,7 +23,7 @@ public:
 	bool load(const Inventory& inventory);
 
 	QString placementId() const override;
-	QString inventoryName() const;
+	QString placementName() const override;
 
 	int rows() const override;
 	int cols() const override;

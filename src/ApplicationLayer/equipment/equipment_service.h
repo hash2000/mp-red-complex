@@ -19,6 +19,7 @@ public:
 	bool load(const Equipment& equipment);
 
 	QString placementId() const override;
+	QString placementName() const override;
 
 	int canPlaceItem(const ItemMimeData& item, int col, int row, bool checkItemPlace) const override;
 	std::optional<QPoint> findFreeSpace(const ItemMimeData& item, bool checkItemPlace) const override;
