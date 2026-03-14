@@ -82,8 +82,8 @@ InventoryItemWidget::~InventoryItemWidget() = default;
 
 QString InventoryItemWidget::newObjectName() {
 	const auto name = QString("inventory_item_widget_%1_%2")
-		.arg(d->item.id)
-		.arg(d->grid->inventoryId());
+		.arg(d->item.id.toString())
+		.arg(d->grid->inventoryId().toString());
 	return name;
 }
 

@@ -181,12 +181,13 @@ void EquipmentSlot::dropEvent(QDropEvent* event) {
 	}
 
 	// в экипировку предмет может попасть только из инвентаря
-	const auto inventoryId = QString::fromUtf8(event->mimeData()->data("application/x-game-item-source-inventory-id"));
-	if (inventoryId.isEmpty()) {
+	const auto inventoryIdStr = QUuid::fromString(QString::fromUtf8(event->mimeData()->data("application/x-game-item-source-inventory-id")));
+	if (inventoryIdStr.isNull()) {
 		event->ignore();
 		return;
 	}
 
+	const auto inventoryId = inventoryIdStr;
 	const auto data = event->mimeData()->data("application/x-game-item");
 	const auto item = ItemMimeData::fromMimeData(data);
 

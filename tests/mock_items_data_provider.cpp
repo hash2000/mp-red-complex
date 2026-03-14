@@ -9,7 +9,7 @@ void MockItemsDataProvider::addEntity(const QString& id, const ItemEntity& entit
 	entities[id] = entity;
 }
 
-void MockItemsDataProvider::addItem(const QString& id, const Item& item) {
+void MockItemsDataProvider::addItem(const QUuid& id, const Item& item) {
 	items[id] = item;
 }
 
@@ -29,7 +29,7 @@ bool MockItemsDataProvider::loadEntity(const QString& id, ItemEntity& entity) co
 	return true;
 }
 
-bool MockItemsDataProvider::loadItem(const QString& id, Item& item) const {
+bool MockItemsDataProvider::loadItem(const QUuid& id, Item& item) const {
 	const auto it = items.find(id);
 	if (it == items.end()) {
 		return false;
@@ -60,7 +60,7 @@ InventoryService* MockItemPlacementStore::createInventory(const QUuid& id, int r
 	auto inventory = std::make_unique<InventoryService>(itemsService);
 
 	Inventory inv;
-	inv.id = id.toString(QUuid::WithoutBraces);
+	inv.id = id;
 	inv.name = id.toString();
 	inv.rows = rows;
 	inv.cols = cols;

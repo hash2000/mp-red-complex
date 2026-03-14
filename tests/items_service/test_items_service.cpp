@@ -94,7 +94,7 @@ void TestItemsService::testCreateItemByEntity() {
 	const auto* item = service->createItemByEntity("test-entity");
 	QVERIFY(item != nullptr);
 	QCOMPARE(item->entityId, QString("test-entity"));
-	QVERIFY(!item->id.isEmpty());
+	QVERIFY(!item->id.isNull());
 }
 
 void TestItemsService::testDuplicateItem() {

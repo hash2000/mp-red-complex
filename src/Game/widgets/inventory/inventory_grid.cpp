@@ -29,12 +29,12 @@ public:
 	// сервис всех инвентарей, для перебрасывания предметов между инвентарями
 	InventoriesService* inventories = nullptr;
 	// Кэш виджетов по ID предмета
-	QHash<QString, InventoryItemWidget*> widgets; 
+	QHash<QUuid, InventoryItemWidget*> widgets;
 	DropPreviewWidget* dropPreview = nullptr;
 };
 
-QString InventoryGrid::inventoryId() const {
-	return d->inventory ? d->inventory->placementId() : QString();
+QUuid InventoryGrid::inventoryId() const {
+	return d->inventory ? d->inventory->placementId() : QUuid();
 }
 
 QString InventoryGrid::inventoryName() const {
@@ -43,7 +43,7 @@ QString InventoryGrid::inventoryName() const {
 
 QString InventoryGrid::newObjectName() {
 	const auto name = QString("inventory_grid_%1")
-		.arg(inventoryId());
+		.arg(inventoryId().toString());
 	return name;
 }
 
@@ -253,7 +253,7 @@ void InventoryGrid::dragMoveEvent(QDragMoveEvent* event) {
 	}
 
 	auto item = ItemMimeData::fromMimeData(event->mimeData()->data("application/x-game-item"));
-	const auto sourceInventoryId = QString::fromUtf8(event->mimeData()->data("application/x-game-item-source-inventory-id"));
+	const auto sourceInventoryId = QUuid::fromBytes(event->mimeData()->data("application/x-game-item-source-inventory-id"));
 	const auto currentInventoryId = inventoryId();
 	const auto isSameGrid = (sourceInventoryId == currentInventoryId);
 
@@ -298,7 +298,7 @@ void InventoryGrid::dropEvent(QDropEvent* event) {
 		return;
 	}
 
-	const auto sourceInventoryId = QString::fromUtf8(event->mimeData()->data("application/x-game-item-source-inventory-id"));
+	const auto sourceInventoryId = QUuid::fromString(QString::fromUtf8(event->mimeData()->data("application/x-game-item-source-inventory-id")));
 	const auto currentInventoryId = inventoryId();
 	const auto isSameGrid = (sourceInventoryId == currentInventoryId);
 
@@ -317,9 +317,7 @@ void InventoryGrid::dropEvent(QDropEvent* event) {
 	}
 
 	// нужно извлечь из инвентаря источника, и переместить в текущий инвентарь
-	if (d->inventories && d->inventories->moveItem(item, col, row,
-		QUuid::fromString(sourceInventoryId),
-		QUuid::fromString(currentInventoryId))) {
+	if (d->inventories && d->inventories->moveItem(item, col, row, sourceInventoryId, currentInventoryId)) {
 		event->acceptProposedAction();
 		return;
 	}

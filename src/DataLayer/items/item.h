@@ -1,6 +1,7 @@
 #pragma once
 #include <QString>
 #include <QPixmap>
+#include <QUuid>
 
 enum class ItemResourceType {
 	Sand,
@@ -98,7 +99,7 @@ public:
 
 class Item {
 public:
-	QString id;
+	QUuid id;
 	QString entityId;
 
 	const ItemEntity* entity;

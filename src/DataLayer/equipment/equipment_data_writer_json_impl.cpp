@@ -49,12 +49,16 @@ bool EquipmentDataWriterJsonImpl::saveEquipment(const QUuid& id, const Equipment
 		.arg(id.toString(QUuid::StringFormat::WithoutBraces).toLower());
 
 	QJsonObject json;
-	json["id"] = equipment.id;
+	json["id"] = equipment.id
+		.toString(QUuid::StringFormat::WithoutBraces)
+		.toLower();
 
 	QJsonArray itemsArr;
 	for (const auto& item : equipment.items) {
 		QJsonObject itemObj;
-		itemObj["id"] = item.id;
+		itemObj["id"] = item.id
+			.toString(QUuid::StringFormat::WithoutBraces)
+			.toLower();
 		itemObj["slot"] = slotToString(item.slot);
 		itemsArr.append(itemObj);
 	}

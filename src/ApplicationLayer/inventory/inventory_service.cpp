@@ -103,7 +103,7 @@ public:
 		return cells[col][row]->item;
 	}
 
-	InventoryItemHandler* itemById(const QString& id) const {
+	InventoryItemHandler* itemById(const QUuid& id) const {
 		const auto it = inventoryItems.find(id);
 		if (it != inventoryItems.end()) {
 			return it->second.get();
@@ -114,11 +114,11 @@ public:
 
 	InventoryService* q;
 	ItemsService* itemsService;
-	QString placementId;
+	QUuid placementId;
 	QString inventoryName;
 	int rows;
 	int cols;
-	std::map<QString, std::unique_ptr<InventoryItemHandler>> inventoryItems;
+	std::map<QUuid, std::unique_ptr<InventoryItemHandler>> inventoryItems;
 	std::vector<std::vector<std::unique_ptr<InventoryViewCell>>> cells;
 	QHash<QPoint, InventoryItemHandler*> items;
 };
@@ -155,7 +155,7 @@ bool InventoryService::load(const Inventory& inventory) {
 	return true;
 }
 
-QString InventoryService::placementId() const {
+QUuid InventoryService::placementId() const {
 	return d->placementId;
 }
 
@@ -179,11 +179,11 @@ const InventoryItemHandler* InventoryService::itemAt(int col, int row) const {
 	return d->itemAt(col, row);
 }
 
-const InventoryItemHandler* InventoryService::itemById(const QString& id) const {
+const InventoryItemHandler* InventoryService::itemById(const QUuid& id) const {
 	return d->itemById(id);
 }
 
-ItemMimeData InventoryService::itemDataById(const QString& id) const {
+ItemMimeData InventoryService::itemDataById(const QUuid& id) const {
 	const auto item = itemById(id);
 	if (!item) {
 		return ItemMimeData();

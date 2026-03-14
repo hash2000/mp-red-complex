@@ -145,9 +145,12 @@ bool ItemsDataProviderJsonImpl::loadEntitiesIds(std::list<QString>& list) const 
 	return true;
 }
 
-bool ItemsDataProviderJsonImpl::loadItem(const QString& id, Item& item) const {
+bool ItemsDataProviderJsonImpl::loadItem(const QUuid& id, Item& item) const {
+	const auto uid = id
+		.toString(QUuid::StringFormat::WithoutBraces)
+		.toLower();
 	const auto path = QString("items/%1.json")
-		.arg(id.toLower());
+		.arg(uid);
 
 	QJsonObject json;
 	Format::Json::DataReader reader(d->resources, "data", path);

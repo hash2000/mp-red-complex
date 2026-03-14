@@ -9,7 +9,7 @@ public:
 	ItemsDataWriterJsonImpl(Resources* resources);
 	~ItemsDataWriterJsonImpl() override;
 
-	bool saveItem(const QString& id, const Item& item) const override;
+	bool saveItem(const QUuid& id, const Item& item) const override;
 
 private:
 	class Private;

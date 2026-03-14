@@ -39,9 +39,7 @@ bool InventoryDataProviderJsonImpl::loadInventory(const QUuid& id, Inventory& in
 		return false;
 	}
 
-	inventory.id = id
-		.toString(QUuid::StringFormat::WithoutBraces)
-		.toLower();
+	inventory.id = id;
 	inventory.rows = json["rows"].toInt();
 	inventory.cols = json["cols"].toInt();
 	inventory.name = json["name"].toString();
@@ -49,7 +47,7 @@ bool InventoryDataProviderJsonImpl::loadInventory(const QUuid& id, Inventory& in
 
 	for (const QJsonValue& itemObj : itemsArr) {
 		InventoryItem item;
-		item.id = itemObj["id"].toString();
+		item.id = QUuid::fromString(itemObj["id"].toString());
 		item.count = itemObj["count"].toInt();
 		item.x = itemObj["x"].toInt();
 		item.y = itemObj["y"].toInt();

@@ -56,6 +56,6 @@ QString InventoryWindow::windowTitle() const {
 }
 
 void InventoryWindow::closeEvent(QCloseEvent* closeEvent) {
-	const auto target = QUuid::fromString(d->widget->grid()->inventoryId());
+	const auto target = d->widget->grid()->inventoryId();
 	QMdiSubWindow::closeEvent(closeEvent);
 }

@@ -36,16 +36,14 @@ bool EquipmentDataProviderJsonImpl::loadEquipment(const QUuid& id, Equipment& eq
 		return false;
 	}
 
-	equipment.id = id
-		.toString(QUuid::StringFormat::WithoutBraces)
-		.toLower();
+	equipment.id = id;
 
 	const QJsonArray items = json["items"]
 		.toArray();
 
 	for (const QJsonValue& item : items) {
 		EquipmentItem eqItem;
-		eqItem.id = item["id"].toString();
+		eqItem.id = QUuid::fromString(item["id"].toString());
 		const auto slot = item["slot"].toString();
 		if (slot == "Head") eqItem.slot = EquipmentSlotType::Head;
 		else if (slot == "Body") eqItem.slot = EquipmentSlotType::Body;

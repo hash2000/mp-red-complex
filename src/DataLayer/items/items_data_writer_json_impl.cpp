@@ -23,12 +23,15 @@ ItemsDataWriterJsonImpl::ItemsDataWriterJsonImpl(Resources* resources)
 
 ItemsDataWriterJsonImpl::~ItemsDataWriterJsonImpl() = default;
 
-bool ItemsDataWriterJsonImpl::saveItem(const QString& id, const Item& item) const {
+bool ItemsDataWriterJsonImpl::saveItem(const QUuid& id, const Item& item) const {
+	const auto uid = id
+		.toString(QUuid::StringFormat::WithoutBraces)
+		.toLower();
 	const auto path = QString("data/items/%1.json")
-		.arg(id.toLower());
+		.arg(uid);
 
 	QJsonObject json;
-	json["id"] = item.id;
+	json["id"] = uid;
 	json["entityId"] = item.entityId;
 
 	QJsonDocument doc(json);

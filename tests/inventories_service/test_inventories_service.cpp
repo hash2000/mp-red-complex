@@ -129,7 +129,7 @@ void TestInventoriesService::testMoveFullStack_PreservesItemId() {
 
 	const auto originalItem = itemsService->createItemByEntity("test-item");
 	QVERIFY(originalItem != nullptr);
-	QString originalItemId = originalItem->id;
+	const auto originalItemId = originalItem->id;
 
 	QUuid inv1Id = QUuid::createUuid();
 	QUuid inv2Id = QUuid::createUuid();
@@ -183,7 +183,7 @@ void TestInventoriesService::testMovePartialStack_CreatesNewId() {
 
 	const auto originalItem = itemsService->createItemByEntity("stack-item");
 	QVERIFY(originalItem != nullptr);
-	QString originalItemId = originalItem->id;
+	const auto originalItemId = originalItem->id;
 
 	QUuid inv1Id = QUuid::createUuid();
 	QUuid inv2Id = QUuid::createUuid();
@@ -221,7 +221,7 @@ void TestInventoriesService::testMovePartialStack_CreatesNewId() {
 
 	// Проверяем, что во втором инвентаре появился новый предмет с новым ID
 	int count = 0;
-	QString newItemId;
+	QUuid newItemId;
 	for (const auto& item : inventory2->items()) {
 		count++;
 		newItemId = item.id;
@@ -400,7 +400,7 @@ void TestInventoriesService::testSplitStack_CreatesNewItemsWithUniqueIds() {
 	mimeData.count = 100;
 	inventory1->placeItem(mimeData);
 
-	QString originalItemId = originalItem->id;
+	const auto originalItemId = originalItem->id;
 
 	// Перемещаем весь стек целиком во второй инвентарь (ID должен сохраниться)
 	auto freeSpace2 = inventory2->findFreeSpace(mimeData, false);
@@ -436,7 +436,7 @@ void TestInventoriesService::testSplitStack_CreatesNewItemsWithUniqueIds() {
 	QVERIFY(result);
 
 	// Собираем все ID предметов
-	std::set<QString> itemIds;
+	std::set<QUuid> itemIds;
 	int totalItems = 0;
 
 	for (const auto& item : inventory1->items()) {

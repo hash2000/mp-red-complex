@@ -20,7 +20,7 @@ public:
 		return it->second.get();
 	}
 
-	Item* itemById(const QString& id) {
+	Item* itemById(const QUuid& id) {
 		const auto& it = items.find(id);
 		if (it != items.end()) {
 			return it->second.get();
@@ -29,7 +29,7 @@ public:
 		return nullptr;
 	}
 
-	Item* makeItem(const QString& id) {
+	Item* makeItem(const QUuid& id) {
 		auto item = itemById(id);
 		if (item) {
 			return item;
@@ -59,8 +59,7 @@ public:
 			return nullptr;
 		}
 
-		newItem->id = QUuid::createUuid()
-			.toString(QUuid::StringFormat::WithoutBraces);
+		newItem->id = QUuid::createUuid();
 		newItem->entityId = entityId;
 
 		const auto& emplaceResult = items.emplace(newItem->id, std::move(newItem));
@@ -72,7 +71,7 @@ public:
 	ItemsService* q;
 	ItemsDataProvider* dataProvider;
 	std::map<QString, std::unique_ptr<ItemEntity>> itemEntities;
-	std::map<QString, std::unique_ptr<Item>> items;
+	std::map<QUuid, std::unique_ptr<Item>> items;
 };
 
 ItemsService::ItemsService(ItemsDataProvider* dataProvider, QObject* parent)
@@ -108,11 +107,11 @@ ItemsService::EntityView ItemsService::entities() const {
 	return make_deref_view(d->itemEntities);
 }
 
-const ItemEntity* ItemsService::entityById(const QString& id) const {
-	return d->entityById(id);
+const ItemEntity* ItemsService::entityById(const QString& entityId) const {
+	return d->entityById(entityId);
 }
 
-const Item* ItemsService::itemById(const QString& id) {
+const Item* ItemsService::itemById(const QUuid& id) {
 	return d->makeItem(id);
 }
 
@@ -120,7 +119,7 @@ ItemsService::ItemView ItemsService::items() const {
 	return make_deref_view(d->items);
 }
 
-const Item* ItemsService::duplicate(const QString& id) {
+const Item* ItemsService::duplicate(const QUuid& id) {
 	const auto from = d->itemById(id);
 	if (!from) {
 		return nullptr;
@@ -129,8 +128,7 @@ const Item* ItemsService::duplicate(const QString& id) {
 	auto item = std::make_unique<Item>();
 	item->entity = from->entity;
 	item->entityId = from->entityId;
-	item->id = QUuid::createUuid()
-		.toString(QUuid::StringFormat::WithoutBraces);
+	item->id = QUuid::createUuid();
 
 	const auto& emplaceResult = d->items.emplace(item->id, std::move(item));
 

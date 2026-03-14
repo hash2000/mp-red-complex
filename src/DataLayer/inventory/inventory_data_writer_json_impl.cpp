@@ -29,7 +29,9 @@ bool InventoryDataWriterJsonImpl::saveInventory(const QUuid& id, const Inventory
 		.arg(id.toString(QUuid::StringFormat::WithoutBraces).toLower());
 
 	QJsonObject json;
-	json["id"] = inventory.id;
+	json["id"] = inventory.id
+		.toString(QUuid::StringFormat::WithoutBraces)
+		.toLower();
 	json["name"] = inventory.name;
 	json["rows"] = inventory.rows;
 	json["cols"] = inventory.cols;
@@ -37,7 +39,9 @@ bool InventoryDataWriterJsonImpl::saveInventory(const QUuid& id, const Inventory
 	QJsonArray itemsArr;
 	for (const auto& item : inventory.items) {
 		QJsonObject itemObj;
-		itemObj["id"] = item.id;
+		itemObj["id"] = item.id
+			.toString(QUuid::StringFormat::WithoutBraces)
+			.toLower();
 		itemObj["count"] = item.count;
 		itemObj["x"] = item.x;
 		itemObj["y"] = item.y;

@@ -1,5 +1,6 @@
 #pragma once
 #include <QString>
+#include <QUuid>
 
 class Item;
 class ItemEntity;
@@ -14,7 +15,7 @@ enum class ItemOwner {
 
 class ItemMimeData {
 public:
-	QString id;
+	QUuid id;
 	QString name;
 	QString entityId;
 	int owner;
