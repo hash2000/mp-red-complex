@@ -1,5 +1,6 @@
 #include "Game/widgets/equipment/equipment_slot_widget.h"
 #include "Game/dragndrop/drag_event_builder.h"
+#include "Game/styles/items_styles.h"
 #include "ApplicationLayer/equipment/equipment_service.h"
 #include "ApplicationLayer/items/item_mime_data.h"
 #include "ApplicationLayer/equipment/equipment_item_handler.h"
@@ -124,6 +125,12 @@ void EquipmentSlot::mousePressEvent(QMouseEvent* event) {
 	}
 
 	QLabel::mousePressEvent(event);
+}
+
+void EquipmentSlot::mouseDoubleClickEvent(QMouseEvent* event) {
+	if (event->button() == Qt::LeftButton && d->item.has_value() && d->item.value().entity->container.has_value()) {
+		emit containerOpened(ItemMimeData(d->item.value()));
+	}
 }
 
 void EquipmentSlot::dragEnterEvent(QDragEnterEvent* event) {

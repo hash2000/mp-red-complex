@@ -12,32 +12,12 @@
 #include "ApplicationLayer/inventories_service.h"
 #include "ApplicationLayer/inventories_save_manager.h"
 #include "ApplicationLayer/items_save_manager.h"
-#include "ApplicationLayer/inventory/inventory_store_impl.h"
-#include "ApplicationLayer/equipment/equipment_store_impl.h"
 #include <list>
 
 class Services::Private {
 public:
 	Private(Services* parent)
 		: q(parent) {
-	}
-
-	void loadInventories() {
-		std::list<QUuid> items;
-		inventoriesDataProvider->loadInventories(items);
-
-		for (const auto& item : items) {
-			inventoriesService->addStore(item, std::make_unique<InventoryStoreImpl>(inventoryDataProvider.get(), itemsService.get()));
-		}
-	}
-
-	void loadEquipments() {
-		std::list<QUuid> items;
-		inventoriesDataProvider->loadEquipments(items);
-
-		for (const auto& item : items) {
-			inventoriesService->addStore(item, std::make_unique<EquipmentStoreImpl>(equipmentDataProvider.get(), itemsService.get()));
-		}
 	}
 
 	Services* q;
@@ -98,8 +78,6 @@ Services::~Services() = default;
 void Services::run() {
 	d->itemsService->loadEntities();
 	d->timeService->start();
-	d->loadInventories();
-	d->loadEquipments();
 }
 
 void Services::postLoadEvent() {

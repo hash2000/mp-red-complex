@@ -13,5 +13,6 @@ public:
 class Equipment {
 public:
 	QUuid id;
+	QString name;
 	std::list<EquipmentItem> items;
 };

@@ -124,6 +124,12 @@ public:
 		}
 	}
 
+	void connectSlots() {
+		for (const auto& slot : allSlots) {
+			connect(slot.second, &EquipmentSlot::containerOpened, q, &EquipmentWidget::containerOpened);
+		}
+	}
+
 	EquipmentWidget* q;
 
 	std::map<EquipmentSlotType, EquipmentSlot*> allSlots;
@@ -168,6 +174,7 @@ bool EquipmentWidget::setEquipmentService(const QUuid& id) {
 	d->equipmentService = equipmentService;
 	d->setupLayout();
 	d->populateSlots();
+	d->connectSlots();
 
 	connect(d->equipmentService, &EquipmentService::itemEquipped, this, &EquipmentWidget::onItemEquipped);
 	connect(d->equipmentService, &EquipmentService::itemUnequipped, this, &EquipmentWidget::onItemUnequipped);

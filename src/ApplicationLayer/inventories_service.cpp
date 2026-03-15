@@ -1,8 +1,5 @@
 #include "ApplicationLayer/inventories_service.h"
-#include "ApplicationLayer/items_placement_store.h"
 #include "ApplicationLayer/items_placement_service.h"
-#include "ApplicationLayer/inventory/inventory_store_impl.h"
-#include "ApplicationLayer/equipment/equipment_store_impl.h"
 #include "ApplicationLayer/inventory/inventory_service.h"
 #include "ApplicationLayer/inventory/inventory_item_handler.h"
 #include "ApplicationLayer/equipment/equipment_service.h"
@@ -19,7 +16,6 @@ public:
 	}
 
 	InventoriesService* q;
-	std::map<QUuid, std::unique_ptr<ItemPlacementStore>> stores;
 	InventoriesDataProvider* inventoriesDataProvider;
 	InventoryDataProvider* inventoryDataProvider;
 	EquipmentDataProvider* equipmentDataProvider;
@@ -39,22 +35,8 @@ InventoriesService::InventoriesService(
 
 InventoriesService::~InventoriesService() = default;
 
-
-bool InventoriesService::addStore(const QUuid& id, std::unique_ptr<ItemPlacementStore> store)
-{
-	const auto& result = d->stores.emplace(id, std::move(store));
-	return result.second;
-}
-
 ItemPlacementService* InventoriesService::placementService(const QUuid& id, bool loadIfNotExists) const {
-	const auto& it = d->stores.find(id);
-	if (it == d->stores.end()) {
-		qWarning() << "Inventory loader not found" << id.toString();
-		return nullptr;
-	}
-
-	auto service = it->second->load(id, loadIfNotExists);
-	return service;
+	return nullptr;
 }
 
 bool InventoriesService::moveItem(const ItemMimeData& item, int col, int row, const QUuid& fromId, const QUuid& toId) {
@@ -136,10 +118,3 @@ bool InventoriesService::moveItem(const ItemMimeData& item, int col, int row, co
 	return true;
 }
 
-std::list<QUuid> InventoriesService::getAllIds() const {
-	std::list<QUuid> ids;
-	for (const auto& [id, store] : d->stores) {
-		ids.push_back(id);
-	}
-	return ids;
-}

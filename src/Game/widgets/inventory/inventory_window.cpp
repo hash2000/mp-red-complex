@@ -2,6 +2,9 @@
 #include "Game/widgets/inventory/inventory_grid_view.h"
 #include "Game/widgets/inventory/inventory_grid.h"
 #include "ApplicationLayer/inventories_service.h"
+#include "ApplicationLayer/items/item_mime_data.h"
+#include "Game/commands/command_context.h"
+#include "Game/app_controller.h"
 #include <QVBoxLayout>
 #include <QUuid>
 #include <QMdiSubWindow>
@@ -44,6 +47,13 @@ bool InventoryWindow::handleCommand(const QString& commandName, const QStringLis
 		}
 
 		d->inventoryName = d->widget->grid()->inventoryName();
+
+		connect(d->widget->grid(), &InventoryGrid::containerOpened, this, [context](const ItemMimeData& item) {
+			const auto itemIdStr = item.id
+				.toString(QUuid::StringFormat::WithoutBraces)
+				.toLower();
+			context->applicationController()->executeCommandByName("window-create", QStringList{ "inventory", itemIdStr, item.name });
+			});
 
 		return true;
 	}

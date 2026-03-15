@@ -59,46 +59,46 @@ public:
 	}
 
 	bool saveAll() {
-		if (!inventoriesService) {
-			return false;
-		}
+	//	if (!inventoriesService) {
+	//		return false;
+	//	}
 
-		bool success = true;
-		const auto ids = inventoriesService->getAllIds();
+	//	bool success = true;
+	//	const auto ids = inventoriesService->getAllIds();
 
-		for (const auto& id : ids) {
-			auto placementService = inventoriesService->placementService(id, false);
+	//	for (const auto& id : ids) {
+	//		auto placementService = inventoriesService->placementService(id, false);
 
-			// Пробуем получить как инвентарь
-			auto inventoryService = dynamic_cast<InventoryService*>(placementService);
-			if (inventoryService && inventoryDataWriter) {
-				auto inventoryData = toInventoryData(inventoryService);
-				if (!inventoryDataWriter->saveInventory(id, inventoryData)) {
-					qWarning() << "InventoriesSaveManager: failed to save inventory" << id;
-					success = false;
-				}
-				else {
-					qDebug() << "InventoriesSaveManager: saved inventory" << id;
-				}
-				continue;
-			}
+	//		// Пробуем получить как инвентарь
+	//		auto inventoryService = dynamic_cast<InventoryService*>(placementService);
+	//		if (inventoryService && inventoryDataWriter) {
+	//			auto inventoryData = toInventoryData(inventoryService);
+	//			if (!inventoryDataWriter->saveInventory(id, inventoryData)) {
+	//				qWarning() << "InventoriesSaveManager: failed to save inventory" << id;
+	//				success = false;
+	//			}
+	//			else {
+	//				qDebug() << "InventoriesSaveManager: saved inventory" << id;
+	//			}
+	//			continue;
+	//		}
 
-			// Пробуем получить как экипировку
-			auto equipmentService = dynamic_cast<EquipmentService*>(placementService);
-			if (equipmentService && equipmentDataWriter) {
-				auto equipmentData = toEquipmentData(equipmentService);
-				if (!equipmentDataWriter->saveEquipment(id, equipmentData)) {
-					qWarning() << "InventoriesSaveManager: failed to save equipment" << id;
-					success = false;
-				}
-				else {
-					qDebug() << "InventoriesSaveManager: saved equipment" << id;
-				}
-				continue;
-			}
-		}
+	//		// Пробуем получить как экипировку
+	//		auto equipmentService = dynamic_cast<EquipmentService*>(placementService);
+	//		if (equipmentService && equipmentDataWriter) {
+	//			auto equipmentData = toEquipmentData(equipmentService);
+	//			if (!equipmentDataWriter->saveEquipment(id, equipmentData)) {
+	//				qWarning() << "InventoriesSaveManager: failed to save equipment" << id;
+	//				success = false;
+	//			}
+	//			else {
+	//				qDebug() << "InventoriesSaveManager: saved equipment" << id;
+	//			}
+	//			continue;
+	//		}
+	//	}
 
-		return success;
+		return true;
 	}
 };
 

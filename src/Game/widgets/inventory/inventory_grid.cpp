@@ -13,6 +13,7 @@
 #include <QDropEvent>
 #include <QDragEnterEvent>
 #include <QMimeData>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QDrag>
 #include <QDebug>
@@ -375,5 +376,20 @@ void InventoryGrid::resizeEvent(QResizeEvent* event) {
 	QWidget::resizeEvent(event);
 	if (d->dropPreview) {
 		d->dropPreview->setFixedSize(size());
+	}
+}
+
+void InventoryGrid::mouseDoubleClickEvent(QMouseEvent* event) {
+	if (event->button() == Qt::LeftButton) {
+		QPoint pos = event->position().toPoint();
+		int col = pos.x() / ItemsStyles::CELL_SIZE;
+		int row = pos.y() / ItemsStyles::CELL_SIZE;
+
+		const auto item = d->inventory->itemAt(col, row);
+		if (!item || !item->entity->container.has_value()) {
+			return;
+		}
+
+		emit containerOpened(ItemMimeData(*item));
 	}
 }

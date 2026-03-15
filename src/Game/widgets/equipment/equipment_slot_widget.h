@@ -9,6 +9,7 @@
 class EquipmentWidget;
 class EquipmentService;
 class EquipmentItemHandler;
+class ItemMimeData;
 enum class EquipmentSlotType;
 
 class EquipmentSlot : public QLabel {
@@ -25,12 +26,12 @@ public:
 	void clearItem();
 	void setItem(const EquipmentItemHandler& item);
 
-  // Публичный интерфейс для программного управления
-  //bool setItem(const EquipmentItem& item);
-  //bool canAcceptItem(const EquipmentItem& item) const;
+signals:
+	void containerOpened(const ItemMimeData& container);
 
 protected:
   void mousePressEvent(QMouseEvent* event) override;
+	void mouseDoubleClickEvent(QMouseEvent* event) override;
   void dragEnterEvent(QDragEnterEvent* event) override;
   void dragLeaveEvent(QDragLeaveEvent* event) override;
   void dropEvent(QDropEvent* event) override;
