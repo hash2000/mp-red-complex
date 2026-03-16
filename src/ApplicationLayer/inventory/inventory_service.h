@@ -18,8 +18,6 @@ public:
 	InventoryService(ItemsService* itemsService);
 	~InventoryService() override;
 
-	bool load(const Inventory& inventory);
-
 	QUuid placementId() const override;
 	QString placementName() const override;
 

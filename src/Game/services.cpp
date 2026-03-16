@@ -53,8 +53,6 @@ Services::Services(Resources* resources)
 	d->itemsService = std::make_unique<ItemsService>(d->itemsDataProvider.get());
 
 	d->inventoriesService = std::make_unique<InventoriesService>(
-		d->inventoryDataProvider.get(),
-		d->equipmentDataProvider.get(),
 		d->itemsService.get());
 
 	d->inventoriesSaveManager = std::make_unique<InventoriesSaveManager>(

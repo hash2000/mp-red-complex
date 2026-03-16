@@ -11,10 +11,8 @@ struct ItemsDataProvider;
 class ItemsService : public QObject {
 	Q_OBJECT
 public:
-	ItemsService(ItemsDataProvider* dataProvider, QObject* parent = nullptr);
+	ItemsService(QObject* parent = nullptr);
 	~ItemsService() override;
-
-	bool loadEntities();
 
 	using EntityView = decltype(make_deref_view(std::declval<const std::map<QString, std::unique_ptr<ItemEntity>>&>()));
 	EntityView entities() const;

@@ -36,33 +36,33 @@ const EquipmentItemHandler* EquipmentService::itemBySlot(EquipmentSlotType slot)
 EquipmentService::ItemsMap EquipmentService::items() const {
 	return d->items;
 }
-
-bool EquipmentService::load(const Equipment& equipment) {
-	d->equipmentId = equipment.id;
-
-	for (const auto& it : equipment.items) {
-		const auto item = d->itemsService->itemById(it.id);
-		if (!item) {
-			qWarning() << "EquipmentService::load: equipment" << d->equipmentId << ". undefined item:" << it.id;
-			continue;
-		}
-
-		auto eq = std::make_unique<EquipmentItemHandler>();
-		eq->id = it.id;
-		eq->slot = it.slot;
-		eq->entity = item->entity;
-
-		if (d->items.contains(eq->slot)) {
-			qWarning() << "EquipmentService::load: equipment" << d->equipmentId <<
-				". item:" << it.id << "current slot allready equiped";
-			continue;
-		}
-
-		d->items.emplace(eq->slot, std::move(eq));
-	}
-
-	return true;
-}
+//
+//bool EquipmentService::load(const Equipment& equipment) {
+//	d->equipmentId = equipment.id;
+//
+//	for (const auto& it : equipment.items) {
+//		const auto item = d->itemsService->itemById(it.id);
+//		if (!item) {
+//			qWarning() << "EquipmentService::load: equipment" << d->equipmentId << ". undefined item:" << it.id;
+//			continue;
+//		}
+//
+//		auto eq = std::make_unique<EquipmentItemHandler>();
+//		eq->id = it.id;
+//		eq->slot = it.slot;
+//		eq->entity = item->entity;
+//
+//		if (d->items.contains(eq->slot)) {
+//			qWarning() << "EquipmentService::load: equipment" << d->equipmentId <<
+//				". item:" << it.id << "current slot allready equiped";
+//			continue;
+//		}
+//
+//		d->items.emplace(eq->slot, std::move(eq));
+//	}
+//
+//	return true;
+//}
 
 QUuid EquipmentService::placementId() const {
 	return d->equipmentId;

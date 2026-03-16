@@ -16,8 +16,6 @@ public:
 	EquipmentService(ItemsService* itemsService, QObject* parent = nullptr);
 	~EquipmentService() override;
 
-	bool load(const Equipment& equipment);
-
 	QUuid placementId() const override;
 	QString placementName() const override;
 

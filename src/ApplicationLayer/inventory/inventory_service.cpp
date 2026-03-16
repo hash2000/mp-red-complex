@@ -130,30 +130,30 @@ InventoryService::InventoryService(ItemsService* itemsService)
 
 InventoryService::~InventoryService() = default;
 
-bool InventoryService::load(const Inventory& inventory) {
-	d->rows = inventory.rows;
-	d->cols = inventory.cols;
-	d->placementId = inventory.id;
-	d->inventoryName = inventory.name;
-
-	for (const auto &it : inventory.items) {
-		const auto item = d->itemsService->itemById(it.id);
-		if (!item) {
-			qDebug() << "InventoryService::load" << d->inventoryName << d->placementId << "can't load item" << it.id;
-			continue;
-		}
-
-		auto invItem = d->makeInventoryitem(item);
-		invItem->x = it.x;
-		invItem->y = it.y;
-		invItem->count = it.count;
-
-		d->inventoryItems.emplace(invItem->id, std::move(invItem));
-	}
-
-	d->setupCells();
-	return true;
-}
+//bool InventoryService::load(const Inventory& inventory) {
+//	d->rows = inventory.rows;
+//	d->cols = inventory.cols;
+//	d->placementId = inventory.id;
+//	d->inventoryName = inventory.name;
+//
+//	for (const auto &it : inventory.items) {
+//		const auto item = d->itemsService->itemById(it.id);
+//		if (!item) {
+//			qDebug() << "InventoryService::load" << d->inventoryName << d->placementId << "can't load item" << it.id;
+//			continue;
+//		}
+//
+//		auto invItem = d->makeInventoryitem(item);
+//		invItem->x = it.x;
+//		invItem->y = it.y;
+//		invItem->count = it.count;
+//
+//		d->inventoryItems.emplace(invItem->id, std::move(invItem));
+//	}
+//
+//	d->setupCells();
+//	return true;
+//}
 
 QUuid InventoryService::placementId() const {
 	return d->placementId;

@@ -4,7 +4,6 @@
 #include "ApplicationLayer/inventory/inventory_item_handler.h"
 #include "ApplicationLayer/equipment/equipment_service.h"
 #include "ApplicationLayer/items/item_mime_data.h"
-#include "DataLayer/inventory/inventory_data_provider.h"
 #include "DataLayer/items/items_data_provider.h"
 #include <QDebug>
 #include <map>
@@ -17,19 +16,13 @@ public:
 
 	InventoriesService* q;
 	InventoriesDataProvider* inventoriesDataProvider;
-	InventoryDataProvider* inventoryDataProvider;
-	EquipmentDataProvider* equipmentDataProvider;
 	ItemsService* itemsService;
 };
 
 InventoriesService::InventoriesService(
-	InventoryDataProvider* inventoryDataProvider,
-	EquipmentDataProvider* equipmentDataProvider,
 	ItemsService* itemsService,
 	QObject* parent)
 : d(std::make_unique<Private>(this)) {
-	d->inventoryDataProvider = inventoryDataProvider;
-	d->equipmentDataProvider = equipmentDataProvider;
 	d->itemsService = itemsService;
 }
 

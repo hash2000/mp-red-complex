@@ -7,8 +7,6 @@
 class ItemMimeData;
 class ItemPlacementService;
 class InventoriesDataProvider;
-class InventoryDataProvider;
-class EquipmentDataProvider;
 class ItemsService;
 struct PlacementCreateParams;
 
@@ -16,8 +14,6 @@ class InventoriesService : public QObject {
 	Q_OBJECT
 public:
 	InventoriesService(
-		InventoryDataProvider* inventoryDataProvider,
-		EquipmentDataProvider* equipmentDataProvider,
 		ItemsService* itemsService,
 		QObject* parent = nullptr);
 
