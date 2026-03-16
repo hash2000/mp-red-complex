@@ -1,5 +1,5 @@
 #include "ApplicationLayer/items/items_service.h"
-#include "DataLayer/items/items_data_provider.h"
+#include "ApplicationLayer/repositories/i_item_repository.h"
 #include <QString>
 #include <QUuid>
 #include <QDebug>
@@ -7,8 +7,9 @@
 
 class ItemsService::Private {
 public:
-	Private(ItemsService* paren)
-		: q(paren) {
+	Private(ItemsService* parent, std::shared_ptr<IItemRepository> repository)
+		: q(parent)
+		, itemRepository(repository) {
 	}
 
 	const ItemEntity* entityById(const QString& id) const {
@@ -35,46 +36,64 @@ public:
 			return item;
 		}
 
-		auto newItem = std::make_unique<Item>();
-		//if (!dataProvider->loadItem(id, *newItem)) {
-		//	return nullptr;
-		//}
-
-		newItem->entity = entityById(newItem->entityId);
-		if (!newItem->entity) {
-			qWarning() << "Unknown item entity" << newItem->entityId;
+		// Lazy loading: загружаем предмет только когда он запрошен
+		auto loadedItem = itemRepository->findItemById(id);
+		if (!loadedItem) {
+			qWarning() << "ItemsService::makeItem: failed to load item" << id;
 			return nullptr;
 		}
 
-		const auto& emplaceResult = items.emplace(newItem->id, std::move(newItem));
+		// Находим сущность для предмета (тоже с lazy loading)
+		auto entityIt = itemEntities.find(loadedItem->entityId);
+		if (entityIt == itemEntities.end()) {
+			auto loadedEntity = itemRepository->findEntityById(loadedItem->entityId);
+			if (!loadedEntity) {
+				qWarning() << "ItemsService::makeItem: unknown item entity" << loadedItem->entityId;
+				return nullptr;
+			}
+			loadedItem->entity = loadedEntity.get();
+			itemEntities.emplace(loadedItem->entityId, std::move(loadedEntity));
+			entityIt = itemEntities.find(loadedItem->entityId);
+		} else {
+			loadedItem->entity = entityIt->second.get();
+		}
+
+		const auto& emplaceResult = items.emplace(id, std::move(loadedItem));
 
 		return emplaceResult.first->second.get();
 	}
 
 	Item* createItemByEntity(const QString& entityId) {
-		auto newItem = std::make_unique<Item>();
-		newItem->entity = entityById(entityId);
-		if (!newItem->entity) {
-			qWarning() << "Unknown item entity" << entityId;
-			return nullptr;
+		auto entity = entityById(entityId);
+		if (!entity) {
+			// Lazy loading сущности
+			auto loadedEntity = itemRepository->findEntityById(entityId);
+			if (!loadedEntity) {
+				qWarning() << "ItemsService::createItemByEntity: unknown item entity" << entityId;
+				return nullptr;
+			}
+			entity = loadedEntity.get();
+			itemEntities.emplace(entityId, std::move(loadedEntity));
 		}
 
-		newItem->id = QUuid::createUuid();
+		auto newItem = std::make_unique<Item>();
+		newItem->entity = entity;
 		newItem->entityId = entityId;
+		newItem->id = QUuid::createUuid();
 
 		const auto& emplaceResult = items.emplace(newItem->id, std::move(newItem));
 
 		return emplaceResult.first->second.get();
-
 	}
 
 	ItemsService* q;
+	std::shared_ptr<IItemRepository> itemRepository;
 	std::map<QString, std::unique_ptr<ItemEntity>> itemEntities;
 	std::map<QUuid, std::unique_ptr<Item>> items;
 };
 
-ItemsService::ItemsService(QObject* parent)
-	: d(std::make_unique<Private>(this))
+ItemsService::ItemsService(std::shared_ptr<IItemRepository> repository, QObject* parent)
+	: d(std::make_unique<Private>(this, repository))
 	, QObject(parent) {
 }
 
@@ -115,5 +134,3 @@ const Item* ItemsService::duplicate(const QUuid& id) {
 const Item* ItemsService::createItemByEntity(const QString& entityId) {
 	return d->createItemByEntity(entityId);
 }
-
-

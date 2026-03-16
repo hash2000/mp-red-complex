@@ -18,6 +18,9 @@ public:
 	InventoryService(ItemsService* itemsService);
 	~InventoryService() override;
 
+	/// Загрузить данные инвентаря
+	bool load(const Inventory& inventory);
+
 	QUuid placementId() const override;
 	QString placementName() const override;
 

@@ -1,17 +1,16 @@
 #pragma once
 #include "DataLayer/items/item.h"
 #include "Base/container_view.h"
+#include "ApplicationLayer/repositories/i_item_repository.h"
 #include <QObject>
 #include <memory>
 #include <map>
 #include <ranges>
 
-struct ItemsDataProvider;
-
 class ItemsService : public QObject {
 	Q_OBJECT
 public:
-	ItemsService(QObject* parent = nullptr);
+	explicit ItemsService(std::shared_ptr<IItemRepository> repository, QObject* parent = nullptr);
 	~ItemsService() override;
 
 	using EntityView = decltype(make_deref_view(std::declval<const std::map<QString, std::unique_ptr<ItemEntity>>&>()));
