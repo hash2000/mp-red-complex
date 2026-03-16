@@ -45,8 +45,8 @@ bool ItemsDataWriterJsonImpl::saveItem(const QUuid& id, const Item& item) const 
 	}
 
 	QDir dir(dataDir);
-	if (!dir.exists("items")) {
-		dir.mkpath("items");
+	if (!dir.exists("data/items")) {
+		dir.mkpath("data/items");
 	}
 
 	QFile file(dir.filePath(path));

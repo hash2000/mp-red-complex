@@ -44,7 +44,7 @@ MessagesExplorerWidget::MessagesExplorerWidget(Resources* resources, const QVari
 	_tableView->setColumnWidth(MessagesTableModel::Message,
 			std::max(200, header->sectionSize(MessagesTableModel::Message)));
 
-  auto* layout = new QVBoxLayout(this);
+  auto layout = new QVBoxLayout(this);
   layout->addWidget(_tableView);
   setLayout(layout);
 }

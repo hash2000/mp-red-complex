@@ -227,7 +227,7 @@ void TestMyClass::testMyFunction() {
     ItemsService service(dataProvider);
     
     // Act
-    const auto* item = service.duplicate("item-id");
+    const auto item = service.duplicate("item-id");
     
     // Assert
     QVERIFY(item != nullptr);

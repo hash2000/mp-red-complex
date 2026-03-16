@@ -3,10 +3,11 @@
 #include "ApplicationLayer/inventory/inventory_service.h"
 #include "ApplicationLayer/inventory/inventory_item_handler.h"
 #include "ApplicationLayer/equipment/equipment_service.h"
+#include "ApplicationLayer/inventory_loader.h"
 #include "ApplicationLayer/items/item_mime_data.h"
-#include "DataLayer/items/items_data_provider.h"
 #include <QDebug>
 #include <map>
+#include <vector>
 
 class InventoriesService::Private {
 public:
@@ -15,21 +16,51 @@ public:
 	}
 
 	InventoriesService* q;
-	InventoriesDataProvider* inventoriesDataProvider;
 	ItemsService* itemsService;
+	InventoryLoader* inventoryLoader;
+
+	// Кэш загруженных сервисов
+	mutable std::map<QUuid, std::unique_ptr<ItemPlacementService>> loadedServices;
 };
 
 InventoriesService::InventoriesService(
 	ItemsService* itemsService,
+	InventoryLoader* inventoryLoader,
 	QObject* parent)
-: d(std::make_unique<Private>(this)) {
+	: d(std::make_unique<Private>(this)) {
 	d->itemsService = itemsService;
+	d->inventoryLoader = inventoryLoader;
 }
 
 InventoriesService::~InventoriesService() = default;
 
 ItemPlacementService* InventoriesService::placementService(const QUuid& id, bool loadIfNotExists) const {
+	// Проверяем кэш
+	auto it = d->loadedServices.find(id);
+	if (it != d->loadedServices.end()) {
+		return it->second.get();
+	}
+
+	// Если не загружен и нужно загрузить
+	if (loadIfNotExists && d->inventoryLoader) {
+		auto service = d->inventoryLoader->load(id);
+		if (service) {
+			auto ptr = service.get();
+			d->loadedServices.emplace(id, std::move(service));
+			return ptr;
+		}
+	}
+
 	return nullptr;
+}
+
+std::vector<QUuid> InventoriesService::loadedPlacementIds() const {
+	std::vector<QUuid> result;
+	result.reserve(d->loadedServices.size());
+	for (const auto& [id, service] : d->loadedServices) {
+		result.push_back(id);
+	}
+	return result;
 }
 
 bool InventoriesService::moveItem(const ItemMimeData& item, int col, int row, const QUuid& fromId, const QUuid& toId) {
@@ -110,4 +141,3 @@ bool InventoriesService::moveItem(const ItemMimeData& item, int col, int row, co
 	emit itemMoved(item, fromId, toId);
 	return true;
 }
-

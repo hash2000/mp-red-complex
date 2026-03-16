@@ -21,7 +21,7 @@ void AtlasViewControlPanel::setupUi() {
 
   // --- Информация по направлению ---
   _directionInfoGroup = new QGroupBox(tr("Direction Info"), this);
-  auto* dirLayout = new QFormLayout;
+  auto dirLayout = new QFormLayout;
   _dirFramesLabel = new QLabel("0", this);
   _dirShiftXLabel = new QLabel("0", this);
   _dirShiftYLabel = new QLabel("0", this);
@@ -37,7 +37,7 @@ void AtlasViewControlPanel::setupUi() {
 
   // --- Информация по фрейму ---
   _frameInfoGroup = new QGroupBox(tr("Frame Info"), this);
-  auto* frmLayout = new QFormLayout;
+  auto frmLayout = new QFormLayout;
   _frmWidthLabel = new QLabel("0", this);
   _frmHeightLabel = new QLabel("0", this);
   _frmOffsetXLabel = new QLabel("0", this);
@@ -51,16 +51,16 @@ void AtlasViewControlPanel::setupUi() {
   _frameInfoGroup->setLayout(frmLayout);
 
   // --- Общий layout ---
-  auto* mainLayout = new QVBoxLayout(this);
+  auto mainLayout = new QVBoxLayout(this);
   mainLayout->addWidget(_rulerCheckBox);
 
-  auto* dirLayout2 = new QHBoxLayout;
+  auto dirLayout2 = new QHBoxLayout;
   dirLayout2->addWidget(_directionLabel);
   dirLayout2->addWidget(_directionComboBox, 1);
   mainLayout->addLayout(dirLayout2);
   mainLayout->addWidget(_directionInfoGroup);
 
-  auto* frmLayout2 = new QHBoxLayout;
+  auto frmLayout2 = new QHBoxLayout;
   frmLayout2->addWidget(_frameLabel);
   frmLayout2->addWidget(_frameComboBox, 1);
   mainLayout->addLayout(frmLayout2);

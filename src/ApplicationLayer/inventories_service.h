@@ -8,6 +8,7 @@ class ItemMimeData;
 class ItemPlacementService;
 class InventoriesDataProvider;
 class ItemsService;
+class InventoryLoader;
 struct PlacementCreateParams;
 
 class InventoriesService : public QObject {
@@ -15,6 +16,7 @@ class InventoriesService : public QObject {
 public:
 	InventoriesService(
 		ItemsService* itemsService,
+		InventoryLoader* inventoryLoader,
 		QObject* parent = nullptr);
 
 	~InventoriesService() override;
@@ -24,6 +26,9 @@ public:
 	/// @param loadIfNotExists Загружать если ещё не загружен
 	/// @return Сервис размещения или nullptr если не найден
 	ItemPlacementService* placementService(const QUuid& id, bool loadIfNotExists) const;
+
+	/// Получить все идентификаторы загруженных инвентарей/экипировок
+	std::vector<QUuid> loadedPlacementIds() const;
 
 	/// Переместить предмет между инвентарями
 	bool moveItem(const ItemMimeData& item, int col, int row, const QUuid& fromId, const QUuid& toId);

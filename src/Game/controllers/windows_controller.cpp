@@ -48,7 +48,7 @@ void WindowsController::setMdiArea(QMdiArea* mdiArea) {
 
 		// Регистрация уже существующих окон
 		for (QMdiSubWindow* subWindow : d->mdiArea->subWindowList()) {
-			if (auto* window = qobject_cast<MdiChildWindow*>(subWindow->widget())) {
+			if (auto window = qobject_cast<MdiChildWindow*>(subWindow->widget())) {
 				registerWindow(window);
 			}
 		}
@@ -144,10 +144,10 @@ void WindowsController::onSubWindowActivated(QMdiSubWindow* subWindow) {
 
 void WindowsController::onSubWindowDestroyed(QObject* obj) {
 	// obj может быть как MdiChildWindow, так и QMdiSubWindow
-	if (auto* window = qobject_cast<MdiChildWindow*>(obj)) {
+	if (auto window = qobject_cast<MdiChildWindow*>(obj)) {
 		unregisterWindow(window);
 	}
-	else if (auto* subWindow = qobject_cast<QMdiSubWindow*>(obj)) {
+	else if (auto subWindow = qobject_cast<QMdiSubWindow*>(obj)) {
 		// Если уничтожено само подокно — ищем widget внутри реестра
 		for (auto it = d->windowToId.constBegin(); it != d->windowToId.constEnd(); ++it) {
 			if (it.key()->parent() == subWindow) {

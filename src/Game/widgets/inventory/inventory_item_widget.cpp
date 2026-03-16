@@ -36,7 +36,7 @@ public:
 InventoryItemWidget::InventoryItemWidget(const InventoryItemHandler& item, InventoryGrid* grid, QWidget* parent)
 	: d(std::make_unique<Private>(this))
 	, QFrame(parent) {
-	auto* layout = new QVBoxLayout(this);
+	auto layout = new QVBoxLayout(this);
 	layout->setContentsMargins(2, 2, 2, 2);
 	layout->setSpacing(0);
 

@@ -35,7 +35,7 @@ void DrawProgram::add(std::unique_ptr<DrawBuffer> buffer) {
 
 void DrawProgram::render() {
 
-	auto* f = QOpenGLContext::currentContext()->functions();
+	auto f = QOpenGLContext::currentContext()->functions();
 
 	_program.bind();
 

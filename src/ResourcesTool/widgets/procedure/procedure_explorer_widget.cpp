@@ -48,7 +48,7 @@ ProcedureExplorerWidget::ProcedureExplorerWidget(Resources* resources, const QVa
 	connect(_tableView, &QTableView::doubleClicked,
 		this, &ProcedureExplorerWidget::onProcDoubleClick);
 
-  auto* layout = new QVBoxLayout(this);
+  auto layout = new QVBoxLayout(this);
   layout->addWidget(_tableView);
   setLayout(layout);
 }

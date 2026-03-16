@@ -81,7 +81,7 @@ const InventoryItemHandler& StackSplitWidget::originalItem() const {
 }
 
 void StackSplitWidget::setupUi() {
-	auto* layout = new QHBoxLayout(this);
+	auto layout = new QHBoxLayout(this);
 	layout->setContentsMargins(8, 4, 8, 4);
 	layout->setSpacing(6);
 

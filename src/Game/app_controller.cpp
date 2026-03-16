@@ -110,7 +110,7 @@ bool ApplicationController::executeCommandByName(const QString& commandName,
 		return false;
 	}
 
-	auto* command = d->commandProcessor->findCommand(commandName);
+	auto command = d->commandProcessor->findCommand(commandName);
 	if (!command) {
 		emit commandFailed(commandName, "Command not found");
 		return false;

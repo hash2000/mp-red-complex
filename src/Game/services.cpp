@@ -78,15 +78,16 @@ Services::Services(Resources* resources)
 	// Передаём репозиторий в ItemsService (вместо provider)
 	d->itemsService = std::make_unique<ItemsService>(d->itemRepository);
 
-	d->inventoriesService = std::make_unique<InventoriesService>(
-		d->itemsService.get());
-
-	// Создаём InventoryLoader для загрузки инвентарей по требованию
+	// Создаём InventoryLoader перед InventoriesService (он нужен для загрузки)
 	d->inventoryLoader = std::make_unique<InventoryLoader>(
 		d->inventoryRepository,
 		d->equipmentRepository,
 		d->itemRepository,
 		d->itemsService.get());
+
+	d->inventoriesService = std::make_unique<InventoriesService>(
+		d->itemsService.get(),
+		d->inventoryLoader.get());
 
 	d->inventoriesSaveManager = std::make_unique<InventoriesSaveManager>(
 		d->inventoriesService.get(),
