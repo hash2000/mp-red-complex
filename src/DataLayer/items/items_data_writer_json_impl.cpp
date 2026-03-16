@@ -27,8 +27,6 @@ bool ItemsDataWriterJsonImpl::saveItem(const QUuid& id, const Item& item) const 
 	const auto uid = id
 		.toString(QUuid::StringFormat::WithoutBraces)
 		.toLower();
-	const auto path = QString("data/items/%1.json")
-		.arg(uid);
 
 	QJsonObject json;
 	json["id"] = uid;
@@ -49,7 +47,8 @@ bool ItemsDataWriterJsonImpl::saveItem(const QUuid& id, const Item& item) const 
 		dir.mkpath("data/items");
 	}
 
-	QFile file(dir.filePath(path));
+	const auto fileName = uid + ".json";
+	QFile file(dir.filePath("data/items/" + fileName));
 	if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
 		qWarning() << "ItemsDataWriterJsonImpl: can't open file for writing:" << file.fileName();
 		return false;

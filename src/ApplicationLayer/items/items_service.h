@@ -13,6 +13,9 @@ public:
 	explicit ItemsService(std::shared_ptr<IItemRepository> repository, QObject* parent = nullptr);
 	~ItemsService() override;
 
+	/// Загрузить все сущности предметов (вызывать после создания сервиса)
+	void loadEntities();
+
 	using EntityView = decltype(make_deref_view(std::declval<const std::map<QString, std::unique_ptr<ItemEntity>>&>()));
 	EntityView entities() const;
 

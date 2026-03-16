@@ -108,8 +108,8 @@ Services::Services(Resources* resources)
 Services::~Services() = default;
 
 void Services::run() {
-	// ItemsService теперь использует lazy loading, предварительная загрузка не нужна
-	// d->itemsService->loadEntities(); // удалено
+	// Загружаем все сущности предметов (eager loading для сущностей)
+	d->itemsService->loadEntities();
 	d->timeService->start();
 }
 

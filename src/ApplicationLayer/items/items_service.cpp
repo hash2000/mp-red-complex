@@ -99,6 +99,28 @@ ItemsService::ItemsService(std::shared_ptr<IItemRepository> repository, QObject*
 
 ItemsService::~ItemsService() = default;
 
+void ItemsService::loadEntities() {
+	// Загружаем все идентификаторы сущностей
+	const auto entityIds = d->itemRepository->findAllEntityIds();
+
+	// Загружаем каждую сущность заранее (eager loading)
+	for (const auto& entityId : entityIds) {
+		auto entity = d->itemRepository->findEntityById(entityId);
+		if (entity) {
+			// Загружаем иконку сущности
+			const auto path = QString("items/%1").arg(entity->iconPath);
+			// Иконка загружается через Resources, это делается в ItemEntity при загрузке
+
+			d->itemEntities.emplace(entityId, std::move(entity));
+		}
+		else {
+			qWarning() << "ItemsService::loadEntities: failed to load entity" << entityId;
+		}
+	}
+
+	qInfo() << "ItemsService::loadEntities: loaded" << d->itemEntities.size() << "item entities";
+}
+
 ItemsService::EntityView ItemsService::entities() const {
 	return make_deref_view(d->itemEntities);
 }
