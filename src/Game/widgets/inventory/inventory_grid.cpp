@@ -174,6 +174,8 @@ void InventoryGrid::createWidgetForItem(const ItemMimeData& item) {
 		// Виджет будет удалён в onItemRemoved
 		});
 
+	connect(widget, &InventoryItemWidget::containerOpened, this, &InventoryGrid::containerOpened);
+
 	d->widgets[item.id] = widget;
 }
 
@@ -379,17 +381,3 @@ void InventoryGrid::resizeEvent(QResizeEvent* event) {
 	}
 }
 
-void InventoryGrid::mouseDoubleClickEvent(QMouseEvent* event) {
-	if (event->button() == Qt::LeftButton) {
-		QPoint pos = event->position().toPoint();
-		int col = pos.x() / ItemsStyles::CELL_SIZE;
-		int row = pos.y() / ItemsStyles::CELL_SIZE;
-
-		const auto item = d->inventory->itemAt(col, row);
-		if (!item || !item->entity->container.has_value()) {
-			return;
-		}
-
-		emit containerOpened(ItemMimeData(*item));
-	}
-}

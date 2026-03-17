@@ -5,6 +5,8 @@
 #include <QGraphicsView>
 #include <QGraphicsScene>
 #include <QGraphicsRectItem>
+#include <unordered_map>
+#include <unordered_set>
 
 class ActionsWidget;
 class TaskManager;

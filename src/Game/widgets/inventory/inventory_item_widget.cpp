@@ -136,25 +136,6 @@ void InventoryItemWidget::startDrag() {
 	setWindowOpacity(1.0);
 }
 
-void InventoryItemWidget::openContainer() {
-	if (!isContainer() || !d->grid) {
-		return;
-	}
-
-	// Сигнал вверх по иерархии для открытия контейнера
-	QWidget* parent = parentWidget();
-	while (parent && !parent->inherits("InventoryItemWidget")) {
-		parent = parent->parentWidget();
-	}
-
-	if (parent) {
-		QMetaObject::invokeMethod(parent, "openContainer",
-			Qt::DirectConnection,
-			Q_ARG(InventoryItem, d->item)
-		);
-	}
-}
-
 void InventoryItemWidget::mousePressEvent(QMouseEvent* event) {
 	if (event->button() == Qt::LeftButton) {
 		d->dragStartPos = event->pos();
@@ -178,7 +159,7 @@ void InventoryItemWidget::mouseMoveEvent(QMouseEvent* event) {
 void InventoryItemWidget::mouseDoubleClickEvent(QMouseEvent* event) {
 	if (event->button() == Qt::LeftButton) {
 		if (isContainer()) {
-			openContainer();
+			emit containerOpened(d->item);
 			event->accept();
 			return;
 		}

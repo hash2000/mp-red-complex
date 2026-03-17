@@ -44,7 +44,6 @@ protected:
 	void dragLeaveEvent(QDragLeaveEvent* event) override;
 	void dropEvent(QDropEvent* event) override;
 	void resizeEvent(QResizeEvent* event) override;
-	void mouseDoubleClickEvent(QMouseEvent* event) override;
 
 private:
 	void onItemPlaced(const ItemMimeData& item, int col, int row);
