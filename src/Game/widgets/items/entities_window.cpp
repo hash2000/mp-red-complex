@@ -94,44 +94,9 @@ void EntitiesWindow::onItemCreateRequested(const QString& itemId) {
 	// Передаём список доступных инвентарей
 	createDialog->setAvailableInventories(openInventoryIds, lastActiveInventoryId);
 	
-	connect(createDialog, &ItemCreateWidget::itemCreated, this, [this, inventoriesService](
+	connect(createDialog, &ItemCreateWidget::itemCreated, this, [this](
 		const QString& entityId, int count, const QString& inventoryId) {
-		// Получаем сервис инвентаря
-		auto inventoryService = static_cast<InventoryService*>(
-			inventoriesService->placementService(QUuid::fromString(inventoryId), false));
-
-		if (!inventoryService) {
-			qWarning() << "Failed to get inventory service for:" << inventoryId;
-			return;
-		}
-
-		// Создаём ItemMimeData для нового предмета
-		const auto newItem = d->service->createItemByEntity(entityId);
-		if (!newItem) {
-			qWarning() << "Failed to create item:" << entityId;
-			return;
-		}
-
-		ItemMimeData mimeData(*newItem);
-		mimeData.count = count;
-
-		// Пытаемся найти свободное место в инвентаре
-		const auto freeSpace = inventoryService->findFreeSpace(mimeData, true);
-		if (!freeSpace.has_value()) {
-			qWarning() << "No free space in inventory for item:" << entityId;
-			return;
-		}
-
-		// Размещаем предмет в инвентаре
-		mimeData.x = freeSpace->x();
-		mimeData.y = freeSpace->y();
-
-		if (inventoryService->placeItem(mimeData)) {
-			qInfo() << "Item placed in inventory:" << newItem->id << "at" << mimeData.x << "," << mimeData.y;
-		}
-		else {
-			qWarning() << "Failed to place item in inventory:" << newItem->id;
-		}
+			d->controller->executeCommandByName("items-create", QStringList{ entityId, QString::number(count), inventoryId});
 	});
 
 	createDialog->show();
