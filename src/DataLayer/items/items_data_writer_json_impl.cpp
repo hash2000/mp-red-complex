@@ -23,12 +23,13 @@ ItemsDataWriterJsonImpl::ItemsDataWriterJsonImpl(Resources* resources)
 
 ItemsDataWriterJsonImpl::~ItemsDataWriterJsonImpl() = default;
 
-bool ItemsDataWriterJsonImpl::saveItem(const QString& id, const Item& item) const {
-	const auto path = QString("data/items/%1.json")
-		.arg(id.toLower());
+bool ItemsDataWriterJsonImpl::saveItem(const QUuid& id, const Item& item) const {
+	const auto uid = id
+		.toString(QUuid::StringFormat::WithoutBraces)
+		.toLower();
 
 	QJsonObject json;
-	json["id"] = item.id;
+	json["id"] = uid;
 	json["entityId"] = item.entityId;
 
 	QJsonDocument doc(json);
@@ -42,11 +43,12 @@ bool ItemsDataWriterJsonImpl::saveItem(const QString& id, const Item& item) cons
 	}
 
 	QDir dir(dataDir);
-	if (!dir.exists("items")) {
-		dir.mkpath("items");
+	if (!dir.exists("data/items")) {
+		dir.mkpath("data/items");
 	}
 
-	QFile file(dir.filePath(path));
+	const auto fileName = uid + ".json";
+	QFile file(dir.filePath("data/items/" + fileName));
 	if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
 		qWarning() << "ItemsDataWriterJsonImpl: can't open file for writing:" << file.fileName();
 		return false;

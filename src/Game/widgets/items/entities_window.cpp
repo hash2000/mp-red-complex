@@ -67,76 +67,37 @@ void EntitiesWindow::onItemCreateRequested(const QString& itemId) {
 		return;
 	}
 
-	// Получаем активный инвентарь через WindowsController
+	// Получаем сервисы
 	const auto services = d->controller->services();
 	const auto inventoriesService = services->inventoriesService();
 	const auto windowsController = d->controller->controllers()->windowsController();
 
-	// Получаем все окна и находим последнее активное окно типа "inventory"
-	QString targetInventoryId;
-	const auto windows = windowsController->windowEntries();
+	// Собираем список всех открытых инвентарей
+	QStringList openInventoryIds;
+	QString lastActiveInventoryId;
 	
-	// Ищем последнее окно типа inventory (последнее = самое верхнее в стеке MDI)
+	const auto windows = windowsController->windowEntries();
 	for (auto it = windows.rbegin(); it != windows.rend(); ++it) {
 		const auto window = it->first.data();
 		if (window && window->windowType() == "inventory") {
-			targetInventoryId = window->windowId();
-			break;
+			const QString windowId = window->windowId();
+			openInventoryIds.prepend(windowId);  // Добавляем в начало, чтобы последний был первым
+			if (lastActiveInventoryId.isEmpty()) {
+				lastActiveInventoryId = windowId;
+			}
 		}
-	}
-	
-	if (targetInventoryId.isEmpty()) {
-		// Если нет активных окон инвентаря, пробуем получить первый доступный инвентарь
-		const auto inventories = inventoriesService->getAllIds();
-		if (inventories.empty()) {
-			qWarning() << "EntitiesWindow::onItemCreateRequested: no inventories available";
-			return;
-		}
-		targetInventoryId = QString::fromUtf8(inventories.front().toByteArray());
 	}
 
 	// Создаём и показываем диалог создания предмета
-	auto createDialog = new ItemCreateWidget(*entity, d->service, this);
-	connect(createDialog, &ItemCreateWidget::itemCreated, this, [this, inventoriesService, targetInventoryId](const QString& entityId, int count) {
-		// Получаем сервис инвентаря
-		auto inventoryService = static_cast<InventoryService*>(
-			inventoriesService->placementService(QUuid::fromString(targetInventoryId), false));
-
-		if (!inventoryService) {
-			qWarning() << "Failed to get inventory service for:" << targetInventoryId;
-			return;
-		}
-
-		// Создаём предметы в инвентаре через сервис
-		const auto newItem = d->service->createItemByEntity(entityId);
-		if (!newItem) {
-			qWarning() << "Failed to create item:" << entityId;
-			return;
-		}
-
-		// Создаём ItemMimeData для нового предмета
-		ItemMimeData mimeData(*newItem);
-		mimeData.count = count;
-
-		// Пытаемся найти свободное место в инвентаре
-		const auto freeSpace = inventoryService->findFreeSpace(mimeData, true);
-		if (!freeSpace.has_value()) {
-			qWarning() << "No free space in inventory for item:" << entityId;
-			return;
-		}
-
-		// Размещаем предмет в инвентаре
-		mimeData.x = freeSpace->x();
-		mimeData.y = freeSpace->y();
-
-		if (inventoryService->placeItem(mimeData)) {
-			qInfo() << "Item placed in inventory:" << newItem->id << "at" << mimeData.x << "," << mimeData.y;
-		}
-		else {
-			qWarning() << "Failed to place item in inventory:" << newItem->id;
-		}
-
-		});
+	auto createDialog = new ItemCreateWidget(*entity, d->service, inventoriesService, this);
+	
+	// Передаём список доступных инвентарей
+	createDialog->setAvailableInventories(openInventoryIds, lastActiveInventoryId);
+	
+	connect(createDialog, &ItemCreateWidget::itemCreated, this, [this](
+		const QString& entityId, int count, const QString& inventoryId) {
+			d->controller->executeCommandByName("items-create", QStringList{ entityId, QString::number(count), inventoryId});
+	});
 
 	createDialog->show();
 }

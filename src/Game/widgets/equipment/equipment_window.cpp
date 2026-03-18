@@ -1,5 +1,8 @@
 #include "Game/widgets/equipment/equipment_window.h"
 #include "Game/widgets/equipment/equipment_widget.h"
+#include "Game/commands/command_context.h"
+#include "Game/app_controller.h"
+#include "ApplicationLayer/items/item_mime_data.h"
 #include <QVBoxLayout>
 #include <QUuid>
 
@@ -36,6 +39,13 @@ bool EquipmentWindow::handleCommand(const QString& commandName, const QStringLis
 		if (!d->widget->setEquipmentService(target)) {
 			return false;
 		}
+
+		connect(d->widget, &EquipmentWidget::containerOpened, this, [context](const ItemMimeData& item) {
+			const auto itemIdStr = item.id
+				.toString(QUuid::StringFormat::WithoutBraces)
+				.toLower();
+			context->applicationController()->executeCommandByName("window-create", QStringList{ "inventory", itemIdStr, item.name });
+			});
 
 		return true;
 	}

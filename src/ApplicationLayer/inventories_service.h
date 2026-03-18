@@ -4,36 +4,39 @@
 #include <list>
 #include <memory>
 
-class ItemPlacementStore;
 class ItemMimeData;
 class ItemPlacementService;
 class InventoriesDataProvider;
-class InventoryDataProvider;
-class EquipmentDataProvider;
 class ItemsService;
+class InventoryLoader;
+struct PlacementCreateParams;
 
 class InventoriesService : public QObject {
 	Q_OBJECT
 public:
 	InventoriesService(
-		InventoryDataProvider* inventoryDataProvider,
-		EquipmentDataProvider* equipmentDataProvider,
 		ItemsService* itemsService,
+		InventoryLoader* inventoryLoader,
 		QObject* parent = nullptr);
 
 	~InventoriesService() override;
 
-	bool addStore(const QUuid& id, std::unique_ptr<ItemPlacementStore> store);
-
+	/// Получить сервис размещения по идентификатору
+	/// @param id Идентификатор инвентаря/экипировки
+	/// @param loadIfNotExists Загружать если ещё не загружен
+	/// @return Сервис размещения или nullptr если не найден
 	ItemPlacementService* placementService(const QUuid& id, bool loadIfNotExists) const;
 
-	bool moveItem(const ItemMimeData& item, int col, int row, const QUuid& fromId, const QUuid& toId);
+	/// Получить все идентификаторы загруженных инвентарей/экипировок
+	std::vector<QUuid> loadedPlacementIds() const;
 
-	/// Получить список всех загруженных инвентарей и экипировок
-	std::list<QUuid> getAllIds() const;
+	/// Переместить предмет между инвентарями
+	bool moveItem(const ItemMimeData& item, int col, int row, const QUuid& fromId, const QUuid& toId);
 
 signals:
 	void itemMoved(const ItemMimeData& item, const QUuid& fromId, const QUuid& toId);
+	void inventoryCreated(const QUuid& id);
+	void equipmentCreated(const QUuid& id);
 
 private:
 	class Private;

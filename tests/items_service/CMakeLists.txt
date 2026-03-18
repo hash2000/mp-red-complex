@@ -10,8 +10,8 @@ set(CMAKE_AUTOUIC ON)
 
 add_executable(TestItemsService
     test_items_service.cpp
-    ../mock_items_data_provider.h
-    ../mock_items_data_provider.cpp
+    
+    
 )
 
 target_include_directories(TestItemsService PRIVATE

@@ -15,13 +15,13 @@ public:
 	QDrag* drag;
 };
 
-DragEventBuilder::DragEventBuilder(QObject* parent, const ItemMimeData& itemMimeData, const ItemEntity& entity, const QString& inventoryId)
+DragEventBuilder::DragEventBuilder(QObject* parent, const ItemMimeData& itemMimeData, const ItemEntity& entity, const QUuid& inventoryId)
 : d(std::make_unique<Private>(this)) {
 	d->drag = new QDrag(parent);
 	auto mimeData = new QMimeData();
 
 	mimeData->setData("application/x-game-item", itemMimeData.toMimeData());
-	mimeData->setData("application/x-game-item-source-inventory-id", inventoryId.toUtf8());
+	mimeData->setData("application/x-game-item-source-inventory-id", inventoryId.toString().toUtf8());
 	mimeData->setText(entity.name);
 
 	// Иконка для курсора

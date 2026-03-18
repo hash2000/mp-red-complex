@@ -4,6 +4,7 @@
 class InventoryGrid;
 class InventoryItemHandler;
 class InventoryItemWidget;
+class ItemMimeData;
 
 class InventoryItemWidget : public QFrame {
 	Q_OBJECT
@@ -29,12 +30,10 @@ public:
 	// Инициировать перетаскивание предмета
 	void startDrag();
 
-	// Открыть контейнер (для ящиков)
-	void openContainer();
-
 signals:
 	void removedFromGrid(InventoryItemWidget* widget);
 	void countChanged(int newCount);
+	void containerOpened(const ItemMimeData& container);
 
 protected:
 	void mousePressEvent(QMouseEvent* event) override;

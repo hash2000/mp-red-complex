@@ -1,5 +1,6 @@
 #include "Game/widgets/equipment/equipment_slot_widget.h"
 #include "Game/dragndrop/drag_event_builder.h"
+#include "Game/styles/items_styles.h"
 #include "ApplicationLayer/equipment/equipment_service.h"
 #include "ApplicationLayer/items/item_mime_data.h"
 #include "ApplicationLayer/equipment/equipment_item_handler.h"
@@ -126,6 +127,12 @@ void EquipmentSlot::mousePressEvent(QMouseEvent* event) {
 	QLabel::mousePressEvent(event);
 }
 
+void EquipmentSlot::mouseDoubleClickEvent(QMouseEvent* event) {
+	if (event->button() == Qt::LeftButton && d->item.has_value() && d->item.value().entity->container.has_value()) {
+		emit containerOpened(ItemMimeData(d->item.value()));
+	}
+}
+
 void EquipmentSlot::dragEnterEvent(QDragEnterEvent* event) {
 	if (!event->mimeData()->hasFormat("application/x-game-item")) {
 		event->ignore();
@@ -181,12 +188,13 @@ void EquipmentSlot::dropEvent(QDropEvent* event) {
 	}
 
 	// в экипировку предмет может попасть только из инвентаря
-	const auto inventoryId = QString::fromUtf8(event->mimeData()->data("application/x-game-item-source-inventory-id"));
-	if (inventoryId.isEmpty()) {
+	const auto inventoryIdStr = QUuid::fromString(QString::fromUtf8(event->mimeData()->data("application/x-game-item-source-inventory-id")));
+	if (inventoryIdStr.isNull()) {
 		event->ignore();
 		return;
 	}
 
+	const auto inventoryId = inventoryIdStr;
 	const auto data = event->mimeData()->data("application/x-game-item");
 	const auto item = ItemMimeData::fromMimeData(data);
 

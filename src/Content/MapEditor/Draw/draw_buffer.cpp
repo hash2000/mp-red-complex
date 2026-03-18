@@ -6,7 +6,7 @@ void DrawBuffer::create(
 	const std::vector<float>& data,
 	const std::vector<Attribute>& attributes)
 {
-	auto* f = QOpenGLContext::currentContext()->functions();
+	auto f = QOpenGLContext::currentContext()->functions();
 
 	_vbo.create();
 	_vbo.bind();

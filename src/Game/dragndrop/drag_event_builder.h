@@ -6,7 +6,7 @@ class ItemMimeData;
 
 class DragEventBuilder {
 public:
-	DragEventBuilder(QObject* parent, const ItemMimeData& itemMimeData, const ItemEntity& entity, const QString& inventoryId);
+	DragEventBuilder(QObject* parent, const ItemMimeData& itemMimeData, const ItemEntity& entity, const QUuid& inventoryId);
 	~DragEventBuilder();
 
 	Qt::DropAction ExecDrag(Qt::DropAction action);

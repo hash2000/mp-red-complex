@@ -8,12 +8,14 @@
 #include "DataLayer/equipment/equipment_data_provider_json_impl.h"
 #include "DataLayer/equipment/equipment_data_writer_json_impl.h"
 #include "DataLayer/inventories/inventories_data_provider_json_impl.h"
+#include "DataLayer/repositories/item_repository_json_impl.h"
+#include "DataLayer/repositories/inventory_repository_json_impl.h"
+#include "DataLayer/repositories/equipment_repository_json_impl.h"
 #include "ApplicationLayer/items/items_service.h"
 #include "ApplicationLayer/inventories_service.h"
+#include "ApplicationLayer/inventory_loader.h"
 #include "ApplicationLayer/inventories_save_manager.h"
 #include "ApplicationLayer/items_save_manager.h"
-#include "ApplicationLayer/inventory/inventory_store_impl.h"
-#include "ApplicationLayer/equipment/equipment_store_impl.h"
 #include <list>
 
 class Services::Private {
@@ -22,42 +24,35 @@ public:
 		: q(parent) {
 	}
 
-	void loadInventories() {
-		std::list<QUuid> items;
-		inventoriesDataProvider->loadInventories(items);
-
-		for (const auto& item : items) {
-			inventoriesService->addStore(item, std::make_unique<InventoryStoreImpl>(inventoryDataProvider.get(), itemsService.get()));
-		}
-	}
-
-	void loadEquipments() {
-		std::list<QUuid> items;
-		inventoriesDataProvider->loadEquipments(items);
-
-		for (const auto& item : items) {
-			inventoriesService->addStore(item, std::make_unique<EquipmentStoreImpl>(equipmentDataProvider.get(), itemsService.get()));
-		}
-	}
-
 	Services* q;
 	std::unique_ptr<TimeService> timeService;
 	std::unique_ptr<WorldService> worldService;
+
+	// Data Providers (остаются для обратной совместимости и writer'ов)
 	std::unique_ptr<InventoryDataProvider> inventoryDataProvider;
 	std::unique_ptr<InventoryDataWriter> inventoryDataWriter;
-	std::unique_ptr<InventoriesService> inventoriesService;
-	std::unique_ptr<InventoriesSaveManager> inventoriesSaveManager;
 	std::unique_ptr<ItemsDataProvider> itemsDataProvider;
 	std::unique_ptr<ItemsDataWriter> itemsDataWriter;
-	std::unique_ptr<ItemsService> itemsService;
-	std::unique_ptr<ItemsSaveManager> itemsSaveManager;
 	std::unique_ptr<EquipmentDataProvider> equipmentDataProvider;
 	std::unique_ptr<EquipmentDataWriter> equipmentDataWriter;
 	std::unique_ptr<InventoriesDataProvider> inventoriesDataProvider;
+
+	// Repositories (новый слой абстракции)
+	std::shared_ptr<IItemRepository> itemRepository;
+	std::shared_ptr<IInventoryRepository> inventoryRepository;
+	std::shared_ptr<IEquipmentRepository> equipmentRepository;
+
+	// Services
+	std::unique_ptr<ItemsService> itemsService;
+	std::unique_ptr<InventoriesService> inventoriesService;
+	std::unique_ptr<InventoryLoader> inventoryLoader;
+	std::unique_ptr<InventoriesSaveManager> inventoriesSaveManager;
+	std::unique_ptr<ItemsSaveManager> itemsSaveManager;
 };
 
 Services::Services(Resources* resources)
-: d(std::make_unique<Private>(this)) {
+	: d(std::make_unique<Private>(this)) {
+	// Создаём provider'ы
 	d->inventoriesDataProvider = std::make_unique<InventoriesDataProviderJsonImpl>(resources);
 	d->inventoryDataProvider = std::make_unique<InventoryDataProviderJsonImpl>(resources);
 	d->itemsDataProvider = std::make_unique<ItemsDataProviderJsonImpl>(resources);
@@ -66,16 +61,33 @@ Services::Services(Resources* resources)
 	d->equipmentDataWriter = std::make_unique<EquipmentDataWriterJsonImpl>(resources);
 	d->itemsDataWriter = std::make_unique<ItemsDataWriterJsonImpl>(resources);
 
+	// Создаём репозитории (адаптеры к provider'ам)
+	d->itemRepository = std::make_shared<ItemRepositoryJsonImpl>(d->itemsDataProvider.get());
+	d->inventoryRepository = std::make_shared<InventoryRepositoryJsonImpl>(
+		d->inventoryDataProvider.get(),
+		d->inventoryDataWriter.get());
+
+	d->equipmentRepository = std::make_shared<EquipmentRepositoryJsonImpl>(
+		d->equipmentDataProvider.get(),
+		d->equipmentDataWriter.get());
+
 	d->timeService = std::make_unique<TimeService>();
 
 	d->worldService = std::make_unique<WorldService>();
 
-	d->itemsService = std::make_unique<ItemsService>(d->itemsDataProvider.get());
+	// Передаём репозиторий в ItemsService (вместо provider)
+	d->itemsService = std::make_unique<ItemsService>(d->itemRepository);
+
+	// Создаём InventoryLoader перед InventoriesService (он нужен для загрузки)
+	d->inventoryLoader = std::make_unique<InventoryLoader>(
+		d->inventoryRepository,
+		d->equipmentRepository,
+		d->itemRepository,
+		d->itemsService.get());
 
 	d->inventoriesService = std::make_unique<InventoriesService>(
-		d->inventoryDataProvider.get(),
-		d->equipmentDataProvider.get(),
-		d->itemsService.get());
+		d->itemsService.get(),
+		d->inventoryLoader.get());
 
 	d->inventoriesSaveManager = std::make_unique<InventoriesSaveManager>(
 		d->inventoriesService.get(),
@@ -96,10 +108,9 @@ Services::Services(Resources* resources)
 Services::~Services() = default;
 
 void Services::run() {
+	// Загружаем все сущности предметов (eager loading для сущностей)
 	d->itemsService->loadEntities();
 	d->timeService->start();
-	d->loadInventories();
-	d->loadEquipments();
 }
 
 void Services::postLoadEvent() {
@@ -114,7 +125,7 @@ TimeService* Services::timeService() const {
 	return d->timeService.get();
 }
 
- WorldService* Services::worldService() const {
+WorldService* Services::worldService() const {
 	return d->worldService.get();
 }
 
@@ -126,3 +137,10 @@ InventoriesService* Services::inventoriesService() const {
 	return d->inventoriesService.get();
 }
 
+InventoryLoader* Services::inventoryLoader() const {
+	return d->inventoryLoader.get();
+}
+
+IInventoryRepository* Services::inventoryRepository() const {
+	return d->inventoryRepository.get();
+}

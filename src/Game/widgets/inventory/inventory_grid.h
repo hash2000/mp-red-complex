@@ -26,7 +26,7 @@ public:
 	int rows() const;
 	int cols() const;
 
-	QString inventoryId() const;
+	QUuid inventoryId() const;
 
 	QString inventoryName() const;
 

@@ -14,14 +14,14 @@ bool CreateWindowCommand::execute(CommandContext* context, const QStringList& ar
 	auto mdiArea = controller->mdiArea();
 
 	if (args.count() < 1) {
-		context->printError("Usage: window-create <type> <id>");
+		context->printError(QString("Usage: %1").arg(help()));
 		return false;
 	}
 
 	const auto target = args.at(0);
 	QString id;
 
-	if (args.count() == 2) {
+	if (args.count() >= 2) {
 		id = args.at(1);
 	}
 	else {

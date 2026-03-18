@@ -16,9 +16,11 @@ public:
 	EquipmentService(ItemsService* itemsService, QObject* parent = nullptr);
 	~EquipmentService() override;
 
+	/// Загрузить данные экипировки
 	bool load(const Equipment& equipment);
 
-	QString placementId() const override;
+	QUuid placementId() const override;
+	QString placementName() const override;
 
 	int canPlaceItem(const ItemMimeData& item, int col, int row, bool checkItemPlace) const override;
 	std::optional<QPoint> findFreeSpace(const ItemMimeData& item, bool checkItemPlace) const override;
@@ -35,9 +37,9 @@ public:
 
 	bool placeItem(const ItemMimeData& item) override;
 	bool removeItemsFromStack(const ItemMimeData& item) override;
-	ItemMimeData itemDataById(const QString& id) const override;
+	ItemMimeData itemDataById(const QUuid& id) const override;
 
-	const EquipmentItemHandler* equipItem(const ItemMimeData& item, EquipmentSlotType slot, const QString& inventoryId);
+	const EquipmentItemHandler* equipItem(const ItemMimeData& item, EquipmentSlotType slot, const QUuid& inventoryId);
 	bool unequipItem(const ItemMimeData& item, EquipmentSlotType slot);
 
 	const EquipmentItemHandler* itemBySlot(EquipmentSlotType slot) const;
@@ -46,7 +48,7 @@ public:
 	ItemsMap items() const;
 
 signals:
-	void itemEquipped(const EquipmentItemHandler& item, EquipmentSlotType slot, const QString& inventoryId);
+	void itemEquipped(const EquipmentItemHandler& item, EquipmentSlotType slot, const QUuid& inventoryId);
 	void itemUnequipped(const EquipmentItemHandler& item, EquipmentSlotType slot);
 	void removeItemEvent(const ItemMimeData& item, int row, int col);
 

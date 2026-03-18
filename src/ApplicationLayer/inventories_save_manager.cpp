@@ -24,7 +24,7 @@ public:
 	Inventory toInventoryData(const InventoryService* service) {
 		Inventory inventory;
 		inventory.id = service->placementId();
-		inventory.name = service->inventoryName();
+		inventory.name = service->placementName();
 		inventory.rows = service->rows();
 		inventory.cols = service->cols();
 
@@ -64,7 +64,7 @@ public:
 		}
 
 		bool success = true;
-		const auto ids = inventoriesService->getAllIds();
+		const auto ids = inventoriesService->loadedPlacementIds();
 
 		for (const auto& id : ids) {
 			auto placementService = inventoriesService->placementService(id, false);

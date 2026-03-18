@@ -1,16 +1,14 @@
 #include "ApplicationLayer/inventories_service.h"
-#include "ApplicationLayer/items_placement_store.h"
 #include "ApplicationLayer/items_placement_service.h"
-#include "ApplicationLayer/inventory/inventory_store_impl.h"
-#include "ApplicationLayer/equipment/equipment_store_impl.h"
 #include "ApplicationLayer/inventory/inventory_service.h"
 #include "ApplicationLayer/inventory/inventory_item_handler.h"
 #include "ApplicationLayer/equipment/equipment_service.h"
+#include "ApplicationLayer/inventory_loader.h"
 #include "ApplicationLayer/items/item_mime_data.h"
-#include "DataLayer/inventory/inventory_data_provider.h"
-#include "DataLayer/items/items_data_provider.h"
+#include "ApplicationLayer/items/items_service.h"
 #include <QDebug>
 #include <map>
+#include <vector>
 
 class InventoriesService::Private {
 public:
@@ -19,42 +17,66 @@ public:
 	}
 
 	InventoriesService* q;
-	std::map<QUuid, std::unique_ptr<ItemPlacementStore>> stores;
-	InventoriesDataProvider* inventoriesDataProvider;
-	InventoryDataProvider* inventoryDataProvider;
-	EquipmentDataProvider* equipmentDataProvider;
 	ItemsService* itemsService;
+	InventoryLoader* inventoryLoader;
+
+	// Кэш загруженных сервисов
+	mutable std::map<QUuid, std::unique_ptr<ItemPlacementService>> loadedServices;
 };
 
 InventoriesService::InventoriesService(
-	InventoryDataProvider* inventoryDataProvider,
-	EquipmentDataProvider* equipmentDataProvider,
 	ItemsService* itemsService,
+	InventoryLoader* inventoryLoader,
 	QObject* parent)
-: d(std::make_unique<Private>(this)) {
-	d->inventoryDataProvider = inventoryDataProvider;
-	d->equipmentDataProvider = equipmentDataProvider;
+	: d(std::make_unique<Private>(this)) {
 	d->itemsService = itemsService;
+	d->inventoryLoader = inventoryLoader;
 }
 
 InventoriesService::~InventoriesService() = default;
 
-
-bool InventoriesService::addStore(const QUuid& id, std::unique_ptr<ItemPlacementStore> store)
-{
-	const auto& result = d->stores.emplace(id, std::move(store));
-	return result.second;
-}
-
 ItemPlacementService* InventoriesService::placementService(const QUuid& id, bool loadIfNotExists) const {
-	const auto& it = d->stores.find(id);
-	if (it == d->stores.end()) {
-		qWarning() << "Inventory loader not found" << id.toString();
-		return nullptr;
+	// Проверяем кэш
+	auto it = d->loadedServices.find(id);
+	if (it != d->loadedServices.end()) {
+		return it->second.get();
 	}
 
-	auto service = it->second->load(id, loadIfNotExists);
-	return service;
+	// Если не загружен и нужно загрузить
+	if (loadIfNotExists && d->inventoryLoader) {
+		auto service = d->inventoryLoader->load(id);
+		
+		if (!service) {
+			// Если загрузка не удалась, создаём пустой инвентарь в памяти
+			// этот инвентарь обязательно должен быть среди предметов с типом Container
+			const auto invItem = d->itemsService->itemById(id);
+			if (!invItem || !invItem->entity->container.has_value()) {
+				return nullptr;
+			}
+
+			service = d->inventoryLoader->createInventory(id,
+				invItem->entity->name,
+				invItem->entity->container->rows,
+				invItem->entity->container->cols);
+		}
+		
+		if (service) {
+			auto ptr = service.get();
+			d->loadedServices.emplace(id, std::move(service));
+			return ptr;
+		}
+	}
+
+	return nullptr;
+}
+
+std::vector<QUuid> InventoriesService::loadedPlacementIds() const {
+	std::vector<QUuid> result;
+	result.reserve(d->loadedServices.size());
+	for (const auto& [id, service] : d->loadedServices) {
+		result.push_back(id);
+	}
+	return result;
 }
 
 bool InventoriesService::moveItem(const ItemMimeData& item, int col, int row, const QUuid& fromId, const QUuid& toId) {
@@ -134,12 +156,4 @@ bool InventoriesService::moveItem(const ItemMimeData& item, int col, int row, co
 
 	emit itemMoved(item, fromId, toId);
 	return true;
-}
-
-std::list<QUuid> InventoriesService::getAllIds() const {
-	std::list<QUuid> ids;
-	for (const auto& [id, store] : d->stores) {
-		ids.push_back(id);
-	}
-	return ids;
 }

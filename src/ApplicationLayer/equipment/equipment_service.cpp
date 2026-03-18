@@ -13,7 +13,7 @@ public:
 
 	EquipmentService* q;
 	ItemsService* itemsService;
-	QString equipmentId;
+	QUuid equipmentId;
 	std::map<EquipmentSlotType, std::unique_ptr<EquipmentItemHandler>> items;
 };
 
@@ -64,8 +64,12 @@ bool EquipmentService::load(const Equipment& equipment) {
 	return true;
 }
 
-QString EquipmentService::placementId() const {
+QUuid EquipmentService::placementId() const {
 	return d->equipmentId;
+}
+
+QString EquipmentService::placementName() const {
+	return QString("Equipment");
 }
 
 int EquipmentService::canPlaceItem(const ItemMimeData& item, int col, int row, bool checkItemPlace) const {
@@ -113,7 +117,7 @@ int EquipmentService::cols() const {
 	return static_cast<qint32>(ItemEquipmentType::LastSlot);
 }
 
-ItemMimeData EquipmentService::EquipmentService::itemDataById(const QString& id) const {
+ItemMimeData EquipmentService::EquipmentService::itemDataById(const QUuid& id) const {
 	for (const auto& [itemType, item]:d->items) {
 		if (item->id == id) {
 			return ItemMimeData(*item);
@@ -190,7 +194,7 @@ bool EquipmentService::removeItemsFromStack(const ItemMimeData& item) {
 	return true;
 }
 
-const EquipmentItemHandler* EquipmentService::equipItem(const ItemMimeData& item, EquipmentSlotType slot, const QString& inventoryId) {
+const EquipmentItemHandler* EquipmentService::equipItem(const ItemMimeData& item, EquipmentSlotType slot, const QUuid& inventoryId) {
 	// берём из инвентаря
 	const auto itemPtr = d->itemsService->itemById(item.id);
 	if (!itemPtr) {

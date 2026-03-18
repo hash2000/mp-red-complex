@@ -45,16 +45,17 @@ QString slotToString(EquipmentSlotType slot) {
 }
 
 bool EquipmentDataWriterJsonImpl::saveEquipment(const QUuid& id, const Equipment& equipment) const {
-	const auto path = QString("data/equipment/%1.json")
-		.arg(id.toString(QUuid::StringFormat::WithoutBraces).toLower());
-
 	QJsonObject json;
-	json["id"] = equipment.id;
+	json["id"] = equipment.id
+		.toString(QUuid::StringFormat::WithoutBraces)
+		.toLower();
 
 	QJsonArray itemsArr;
 	for (const auto& item : equipment.items) {
 		QJsonObject itemObj;
-		itemObj["id"] = item.id;
+		itemObj["id"] = item.id
+			.toString(QUuid::StringFormat::WithoutBraces)
+			.toLower();
 		itemObj["slot"] = slotToString(item.slot);
 		itemsArr.append(itemObj);
 	}
@@ -63,6 +64,7 @@ bool EquipmentDataWriterJsonImpl::saveEquipment(const QUuid& id, const Equipment
 	QJsonDocument doc(json);
 
 	// Получаем путь к директории data из Resources
+	const auto path = QString("data/equipment/");
 	auto dataDir = d->resources->Variables.get("Resources.Path", "")
 		.toString();
 	if (dataDir.isEmpty()) {
@@ -71,11 +73,12 @@ bool EquipmentDataWriterJsonImpl::saveEquipment(const QUuid& id, const Equipment
 	}
 
 	QDir dir(dataDir);
-	if (!dir.exists("equipment")) {
-		dir.mkpath("equipment");
+	if (!dir.exists(path)) {
+		dir.mkpath(path);
 	}
 
-	QFile file(dir.filePath("data/equipment/" + id.toString(QUuid::StringFormat::WithoutBraces).toLower() + ".json"));
+	const auto fileName = id.toString(QUuid::StringFormat::WithoutBraces).toLower() + ".json";
+	QFile file(dir.filePath(path + fileName));
 	if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
 		qWarning() << "EquipmentDataWriterJsonImpl: can't open file for writing:" << file.fileName();
 		return false;

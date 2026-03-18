@@ -25,11 +25,10 @@ InventoryDataWriterJsonImpl::InventoryDataWriterJsonImpl(Resources* resources)
 InventoryDataWriterJsonImpl::~InventoryDataWriterJsonImpl() = default;
 
 bool InventoryDataWriterJsonImpl::saveInventory(const QUuid& id, const Inventory& inventory) const {
-	const auto path = QString("data/inventory/%1.json")
-		.arg(id.toString(QUuid::StringFormat::WithoutBraces).toLower());
-
 	QJsonObject json;
-	json["id"] = inventory.id;
+	json["id"] = inventory.id
+		.toString(QUuid::StringFormat::WithoutBraces)
+		.toLower();
 	json["name"] = inventory.name;
 	json["rows"] = inventory.rows;
 	json["cols"] = inventory.cols;
@@ -37,7 +36,9 @@ bool InventoryDataWriterJsonImpl::saveInventory(const QUuid& id, const Inventory
 	QJsonArray itemsArr;
 	for (const auto& item : inventory.items) {
 		QJsonObject itemObj;
-		itemObj["id"] = item.id;
+		itemObj["id"] = item.id
+			.toString(QUuid::StringFormat::WithoutBraces)
+			.toLower();
 		itemObj["count"] = item.count;
 		itemObj["x"] = item.x;
 		itemObj["y"] = item.y;
@@ -48,6 +49,7 @@ bool InventoryDataWriterJsonImpl::saveInventory(const QUuid& id, const Inventory
 	QJsonDocument doc(json);
 
 	// Получаем путь к директории data из Resources
+	const auto path = QString("data/inventory/");
 	auto dataDir = d->resources->Variables.get("Resources.Path", "")
 		.toString();
 	if (dataDir.isEmpty()) {
@@ -56,11 +58,12 @@ bool InventoryDataWriterJsonImpl::saveInventory(const QUuid& id, const Inventory
 	}
 
 	QDir dir(dataDir);
-	if (!dir.exists("inventory")) {
-		dir.mkpath("inventory");
+	if (!dir.exists(path)) {
+		dir.mkpath(path);
 	}
 
-	QFile file(dir.filePath("data/inventory/" + id.toString(QUuid::StringFormat::WithoutBraces).toLower() + ".json"));
+	const auto fileName = id.toString(QUuid::StringFormat::WithoutBraces).toLower() + ".json";
+	QFile file(dir.filePath(path + fileName));
 	if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
 		qWarning() << "InventoryDataWriterJsonImpl: can't open file for writing:" << file.fileName();
 		return false;

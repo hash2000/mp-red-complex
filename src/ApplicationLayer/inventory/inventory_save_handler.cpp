@@ -14,7 +14,7 @@ public:
 	Inventory toInventoryData(const InventoryService* service) {
 		Inventory inventory;
 		inventory.id = service->placementId();
-		inventory.name = service->inventoryName();
+		inventory.name = service->placementName();
 		inventory.rows = service->rows();
 		inventory.cols = service->cols();
 

@@ -7,6 +7,8 @@ class TimeService;
 class WorldService;
 class InventoriesService;
 class ItemsService;
+class InventoryLoader;
+class IInventoryRepository;
 
 class Services: public QObject {
 	Q_OBJECT
@@ -21,6 +23,10 @@ public:
 	ItemsService* itemsService() const;
 
 	InventoriesService* inventoriesService() const;
+
+	InventoryLoader* inventoryLoader() const;
+
+	IInventoryRepository* inventoryRepository() const;
 
 	void run();
 

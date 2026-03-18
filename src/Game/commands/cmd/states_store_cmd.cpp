@@ -20,5 +20,6 @@ bool StatesStoreCommand::execute(CommandContext* context, const QStringList& arg
 		return true;
 	}
 
+	context->printError(QString("Usage: %1").arg(help()));
 	return false;
 }

@@ -1,7 +1,7 @@
 #pragma once
 #include <QString>
-#include <QString>
 #include <QPoint>
+#include <QUuid>
 #include <optional>
 
 class ItemMimeData;
@@ -10,10 +10,16 @@ class ItemPlacementService {
 public:
 
 	/// <summary>
+	/// Сщтефштук Тфьу
+	/// </summary>
+	/// <returns></returns>
+	virtual QString placementName() const = 0;
+
+	/// <summary>
 	/// Container id
 	/// </summary>
 	/// <returns></returns>
-	virtual QString placementId() const = 0;
+	virtual QUuid placementId() const = 0;
 
 	/// <summary>
 	/// Check cell to place there current item
@@ -94,5 +100,5 @@ public:
 	/// </summary>
 	/// <param name="id"></param>
 	/// <returns></returns>
-	virtual ItemMimeData itemDataById(const QString& id) const = 0;
+	virtual ItemMimeData itemDataById(const QUuid& id) const = 0;
 };

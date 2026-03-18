@@ -8,5 +8,5 @@ public:
 
 	QString name() const override { return "states-store"; }
 	QString description() const override { return "Serialize/deserialize application states"; }
-	QString help() const override { return "states-store — serialize/deserialize application states"; }
+	QString help() const override { return "states-store <'save' | 'load'>"; }
 };

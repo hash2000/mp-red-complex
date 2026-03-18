@@ -15,15 +15,14 @@ class ItemMimeData;
 class InventoryService : public QObject, public ItemPlacementService {
 	Q_OBJECT
 public:
-	using EntityView = decltype(make_deref_view(std::declval<const std::map<QString, std::unique_ptr<InventoryItemHandler>>&>()));
-public:
 	InventoryService(ItemsService* itemsService);
 	~InventoryService() override;
 
+	/// Загрузить данные инвентаря
 	bool load(const Inventory& inventory);
 
-	QString placementId() const override;
-	QString inventoryName() const;
+	QUuid placementId() const override;
+	QString placementName() const override;
 
 	int rows() const override;
 	int cols() const override;
@@ -34,8 +33,10 @@ public:
 	bool moveItem(const ItemMimeData& item, int newCol, int newRow, bool checkItemPlace) override;
 	void removeItem(const ItemMimeData& item) override;
 
-	const InventoryItemHandler* itemById(const QString& id) const;
+	const InventoryItemHandler* itemById(const QUuid& id) const;
 	const InventoryItemHandler* itemAt(int col, int row) const;
+
+	using EntityView = decltype(make_deref_view(std::declval<const std::map<QUuid, std::unique_ptr<InventoryItemHandler>>&>()));
 	EntityView items() const;
 
 	bool containsItem(const ItemMimeData& item) const override;
@@ -44,7 +45,7 @@ public:
 	bool placeItem(const ItemMimeData& item);
 	bool removeItemsFromStack(const ItemMimeData& item) override;
 
-	ItemMimeData itemDataById(const QString& id) const override;
+	ItemMimeData itemDataById(const QUuid& id) const override;
 
 signals:
 	void placeItemEvent(const ItemMimeData& item, int col, int row);

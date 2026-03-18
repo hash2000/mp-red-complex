@@ -124,6 +124,12 @@ public:
 		}
 	}
 
+	void connectSlots() {
+		for (const auto& slot : allSlots) {
+			connect(slot.second, &EquipmentSlot::containerOpened, q, &EquipmentWidget::containerOpened);
+		}
+	}
+
 	EquipmentWidget* q;
 
 	std::map<EquipmentSlotType, EquipmentSlot*> allSlots;
@@ -168,6 +174,7 @@ bool EquipmentWidget::setEquipmentService(const QUuid& id) {
 	d->equipmentService = equipmentService;
 	d->setupLayout();
 	d->populateSlots();
+	d->connectSlots();
 
 	connect(d->equipmentService, &EquipmentService::itemEquipped, this, &EquipmentWidget::onItemEquipped);
 	connect(d->equipmentService, &EquipmentService::itemUnequipped, this, &EquipmentWidget::onItemUnequipped);
@@ -175,13 +182,13 @@ bool EquipmentWidget::setEquipmentService(const QUuid& id) {
 	return true;
 }
 
-void EquipmentWidget::onItemEquipped(const EquipmentItemHandler& item, EquipmentSlotType slot, const QString& inventoryId) {
+void EquipmentWidget::onItemEquipped(const EquipmentItemHandler& item, EquipmentSlotType slot, const QUuid& inventoryId) {
 	const auto &it = d->allSlots.find(slot);
 	if (it == d->allSlots.end()) {
 		return;
 	}
 
-	auto inventory = d->inventoriesService->placementService(QUuid::fromString(inventoryId), false);
+	auto inventory = d->inventoriesService->placementService(inventoryId, false);
 	if (inventory) {
 		inventory->removeItem(ItemMimeData(item));
 	}

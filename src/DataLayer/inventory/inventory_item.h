@@ -1,13 +1,14 @@
 #pragma once
 #include "DataLayer/items/item.h"
 #include <QString>
+#include <QUuid>
 #include <list>
 #include <map>
 #include <memory>
 
 class InventoryItem {
 public:
-	QString id;
+	QUuid id;
 	int x;
 	int y;
 	int count;
@@ -15,7 +16,7 @@ public:
 
 class Inventory {
 public:
-	QString id;
+	QUuid id;
 	QString name;
 	int rows;
 	int cols;
