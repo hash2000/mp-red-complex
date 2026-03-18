@@ -1,5 +1,5 @@
 #pragma once
-#include "ApplicationLayer/repositories/i_inventory_repository.h"
+#include "ApplicationLayer/inventory/i_inventory_repository.h"
 #include <memory>
 
 class InventoryDataProvider;

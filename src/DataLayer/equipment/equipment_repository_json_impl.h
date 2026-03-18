@@ -1,5 +1,5 @@
 #pragma once
-#include "ApplicationLayer/repositories/i_equipment_repository.h"
+#include "ApplicationLayer/equipment/i_equipment_repository.h"
 #include <memory>
 
 class EquipmentDataProvider;

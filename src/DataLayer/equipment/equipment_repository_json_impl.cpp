@@ -1,4 +1,4 @@
-#include "DataLayer/repositories/equipment_repository_json_impl.h"
+#include "DataLayer/equipment/equipment_repository_json_impl.h"
 #include "DataLayer/equipment/equipment_data_provider.h"
 #include "DataLayer/equipment/equipment_data_writer.h"
 #include "DataLayer/equipment/equipment.h"

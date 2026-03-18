@@ -1,4 +1,4 @@
-#include "DataLayer/repositories/inventory_repository_json_impl.h"
+#include "DataLayer/inventory/inventory_repository_json_impl.h"
 #include "DataLayer/inventory/inventory_data_provider.h"
 #include "DataLayer/inventory/inventory_data_writer.h"
 #include "DataLayer/inventory/inventory_item.h"
