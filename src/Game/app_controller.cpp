@@ -5,7 +5,7 @@
 #include "Game/commands/command_context.h"
 #include "Game/commands/cmd/windows_close_all_cmd.h"
 #include "Game/commands/cmd/windows_list_cmd.h"
-#include "Game/commands/cmd/window_close_cmd.h"
+#include "Game/commands/cmd/windows_close_cmd.h"
 #include "Game/commands/cmd/window_create_cmd.h"
 #include "Game/commands/cmd/states_store_cmd.h"
 #include "Game/commands/cmd/items_create.h"
@@ -44,7 +44,7 @@ ApplicationController::ApplicationController(Resources* resources, QObject* pare
 
 	// Регистрация встроенных системных команд
 	d->commandProcessor->registerCommand(std::make_unique<ListWindowsCommand>());
-	d->commandProcessor->registerCommand(std::make_unique<CloseWindowCommand>());
+	d->commandProcessor->registerCommand(std::make_unique<CloseWindowsCommand>());
 	d->commandProcessor->registerCommand(std::make_unique<CloseAllWindowsCommand>());
 	d->commandProcessor->registerCommand(std::make_unique<CreateWindowCommand>());
 	d->commandProcessor->registerCommand(std::make_unique<StatesStoreCommand>());

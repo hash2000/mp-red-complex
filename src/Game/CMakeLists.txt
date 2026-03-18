@@ -4,6 +4,9 @@ set(Game-Sources
 	${RedComplex_SOURCE_DIR}/src/Game
 )
 
+# Включаем MOC для Qt-классов с Q_OBJECT
+set(CMAKE_AUTOMOC ON)
+
 file(GLOB_RECURSE SRCS ${Game-Sources}/*.cpp)
 add_executable(Game
 	${SRCS}

@@ -140,3 +140,7 @@ InventoriesService* Services::inventoriesService() const {
 InventoryLoader* Services::inventoryLoader() const {
 	return d->inventoryLoader.get();
 }
+
+IInventoryRepository* Services::inventoryRepository() const {
+	return d->inventoryRepository.get();
+}

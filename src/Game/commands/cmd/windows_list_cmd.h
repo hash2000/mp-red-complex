@@ -8,5 +8,5 @@ public:
 
 	QString name() const override { return "windows-list"; }
 	QString description() const override { return "List all open MDI windows"; }
-	QString help() const override { return "windows — list all open windows"; }
+	QString help() const override { return "windows-list"; }
 };

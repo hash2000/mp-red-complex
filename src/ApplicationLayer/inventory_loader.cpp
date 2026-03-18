@@ -63,3 +63,35 @@ std::unique_ptr<ItemPlacementService> InventoryLoader::load(const QUuid& id) {
 
     return nullptr;
 }
+
+std::unique_ptr<ItemPlacementService> InventoryLoader::createInventory(const QUuid& id, const QString& name, int rows, int cols) {
+    // Создаём пустой инвентарь в памяти
+    Inventory inventory;
+    inventory.id = id;
+    inventory.name = name;
+    inventory.rows = rows;
+    inventory.cols = cols;
+    // items пуст по умолчанию
+
+    auto inventoryService = std::make_unique<InventoryService>(d->itemsService);
+    if (!inventoryService->load(inventory)) {
+        qWarning() << "InventoryLoader::createInventory: failed to initialize inventory" << id;
+        return nullptr;
+    }
+    return inventoryService;
+}
+
+std::unique_ptr<ItemPlacementService> InventoryLoader::createEquipment(const QUuid& id) {
+    // Создаём пустую экипировку в памяти
+    Equipment equipment;
+    equipment.id = id;
+    equipment.name = QString("Equipment");
+    // items пуст по умолчанию
+
+    auto equipmentService = std::make_unique<EquipmentService>(d->itemsService);
+    if (!equipmentService->load(equipment)) {
+        qWarning() << "InventoryLoader::createEquipment: failed to initialize equipment" << id;
+        return nullptr;
+    }
+    return equipmentService;
+}

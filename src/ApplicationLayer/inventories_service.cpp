@@ -5,6 +5,7 @@
 #include "ApplicationLayer/equipment/equipment_service.h"
 #include "ApplicationLayer/inventory_loader.h"
 #include "ApplicationLayer/items/item_mime_data.h"
+#include "ApplicationLayer/items/items_service.h"
 #include <QDebug>
 #include <map>
 #include <vector>
@@ -44,6 +45,21 @@ ItemPlacementService* InventoriesService::placementService(const QUuid& id, bool
 	// Если не загружен и нужно загрузить
 	if (loadIfNotExists && d->inventoryLoader) {
 		auto service = d->inventoryLoader->load(id);
+		
+		if (!service) {
+			// Если загрузка не удалась, создаём пустой инвентарь в памяти
+			// этот инвентарь обязательно должен быть среди предметов с типом Container
+			const auto invItem = d->itemsService->itemById(id);
+			if (!invItem || !invItem->entity->container.has_value()) {
+				return nullptr;
+			}
+
+			service = d->inventoryLoader->createInventory(id,
+				invItem->entity->name,
+				invItem->entity->container->rows,
+				invItem->entity->container->cols);
+		}
+		
 		if (service) {
 			auto ptr = service.get();
 			d->loadedServices.emplace(id, std::move(service));

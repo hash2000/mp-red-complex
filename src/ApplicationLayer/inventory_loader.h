@@ -2,6 +2,7 @@
 #include <QObject>
 #include <memory>
 #include <QUuid>
+#include <QString>
 
 class ItemPlacementService;
 class IItemRepository;
@@ -26,6 +27,19 @@ public:
     /// @param id Идентификатор инвентаря или экипировки
     /// @return Сервис размещения предметов или nullptr если не найдено
     std::unique_ptr<ItemPlacementService> load(const QUuid& id);
+
+    /// Создать пустой инвентарь в памяти
+    /// @param id Идентификатор инвентаря
+    /// @param name Название инвентаря
+    /// @param rows Количество рядов
+    /// @param cols Количество колонок
+    /// @return Сервис размещения предметов
+    std::unique_ptr<ItemPlacementService> createInventory(const QUuid& id, const QString& name, int rows, int cols);
+
+    /// Создать пустую экипировку в памяти
+    /// @param id Идентификатор экипировки
+    /// @return Сервис размещения предметов
+    std::unique_ptr<ItemPlacementService> createEquipment(const QUuid& id);
 
 private:
     class Private;

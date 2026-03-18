@@ -10,8 +10,22 @@
 #include "ApplicationLayer/inventories_service.h"
 #include "ApplicationLayer/items/items_service.h"
 #include "ApplicationLayer/items/item_mime_data.h"
+#include "DataLayer/inventory/inventory_item.h"
 #include <QMdiSubWindow>
 #include <QUuid>
+
+class ItemsCreateCommand::Private {
+public:
+	Private(ItemsCreateCommand* parent) : q(parent) {
+	}	
+
+	ItemsCreateCommand* q;
+};
+
+
+ItemsCreateCommand::ItemsCreateCommand()
+: d(std::make_unique<Private>(this)) {
+}
 
 ItemsCreateCommand::~ItemsCreateCommand() = default;
 

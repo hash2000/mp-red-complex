@@ -8,5 +8,5 @@ public:
 
 	QString name() const override { return "windows-closeall"; }
 	QString description() const override { return "Close all open windows"; }
-	QString help() const override { return "closeall — close all windows"; }
+	QString help() const override { return "windows-closeall"; }
 };

@@ -52,7 +52,7 @@ bool InventoryWindow::handleCommand(const QString& commandName, const QStringLis
 			const auto itemIdStr = item.id
 				.toString(QUuid::StringFormat::WithoutBraces)
 				.toLower();
-			context->applicationController()->executeCommandByName("window-create", QStringList{ "inventory", itemIdStr, item.name });
+			context->applicationController()->executeCommandByName("window-create", QStringList{ "inventory", itemIdStr });
 			});
 
 		return true;
