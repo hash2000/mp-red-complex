@@ -1,5 +1,5 @@
 #include "ApplicationLayer/inventories_service.h"
-#include "ApplicationLayer/items_placement_service.h"
+#include "ApplicationLayer/i_items_placement_service.h"
 #include "ApplicationLayer/inventory/inventory_service.h"
 #include "ApplicationLayer/inventory/inventory_item_handler.h"
 #include "ApplicationLayer/equipment/equipment_service.h"
@@ -21,7 +21,7 @@ public:
 	InventoryLoader* inventoryLoader;
 
 	// Кэш загруженных сервисов
-	mutable std::map<QUuid, std::unique_ptr<ItemPlacementService>> loadedServices;
+	mutable std::map<QUuid, std::unique_ptr<IItemPlacementService>> loadedServices;
 };
 
 InventoriesService::InventoriesService(
@@ -35,7 +35,7 @@ InventoriesService::InventoriesService(
 
 InventoriesService::~InventoriesService() = default;
 
-ItemPlacementService* InventoriesService::placementService(const QUuid& id, bool loadIfNotExists) const {
+IItemPlacementService* InventoriesService::placementService(const QUuid& id, bool loadIfNotExists) const {
 	// Проверяем кэш
 	auto it = d->loadedServices.find(id);
 	if (it != d->loadedServices.end()) {

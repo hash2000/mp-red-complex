@@ -274,12 +274,12 @@ QTEST_MAIN(TestMyClass)
   - `InventoriesDataProviderJsonImpl`: Discovers which inventory and equipment files exist.
 - **Application Layer** (`src/ApplicationLayer`): Implements business logic.
   - `ItemsService`: Loads all item entities and can create instances (`duplicate` method).
-  - `InventoriesService`: The central hub. It uses `ItemPlacementStore` to load `ItemPlacementService` instances for specific inventories or equipment.
+  - `InventoriesService`: The central hub. It uses `ItemPlacementStore` to load `IItemPlacementService` instances for specific inventories or equipment.
     - `InventoryStoreImpl` -> `InventoryService`: For regular inventories.
     - `EquipmentStoreImpl` -> `EquipmentService`: For equipment slots.
   - `ItemMimeData`: A data transfer object used for drag-and-drop operations between containers.
-  - `ItemPlacementService`: An abstract interface (`pure virtual`) defining operations like `canPlaceItem`, `moveItem`, `applyDublicateFromItem`. Both `InventoryService` and `EquipmentService` implement this.
-- This design allows the `InventoriesService` to handle moves between any two containers (inventory-to-inventory, inventory-to-equipment) by treating them all as `ItemPlacementService` instances.
+  - `IItemPlacementService`: An abstract interface (`pure virtual`) defining operations like `canPlaceItem`, `moveItem`, `applyDublicateFromItem`. Both `InventoryService` and `EquipmentService` implement this.
+- This design allows the `InventoriesService` to handle moves between any two containers (inventory-to-inventory, inventory-to-equipment) by treating them all as `IItemPlacementService` instances.
 
 **Item Stack Management (Пачки предметов)**
 - Items can be stacked if `entity->maxStack > 1`

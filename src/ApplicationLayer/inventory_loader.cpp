@@ -38,7 +38,7 @@ InventoryLoader::InventoryLoader(
 
 InventoryLoader::~InventoryLoader() = default;
 
-std::unique_ptr<ItemPlacementService> InventoryLoader::load(const QUuid& id) {
+std::unique_ptr<IItemPlacementService> InventoryLoader::load(const QUuid& id) {
     // Сначала пробуем загрузить как инвентарь
     auto inventory = d->inventoryRepository->findById(id);
     if (inventory) {
@@ -64,7 +64,7 @@ std::unique_ptr<ItemPlacementService> InventoryLoader::load(const QUuid& id) {
     return nullptr;
 }
 
-std::unique_ptr<ItemPlacementService> InventoryLoader::createInventory(const QUuid& id, const QString& name, int rows, int cols) {
+std::unique_ptr<IItemPlacementService> InventoryLoader::createInventory(const QUuid& id, const QString& name, int rows, int cols) {
     // Создаём пустой инвентарь в памяти
     Inventory inventory;
     inventory.id = id;
@@ -81,7 +81,7 @@ std::unique_ptr<ItemPlacementService> InventoryLoader::createInventory(const QUu
     return inventoryService;
 }
 
-std::unique_ptr<ItemPlacementService> InventoryLoader::createEquipment(const QUuid& id) {
+std::unique_ptr<IItemPlacementService> InventoryLoader::createEquipment(const QUuid& id) {
     // Создаём пустую экипировку в памяти
     Equipment equipment;
     equipment.id = id;

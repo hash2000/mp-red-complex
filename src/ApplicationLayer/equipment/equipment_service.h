@@ -1,5 +1,5 @@
 #pragma once
-#include "ApplicationLayer/items_placement_service.h"
+#include "ApplicationLayer/i_items_placement_service.h"
 #include <QObject>
 #include <map>
 #include <memory>
@@ -10,7 +10,7 @@ class EquipmentItemHandler;
 class ItemMimeData;
 enum class EquipmentSlotType;
 
-class EquipmentService : public QObject, public ItemPlacementService {
+class EquipmentService : public QObject, public IItemPlacementService {
 	Q_OBJECT
 public:
 	EquipmentService(ItemsService* itemsService, QObject* parent = nullptr);

@@ -2,7 +2,7 @@
 #include "Game/styles/items_styles.h"
 #include "ApplicationLayer/items/items_service.h"
 #include "ApplicationLayer/inventories_service.h"
-#include "ApplicationLayer/items_placement_service.h"
+#include "ApplicationLayer/i_items_placement_service.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
