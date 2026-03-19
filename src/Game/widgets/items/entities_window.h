@@ -21,7 +21,8 @@ public:
 	bool handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) override;
 
 private slots:
-	void onItemCreateRequested(const QString& itemId);
+	void onItemCreateRequested(const QString& itemId, const QString& inventoryId);
+	void onInventorySelectionRequested();
 
 private:
 	class Private;

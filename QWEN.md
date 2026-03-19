@@ -72,9 +72,10 @@ ctest --output-on-failure
 
 ### Naming Conventions
 - **Classes**: `PascalCase` (e.g., `ApplicationController`)
+- **Interfaces**: `PascalCase` starts with `I` (e.g., `IInventoryRepository`)
+- **Implementations: `PascalCase` ends with implementation type and `Impl` (e.g., `InventoryRepositoryJsonImpl`)
 - **Functions/Methods**: `camelCase` (e.g., `executeCommand`)
-- **Member variables**: `_camelCase` with leading underscore (e.g., `_resources_path`)
-- **Constants**: `kPascalCase` or `SCREAMING_SNAKE_CASE`
+- **Constants**: `kPascalCase`
 - **Files**: Match class name (e.g., `app_controller.h` / `app_controller.cpp`)
 
 ### Formatting

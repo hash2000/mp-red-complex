@@ -1,8 +1,6 @@
 #include "Game/widgets/items/item_create_widget.h"
 #include "Game/styles/items_styles.h"
 #include "ApplicationLayer/items/items_service.h"
-#include "ApplicationLayer/inventories_service.h"
-#include "ApplicationLayer/i_items_placement_service.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -11,9 +9,6 @@
 #include <QPushButton>
 #include <QSpinBox>
 #include <QPainter>
-#include <QDialog>
-#include <QListWidget>
-#include <QMessageBox>
 
 class ItemCreateWidget::Private {
 public:
@@ -24,32 +19,24 @@ public:
 	ItemCreateWidget* q;
 	ItemEntity entity;
 	ItemsService* itemsService;
-	InventoriesService* inventoriesService;
+	QString inventoryId;
 
 	QLabel* imageLabel = nullptr;
 	QTableWidget* paramsTable = nullptr;
 	QPushButton* createButton = nullptr;
 	QSpinBox* countSpinBox = nullptr;
-
-	// Элементы выбора инвентаря
-	QLabel* inventoryLabel = nullptr;
-	QPushButton* selectInventoryButton = nullptr;
-
-	// Данные об инвентарях
-	QStringList availableInventoryIds;
-	QString selectedInventoryId;
 };
 
 ItemCreateWidget::ItemCreateWidget(
 	const ItemEntity& entity,
 	ItemsService* itemsService,
-	InventoriesService* inventoriesService,
+	const QString& inventoryId,
 	QWidget* parent)
 	: d(std::make_unique<Private>(this))
 	, QWidget(parent) {
 	d->entity = entity;
 	d->itemsService = itemsService;
-	d->inventoriesService = inventoriesService;
+	d->inventoryId = inventoryId;
 
 	setWindowTitle("Создание предмета");
 	setWindowFlags(Qt::Dialog | Qt::WindowCloseButtonHint);
@@ -58,29 +45,13 @@ ItemCreateWidget::ItemCreateWidget(
 	setupLayout();
 	updateItemImage();
 	populateParamsTable();
-	updateInventoryDisplay();
 
 	// Подключаем кнопку создания
 	connect(d->createButton, &QPushButton::clicked, this, [this]() {
-		// Проверяем, выбран ли инвентарь
-		if (d->selectedInventoryId.isEmpty()) {
-			showInventorySelectionDialog();
-			if (d->selectedInventoryId.isEmpty()) {
-				// Пользователь не выбрал инвентарь (отменил диалог или нет доступных)
-				return;
-			}
-		}
-
 		const int count = d->countSpinBox->value();
-		emit itemCreated(d->entity.id, count, d->selectedInventoryId);
+		emit itemCreated(d->entity.id, count, d->inventoryId);
 		close();
-		});
-
-	// Подключаем кнопку выбора инвентаря
-	if (d->selectInventoryButton) {
-		connect(d->selectInventoryButton, &QPushButton::clicked,
-			this, &ItemCreateWidget::onInventorySelectionRequested);
-	}
+	});
 }
 
 ItemCreateWidget::~ItemCreateWidget() = default;
@@ -204,62 +175,11 @@ void ItemCreateWidget::setupLayout() {
 
 	rightLayout->addWidget(d->createButton);
 
-	// Блок выбора инвентаря
-	auto inventoryFrame = new QWidget();
-	inventoryFrame->setStyleSheet(R"(
-		QWidget {
-			background-color: rgba(30, 41, 59, 200);
-			border: 1px solid #4a5568;
-			border-radius: 6px;
-			padding: 8px;
-		}
-	)");
-	auto inventoryLayout = new QVBoxLayout(inventoryFrame);
-	inventoryLayout->setContentsMargins(8, 8, 8, 8);
-	inventoryLayout->setSpacing(4);
-
-	// Заголовок
-	auto inventoryTitleLabel = new QLabel("Инвентарь для создания:");
-	inventoryTitleLabel->setStyleSheet("color: #94a3b8; font-weight: 600; font-size: 11px;");
-	inventoryLayout->addWidget(inventoryTitleLabel);
-
-	// Метка с выбранным инвентарём и кнопка выбора
-	auto inventoryRow = new QHBoxLayout();
-	
-	d->inventoryLabel = new QLabel("Не выбрано");
-	d->inventoryLabel->setStyleSheet("color: #e2e8f0; font-size: 12px;");
-	d->inventoryLabel->setWordWrap(true);
-	inventoryRow->addWidget(d->inventoryLabel, 1);
-
-	d->selectInventoryButton = new QPushButton("Выбрать");
-	d->selectInventoryButton->setFixedHeight(28);
-	d->selectInventoryButton->setStyleSheet(R"(
-		QPushButton {
-			background-color: #3b82f6;
-			color: #0f172a;
-			border: none;
-			border-radius: 4px;
-			font-weight: 600;
-			font-size: 11px;
-			padding: 4px 12px;
-		}
-		QPushButton:hover {
-			background-color: #2563eb;
-		}
-		QPushButton:pressed {
-			background-color: #1d4ed8;
-		}
-	)");
-	inventoryRow->addWidget(d->selectInventoryButton);
-
-	inventoryLayout->addLayout(inventoryRow);
-	rightLayout->addWidget(inventoryFrame);
-
 	mainLayout->addLayout(rightLayout);
 
 	// Устанавливаем фиксированный размер окна
 	const int windowWidth = 500;
-	const int windowHeight = 420;
+	const int windowHeight = 320;
 	setFixedSize(windowWidth, windowHeight);
 }
 
@@ -350,179 +270,4 @@ void ItemCreateWidget::populateParamsTable() {
 	case ItemRarityType::Unique: rarityText = "Уникальное"; break;
 	}
 	addRow("Редкость", rarityText);
-}
-
-void ItemCreateWidget::setAvailableInventories(const QStringList& inventoryIds, const QString& preselectedInventoryId) {
-	d->availableInventoryIds = inventoryIds;
-	
-	// Если указан предварительный выбор и он есть в списке
-	if (!preselectedInventoryId.isEmpty() && inventoryIds.contains(preselectedInventoryId)) {
-		d->selectedInventoryId = preselectedInventoryId;
-	}
-	// Если только один инвентарь в списке, выбираем его автоматически
-	else if (inventoryIds.size() == 1) {
-		d->selectedInventoryId = inventoryIds.first();
-	}
-	
-	updateInventoryDisplay();
-}
-
-QString ItemCreateWidget::selectedInventoryId() const {
-	return d->selectedInventoryId;
-}
-
-void ItemCreateWidget::onInventorySelectionRequested() {
-	showInventorySelectionDialog();
-}
-
-void ItemCreateWidget::onItemSelected() {
-	// Этот слот может использоваться для дополнительных действий после выбора
-	updateInventoryDisplay();
-}
-
-void ItemCreateWidget::updateInventoryDisplay() {
-	if (!d->inventoryLabel) {
-		return;
-	}
-
-	if (d->selectedInventoryId.isEmpty()) {
-		d->inventoryLabel->setText("Не выбрано");
-		d->inventoryLabel->setStyleSheet("color: #f59e0b; font-size: 12px; font-weight: 600;");
-	}
-	else {
-		QString displayName = getInventoryDisplayName(d->selectedInventoryId);
-		d->inventoryLabel->setText(displayName);
-		d->inventoryLabel->setStyleSheet("color: #10b981; font-size: 12px; font-weight: 600;");
-	}
-}
-
-void ItemCreateWidget::showInventorySelectionDialog() {
-	// Проверяем наличие доступных инвентарей
-	if (d->availableInventoryIds.isEmpty()) {
-		QMessageBox::warning(this, "Нет доступных инвентарей",
-			"Откройте хотя бы один инвентарь для создания предметов.");
-		return;
-	}
-
-	// Если только один инвентарь, выбираем его автоматически
-	if (d->availableInventoryIds.size() == 1) {
-		d->selectedInventoryId = d->availableInventoryIds.first();
-		updateInventoryDisplay();
-		return;
-	}
-
-	// Создаём диалог выбора инвентаря
-	QDialog dialog(this);
-	dialog.setWindowTitle("Выберите инвентарь");
-	dialog.setWindowModality(Qt::WindowModal);
-	dialog.setMinimumSize(300, 200);
-
-	auto layout = new QVBoxLayout(&dialog);
-
-	auto listWidget = new QListWidget();
-	listWidget->setStyleSheet(R"(
-		QListWidget {
-			background-color: rgba(15, 23, 42, 255);
-			border: 1px solid #4a5568;
-			border-radius: 6px;
-			color: #e2e8f0;
-		}
-		QListWidget::item {
-			padding: 8px;
-		}
-		QListWidget::item:selected {
-			background-color: #1e40af;
-		}
-		QListWidget::item:hover {
-			background-color: #1e3a8a;
-		}
-	)");
-
-	// Заполняем список инвентарей
-	for (const auto& inventoryId : d->availableInventoryIds) {
-		QString displayName = getInventoryDisplayName(inventoryId);
-		auto item = new QListWidgetItem(displayName);
-		item->setData(Qt::UserRole, inventoryId);
-		
-		// Если этот инвентарь уже выбран, помечаем его
-		if (inventoryId == d->selectedInventoryId) {
-			item->setSelected(true);
-		}
-		
-		listWidget->addItem(item);
-	}
-
-	layout->addWidget(listWidget);
-
-	// Кнопки подтверждения и отмены
-	auto buttonLayout = new QHBoxLayout();
-	buttonLayout->addStretch();
-
-	auto okButton = new QPushButton("OK");
-	okButton->setFixedWidth(80);
-	okButton->setStyleSheet(R"(
-		QPushButton {
-			background-color: #10b981;
-			color: #0f172a;
-			border: none;
-			border-radius: 4px;
-			font-weight: 600;
-		}
-		QPushButton:hover {
-			background-color: #0da271;
-		}
-	)");
-
-	auto cancelButton = new QPushButton("Отмена");
-	cancelButton->setFixedWidth(80);
-	cancelButton->setStyleSheet(R"(
-		QPushButton {
-			background-color: #64748b;
-			color: #0f172a;
-			border: none;
-			border-radius: 4px;
-			font-weight: 600;
-		}
-		QPushButton:hover {
-			background-color: #475569;
-		}
-	)");
-
-	buttonLayout->addWidget(okButton);
-	buttonLayout->addWidget(cancelButton);
-	layout->addLayout(buttonLayout);
-
-	// Подключаем кнопки
-	connect(okButton, &QPushButton::clicked, &dialog, &QDialog::accept);
-	connect(cancelButton, &QPushButton::clicked, &dialog, &QDialog::reject);
-
-	// Двойной клик по элементу списка
-	connect(listWidget, &QListWidget::itemDoubleClicked, &dialog, [&dialog](QListWidgetItem* item) {
-		Q_UNUSED(item);
-		dialog.accept();
-	});
-
-	if (dialog.exec() == QDialog::Accepted && listWidget->currentItem()) {
-		d->selectedInventoryId = listWidget->currentItem()->data(Qt::UserRole).toString();
-		updateInventoryDisplay();
-		emit onItemSelected();
-	}
-}
-
-QString ItemCreateWidget::getInventoryDisplayName(const QString& inventoryId) const {
-	// Пытаемся получить имя инвентаря через сервис
-	if (d->inventoriesService) {
-		// Получаем сервис размещения для этого инвентаря
-		auto placementService = d->inventoriesService->placementService(
-			QUuid::fromString(inventoryId), false);
-		
-		if (placementService) {
-			// Можно попробовать получить дополнительную информацию об инвентаре
-			// Пока просто возвращаем ID в более читаемом формате
-			return placementService->placementName();
-		}
-	}
-
-	// Если не удалось получить имя, возвращаем сокращённый ID
-	return QString("Инвентарь %1").arg(inventoryId.left(8));
 }
