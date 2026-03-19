@@ -61,11 +61,13 @@ public:
 		splitter->setStretchFactor(1, 0);
 		q->setCentralWidget(splitter);
 
-		controller->executeCommandByName("window-create", QStringList{ "map" });
-		controller->executeCommandByName("window-create", QStringList{ "equipment", "abfa5aac-7fb5-4570-965f-00af8aee664a" });
-		controller->executeCommandByName("window-create", QStringList{ "inventory", "3f2df95f-581b-4084-94bb-20322325e728" });
-		controller->executeCommandByName("window-create", QStringList{ "inventory", "b85cf432-ec9d-441e-b438-eab9c5630e4b" });
-		controller->executeCommandByName("window-create", QStringList{ "item-entities", "1d6abf2e-9d77-4cf7-9444-2b54aca14259" });
+		//controller->executeCommandByName("window-create", QStringList{ "map" });
+		//controller->executeCommandByName("window-create", QStringList{ "equipment", "abfa5aac-7fb5-4570-965f-00af8aee664a" });
+		//controller->executeCommandByName("window-create", QStringList{ "inventory", "3f2df95f-581b-4084-94bb-20322325e728" });
+		//controller->executeCommandByName("window-create", QStringList{ "inventory", "b85cf432-ec9d-441e-b438-eab9c5630e4b" });
+		//controller->executeCommandByName("window-create", QStringList{ "item-entities", "1d6abf2e-9d77-4cf7-9444-2b54aca14259" });
+
+		controller->executeCommandByName("window-create", QStringList{ "login" });
 	}
 
 

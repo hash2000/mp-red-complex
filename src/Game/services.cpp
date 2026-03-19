@@ -11,11 +11,13 @@
 #include "DataLayer/items/item_repository_json_impl.h"
 #include "DataLayer/inventory/inventory_repository_json_impl.h"
 #include "DataLayer/equipment/equipment_repository_json_impl.h"
+#include "DataLayer/users/users_data_provider_json_impl.h"
 #include "ApplicationLayer/items/items_service.h"
 #include "ApplicationLayer/inventories_service.h"
 #include "ApplicationLayer/inventory_loader.h"
 #include "ApplicationLayer/inventories_save_manager.h"
 #include "ApplicationLayer/items_save_manager.h"
+#include "ApplicationLayer/users/users_service.h"
 #include <list>
 
 class Services::Private {
@@ -48,6 +50,7 @@ public:
 	std::unique_ptr<InventoryLoader> inventoryLoader;
 	std::unique_ptr<InventoriesSaveManager> inventoriesSaveManager;
 	std::unique_ptr<ItemsSaveManager> itemsSaveManager;
+	std::unique_ptr<UsersService> usersService;
 };
 
 Services::Services(Resources* resources)
@@ -98,6 +101,10 @@ Services::Services(Resources* resources)
 		d->itemsService.get(),
 		d->itemsDataWriter.get());
 
+	// Создаём сервис пользователей
+	d->usersService = std::make_unique<UsersService>(
+		std::make_unique<UsersDataProviderJsonImpl>(resources));
+
 	// Подключаем сохранение к сигналу save()
 	connect(this, &Services::save,
 		d->inventoriesSaveManager.get(), &InventoriesSaveManager::saveAll);
@@ -143,4 +150,8 @@ InventoryLoader* Services::inventoryLoader() const {
 
 IInventoryRepository* Services::inventoryRepository() const {
 	return d->inventoryRepository.get();
+}
+
+UsersService* Services::usersService() const {
+	return d->usersService.get();
 }

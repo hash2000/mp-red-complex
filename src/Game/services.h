@@ -9,6 +9,7 @@ class InventoriesService;
 class ItemsService;
 class InventoryLoader;
 class IInventoryRepository;
+class UsersService;
 
 class Services: public QObject {
 	Q_OBJECT
@@ -27,6 +28,8 @@ public:
 	InventoryLoader* inventoryLoader() const;
 
 	IInventoryRepository* inventoryRepository() const;
+
+	UsersService* usersService() const;
 
 	void run();
 
