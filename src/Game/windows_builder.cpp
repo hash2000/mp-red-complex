@@ -40,7 +40,7 @@ WindowsBuilder::WindowsBuilder(ApplicationController* appController)
 			services->inventoriesService(),
 			id);
 		});
-	d->factory.emplace("items", [](Services* services, const QString& id) {
+	d->factory.emplace("item-entities", [](Services* services, const QString& id) {
 		return new EntitiesWindow(
 			services->itemsService(),
 			id);
