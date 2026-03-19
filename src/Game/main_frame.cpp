@@ -4,6 +4,7 @@
 #include "Game/services.h"
 #include "Game/controllers.h"
 #include "Game/controllers/windows_controller.h"
+#include "BaseWidgets/mdi_area.h"
 #include "Resources/resources.h"
 
 #include <QSplitter>
@@ -20,7 +21,7 @@ class GameMainFrame::Private {
 public:
 	Private(GameMainFrame* parent)
 	: q(parent) {
-		mdiArea = new QMdiArea(parent);
+		mdiArea = new MdiArea(parent);
 		mdiArea->setTabsMovable(true);
 		mdiArea->setActivationOrder(QMdiArea::ActivationHistoryOrder);
 		mdiArea->setDocumentMode(true);
@@ -70,7 +71,7 @@ public:
 
 	GameMainFrame* q;
 	Resources* resources;
-	QMdiArea* mdiArea;
+	MdiArea* mdiArea;
 	ApplicationController* controller;
 	CommandConsole* commandConsole;
 	QToolButton* consoleToggleButton;
