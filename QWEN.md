@@ -303,6 +303,265 @@ QTEST_MAIN(TestMyClass)
 
 ---
 
+## Creating New MDI Windows
+
+To add a new MDI child window to the application, follow the established pattern:
+
+### 1. Create Data Layer (if needed)
+
+For windows that need data persistence, create a data provider interface and implementation:
+
+```cpp
+// src/DataLayer/your_module/i_your_data_provider.h
+#pragma once
+#include <QString>
+#include <QHash>
+#include <optional>
+
+struct YourData {
+    QString id;
+    QString name;
+    // ... other fields
+};
+
+class IYourDataProvider {
+public:
+    virtual ~IYourDataProvider() = default;
+    virtual std::optional<YourData> loadItem(const QString& id) const = 0;
+    virtual bool saveItem(const YourData& item) = 0;
+};
+```
+
+```cpp
+// src/DataLayer/your_module/your_data_provider_json_impl.h
+#pragma once
+#include "DataLayer/your_module/i_your_data_provider.h"
+#include <memory>
+
+class Resources;
+
+class YourDataProviderJsonImpl : public IYourDataProvider {
+public:
+    YourDataProviderJsonImpl(Resources* resources);
+    ~YourDataProviderJsonImpl() override;
+
+    std::optional<YourData> loadItem(const QString& id) const override;
+    bool saveItem(const YourData& item) override;
+
+private:
+    class Private;
+    std::unique_ptr<Private> d;
+};
+```
+
+### 2. Create Application Layer Service
+
+Create a service that uses the data provider:
+
+```cpp
+// src/ApplicationLayer/your_module/your_service.h
+#pragma once
+#include "DataLayer/your_module/i_your_data_provider.h"
+#include <QObject>
+#include <memory>
+
+class YourService : public QObject {
+    Q_OBJECT
+public:
+    explicit YourService(std::unique_ptr<IYourDataProvider> dataProvider, QObject* parent = nullptr);
+    ~YourService() override;
+
+    // Business logic methods
+    void doSomething();
+
+signals:
+    void dataChanged();
+
+private:
+    class Private;
+    std::unique_ptr<Private> d;
+};
+```
+
+### 3. Create Widget (UI Component)
+
+Create the actual UI widget:
+
+```cpp
+// src/Game/widgets/your_module/your_widget.h
+#pragma once
+#include <QWidget>
+#include <memory>
+
+class YourService;
+class QPushButton;
+class QLineEdit;
+
+class YourWidget : public QWidget {
+    Q_OBJECT
+public:
+    explicit YourWidget(YourService* service, QWidget* parent = nullptr);
+    ~YourWidget() override;
+
+signals:
+    void actionCompleted();
+
+private slots:
+    void onButtonClicked();
+
+private:
+    void setupLayout();
+
+    class Private;
+    std::unique_ptr<Private> d;
+};
+```
+
+### 4. Create MDI Window
+
+Create the MDI child window that wraps the widget:
+
+```cpp
+// src/Game/widgets/your_module/your_window.h
+#pragma once
+#include "Game/mdi_child_window.h"
+#include <QObject>
+#include <memory>
+
+class YourService;
+class YourWidget;
+
+class YourWindow : public MdiChildWindow {
+    Q_OBJECT
+
+public:
+    explicit YourWindow(YourService* service, const QString& id, QWidget* parent = nullptr);
+    ~YourWindow() override;
+
+    QString windowType() const override { return "your-window-type"; }
+    QString windowTitle() const override { return "Window Title"; }
+    QSize windowDefaultSizes() const override { return QSize(400, 300); }
+
+    bool handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) override;
+
+private slots:
+    void onWidgetAction();
+
+private:
+    class Private;
+    std::unique_ptr<Private> d;
+};
+```
+
+```cpp
+// src/Game/widgets/your_module/your_window.cpp
+#include "Game/widgets/your_module/your_window.h"
+#include "Game/widgets/your_module/your_widget.h"
+#include "ApplicationLayer/your_module/your_service.h"
+#include "Game/app_controller.h"
+#include "Game/commands/command_context.h"
+
+class YourWindow::Private {
+public:
+    Private(YourWindow* parent) : q(parent) {}
+    YourWindow* q;
+    YourService* service;
+    YourWidget* widget = nullptr;
+    ApplicationController* controller = nullptr;
+};
+
+YourWindow::YourWindow(YourService* service, const QString& id, QWidget* parent)
+    : d(std::make_unique<Private>(this))
+    , MdiChildWindow(id, parent) {
+    d->service = service;
+    d->widget = new YourWidget(service, this);
+
+    connect(d->widget, &YourWidget::actionCompleted, this, &YourWindow::onWidgetAction);
+
+    setWidget(d->widget);
+    resize(windowDefaultSizes());
+}
+
+YourWindow::~YourWindow() = default;
+
+bool YourWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) {
+    if (commandName == "create") {
+        d->controller = context->applicationController();
+        return true;
+    }
+    return false;
+}
+
+void YourWindow::onWidgetAction() {
+    // Handle widget action
+}
+```
+
+### 5. Register Service in `services.cpp`
+
+Add the service to the Services class:
+
+```cpp
+// src/Game/services.h - add forward declaration
+class YourService;
+
+// src/Game/services.h - add method
+YourService* yourService() const;
+
+// src/Game/services.cpp - add include
+#include "ApplicationLayer/your_module/your_service.h"
+#include "DataLayer/your_module/your_data_provider_json_impl.h"
+
+// src/Game/services.cpp - add to Private class
+std::unique_ptr<YourService> yourService;
+
+// src/Game/services.cpp - create in constructor
+d->yourService = std::make_unique<YourService>(
+    std::make_unique<YourDataProviderJsonImpl>(resources));
+
+// src/Game/services.cpp - add accessor
+YourService* Services::yourService() const {
+    return d->yourService.get();
+}
+```
+
+### 6. Register Window in `windows_builder.cpp`
+
+Add the window factory:
+
+```cpp
+#include "Game/widgets/your_module/your_window.h"
+
+// In constructor:
+d->factory.emplace("your-window-type", [](Services* services, const QString& id) {
+    return new YourWindow(
+        services->yourService(),
+        id);
+});
+```
+
+### 7. Create Window via Command
+
+```cpp
+// Via code:
+controller->executeCommandByName("window-create", QStringList{ "your-window-type", "unique-id" });
+
+// Via console:
+window-create your-window-type unique-id
+```
+
+### Example: Login Window
+
+The Login window (`src/Game/widgets/user/`) demonstrates the complete pattern:
+
+1. **Data Layer**: `IUsersDataProvider`, `UsersDataProviderJsonImpl`
+2. **Service**: `UsersService` with `login()`, `logout()`, `registerUser()` methods
+3. **Widget**: `LoginWidget` with login/password fields
+4. **Window**: `LoginWindow` wrapping the widget
+5. **Registration**: Added to `services.cpp` and `windows_builder.cpp`
+
+---
+
 ## Development Workflow
 
 1. **Create feature branch**: `git checkout -b feature/your-feature`
