@@ -1,5 +1,5 @@
 #include "ApplicationLayer/items/items_service.h"
-#include "ApplicationLayer/repositories/i_item_repository.h"
+#include "ApplicationLayer/items/i_item_repository.h"
 #include <QString>
 #include <QUuid>
 #include <QDebug>

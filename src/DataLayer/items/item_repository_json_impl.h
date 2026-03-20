@@ -1,13 +1,13 @@
 #pragma once
-#include "ApplicationLayer/repositories/i_item_repository.h"
+#include "ApplicationLayer/items/i_item_repository.h"
 #include <memory>
 
-class ItemsDataProvider;
+class IItemsDataProvider;
 
 /// Реализация репозитория предметов на основе JSON provider
 class ItemRepositoryJsonImpl : public IItemRepository {
 public:
-    explicit ItemRepositoryJsonImpl(ItemsDataProvider* provider);
+    explicit ItemRepositoryJsonImpl(IItemsDataProvider* provider);
     ~ItemRepositoryJsonImpl() override;
 
     std::unique_ptr<ItemEntity> findEntityById(const QString& id) const override;
@@ -16,5 +16,5 @@ public:
     void saveItem(const Item& item) override;
 
 private:
-    ItemsDataProvider* _provider;
+    IItemsDataProvider* _provider;
 };

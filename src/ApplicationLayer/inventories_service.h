@@ -5,8 +5,8 @@
 #include <memory>
 
 class ItemMimeData;
-class ItemPlacementService;
-class InventoriesDataProvider;
+class IItemPlacementService;
+class IInventoriesDataProvider;
 class ItemsService;
 class InventoryLoader;
 struct PlacementCreateParams;
@@ -25,7 +25,7 @@ public:
 	/// @param id Идентификатор инвентаря/экипировки
 	/// @param loadIfNotExists Загружать если ещё не загружен
 	/// @return Сервис размещения или nullptr если не найден
-	ItemPlacementService* placementService(const QUuid& id, bool loadIfNotExists) const;
+	IItemPlacementService* placementService(const QUuid& id, bool loadIfNotExists) const;
 
 	/// Получить все идентификаторы загруженных инвентарей/экипировок
 	std::vector<QUuid> loadedPlacementIds() const;

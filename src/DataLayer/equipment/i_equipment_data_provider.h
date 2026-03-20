@@ -3,9 +3,9 @@
 
 class Equipment;
 
-class EquipmentDataProvider {
+class IEquipmentDataProvider {
 public:
-	virtual ~EquipmentDataProvider() = default;
+	virtual ~IEquipmentDataProvider() = default;
 
 	virtual bool loadEquipment(const QUuid& id, Equipment& equipment) = 0;
 

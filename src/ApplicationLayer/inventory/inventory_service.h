@@ -1,5 +1,5 @@
 #pragma once
-#include "ApplicationLayer/items_placement_service.h"
+#include "ApplicationLayer/i_items_placement_service.h"
 #include "Base/container_view.h"
 #include <QObject>
 #include <QUuid>
@@ -12,7 +12,7 @@ class InventoryItem;
 class InventoryItemHandler;
 class ItemMimeData;
 
-class InventoryService : public QObject, public ItemPlacementService {
+class InventoryService : public QObject, public IItemPlacementService {
 	Q_OBJECT
 public:
 	InventoryService(ItemsService* itemsService);

@@ -6,6 +6,7 @@
 #include "Game/widgets/equipment/equipment_window.h"
 #include "Game/widgets/inventory/inventory_window.h"
 #include "Game/widgets/items/entities_window.h"
+#include "Game/widgets/user/login_window.h"
 #include <map>
 #include <functional>
 
@@ -40,9 +41,14 @@ WindowsBuilder::WindowsBuilder(ApplicationController* appController)
 			services->inventoriesService(),
 			id);
 		});
-	d->factory.emplace("items", [](Services* services, const QString& id) {
+	d->factory.emplace("item-entities", [](Services* services, const QString& id) {
 		return new EntitiesWindow(
 			services->itemsService(),
+			id);
+		});
+	d->factory.emplace("login", [](Services* services, const QString& id) {
+		return new LoginWindow(
+			services->usersService(),
 			id);
 		});
 }

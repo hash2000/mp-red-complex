@@ -3,9 +3,9 @@
 
 class Equipment;
 
-class EquipmentDataWriter {
+class IEquipmentDataWriter {
 public:
-	virtual ~EquipmentDataWriter() = default;
+	virtual ~IEquipmentDataWriter() = default;
 
 	virtual bool saveEquipment(const QUuid& id, const Equipment& equipment) const = 0;
 };

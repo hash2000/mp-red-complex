@@ -6,7 +6,7 @@
 
 class ItemMimeData;
 
-class ItemPlacementService {
+class IItemPlacementService {
 public:
 
 	/// <summary>

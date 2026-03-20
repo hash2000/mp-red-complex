@@ -1,8 +1,8 @@
-#include "DataLayer/repositories/item_repository_json_impl.h"
-#include "DataLayer/items/items_data_provider.h"
+#include "DataLayer/items/item_repository_json_impl.h"
+#include "DataLayer/items/i_items_data_provider.h"
 #include <QDebug>
 
-ItemRepositoryJsonImpl::ItemRepositoryJsonImpl(ItemsDataProvider* provider)
+ItemRepositoryJsonImpl::ItemRepositoryJsonImpl(IItemsDataProvider* provider)
     : _provider(provider) {
 }
 
@@ -35,6 +35,6 @@ std::unique_ptr<Item> ItemRepositoryJsonImpl::findItemById(const QUuid& id) cons
 }
 
 void ItemRepositoryJsonImpl::saveItem(const Item& item) {
-    // TODO: реализовать сохранение через ItemsDataWriter
+    // TODO: реализовать сохранение через IItemsDataWriter
     Q_UNUSED(item);
 }

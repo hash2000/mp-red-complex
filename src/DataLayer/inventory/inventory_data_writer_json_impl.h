@@ -1,11 +1,11 @@
 #pragma once
-#include "DataLayer/inventory/inventory_data_writer.h"
+#include "DataLayer/inventory/i_inventory_data_writer.h"
 #include <QString>
 #include <memory>
 
 class Resources;
 
-class InventoryDataWriterJsonImpl : public InventoryDataWriter {
+class InventoryDataWriterJsonImpl : public IInventoryDataWriter {
 public:
 	InventoryDataWriterJsonImpl(Resources* resources);
 	~InventoryDataWriterJsonImpl() override;

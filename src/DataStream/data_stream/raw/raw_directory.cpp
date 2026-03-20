@@ -9,7 +9,12 @@ ContainerType RawDirectory::type() const {
 }
 
 void RawDirectory::loadFromPath(const QString &path) {
-	_path = QDir(path);
+	_path = QDir(name()).filePath(path);
+}
+
+std::map<QString, std::shared_ptr<DataStream>> RawDirectory::items() const {
+	std::map<QString, std::shared_ptr<DataStream>> result;
+
 	QDirIterator iterator(_path.absolutePath(), QDir::Files, QDirIterator::Subdirectories);
 	while (iterator.hasNext()) {
 		const auto fullPath = iterator.next();
@@ -30,10 +35,35 @@ void RawDirectory::loadFromPath(const QString &path) {
 			buffer->name(relative);
 			buffer->containerName(name());
 			buffer->type(type());
-			add(std::move(buffer));
+			result.emplace(relative, std::move(buffer));
 		}
 		catch (std::exception& ex) {
 			qWarning() << "Load" << fullPath << "exception:" << ex.what();
 		}
 	}
+
+	return result;
+}
+
+std::optional<std::shared_ptr<DataStream>> RawDirectory::find(const QString &name) const {
+	const auto streams = items();
+	const auto it = streams.find(name);
+	if (it == streams.end()) {
+		return std::nullopt;
+	}
+	return it->second;
+}
+
+void RawDirectory::add(std::shared_ptr<DataStream> stream) {
+	Q_UNUSED(stream);
+	qWarning() << "RawDirectory::add() is not supported - in-memory storage is not available";
+}
+
+void RawDirectory::remove(const QString &name) {
+	Q_UNUSED(name);
+	qWarning() << "RawDirectory::remove() is not supported - in-memory storage is not available";
+}
+
+void RawDirectory::clear() {
+	qWarning() << "RawDirectory::clear() is not supported - in-memory storage is not available";
 }

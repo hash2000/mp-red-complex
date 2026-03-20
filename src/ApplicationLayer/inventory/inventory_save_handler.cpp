@@ -1,7 +1,7 @@
 #include "ApplicationLayer/inventory/inventory_save_handler.h"
 #include "ApplicationLayer/inventory/inventory_service.h"
 #include "ApplicationLayer/inventory/inventory_item_handler.h"
-#include "DataLayer/inventory/inventory_data_writer.h"
+#include "DataLayer/inventory/i_inventory_data_writer.h"
 #include "DataLayer/inventory/inventory_item.h"
 #include <QDebug>
 
@@ -41,13 +41,13 @@ public:
 
 	InventorySaveHandler* q;
 	InventoryService* inventoryService = nullptr;
-	InventoryDataWriter* dataWriter = nullptr;
+	IInventoryDataWriter* dataWriter = nullptr;
 	QUuid inventoryId;
 };
 
 InventorySaveHandler::InventorySaveHandler(
 	InventoryService* inventoryService,
-	InventoryDataWriter* dataWriter,
+	IInventoryDataWriter* dataWriter,
 	const QUuid& inventoryId,
 	QObject* parent)
 : QObject(parent)

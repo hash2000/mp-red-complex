@@ -70,3 +70,34 @@ std::unique_ptr<DataStream> DatFile::loadStream(std::shared_ptr<std::ifstream> &
 
 	return std::move(buffer);
 }
+
+std::map<QString, std::shared_ptr<DataStream>> DatFile::items() const {
+	return _streams;
+}
+
+std::optional<std::shared_ptr<DataStream>> DatFile::find(const QString &name) const {
+	const auto it = _streams.find(name);
+	if (it == _streams.end()) {
+		return std::nullopt;
+	}
+	return it->second;
+}
+
+void DatFile::add(std::shared_ptr<DataStream> stream) {
+	const auto name = stream->name();
+	remove(name);
+	_streams.emplace(name, std::move(stream));
+}
+
+void DatFile::remove(const QString &name) {
+	auto it = _streams.find(name);
+	if (it == _streams.end()) {
+		return;
+	}
+
+	_streams.erase(it);
+}
+
+void DatFile::clear() {
+	_streams.clear();
+}

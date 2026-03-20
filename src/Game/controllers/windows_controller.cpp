@@ -14,7 +14,7 @@ public:
 	}
 
 	WindowsController* q;
-	QPointer<QMdiArea> mdiArea;
+	QPointer<MdiArea> mdiArea;
 	QHash<QString, QPointer<MdiChildWindow>> windowRegistry;
 	QHash<MdiChildWindow*, QString> windowToId;
 	QPointer<MdiChildWindow> activeWindow;
@@ -28,14 +28,14 @@ WindowsController::WindowsController()
 WindowsController::~WindowsController() = default;
 
 
-void WindowsController::setMdiArea(QMdiArea* mdiArea) {
+void WindowsController::setMdiArea(MdiArea* mdiArea) {
 	if (d->mdiArea == mdiArea) {
 		return;
 	}
 
 	// Отключение от предыдущей MDI области
 	if (d->mdiArea) {
-		disconnect(d->mdiArea, &QMdiArea::subWindowActivated,
+		disconnect(d->mdiArea, &MdiArea::subWindowActivated,
 			this, &WindowsController::onSubWindowActivated);
 	}
 
@@ -43,7 +43,7 @@ void WindowsController::setMdiArea(QMdiArea* mdiArea) {
 
 	// Подключение к новой MDI области
 	if (d->mdiArea) {
-		connect(d->mdiArea, &QMdiArea::subWindowActivated,
+		connect(d->mdiArea, &MdiArea::subWindowActivated,
 			this, &WindowsController::onSubWindowActivated);
 
 		// Регистрация уже существующих окон
@@ -55,7 +55,7 @@ void WindowsController::setMdiArea(QMdiArea* mdiArea) {
 	}
 }
 
-QMdiArea* WindowsController::mdiArea() const {
+MdiArea* WindowsController::mdiArea() const {
 	return d->mdiArea.data();
 }
 

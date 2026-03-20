@@ -1,11 +1,11 @@
 #pragma once
-#include "DataLayer/equipment/equipment_data_writer.h"
+#include "DataLayer/equipment/i_equipment_data_writer.h"
 #include <QString>
 #include <memory>
 
 class Resources;
 
-class EquipmentDataWriterJsonImpl : public EquipmentDataWriter {
+class EquipmentDataWriterJsonImpl : public IEquipmentDataWriter {
 public:
 	EquipmentDataWriterJsonImpl(Resources* resources);
 	~EquipmentDataWriterJsonImpl() override;

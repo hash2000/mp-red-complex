@@ -256,7 +256,7 @@ void InventoryGrid::dragMoveEvent(QDragMoveEvent* event) {
 	}
 
 	auto item = ItemMimeData::fromMimeData(event->mimeData()->data("application/x-game-item"));
-	const auto sourceInventoryId = QUuid::fromBytes(event->mimeData()->data("application/x-game-item-source-inventory-id"));
+	const auto sourceInventoryId = QUuid::fromString(QString::fromUtf8(event->mimeData()->data("application/x-game-item-source-inventory-id")));
 	const auto currentInventoryId = inventoryId();
 	const auto isSameGrid = (sourceInventoryId == currentInventoryId);
 

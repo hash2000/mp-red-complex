@@ -4,6 +4,7 @@
 
 class MdiChildWindow;
 class ApplicationController;
+class MdiArea;
 
 class CommandContext : public QObject {
 	Q_OBJECT

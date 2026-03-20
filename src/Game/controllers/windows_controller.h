@@ -1,5 +1,6 @@
 #pragma once
 #include "Game/mdi_child_window.h"
+#include "BaseWidgets/mdi_area.h"
 #include <QObject>
 #include <QMdiArea>
 #include <memory>
@@ -10,8 +11,8 @@ public:
 	WindowsController();
 	~WindowsController() override;
 
-	void setMdiArea(QMdiArea* mdiArea);
-	QMdiArea* mdiArea() const;
+	void setMdiArea(MdiArea* mdiArea);
+	MdiArea* mdiArea() const;
 
 	/**
 	 * Регистрация нового окна в системе

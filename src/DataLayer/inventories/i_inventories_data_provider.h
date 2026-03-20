@@ -2,9 +2,9 @@
 #include <QUuid>
 #include <list>
 
-class InventoriesDataProvider {
+class IInventoriesDataProvider {
 public:
-	virtual ~InventoriesDataProvider() = default;
+	virtual ~IInventoriesDataProvider() = default;
 
 	virtual void loadInventories(std::list<QUuid>& inventories) const = 0;
 	virtual void loadEquipments(std::list<QUuid>& equipments) const = 0;
