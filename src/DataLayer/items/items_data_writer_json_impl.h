@@ -1,10 +1,10 @@
 #pragma once
-#include "DataLayer/items/items_data_writer.h"
+#include "DataLayer/items/i_items_data_writer.h"
 #include <memory>
 
 class Resources;
 
-class ItemsDataWriterJsonImpl : public ItemsDataWriter {
+class ItemsDataWriterJsonImpl : public IItemsDataWriter {
 public:
 	ItemsDataWriterJsonImpl(Resources* resources);
 	~ItemsDataWriterJsonImpl() override;

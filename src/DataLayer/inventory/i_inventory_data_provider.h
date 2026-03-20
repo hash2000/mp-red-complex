@@ -3,9 +3,9 @@
 
 class Inventory;
 
-class InventoryDataProvider {
+class IInventoryDataProvider {
 public:
-	virtual ~InventoryDataProvider() = default;
+	virtual ~IInventoryDataProvider() = default;
 
 	virtual bool loadInventory(const QUuid& id, Inventory& inventory) const = 0;
 };

@@ -4,8 +4,8 @@
 #include "ApplicationLayer/inventory/inventory_item_handler.h"
 #include "ApplicationLayer/equipment/equipment_service.h"
 #include "ApplicationLayer/equipment/equipment_item_handler.h"
-#include "DataLayer/inventory/inventory_data_writer.h"
-#include "DataLayer/equipment/equipment_data_writer.h"
+#include "DataLayer/inventory/i_inventory_data_writer.h"
+#include "DataLayer/equipment/i_equipment_data_writer.h"
 #include "DataLayer/inventory/inventory_item.h"
 #include "DataLayer/equipment/equipment.h"
 #include <QDebug>
@@ -18,8 +18,8 @@ public:
 
 	InventoriesSaveManager* q;
 	InventoriesService* inventoriesService = nullptr;
-	InventoryDataWriter* inventoryDataWriter = nullptr;
-	EquipmentDataWriter* equipmentDataWriter = nullptr;
+	IInventoryDataWriter* inventoryDataWriter = nullptr;
+	IEquipmentDataWriter* equipmentDataWriter = nullptr;
 
 	Inventory toInventoryData(const InventoryService* service) {
 		Inventory inventory;
@@ -104,8 +104,8 @@ public:
 
 InventoriesSaveManager::InventoriesSaveManager(
 	InventoriesService* inventoriesService,
-	InventoryDataWriter* inventoryDataWriter,
-	EquipmentDataWriter* equipmentDataWriter,
+	IInventoryDataWriter* inventoryDataWriter,
+	IEquipmentDataWriter* equipmentDataWriter,
 	QObject* parent)
 : QObject(parent)
 , d(std::make_unique<Private>(this)) {

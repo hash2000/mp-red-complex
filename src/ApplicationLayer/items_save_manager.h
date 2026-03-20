@@ -3,7 +3,7 @@
 #include <memory>
 
 class ItemsService;
-class ItemsDataWriter;
+class IItemsDataWriter;
 
 /**
  * @brief Менеджер сохранения предметов
@@ -16,7 +16,7 @@ class ItemsSaveManager : public QObject {
 public:
 	ItemsSaveManager(
 		ItemsService* itemsService,
-		ItemsDataWriter* itemsDataWriter,
+		IItemsDataWriter* itemsDataWriter,
 		QObject* parent = nullptr);
 
 	~ItemsSaveManager() override;

@@ -4,7 +4,7 @@ project(RedComplexTests LANGUAGES CXX)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Test)
 
-# Моковый ItemsDataProvider для тестов (общий для всех тестов)
+# Моковый IItemsDataProvider для тестов (общий для всех тестов)
 set(Test-Mocks
     mock_items_data_provider.h
     mock_items_data_provider.cpp

@@ -1,7 +1,7 @@
 #include "ApplicationLayer/equipment/equipment_save_handler.h"
 #include "ApplicationLayer/equipment/equipment_service.h"
 #include "ApplicationLayer/equipment/equipment_item_handler.h"
-#include "DataLayer/equipment/equipment_data_writer.h"
+#include "DataLayer/equipment/i_equipment_data_writer.h"
 #include "DataLayer/equipment/equipment.h"
 #include <QDebug>
 
@@ -40,13 +40,13 @@ public:
 
 	EquipmentSaveHandler* q;
 	EquipmentService* equipmentService = nullptr;
-	EquipmentDataWriter* dataWriter = nullptr;
+	IEquipmentDataWriter* dataWriter = nullptr;
 	QUuid equipmentId;
 };
 
 EquipmentSaveHandler::EquipmentSaveHandler(
 	EquipmentService* equipmentService,
-	EquipmentDataWriter* dataWriter,
+	IEquipmentDataWriter* dataWriter,
 	const QUuid& equipmentId,
 	QObject* parent)
 : QObject(parent)

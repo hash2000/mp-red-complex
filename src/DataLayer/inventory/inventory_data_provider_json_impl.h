@@ -1,11 +1,11 @@
 #pragma once
-#include "DataLayer/inventory/inventory_data_provider.h"
+#include "DataLayer/inventory/i_inventory_data_provider.h"
 #include <QString>
 #include <memory>
 
 class Resources;
 
-class InventoryDataProviderJsonImpl : public InventoryDataProvider {
+class InventoryDataProviderJsonImpl : public IInventoryDataProvider {
 public:
 	InventoryDataProviderJsonImpl(Resources* resources);
 	~InventoryDataProviderJsonImpl() override;

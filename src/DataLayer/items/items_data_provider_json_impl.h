@@ -1,12 +1,12 @@
 #pragma once
-#include "DataLayer/items/items_data_provider.h"
+#include "DataLayer/items/i_items_data_provider.h"
 #include <QPixmap>
 #include <QUuid>
 #include <memory>
 
 class Resources;
 
-class ItemsDataProviderJsonImpl : public ItemsDataProvider {
+class ItemsDataProviderJsonImpl : public IItemsDataProvider {
 public:
 	ItemsDataProviderJsonImpl(Resources* resources);
 	~ItemsDataProviderJsonImpl() override;

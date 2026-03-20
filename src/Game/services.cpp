@@ -31,13 +31,13 @@ public:
 	std::unique_ptr<WorldService> worldService;
 
 	// Data Providers (остаются для обратной совместимости и writer'ов)
-	std::unique_ptr<InventoryDataProvider> inventoryDataProvider;
-	std::unique_ptr<InventoryDataWriter> inventoryDataWriter;
-	std::unique_ptr<ItemsDataProvider> itemsDataProvider;
-	std::unique_ptr<ItemsDataWriter> itemsDataWriter;
-	std::unique_ptr<EquipmentDataProvider> equipmentDataProvider;
-	std::unique_ptr<EquipmentDataWriter> equipmentDataWriter;
-	std::unique_ptr<InventoriesDataProvider> inventoriesDataProvider;
+	std::unique_ptr<IInventoryDataProvider> inventoryDataProvider;
+	std::unique_ptr<IInventoryDataWriter> inventoryDataWriter;
+	std::unique_ptr<IItemsDataProvider> itemsDataProvider;
+	std::unique_ptr<IItemsDataWriter> itemsDataWriter;
+	std::unique_ptr<IEquipmentDataProvider> equipmentDataProvider;
+	std::unique_ptr<IEquipmentDataWriter> equipmentDataWriter;
+	std::unique_ptr<IInventoriesDataProvider> inventoriesDataProvider;
 
 	// Repositories (новый слой абстракции)
 	std::shared_ptr<IItemRepository> itemRepository;

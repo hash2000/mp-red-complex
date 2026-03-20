@@ -1,9 +1,9 @@
 #pragma once
-#include "DataLayer/inventories/inventories_data_provider.h"
+#include "DataLayer/inventories/i_inventories_data_provider.h"
 
 class Resources;
 
-class InventoriesDataProviderJsonImpl : public InventoriesDataProvider {
+class InventoriesDataProviderJsonImpl : public IInventoriesDataProvider {
 public:
 	InventoriesDataProviderJsonImpl(Resources* resources);
 	~InventoriesDataProviderJsonImpl() override;

@@ -4,20 +4,20 @@
 #include <memory>
 
 class EquipmentService;
-class EquipmentDataWriter;
+class IEquipmentDataWriter;
 
 /**
  * @brief Обработчик сохранения экипировки
  * 
  * Слушает сигналы изменений от EquipmentService и сохраняет
- * состояние экипировки через EquipmentDataWriter
+ * состояние экипировки через IEquipmentDataWriter
  */
 class EquipmentSaveHandler : public QObject {
 	Q_OBJECT
 public:
 	EquipmentSaveHandler(
 		EquipmentService* equipmentService,
-		EquipmentDataWriter* dataWriter,
+		IEquipmentDataWriter* dataWriter,
 		const QUuid& equipmentId,
 		QObject* parent = nullptr);
 

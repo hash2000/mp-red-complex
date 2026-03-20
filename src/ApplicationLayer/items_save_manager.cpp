@@ -1,6 +1,6 @@
 #include "ApplicationLayer/items_save_manager.h"
 #include "ApplicationLayer/items/items_service.h"
-#include "DataLayer/items/items_data_writer.h"
+#include "DataLayer/items/i_items_data_writer.h"
 #include "DataLayer/items/item.h"
 #include <QDebug>
 
@@ -12,7 +12,7 @@ public:
 
 	ItemsSaveManager* q;
 	ItemsService* itemsService = nullptr;
-	ItemsDataWriter* itemsDataWriter = nullptr;
+	IItemsDataWriter* itemsDataWriter = nullptr;
 
 	bool saveAll() {
 		if (!itemsService || !itemsDataWriter) {
@@ -37,7 +37,7 @@ public:
 
 ItemsSaveManager::ItemsSaveManager(
 	ItemsService* itemsService,
-	ItemsDataWriter* itemsDataWriter,
+	IItemsDataWriter* itemsDataWriter,
 	QObject* parent)
 : QObject(parent)
 , d(std::make_unique<Private>(this)) {

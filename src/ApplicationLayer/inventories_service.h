@@ -6,7 +6,7 @@
 
 class ItemMimeData;
 class IItemPlacementService;
-class InventoriesDataProvider;
+class IInventoriesDataProvider;
 class ItemsService;
 class InventoryLoader;
 struct PlacementCreateParams;

@@ -1,12 +1,12 @@
 #include "DataLayer/equipment/equipment_repository_json_impl.h"
-#include "DataLayer/equipment/equipment_data_provider.h"
-#include "DataLayer/equipment/equipment_data_writer.h"
+#include "DataLayer/equipment/i_equipment_data_provider.h"
+#include "DataLayer/equipment/i_equipment_data_writer.h"
 #include "DataLayer/equipment/equipment.h"
 #include <QDebug>
 
 EquipmentRepositoryJsonImpl::EquipmentRepositoryJsonImpl(
-    EquipmentDataProvider* provider,
-    EquipmentDataWriter* writer)
+    IEquipmentDataProvider* provider,
+    IEquipmentDataWriter* writer)
     : _provider(provider)
     , _writer(writer) {
 }

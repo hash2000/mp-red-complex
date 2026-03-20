@@ -3,8 +3,8 @@
 #include <memory>
 
 class InventoriesService;
-class InventoryDataWriter;
-class EquipmentDataWriter;
+class IInventoryDataWriter;
+class IEquipmentDataWriter;
 
 /**
  * @brief Менеджер сохранения инвентарей и экипировок
@@ -17,8 +17,8 @@ class InventoriesSaveManager : public QObject {
 public:
 	InventoriesSaveManager(
 		InventoriesService* inventoriesService,
-		InventoryDataWriter* inventoryDataWriter,
-		EquipmentDataWriter* equipmentDataWriter,
+		IInventoryDataWriter* inventoryDataWriter,
+		IEquipmentDataWriter* equipmentDataWriter,
 		QObject* parent = nullptr);
 
 	~InventoriesSaveManager() override;

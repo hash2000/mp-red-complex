@@ -4,9 +4,9 @@
 
 class Item;
 
-class ItemsDataWriter {
+class IItemsDataWriter {
 public:
-	virtual ~ItemsDataWriter() = default;
+	virtual ~IItemsDataWriter() = default;
 
 	virtual bool saveItem(const QUuid& id, const Item& item) const = 0;
 };

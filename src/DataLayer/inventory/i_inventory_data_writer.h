@@ -3,9 +3,9 @@
 
 class Inventory;
 
-class InventoryDataWriter {
+class IInventoryDataWriter {
 public:
-	virtual ~InventoryDataWriter() = default;
+	virtual ~IInventoryDataWriter() = default;
 
 	virtual bool saveInventory(const QUuid& id, const Inventory& inventory) const = 0;
 };

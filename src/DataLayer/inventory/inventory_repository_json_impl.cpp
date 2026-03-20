@@ -1,12 +1,12 @@
 #include "DataLayer/inventory/inventory_repository_json_impl.h"
-#include "DataLayer/inventory/inventory_data_provider.h"
-#include "DataLayer/inventory/inventory_data_writer.h"
+#include "DataLayer/inventory/i_inventory_data_provider.h"
+#include "DataLayer/inventory/i_inventory_data_writer.h"
 #include "DataLayer/inventory/inventory_item.h"
 #include <QDebug>
 
 InventoryRepositoryJsonImpl::InventoryRepositoryJsonImpl(
-    InventoryDataProvider* provider,
-    InventoryDataWriter* writer)
+    IInventoryDataProvider* provider,
+    IInventoryDataWriter* writer)
     : _provider(provider)
     , _writer(writer) {
 }
