@@ -203,5 +203,13 @@ void LoginWidget::onLoginClicked() {
 }
 
 void LoginWidget::onRegisterClicked() {
-	emit registerRequested();
+	QString login = d->loginEdit->text().trimmed();
+	QString password = d->passwordEdit->text();
+
+	auto result = d->usersService->registerUser(login, password, login);
+	if (result.has_value()) {
+		if (d->usersService->login(login, password).has_value()) {
+			emit registerSuccess();
+		}
+	}
 }

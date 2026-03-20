@@ -15,11 +15,8 @@ public:
 	~LoginWidget() override;
 
 signals:
-	/// Сигнал об успешном входе
 	void loginSuccess();
-
-	/// Сигнал о запросе регистрации
-	void registerRequested();
+	void registerSuccess();
 
 private slots:
 	void onLoginClicked();

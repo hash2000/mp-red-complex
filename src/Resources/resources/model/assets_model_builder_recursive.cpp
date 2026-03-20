@@ -13,8 +13,7 @@ void AssetsModelBuilderRecursive::build() {
 
 	_treeCache.clear();
 
-	for (const auto& item : _container.items()) {
-		const auto& name = item.name();
+	for (const auto& [name, stream] : _container.items()) {
 		buildItemsFromPath(_parent, name);
 	}
 }

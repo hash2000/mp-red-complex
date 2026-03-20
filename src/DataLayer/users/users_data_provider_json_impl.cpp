@@ -13,34 +13,26 @@ class UsersDataProviderJsonImpl::Private {
 public:
 	Private(UsersDataProviderJsonImpl* parent)
 		: q(parent) {
-		// Путь к данным пользователей
-		dataPath = QDir::fromNativeSeparators(
-			QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/users");
 	}
 
 	UsersDataProviderJsonImpl* q;
-	QString dataPath;
+	Resources* resources;
 
 	// Загрузить пользователя из JSON файла
 	std::optional<UserData> loadUserFromFile(const QString& filePath) const {
-		QFile file(filePath);
-		if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+		QJsonObject json;
+		Format::Json::DataReader reader(resources, "data", filePath);
+		if (!reader.read(json)) {
 			return std::nullopt;
 		}
 
-		QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
-		if (doc.isNull()) {
-			return std::nullopt;
-		}
-
-		return userFromJson(doc.object());
+		return userFromJson(json);
 	}
 
 	// Парсинг UserData из JSON
 	UserData userFromJson(const QJsonObject& json) const {
 		UserData user;
-		user.id = json["id"].toString();
-		user.login = json["login"].toString();
+		user.loginHash = json["login"].toString();
 		user.passwordHash = json["passwordHash"].toString();
 		user.displayName = json["displayName"].toString();
 
@@ -58,8 +50,7 @@ public:
 	// Сериализация UserData в JSON
 	QJsonObject userToJson(const UserData& user) const {
 		QJsonObject json;
-		json["id"] = user.id;
-		json["login"] = user.login;
+		json["login"] = user.loginHash;
 		json["passwordHash"] = user.passwordHash;
 		json["displayName"] = user.displayName;
 
@@ -74,52 +65,39 @@ public:
 	}
 
 	// Получить путь к файлу пользователя
-	QString getUserFilePath(const QString& userId) const {
-		return dataPath + "/" + userId + ".json";
+	QString getUserFilePath(const QString& loginHash) const {
+		const auto path = QString("users/%1.json")
+			.arg(loginHash.toLower());
+
+		return path;
 	}
 };
 
 UsersDataProviderJsonImpl::UsersDataProviderJsonImpl(Resources* resources)
 	: d(std::make_unique<Private>(this)) {
-	Q_UNUSED(resources);
-	// Создаём директорию, если не существует
-	QDir().mkpath(d->dataPath);
+	d->resources = resources;
 }
 
 UsersDataProviderJsonImpl::~UsersDataProviderJsonImpl() = default;
 
-bool UsersDataProviderJsonImpl::loadAllUsers(QHash<QString, UserData>& users) const {
-	users.clear();
-
-	QDir dir(d->dataPath);
-	if (!dir.exists()) {
-		return true; // Нет директории - нет пользователей
-	}
-
-	dir.setNameFilters(QStringList() << "*.json");
-	const auto files = dir.entryInfoList();
-
-	for (const auto& fileInfo : files) {
-		auto userOpt = d->loadUserFromFile(fileInfo.absoluteFilePath());
-		if (userOpt.has_value()) {
-			users[userOpt->id] = userOpt.value();
-		}
-	}
-
-	return true;
-}
-
-std::optional<UserData> UsersDataProviderJsonImpl::loadUser(const QString& userId) const {
-	QString filePath = d->getUserFilePath(userId);
+std::optional<UserData> UsersDataProviderJsonImpl::loadUser(const QString& loginHash) const {
+	QString filePath = d->getUserFilePath(loginHash);
 	return d->loadUserFromFile(filePath);
 }
 
 bool UsersDataProviderJsonImpl::saveUser(const UserData& user) {
-	QString filePath = d->getUserFilePath(user.id);
+	QString path = d->getUserFilePath(user.loginHash);
+	auto dataDir = d->resources->Variables.get("Resources.Path", "")
+		.toString();
+	QDir dir(dataDir);
+	if (!dir.exists(path)) {
+		dir.mkpath(path);
+	}
 
 	QJsonObject json = d->userToJson(user);
 	QJsonDocument doc(json);
 
+	const auto filePath = dir.filePath("data/" + path);
 	QFile file(filePath);
 	if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
 		return false;
@@ -129,22 +107,7 @@ bool UsersDataProviderJsonImpl::saveUser(const UserData& user) {
 	return true;
 }
 
-bool UsersDataProviderJsonImpl::deleteUser(const QString& userId) {
-	QString filePath = d->getUserFilePath(userId);
+bool UsersDataProviderJsonImpl::deleteUser(const QString& loginHash) {
+	QString filePath = d->getUserFilePath(loginHash);
 	return QFile::remove(filePath);
-}
-
-std::optional<UserData> UsersDataProviderJsonImpl::findUserByLogin(const QString& login) const {
-	QHash<QString, UserData> users;
-	if (!loadAllUsers(users)) {
-		return std::nullopt;
-	}
-
-	for (const auto& user : users) {
-		if (user.login == login) {
-			return user;
-		}
-	}
-
-	return std::nullopt;
 }

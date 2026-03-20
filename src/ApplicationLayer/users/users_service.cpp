@@ -17,6 +17,10 @@ public:
 	static QString hashPassword(const QString& password) {
 		return QCryptographicHash::hash(password.toUtf8(), QCryptographicHash::Sha256).toHex();
 	}
+
+	static QString hashLogin(const QString& login) {
+		return QCryptographicHash::hash(login.toUtf8(), QCryptographicHash::Sha256).toHex();
+	}
 };
 
 UsersService::UsersService(std::unique_ptr<IUsersDataProvider> dataProvider, QObject* parent)
@@ -28,7 +32,8 @@ UsersService::UsersService(std::unique_ptr<IUsersDataProvider> dataProvider, QOb
 UsersService::~UsersService() = default;
 
 std::optional<QString> UsersService::login(const QString& login, const QString& password) {
-	auto userOpt = d->dataProvider->findUserByLogin(login);
+	const auto loginHash = Private::hashLogin(login);
+	auto userOpt = d->dataProvider->loadUser(loginHash);
 	if (!userOpt.has_value()) {
 		return std::nullopt;
 	}
@@ -41,11 +46,11 @@ std::optional<QString> UsersService::login(const QString& login, const QString& 
 	}
 
 	// Успешный вход
-	d->currentUserId = user.id;
+	d->currentUserId = user.loginHash;
 	d->authenticated = true;
 
-	emit loginSuccess(user.id);
-	return user.id;
+	emit loginSuccess(user.displayName);
+	return user.loginHash;
 }
 
 void UsersService::logout() {
@@ -71,16 +76,14 @@ QString UsersService::currentUserId() const {
 }
 
 std::optional<QString> UsersService::registerUser(const QString& login, const QString& password, const QString& displayName) {
-	// Проверяем, существует ли пользователь с таким логином
-	auto existingUser = d->dataProvider->findUserByLogin(login);
+	const auto loginHash = Private::hashLogin(login);
+	const auto existingUser = d->dataProvider->loadUser(loginHash);
 	if (existingUser.has_value()) {
-		return std::nullopt; // Пользователь уже существует
+		return std::nullopt;
 	}
 
-	// Создаём нового пользователя
 	UserData user;
-	user.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
-	user.login = login;
+	user.loginHash = loginHash;
 	user.passwordHash = Private::hashPassword(password);
 	user.displayName = displayName.isEmpty() ? login : displayName;
 
@@ -88,7 +91,7 @@ std::optional<QString> UsersService::registerUser(const QString& login, const QS
 		return std::nullopt;
 	}
 
-	return user.id;
+	return user.loginHash;
 }
 
 QString UsersService::hashPassword(const QString& password) {

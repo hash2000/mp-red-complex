@@ -9,11 +9,9 @@ public:
 	UsersDataProviderJsonImpl(Resources* resources);
 	~UsersDataProviderJsonImpl() override;
 
-	bool loadAllUsers(QHash<QString, UserData>& users) const override;
-	std::optional<UserData> loadUser(const QString& userId) const override;
-	bool saveUser(const UserData& user) override;
-	bool deleteUser(const QString& userId) override;
-	std::optional<UserData> findUserByLogin(const QString& login) const override;
+	std::optional<UserData> loadUser(const QString& loginHash) const override;
+	bool saveUser(const UserData& loginHash) override;
+	bool deleteUser(const QString& loginHash) override;
 
 private:
 	class Private;

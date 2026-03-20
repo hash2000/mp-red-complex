@@ -21,6 +21,9 @@ EquipmentWindow::EquipmentWindow(InventoriesService* inventoriesService, const Q
 	d->widget = new EquipmentWidget(inventoriesService, this);
 	setWindowTitle("Equipment");
 	setWidget(d->widget);
+
+	resize(windowDefaultSizes());
+	setFixedSize(windowDefaultSizes());
 }
 
 EquipmentWindow::~EquipmentWindow() = default;

@@ -23,7 +23,7 @@ public:
 
 private slots:
 	void onLoginSuccess();
-	void onRegisterRequested();
+	void onRegisterSuccess();
 
 private:
 	class Private;

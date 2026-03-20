@@ -27,11 +27,10 @@ LoginWindow::LoginWindow(UsersService* usersService, const QString& id, QWidget*
 
 	// Подключаем сигналы
 	connect(d->loginWidget, &LoginWidget::loginSuccess, this, &LoginWindow::onLoginSuccess);
-	connect(d->loginWidget, &LoginWidget::registerRequested, this, &LoginWindow::onRegisterRequested);
+	connect(d->loginWidget, &LoginWidget::registerSuccess, this, &LoginWindow::onRegisterSuccess);
 
 	setWidget(d->loginWidget);
 
-	// Устанавливаем размеры окна
 	resize(windowDefaultSizes());
 	setFixedSize(windowDefaultSizes());
 }
@@ -51,17 +50,11 @@ void LoginWindow::onLoginSuccess() {
 	// Получаем данные текущего пользователя
 	auto userOpt = d->usersService->currentUser();
 	if (userOpt.has_value()) {
-		// Показываем сообщение об успешном входе
-		QMessageBox::information(this, "Вход выполнен",
-			QString("Добро пожаловать, %1!").arg(userOpt->displayName));
-
-		// Закрываем окно входа
+		qDebug() << "User login" << userOpt->displayName;
 		close();
 	}
 }
 
-void LoginWindow::onRegisterRequested() {
-	// TODO: Реализовать окно регистрации
-	QMessageBox::information(this, "Регистрация",
-		"Функция регистрации будет доступна в следующей версии.");
+void LoginWindow::onRegisterSuccess() {
+
 }

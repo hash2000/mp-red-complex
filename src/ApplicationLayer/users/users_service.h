@@ -29,7 +29,7 @@ public:
 
 	/// Зарегистрировать нового пользователя
 	/// Возвращает ID созданного пользователя или nullopt при ошибке
-	std::optional<QString> registerUser(const QString& login, const QString& password, const QString& displayName = QString());
+	std::optional<QString> registerUser(const QString& login, const QString& password, const QString& displayName);
 
 	/// Создать хэш пароля (для тестирования и отладки)
 	static QString hashPassword(const QString& password);
