@@ -1,4 +1,3 @@
-#include "Game/widgets/user/login_widget.h"
 #include "Game/widgets/user/register_widget.h"
 #include "ApplicationLayer/users/users_service.h"
 #include <QVBoxLayout>
@@ -7,34 +6,38 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QLabel>
-#include <QMessageBox>
 #include <QFrame>
 
-class LoginWidget::Private {
+class RegisterWidget::Private {
 public:
-	Private(LoginWidget* parent)
+	Private(RegisterWidget* parent)
 		: q(parent) {
 	}
 
-	LoginWidget* q;
+	RegisterWidget* q;
 	UsersService* usersService;
 
 	QLineEdit* loginEdit = nullptr;
 	QLineEdit* passwordEdit = nullptr;
-	QPushButton* loginButton = nullptr;
+	QLineEdit* nicknameEdit = nullptr;
 	QPushButton* registerButton = nullptr;
+	QPushButton* cancelButton = nullptr;
 	QLabel* titleLabel = nullptr;
 	QLabel* errorLabel = nullptr;
+
+	QString resultLogin;
+	QString resultPassword;
 };
 
-LoginWidget::LoginWidget(UsersService* usersService, QWidget* parent)
+RegisterWidget::RegisterWidget(UsersService* usersService, QWidget* parent)
 	: d(std::make_unique<Private>(this))
-	, QWidget(parent) {
+	, QDialog(parent) {
 	d->usersService = usersService;
 
-	setWindowTitle("Вход в систему");
+	setWindowTitle("Регистрация");
+	setModal(true);
 	setStyleSheet(R"(
-		LoginWidget {
+		RegisterWidget {
 			background-color: #0f172a;
 		}
 	)");
@@ -42,15 +45,23 @@ LoginWidget::LoginWidget(UsersService* usersService, QWidget* parent)
 	setupLayout();
 }
 
-LoginWidget::~LoginWidget() = default;
+RegisterWidget::~RegisterWidget() = default;
 
-void LoginWidget::setupLayout() {
+QString RegisterWidget::login() const {
+	return d->resultLogin;
+}
+
+QString RegisterWidget::password() const {
+	return d->resultPassword;
+}
+
+void RegisterWidget::setupLayout() {
 	auto mainLayout = new QVBoxLayout(this);
 	mainLayout->setContentsMargins(40, 40, 40, 40);
 	mainLayout->setSpacing(20);
 
 	// Заголовок
-	d->titleLabel = new QLabel("Вход в систему");
+	d->titleLabel = new QLabel("Регистрация");
 	d->titleLabel->setStyleSheet(
 		"color: #e2e8f0; font-weight: 700; font-size: 24px;");
 	d->titleLabel->setAlignment(Qt::AlignCenter);
@@ -63,14 +74,14 @@ void LoginWidget::setupLayout() {
 	line->setFixedHeight(2);
 	mainLayout->addWidget(line);
 
-	// Форма входа
+	// Форма регистрации
 	auto formLayout = new QFormLayout();
 	formLayout->setSpacing(12);
 	formLayout->setLabelAlignment(Qt::AlignRight);
 
 	// Логин
 	d->loginEdit = new QLineEdit();
-	d->loginEdit->setPlaceholderText("Введите логин");
+	d->loginEdit->setPlaceholderText("Придумайте логин");
 	d->loginEdit->setFixedHeight(40);
 	d->loginEdit->setStyleSheet(R"(
 		QLineEdit {
@@ -89,7 +100,7 @@ void LoginWidget::setupLayout() {
 
 	// Пароль
 	d->passwordEdit = new QLineEdit();
-	d->passwordEdit->setPlaceholderText("Введите пароль");
+	d->passwordEdit->setPlaceholderText("Придумайте пароль");
 	d->passwordEdit->setEchoMode(QLineEdit::Password);
 	d->passwordEdit->setFixedHeight(40);
 	d->passwordEdit->setStyleSheet(R"(
@@ -107,6 +118,25 @@ void LoginWidget::setupLayout() {
 	)");
 	formLayout->addRow("Пароль:", d->passwordEdit);
 
+	// Никнейм
+	d->nicknameEdit = new QLineEdit();
+	d->nicknameEdit->setPlaceholderText("Ваше отображаемое имя");
+	d->nicknameEdit->setFixedHeight(40);
+	d->nicknameEdit->setStyleSheet(R"(
+		QLineEdit {
+			background-color: rgba(30, 41, 59, 200);
+			border: 1px solid #4a5568;
+			border-radius: 6px;
+			color: #e2e8f0;
+			padding: 0 12px;
+			font-size: 14px;
+		}
+		QLineEdit:focus {
+			border-color: #3b82f6;
+		}
+	)");
+	formLayout->addRow("Никнейм:", d->nicknameEdit);
+
 	mainLayout->addLayout(formLayout);
 
 	// Метка для ошибок
@@ -120,10 +150,10 @@ void LoginWidget::setupLayout() {
 	auto buttonLayout = new QHBoxLayout();
 	buttonLayout->setSpacing(12);
 
-	// Кнопка входа
-	d->loginButton = new QPushButton("Войти");
-	d->loginButton->setFixedHeight(44);
-	d->loginButton->setStyleSheet(R"(
+	// Кнопка регистрации
+	d->registerButton = new QPushButton("Зарегистрироваться");
+	d->registerButton->setFixedHeight(44);
+	d->registerButton->setStyleSheet(R"(
 		QPushButton {
 			background-color: #10b981;
 			color: #0f172a;
@@ -139,14 +169,14 @@ void LoginWidget::setupLayout() {
 			background-color: #0a8c62;
 		}
 	)");
-	buttonLayout->addWidget(d->loginButton, 1);
+	buttonLayout->addWidget(d->registerButton, 1);
 
-	// Кнопка регистрации
-	d->registerButton = new QPushButton("Регистрация");
-	d->registerButton->setFixedHeight(44);
-	d->registerButton->setStyleSheet(R"(
+	// Кнопка отмены
+	d->cancelButton = new QPushButton("Отмена");
+	d->cancelButton->setFixedHeight(44);
+	d->cancelButton->setStyleSheet(R"(
 		QPushButton {
-			background-color: #3b82f6;
+			background-color: #4a5568;
 			color: #0f172a;
 			border: none;
 			border-radius: 6px;
@@ -154,31 +184,31 @@ void LoginWidget::setupLayout() {
 			font-size: 14px;
 		}
 		QPushButton:hover {
-			background-color: #2563eb;
+			background-color: #5a6678;
 		}
 		QPushButton:pressed {
-			background-color: #1d4ed8;
+			background-color: #6a7688;
 		}
 	)");
-	buttonLayout->addWidget(d->registerButton, 1);
+	buttonLayout->addWidget(d->cancelButton, 1);
 
 	mainLayout->addLayout(buttonLayout);
-	mainLayout->addStretch();
 
 	// Подключаем сигналы
-	connect(d->loginButton, &QPushButton::clicked, this, &LoginWidget::onLoginClicked);
-	connect(d->registerButton, &QPushButton::clicked, this, &LoginWidget::onRegisterClicked);
+	connect(d->registerButton, &QPushButton::clicked, this, &RegisterWidget::onRegisterClicked);
+	connect(d->cancelButton, &QPushButton::clicked, this, &RegisterWidget::onCancelClicked);
 
-	// Вход по Enter
-	connect(d->passwordEdit, &QLineEdit::returnPressed, this, &LoginWidget::onLoginClicked);
+	// Регистрация по Enter
+	connect(d->nicknameEdit, &QLineEdit::returnPressed, this, &RegisterWidget::onRegisterClicked);
 
 	// Устанавливаем размер
-	setFixedSize(400, 350);
+	setFixedSize(400, 380);
 }
 
-void LoginWidget::onLoginClicked() {
+void RegisterWidget::onRegisterClicked() {
 	QString login = d->loginEdit->text().trimmed();
 	QString password = d->passwordEdit->text();
+	QString nickname = d->nicknameEdit->text().trimmed();
 
 	if (login.isEmpty()) {
 		d->errorLabel->setText("Введите логин");
@@ -192,25 +222,25 @@ void LoginWidget::onLoginClicked() {
 		return;
 	}
 
-	auto result = d->usersService->login(login, password);
+	if (nickname.isEmpty()) {
+		d->errorLabel->setText("Введите никнейм");
+		d->errorLabel->show();
+		return;
+	}
+
+	auto result = d->usersService->registerUser(login, password, nickname);
 	if (result.has_value()) {
-		d->errorLabel->hide();
-		emit loginSuccess();
+		d->resultLogin = login;
+		d->resultPassword = password;
+		accept();
+		emit registerSuccess();
 	}
 	else {
-		d->errorLabel->setText("Неверный логин или пароль");
+		d->errorLabel->setText("Ошибка регистрации.");
 		d->errorLabel->show();
 	}
 }
 
-void LoginWidget::onRegisterClicked() {
-	RegisterWidget registerDialog(d->usersService, this);
-	if (registerDialog.exec() == QDialog::Accepted) {
-		// Заполняем поля входа новыми учётными данными
-		d->loginEdit->setText(registerDialog.login());
-		d->passwordEdit->setText(registerDialog.password());
-		
-		// Автоматически выполняем вход
-		onLoginClicked();
-	}
+void RegisterWidget::onCancelClicked() {
+	reject();
 }

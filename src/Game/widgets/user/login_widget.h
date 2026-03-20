@@ -6,6 +6,7 @@ class UsersService;
 class QLineEdit;
 class QPushButton;
 class QLabel;
+class RegisterWidget;
 
 /// Виджет формы входа
 class LoginWidget : public QWidget {
