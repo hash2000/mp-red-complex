@@ -30,7 +30,7 @@ bool CreateWindowCommand::execute(CommandContext* context, const QStringList& ar
 	}
 
 	WindowsBuilder builder(app);
-	auto widget = builder.build(target, id);
+	auto widget = builder.build(target, id, mdiArea);
 	if (!widget) {
 		context->printError(QString("Can't find target window %1")
 			.arg(target));
@@ -50,6 +50,11 @@ bool CreateWindowCommand::execute(CommandContext* context, const QStringList& ar
 	subWndow->setWindowTitle(title);
 	subWndow->setAttribute(Qt::WA_DeleteOnClose, true);
 	subWndow->resize(sizes.width(), sizes.height());
+	
+	// Устанавливаем MDI area для центрирования и центрируем окно
+	widget->setMdiArea(mdiArea);
+	widget->centerInMdiArea();
+	
 	subWndow->show();
 
 	context->printSuccess(QString("Window %1 created with title '%2'")

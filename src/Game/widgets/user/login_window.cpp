@@ -30,9 +30,6 @@ LoginWindow::LoginWindow(UsersService* usersService, const QString& id, QWidget*
 	connect(d->loginWidget, &LoginWidget::registerSuccess, this, &LoginWindow::onRegisterSuccess);
 
 	setWidget(d->loginWidget);
-
-	resize(windowDefaultSizes());
-	setFixedSize(windowDefaultSizes());
 }
 
 LoginWindow::~LoginWindow() = default;

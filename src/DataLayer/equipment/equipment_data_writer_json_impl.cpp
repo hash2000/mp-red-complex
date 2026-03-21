@@ -31,12 +31,12 @@ QString slotToString(EquipmentSlotType slot) {
 	case EquipmentSlotType::Body: return "Body";
 	case EquipmentSlotType::WeaponLeft: return "WeaponLeft";
 	case EquipmentSlotType::WeaponRight: return "WeaponRight";
-	case EquipmentSlotType::GlovesLeft: return "GlovesLeft";
-	case EquipmentSlotType::GlovesRight: return "GlovesRight";
-	case EquipmentSlotType::Boots: return "Boots";
-	case EquipmentSlotType::RingLeft: return "RingLeft";
-	case EquipmentSlotType::RingRight: return "RingRight";
+	case EquipmentSlotType::Gloves: return "Gloves";
 	case EquipmentSlotType::Amulet: return "Amulet";
+	case EquipmentSlotType::Boots: return "Boots";
+	case EquipmentSlotType::Ring1: return "Ring1";
+	case EquipmentSlotType::Ring2: return "Ring2";
+	case EquipmentSlotType::Ring3: return "Ring3";
 	case EquipmentSlotType::Backpack: return "Backpack";
 	case EquipmentSlotType::Bag1: return "Bag1";
 	case EquipmentSlotType::Bag2: return "Bag2";

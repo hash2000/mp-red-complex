@@ -48,11 +48,12 @@ bool EquipmentDataProviderJsonImpl::loadEquipment(const QUuid& id, Equipment& eq
 		if (slot == "Head") eqItem.slot = EquipmentSlotType::Head;
 		else if (slot == "Body") eqItem.slot = EquipmentSlotType::Body;
 		else if (slot == "WeaponLeft") eqItem.slot = EquipmentSlotType::WeaponLeft;
-		else if (slot == "GlovesLeft") eqItem.slot = EquipmentSlotType::GlovesLeft;
-		else if (slot == "GlovesRight") eqItem.slot = EquipmentSlotType::GlovesRight;
-		else if (slot == "Boots") eqItem.slot = EquipmentSlotType::Boots;
-		else if (slot == "RingLeft") eqItem.slot = EquipmentSlotType::RingLeft;
+		else if (slot == "Gloves") eqItem.slot = EquipmentSlotType::Gloves;
 		else if (slot == "Amulet") eqItem.slot = EquipmentSlotType::Amulet;
+		else if (slot == "Boots") eqItem.slot = EquipmentSlotType::Boots;
+		else if (slot == "Ring1") eqItem.slot = EquipmentSlotType::Ring1;
+		else if (slot == "Ring2") eqItem.slot = EquipmentSlotType::Ring2;
+		else if (slot == "Ring3") eqItem.slot = EquipmentSlotType::Ring3;
 		else if (slot == "Backpack") eqItem.slot = EquipmentSlotType::Backpack;
 		else if (slot == "Bag1") eqItem.slot = EquipmentSlotType::Bag1;
 		else if (slot == "Bag2") eqItem.slot = EquipmentSlotType::Bag2;
