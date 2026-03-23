@@ -4,6 +4,9 @@
 #include "Game/services.h"
 #include "Game/controllers.h"
 #include "Game/controllers/windows_controller.h"
+#include "Game/controllers/action_panel_controller.h"
+#include "Game/controllers/action_button_config.h"
+#include "Game/widgets/action_panel/action_panel_widget.h"
 #include "BaseWidgets/mdi_area.h"
 #include "Resources/resources.h"
 
@@ -54,15 +57,44 @@ public:
 	}
 
 	void setupView() {
-		auto splitter = new QSplitter(Qt::Vertical);
-		splitter->addWidget(mdiArea);
-		splitter->addWidget(commandConsole);
-		splitter->setStretchFactor(0, 1);
-		splitter->setStretchFactor(1, 0);
-		q->setCentralWidget(splitter);
+		// Горизонтальный сплиттер для основной области и панели действий
+		auto* horizontalSplitter = new QSplitter(Qt::Horizontal);
+
+		// Вертикальный сплиттер для MDI и консоли
+		auto* verticalSplitter = new QSplitter(Qt::Vertical);
+		verticalSplitter->addWidget(mdiArea);
+		verticalSplitter->addWidget(commandConsole);
+		verticalSplitter->setStretchFactor(0, 1);
+		verticalSplitter->setStretchFactor(1, 0);
+
+		horizontalSplitter->addWidget(verticalSplitter);
+
+		// Панель действий
+		actionPanel = new ActionPanelWidget(controller->controllers()->actionPanelController(), q);
+		horizontalSplitter->addWidget(actionPanel);
+
+		horizontalSplitter->setStretchFactor(0, 1);
+		horizontalSplitter->setStretchFactor(1, 0);
+
+		q->setCentralWidget(horizontalSplitter);
+
+		// Добавляем кнопку Login
+		setupActionPanel();
+
 		controller->executeCommandByName("window-create", QStringList{ "login" });
 	}
 
+	void setupActionPanel() {
+		// Кнопка Login
+		ActionButtonConfig loginButton(
+			"login",
+			":/icons/login.png",
+			"Войти в систему",
+			"window-create login ",
+			1
+		);
+		controller->controllers()->actionPanelController()->addButton(loginButton);
+	}
 
 	GameMainFrame* q;
 	Resources* resources;
@@ -70,6 +102,7 @@ public:
 	ApplicationController* controller;
 	CommandConsole* commandConsole;
 	QToolButton* consoleToggleButton;
+	ActionPanelWidget* actionPanel = nullptr;
 };
 
 GameMainFrame::GameMainFrame(Resources* resources)

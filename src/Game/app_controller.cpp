@@ -40,7 +40,7 @@ ApplicationController::ApplicationController(Resources* resources, QObject* pare
 	d->commandProcessor = std::make_unique<CommandProcessor>(resources);
 	d->commandContext = std::make_unique<CommandContext>(this);
 	d->services = std::make_unique<Services>(resources);
-	d->controllers = std::make_unique<Controllers>(d->services.get());
+	d->controllers = std::make_unique<Controllers>(this, d->services.get());
 
 	// Регистрация встроенных системных команд
 	d->commandProcessor->registerCommand(std::make_unique<ListWindowsCommand>());

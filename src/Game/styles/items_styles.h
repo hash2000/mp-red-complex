@@ -21,6 +21,7 @@ public:
 
 namespace ItemsStyles {
 	static constexpr int CELL_SIZE = 38;
+	static constexpr int ICON_SIZE = 38;
 
 	QString rarityColor(ItemRarityType rarity);
 
