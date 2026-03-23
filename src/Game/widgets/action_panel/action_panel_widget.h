@@ -5,13 +5,17 @@
 #include <vector>
 
 class ActionPanelController;
+class TexturesService;
 class QToolButton;
 class QVBoxLayout;
 
 class ActionPanelWidget : public QWidget {
 	Q_OBJECT
 public:
-	explicit ActionPanelWidget(ActionPanelController* controller, QWidget* parent = nullptr);
+	explicit ActionPanelWidget(
+		ActionPanelController* controller,
+		TexturesService* texturesService,
+		QWidget* parent = nullptr);
 	~ActionPanelWidget() override;
 
 	// Скрытие/отображение панели

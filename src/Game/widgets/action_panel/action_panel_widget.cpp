@@ -1,5 +1,6 @@
 #include "Game/widgets/action_panel/action_panel_widget.h"
 #include "Game/controllers/action_panel_controller.h"
+#include "ApplicationLayer/textures/textures_service.h"
 #include "Game/styles/items_styles.h"
 #include <QToolButton>
 #include <QVBoxLayout>
@@ -13,6 +14,7 @@ public:
 
 	ActionPanelWidget* q;
 	ActionPanelController* controller = nullptr;
+	TexturesService* texturesService = nullptr;
 	QVBoxLayout* mainLayout = nullptr;
 	QWidget* buttonsContainer = nullptr;
 	QVBoxLayout* buttonsLayout = nullptr;
@@ -20,10 +22,14 @@ public:
 	bool isVisible = true;
 };
 
-ActionPanelWidget::ActionPanelWidget(ActionPanelController* controller, QWidget* parent)
+ActionPanelWidget::ActionPanelWidget(
+	ActionPanelController* controller,
+	TexturesService* texturesService,
+	QWidget* parent)
 	: QWidget(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->controller = controller;
+	d->texturesService = texturesService;
 
 	// Подключение сигналов контроллера
 	connect(d->controller, &ActionPanelController::buttonAdded,
@@ -69,11 +75,12 @@ void ActionPanelWidget::setupLayout() {
 			border-radius: 6px;
 		}
 		QToolButton:hover {
-			background-color: #e0f2fe;
-			border: 1px solid #bae6fd;
+			background-color: transparent;
+			border: 1px solid #60a5fa;
 		}
 		QToolButton:pressed {
-			background-color: #bae6fd;
+			background-color: transparent;
+			border: 2px solid #3b82f6;
 		}
 	)");
 
@@ -87,7 +94,11 @@ void ActionPanelWidget::setupLayout() {
 
 QToolButton* ActionPanelWidget::createToolButton(const ActionButtonConfig& config) {
 	auto* button = new QToolButton(this);
-	button->setIcon(QIcon(config.iconName));
+
+	// Загружаем иконку через сервис текстур (с кэшированием)
+	QPixmap pixmap = d->texturesService->getTexture(config.iconName);
+	button->setIcon(QIcon(pixmap));
+
 	button->setIconSize(QSize(ItemsStyles::ICON_SIZE, ItemsStyles::ICON_SIZE));
 	button->setToolTip(config.toolTip);
 	button->setFixedSize(ItemsStyles::ICON_SIZE, ItemsStyles::ICON_SIZE);

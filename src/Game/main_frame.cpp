@@ -70,7 +70,10 @@ public:
 		horizontalSplitter->addWidget(verticalSplitter);
 
 		// Панель действий
-		actionPanel = new ActionPanelWidget(controller->controllers()->actionPanelController(), q);
+		actionPanel = new ActionPanelWidget(
+			controller->controllers()->actionPanelController(),
+			controller->services()->texturesService(),
+			q);
 		horizontalSplitter->addWidget(actionPanel);
 
 		horizontalSplitter->setStretchFactor(0, 1);
@@ -89,7 +92,7 @@ public:
 		// Кнопка Login
 		ActionButtonConfig loginButton(
 			"login",
-			":/icons/login.png",
+			"login.png",  // Имя файла иконки (путь будет icons/login.png)
 			"Войти в систему",
 			"window-create login",
 			1

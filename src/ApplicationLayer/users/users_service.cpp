@@ -9,7 +9,7 @@ public:
 	}
 
 	UsersService* q;
-	std::unique_ptr<IUsersDataProvider> dataProvider;
+	IUsersDataProvider* dataProvider = nullptr;
 	QString currentUserId;
 	bool authenticated = false;
 
@@ -23,10 +23,10 @@ public:
 	}
 };
 
-UsersService::UsersService(std::unique_ptr<IUsersDataProvider> dataProvider, QObject* parent)
+UsersService::UsersService(IUsersDataProvider* dataProvider, QObject* parent)
 	: QObject(parent)
 	, d(std::make_unique<Private>(this)) {
-	d->dataProvider = std::move(dataProvider);
+	d->dataProvider = dataProvider;
 }
 
 UsersService::~UsersService() = default;
