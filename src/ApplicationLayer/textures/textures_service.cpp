@@ -51,7 +51,7 @@ void TexturesService::clearCache() {
 void TexturesService::preloadTexture(const QString& name) {
 	// Предварительная загрузка в кэш (без возврата значения)
 	if (!d->texturesCache.contains(name)) {
-		auto pixmap = d->dataProvider->loadIcon(name);
+		auto pixmap = d->dataProvider->loadTexture(name);
 		if (pixmap.has_value()) {
 			d->texturesCache.insert(name, *pixmap);
 		}

@@ -22,6 +22,9 @@ public:
 	void setPanelVisible(bool visible);
 	bool isPanelVisible() const;
 
+	// Переключить состояние панели
+	void togglePanel();
+
 public slots:
 	void onButtonAdded(const ActionButtonConfig& config);
 	void onButtonRemoved(const QString& id);
@@ -31,11 +34,13 @@ public slots:
 
 private slots:
 	void onToolButtonClicked();
+	void onToggleButtonClicked();
 
 private:
 	void setupLayout();
 	QToolButton* createToolButton(const ActionButtonConfig& config);
 	void refreshButtons();
+	void updateToggleButtonIcon();
 
 	class Private;
 	std::unique_ptr<Private> d;

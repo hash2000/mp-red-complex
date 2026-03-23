@@ -7,6 +7,7 @@
 #include <QHBoxLayout>
 #include <QIcon>
 #include <QGraphicsEffect>
+#include <QStackedLayout>
 
 class ActionPanelWidget::Private {
 public:
@@ -15,11 +16,14 @@ public:
 	ActionPanelWidget* q;
 	ActionPanelController* controller = nullptr;
 	TexturesService* texturesService = nullptr;
-	QVBoxLayout* mainLayout = nullptr;
+	QHBoxLayout* mainLayout = nullptr;
 	QWidget* buttonsContainer = nullptr;
 	QVBoxLayout* buttonsLayout = nullptr;
+	QWidget* toggleContainer = nullptr;      // Контейнер кнопки переключения
+	QVBoxLayout* toggleLayout = nullptr;
+	QToolButton* toggleButton = nullptr;     // Кнопка сворачивания/разворачивания
 	QHash<QString, QToolButton*> buttonMap;  // ID -> QToolButton
-	bool isVisible = true;
+	bool isVisible = false;  // По умолчанию панель скрыта (стрелка вправо)
 };
 
 ActionPanelWidget::ActionPanelWidget(
@@ -49,19 +53,57 @@ ActionPanelWidget::ActionPanelWidget(
 ActionPanelWidget::~ActionPanelWidget() = default;
 
 void ActionPanelWidget::setupLayout() {
-	// Основной layout
-	d->mainLayout = new QVBoxLayout(this);
+	// Основной layout - горизонтальный, чтобы разделить кнопки и переключатель
+	d->mainLayout = new QHBoxLayout(this);
 	d->mainLayout->setContentsMargins(0, 0, 0, 0);
 	d->mainLayout->setSpacing(2);
 
-	// Контейнер для кнопок
+	// Контейнер для кнопок действий (левая часть)
 	d->buttonsContainer = new QWidget(this);
 	d->buttonsLayout = new QVBoxLayout(d->buttonsContainer);
 	d->buttonsLayout->setContentsMargins(0, 0, 0, 0);
 	d->buttonsLayout->setSpacing(2);
 	d->buttonsLayout->addStretch();  // Кнопки прижимаются к верху
 
-	d->mainLayout->addWidget(d->buttonsContainer);
+	d->mainLayout->addWidget(d->buttonsContainer, 1);  // stretch = 1
+
+	// Контейнер кнопки переключения (правая часть, фиксированная ширина)
+	d->toggleContainer = new QWidget(this);
+	d->toggleContainer->setFixedWidth(16);  // Фиксированная ширина для колонки переключателя
+	d->toggleLayout = new QVBoxLayout(d->toggleContainer);
+	d->toggleLayout->setContentsMargins(0, 0, 0, 0);
+	d->toggleLayout->setSpacing(0);
+	d->toggleLayout->addStretch();  // Пружина сверху
+
+	// Кнопка переключения (внизу правой колонки)
+	d->toggleButton = new QToolButton(this);
+	d->toggleButton->setFixedSize(16, 16);
+	d->toggleButton->setAutoRaise(true);
+	connect(d->toggleButton, &QToolButton::clicked, this, &ActionPanelWidget::onToggleButtonClicked);
+	updateToggleButtonIcon();
+
+	// Стиль кнопки переключения
+	d->toggleButton->setStyleSheet(R"(
+		QToolButton {
+			background-color: transparent;
+			border: none;
+			border-radius: 3px;
+			color: #64748b;
+			font-size: 10px;
+		}
+		QToolButton:hover {
+			background-color: #e2e8f0;
+			color: #334155;
+		}
+		QToolButton:pressed {
+			background-color: #cbd5e1;
+		}
+	)");
+
+	d->toggleLayout->addWidget(d->toggleButton, 0, Qt::AlignHCenter);
+	d->toggleLayout->addStretch();  // Пружина снизу (для центрирования)
+
+	d->mainLayout->addWidget(d->toggleContainer, 0);  // stretch = 0, фиксированная ширина
 
 	// Стиль панели
 	setStyleSheet(R"(
@@ -69,27 +111,24 @@ void ActionPanelWidget::setupLayout() {
 			background-color: #f8fafc;
 			border-left: 1px solid #e2e8f0;
 		}
-		QToolButton {
+		/* Кнопки действий */
+		ActionPanelWidget QToolButton[actionId] {
 			background-color: transparent;
 			border: 1px solid transparent;
-			border-radius: 6px;
+			border-radius: 3px;
 		}
-		QToolButton:hover {
+		ActionPanelWidget QToolButton[actionId]:hover {
 			background-color: transparent;
 			border: 1px solid #60a5fa;
 		}
-		QToolButton:pressed {
+		ActionPanelWidget QToolButton[actionId]:pressed {
 			background-color: transparent;
 			border: 2px solid #3b82f6;
 		}
 	)");
-
-	// Фиксированный размер панели
-	int panelWidth = ItemsStyles::ICON_SIZE + 16;
-	setMinimumWidth(panelWidth);
-	setMaximumWidth(panelWidth);
-	setMinimumHeight(0);
-	setMaximumHeight(QWIDGETSIZE_MAX);
+	
+	// По умолчанию скрываем контейнер кнопок
+	setPanelVisible(true);
 }
 
 QToolButton* ActionPanelWidget::createToolButton(const ActionButtonConfig& config) {
@@ -176,10 +215,42 @@ void ActionPanelWidget::onPanelVisibilityChanged(bool visible) {
 
 void ActionPanelWidget::setPanelVisible(bool visible) {
 	d->isVisible = visible;
-	d->buttonsContainer->setVisible(visible);
-	setVisible(visible);
+	
+	// Скрываем/показываем контейнер кнопок и меняем ширину панели
+	if (visible) {
+		int panelWidth = ItemsStyles::ICON_SIZE + 20;
+		setMinimumWidth(panelWidth);
+		setMaximumWidth(panelWidth);
+		d->buttonsContainer->setVisible(true);
+	} else {
+		// Оставляем только колонку переключателя (16px)
+		setMinimumWidth(16);
+		setMaximumWidth(16);
+		d->buttonsContainer->setVisible(false);
+	}
+	
+	updateToggleButtonIcon();
 }
 
 bool ActionPanelWidget::isPanelVisible() const {
 	return d->isVisible;
+}
+
+void ActionPanelWidget::togglePanel() {
+	setPanelVisible(!d->isVisible);
+}
+
+void ActionPanelWidget::onToggleButtonClicked() {
+	togglePanel();
+}
+
+void ActionPanelWidget::updateToggleButtonIcon() {
+	// Стрелка влево (панель раскрыта) или вправо (панель скрыта)
+	if (d->isVisible) {
+		d->toggleButton->setText("◀");
+		d->toggleButton->setToolTip("Свернуть панель");
+	} else {
+		d->toggleButton->setText("▶");
+		d->toggleButton->setToolTip("Развернуть панель");
+	}
 }

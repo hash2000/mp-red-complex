@@ -30,24 +30,14 @@ TexturesDataProviderJsonImpl::TexturesDataProviderJsonImpl(Resources* resources)
 TexturesDataProviderJsonImpl::~TexturesDataProviderJsonImpl() = default;
 
 std::optional<QPixmap> TexturesDataProviderJsonImpl::loadTexture(const QString& path) const {
+	// Путь к иконке в папке icons
+	const auto iconsPath = QString("icons/%1")
+		.arg(path);
+
 	QPixmap pixmap;
-	Format::Pixmap::DataReader reader(d->resources, "assets", path);
+	Format::Pixmap::DataReader reader(d->resources, "assets", iconsPath);
 	if (!reader.read(pixmap)) {
 		return std::nullopt;
 	}
-	return pixmap;
-}
-
-std::optional<QPixmap> TexturesDataProviderJsonImpl::loadIcon(const QString& iconName) const {
-	// Путь к иконке в папке icons
-	const auto path = QString("icons/%1").arg(iconName);
-
-	QPixmap pixmap;
-	Format::Pixmap::DataReader reader(d->resources, "assets", path);
-	if (!reader.read(pixmap)) {
-		// Возвращаем заглушку, если иконка не найдена
-		return d->loadEmptyStubIcon(iconName);
-	}
-
 	return pixmap;
 }
