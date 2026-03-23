@@ -10,6 +10,7 @@
 class ActionPanelWidget::Private {
 public:
 	Private(ActionPanelWidget* parent) : q(parent) {}
+
 	ActionPanelWidget* q;
 	ActionPanelController* controller = nullptr;
 	QVBoxLayout* mainLayout = nullptr;
@@ -76,9 +77,12 @@ void ActionPanelWidget::setupLayout() {
 		}
 	)");
 
-	// Фиксированная ширина панели
-	setMinimumWidth(ItemsStyles::ICON_SIZE + 16);
-	setMaximumWidth(ItemsStyles::ICON_SIZE + 16);
+	// Фиксированный размер панели
+	int panelWidth = ItemsStyles::ICON_SIZE + 16;
+	setMinimumWidth(panelWidth);
+	setMaximumWidth(panelWidth);
+	setMinimumHeight(0);
+	setMaximumHeight(QWIDGETSIZE_MAX);
 }
 
 QToolButton* ActionPanelWidget::createToolButton(const ActionButtonConfig& config) {

@@ -76,12 +76,13 @@ public:
 		horizontalSplitter->setStretchFactor(0, 1);
 		horizontalSplitter->setStretchFactor(1, 0);
 
+		// Фиксируем размер сплиттера (запрещаем изменение)
+		horizontalSplitter->setHandleWidth(0);
+
 		q->setCentralWidget(horizontalSplitter);
 
 		// Добавляем кнопку Login
 		setupActionPanel();
-
-		controller->executeCommandByName("window-create", QStringList{ "login" });
 	}
 
 	void setupActionPanel() {
@@ -90,7 +91,7 @@ public:
 			"login",
 			":/icons/login.png",
 			"Войти в систему",
-			"window-create login ",
+			"window-create login",
 			1
 		);
 		controller->controllers()->actionPanelController()->addButton(loginButton);
