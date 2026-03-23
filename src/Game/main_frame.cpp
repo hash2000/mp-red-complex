@@ -6,6 +6,7 @@
 #include "Game/controllers/windows_controller.h"
 #include "Game/controllers/action_panel_controller.h"
 #include "Game/controllers/action_button_config.h"
+#include "Game/widgets/action_panel/action_panel_login_builder.h"
 #include "Game/widgets/action_panel/action_panel_widget.h"
 #include "BaseWidgets/mdi_area.h"
 #include "Resources/resources.h"
@@ -89,15 +90,8 @@ public:
 	}
 
 	void setupActionPanel() {
-		// Кнопка Login
-		ActionButtonConfig loginButton(
-			"login",
-			"login.png",  // Имя файла иконки (путь будет icons/login.png)
-			"Войти в систему",
-			"window-create login",
-			1
-		);
-		controller->controllers()->actionPanelController()->addButton(loginButton);
+		ActionPanelLoginBuilder builder(controller->controllers()->actionPanelController());
+		builder.build();
 	}
 
 	GameMainFrame* q;

@@ -62,7 +62,7 @@ void ActionPanelWidget::setupLayout() {
 	d->buttonsContainer = new QWidget(this);
 	d->buttonsLayout = new QVBoxLayout(d->buttonsContainer);
 	d->buttonsLayout->setContentsMargins(0, 0, 0, 0);
-	d->buttonsLayout->setSpacing(2);
+	d->buttonsLayout->setSpacing(8);  // Расстояние между кнопками 8px
 	d->buttonsLayout->addStretch();  // Кнопки прижимаются к верху
 
 	d->mainLayout->addWidget(d->buttonsContainer, 1);  // stretch = 1
