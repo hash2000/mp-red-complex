@@ -30,7 +30,7 @@ bool CreateWindowCommand::execute(CommandContext* context, const QStringList& ar
 	}
 
 	WindowsBuilder builder(app);
-	auto widget = builder.build(target, id, mdiArea);
+	auto widget = builder.build(target, id, nullptr);
 	if (!widget) {
 		context->printError(QString("Can't find target window %1")
 			.arg(target));
@@ -42,20 +42,21 @@ bool CreateWindowCommand::execute(CommandContext* context, const QStringList& ar
 		return false;
 	}
 
-	if (!controller->registerWindow(widget)) {
-		delete widget;
-		return false;
-	}
-
 	const auto title = widget->windowTitle();
 	const auto sizes = widget->windowDefaultSizes();
+	
 	auto subWndow = mdiArea->addSubWindow(widget);
 	subWndow->setWindowTitle(title);
 	subWndow->setAttribute(Qt::WA_DeleteOnClose, true);
 	subWndow->resize(sizes.width(), sizes.height());
 	widget->setMdiArea(mdiArea);
-	widget->setupMdiArea();	
+	widget->setupMdiArea();
 	subWndow->show();
+
+	if (!controller->registerWindow(widget)) {
+		delete widget;
+		return false;
+	}
 
 	context->printSuccess(QString("Window %1 created with title '%2'")
 		.arg(target)
