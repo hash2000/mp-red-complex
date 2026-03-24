@@ -65,6 +65,7 @@ void MdiChildWindow::setupMdiArea() {
 		return;
 	}
 
+	// Для QMdiSubWindow нужно центрировать относительно viewport
 	const QSize areaSize = d->mdiArea->viewport()->size();
 
 	// Вычисляем центральную позицию
@@ -78,6 +79,9 @@ void MdiChildWindow::setupMdiArea() {
 	// Устанавливаем размер и позицию
 	resize(windowSize);
 	move(x, y);
+	
+	// Обновляем окно
+	update();
 }
 
 bool MdiChildWindow::handleCommand(const QString& commandName,
