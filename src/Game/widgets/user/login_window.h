@@ -19,6 +19,10 @@ public:
 
 	QSize windowDefaultSizes() const override { return QSize(400, 350); }
 
+	bool NeedCentering() const override { return true; }
+
+	bool NeedFixedSize() const override { return true; }
+
 	bool handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) override;
 
 private slots:

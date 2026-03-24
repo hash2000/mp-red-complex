@@ -50,11 +50,8 @@ bool CreateWindowCommand::execute(CommandContext* context, const QStringList& ar
 	subWndow->setWindowTitle(title);
 	subWndow->setAttribute(Qt::WA_DeleteOnClose, true);
 	subWndow->resize(sizes.width(), sizes.height());
-	
-	// Устанавливаем MDI area для центрирования и центрируем окно
 	widget->setMdiArea(mdiArea);
-	widget->centerInMdiArea();
-	
+	widget->setupMdiArea();	
 	subWndow->show();
 
 	context->printSuccess(QString("Window %1 created with title '%2'")

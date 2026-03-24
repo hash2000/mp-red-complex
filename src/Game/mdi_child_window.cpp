@@ -42,13 +42,29 @@ void MdiChildWindow::setMdiArea(QMdiArea* mdiArea) {
 	d->mdiArea = mdiArea;
 }
 
-void MdiChildWindow::centerInMdiArea() {
+bool MdiChildWindow::NeedCentering() const {
+	return false;
+}
+
+bool MdiChildWindow::NeedFixedSize() const {
+	return false;
+}
+
+void MdiChildWindow::setupMdiArea() {
+	const QSize windowSize = windowDefaultSizes();
+
+	if (NeedFixedSize()) {
+		setFixedSize(windowSize);
+	}
+
+	if (!NeedCentering()) {
+		return;
+	}
+
 	if (!d->mdiArea) {
 		return;
 	}
 
-	// Получаем размеры окна и MDI area
-	const QSize windowSize = windowDefaultSizes();
 	const QSize areaSize = d->mdiArea->viewport()->size();
 
 	// Вычисляем центральную позицию
@@ -61,7 +77,6 @@ void MdiChildWindow::centerInMdiArea() {
 
 	// Устанавливаем размер и позицию
 	resize(windowSize);
-	setFixedSize(windowSize);
 	move(x, y);
 }
 
