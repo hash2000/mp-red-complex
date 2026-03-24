@@ -42,7 +42,10 @@ bool CreateWindowCommand::execute(CommandContext* context, const QStringList& ar
 		return false;
 	}
 
-	controller->registerWindow(widget);
+	if (!controller->registerWindow(widget)) {
+		delete widget;
+		return false;
+	}
 
 	const auto title = widget->windowTitle();
 	const auto sizes = widget->windowDefaultSizes();
