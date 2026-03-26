@@ -281,8 +281,8 @@ int InventoryService::canPlaceItem(const ItemMimeData& item, int col, int row, b
 			if (cell->occupied) {
 				// Случай 1: это та же самая ячейка исходного предмета (при перемещении внутри себя)
 				if (checkItemPlace && cell->item && cell->item->id == item.id &&
-					checkX >= row && checkX < row + item.width &&
-					checkY >= col && checkY < col + item.height) {
+					checkX >= col && checkX < col + item.width &&
+					checkY >= row && checkY < row + item.height) {
 					continue; // Пропускаем ячейки самого предмета
 				}
 
