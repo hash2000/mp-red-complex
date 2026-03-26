@@ -50,6 +50,7 @@ void Resources::loadDatFile(const QString& fileName) {
 }
 
 void Resources::loadDatResources() {
+	qDebug() << "Resources::loadDatResources from" << _resources_path.absolutePath();
 	const auto entries = _resources_path.entryInfoList(QDir::Files);
 
 	for(const auto &entry: entries) {
@@ -63,6 +64,7 @@ void Resources::loadDatResources() {
 }
 
 void Resources::loadRawResources() {
+	qDebug() << "Resources::loadRawResources from" << _resources_path_raw.absolutePath();
 	const auto entries = _resources_path_raw.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
 	for(const auto &entry: entries) {
 		const auto path = entry.absoluteFilePath();
