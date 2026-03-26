@@ -65,4 +65,5 @@ bool EquipmentDataProviderJsonImpl::loadEquipment(const QUuid& id, Equipment& eq
 		equipment.items.push_back(eqItem);
 	}
 
+	return true;
 }
