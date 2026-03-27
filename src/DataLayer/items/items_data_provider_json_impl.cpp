@@ -36,6 +36,22 @@ public:
 		else if (typeStr == "resource") {
 			entity.type = ItemType::Resource;
 			entity.maxStack = json["maxStack"].toInt(100);
+
+			if (json.contains("resource")) {
+				QJsonArray resourceTypes = json["resource"].toArray();
+				for (const QJsonValue& rtValue : resourceTypes) {
+					const auto typeName = rtValue.toString().toLower();
+					if (typeName == "ore") {
+						entity.resourceType.push_back(ItemResourceType::Ore);
+					}
+					else if (typeName == "chemical") {
+						entity.resourceType.push_back(ItemResourceType::Chemical);
+					}
+					else {
+						qDebug() << "Load item entity: Undefined resource type:" << typeName;
+					}
+				}
+			}
 		}
 		else if (typeStr == "component") {
 			entity.type = ItemType::Component;
@@ -53,6 +69,44 @@ public:
 				cap["rows"].toInt(4),
 				cap["cols"].toInt(4),
 			};
+
+			if (json.contains("permissions")) {
+				QJsonObject permissions = json["permissions"].toObject();
+				if (permissions.contains("resource")) {
+					QJsonObject resource = permissions["resource"].toObject();
+					if (resource.contains("all")) {
+						QJsonArray allArray = resource["all"].toArray();
+						for (const QJsonValue& val : allArray) {
+							const auto typeName = val.toString().toLower();
+							if (typeName == "ore") {
+								entity.container->permissions.resources.all.push_back(ItemResourceType::Ore);
+							}
+							else if (typeName == "chemical") {
+								entity.container->permissions.resources.all.push_back(ItemResourceType::Chemical);
+							}
+							else {
+								qDebug() << "Load item entity: Undefined resource type in permissions.all:" << typeName;
+							}
+						}
+					}
+
+					if (resource.contains("any")) {
+						QJsonArray anyArray = resource["any"].toArray();
+						for (const QJsonValue& val : anyArray) {
+							const auto typeName = val.toString().toLower();
+							if (typeName == "ore") {
+								entity.container->permissions.resources.any.push_back(ItemResourceType::Ore);
+							}
+							else if (typeName == "chemical") {
+								entity.container->permissions.resources.any.push_back(ItemResourceType::Chemical);
+							}
+							else {
+								qDebug() << "Load item entity: Undefined resource type in permissions.any:" << typeName;
+							}
+						}
+					}
+				}
+			}
 		}
 
 		// Размер в ячейках
