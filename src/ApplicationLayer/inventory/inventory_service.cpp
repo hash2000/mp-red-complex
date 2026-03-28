@@ -121,6 +121,7 @@ public:
 	std::map<QUuid, std::unique_ptr<InventoryItemHandler>> inventoryItems;
 	std::vector<std::vector<std::unique_ptr<InventoryViewCell>>> cells;
 	QHash<QPoint, InventoryItemHandler*> items;
+	ItemContainerPermissions permissions;
 };
 
 InventoryService::InventoryService(ItemsService* itemsService)
@@ -268,6 +269,13 @@ int InventoryService::canPlaceItem(const ItemMimeData& item, int col, int row, b
 	if (col < 0 || row < 0 || col + item.width > d->cols || row + item.height > d->rows) {
 		return 0;
 	}
+
+	const auto itemPtr = itemById(item.id);
+	if (!itemPtr) {
+		return 0;
+	}
+
+	
 
 	// Проверяем все ячейки области предмета
 	for (int dy = 0; dy < item.height; dy++) {
@@ -562,4 +570,15 @@ bool InventoryService::removeItemsFromStack(const ItemMimeData& item) {
 	}
 	
 	return true;
+}
+
+void InventoryService::clearResourcesPermissions() {
+	d->permissions.resources.all.clear();
+	d->permissions.resources.any.clear();
+}
+
+void InventoryService::addResourcesPermissions(
+	const std::list<ItemResourceType>& all,
+	const std::list<ItemResourceType>& any) {
+
 }

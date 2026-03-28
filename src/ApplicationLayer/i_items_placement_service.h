@@ -5,6 +5,7 @@
 #include <optional>
 
 class ItemMimeData;
+enum class ItemResourceType;
 
 class IItemPlacementService {
 public:
@@ -101,4 +102,18 @@ public:
 	/// <param name="id"></param>
 	/// <returns></returns>
 	virtual ItemMimeData itemDataById(const QUuid& id) const = 0;
+
+	/// <summary>
+	/// очистить разрешения на резмещение реурсов
+	/// </summary>
+	virtual void clearResourcesPermissions() = 0;
+
+	/// <summary>
+	/// Добавить разрешения для ресурсов текущего инвентаря
+	/// </summary>
+	/// <param name="all"></param>
+	/// <param name="any"></param>
+	virtual void addResourcesPermissions(
+		const std::list<ItemResourceType>& all,
+		const std::list<ItemResourceType>& any) = 0;
 };

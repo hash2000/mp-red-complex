@@ -54,10 +54,7 @@ IItemPlacementService* InventoriesService::placementService(const QUuid& id, boo
 				return nullptr;
 			}
 
-			service = d->inventoryLoader->createInventory(id,
-				invItem->entity->name,
-				invItem->entity->container->rows,
-				invItem->entity->container->cols);
+			service = d->inventoryLoader->createInventory(id, invItem->entity->name, *invItem->entity->container);
 		}
 		
 		if (service) {
@@ -68,15 +65,6 @@ IItemPlacementService* InventoriesService::placementService(const QUuid& id, boo
 	}
 
 	return nullptr;
-}
-
-std::vector<QUuid> InventoriesService::loadedPlacementIds() const {
-	std::vector<QUuid> result;
-	result.reserve(d->loadedServices.size());
-	for (const auto& [id, service] : d->loadedServices) {
-		result.push_back(id);
-	}
-	return result;
 }
 
 bool InventoriesService::moveItem(const ItemMimeData& item, int col, int row, const QUuid& fromId, const QUuid& toId) {
@@ -156,4 +144,13 @@ bool InventoriesService::moveItem(const ItemMimeData& item, int col, int row, co
 
 	emit itemMoved(item, fromId, toId);
 	return true;
+}
+
+std::vector<QUuid> InventoriesService::loadedPlacementIds() const {
+	std::vector<QUuid> result;
+	result.reserve(d->loadedServices.size());
+	for (const auto& [id, service] : d->loadedServices) {
+		result.push_back(id);
+	}
+	return result;
 }

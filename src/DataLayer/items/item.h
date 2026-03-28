@@ -54,17 +54,19 @@ public:
 	std::vector<Ingredient> ingredients;
 };
 
+struct ItemContainerPermissions {
+	struct {
+		std::list<ItemResourceType> all;
+		std::list<ItemResourceType> any;
+	} resources;
+};
+
 class ItemContainer {
 public:
 	int rows = 1;
 	int cols = 1;
 
-	struct {
-		struct {
-			std::list<ItemResourceType> all;
-			std::list<ItemResourceType> any;
-		} resources;
-	} permissions;
+	ItemContainerPermissions permissions;
 };
 
 class ItemEntity {

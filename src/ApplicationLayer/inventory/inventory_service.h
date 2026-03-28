@@ -47,6 +47,12 @@ public:
 
 	ItemMimeData itemDataById(const QUuid& id) const override;
 
+	void clearResourcesPermissions() override;
+
+	void addResourcesPermissions(
+		const std::list<ItemResourceType>& all,
+		const std::list<ItemResourceType>& any) override;
+
 signals:
 	void placeItemEvent(const ItemMimeData& item, int col, int row);
 	void removeItemEvent(const ItemMimeData& item, int col, int row);
