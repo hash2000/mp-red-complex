@@ -504,6 +504,7 @@ Add the service to the Services class:
 ```cpp
 // src/Game/services.h - add forward declaration
 class YourService;
+class IYourDataProvider;  // Forward declaration of interface
 
 // src/Game/services.h - add method
 YourService* yourService() const;
@@ -511,19 +512,118 @@ YourService* yourService() const;
 // src/Game/services.cpp - add include
 #include "ApplicationLayer/your_module/your_service.h"
 #include "DataLayer/your_module/your_data_provider_json_impl.h"
+#include "DataLayer/your_module/i_your_data_provider.h"
 
 // src/Game/services.cpp - add to Private class
 std::unique_ptr<YourService> yourService;
 
+// Data providers are stored in Services (ownership)
+std::unique_ptr<IYourDataProvider> yourDataProvider;
+
 // src/Game/services.cpp - create in constructor
-d->yourService = std::make_unique<YourService>(
-    std::make_unique<YourDataProviderJsonImpl>(resources));
+// First, create the data provider (Services owns it)
+d->yourDataProvider = std::make_unique<YourDataProviderJsonImpl>(resources);
+
+// Then, pass raw pointer to service (service doesn't own it)
+d->yourService = std::make_unique<YourService>(d->yourDataProvider.get());
 
 // src/Game/services.cpp - add accessor
 YourService* Services::yourService() const {
     return d->yourService.get();
 }
 ```
+
+**Important: Service-Provider Ownership Pattern**
+
+The project follows a specific ownership pattern for services and data providers:
+
+1. **`Services` class owns all data providers** via `std::unique_ptr<IYourDataProvider>`
+2. **Services receive non-owning raw pointers** to the interface
+3. This ensures:
+   - Clear ownership (Services lifetime > Service lifetime)
+   - No double-deletion issues
+   - Easy testing (can inject mock providers)
+   - Consistent architecture across all services
+
+```cpp
+// ❌ WRONG: Service takes ownership
+d->yourService = std::make_unique<YourService>(
+    std::make_unique<YourDataProviderJsonImpl>(resources));
+
+// ✅ CORRECT: Services owns provider, service gets pointer
+d->yourDataProvider = std::make_unique<YourDataProviderJsonImpl>(resources);
+d->yourService = std::make_unique<YourService>(d->yourDataProvider.get());
+```
+
+**Service Header Pattern:**
+```cpp
+// src/ApplicationLayer/your_module/your_service.h
+#pragma once
+#include "DataLayer/your_module/i_your_data_provider.h"
+#include <QObject>
+#include <memory>
+
+class YourService : public QObject {
+    Q_OBJECT
+public:
+    // Service receives raw pointer (non-owning)
+    explicit YourService(IYourDataProvider* dataProvider, QObject* parent = nullptr);
+    ~YourService() override;
+
+    // ...
+};
+```
+
+**Service Implementation Pattern:**
+```cpp
+// src/ApplicationLayer/your_module/your_service.cpp
+class YourService::Private {
+public:
+    Private(YourService* parent) : q(parent) {}
+    YourService* q;
+    IYourDataProvider* dataProvider = nullptr;  // Raw pointer, not owned
+};
+
+YourService::YourService(IYourDataProvider* dataProvider, QObject* parent)
+    : QObject(parent)
+    , d(std::make_unique<Private>(this)) {
+    d->dataProvider = dataProvider;  // Just store the pointer
+}
+```
+
+---
+
+### Textures and Images Service
+
+For loading and caching textures/icons, use the `TexturesService`:
+
+**Data Layer** (`src/DataLayer/textures/`):
+- `ITexturesDataProvider` — Interface for loading textures
+- `TexturesDataProviderJsonImpl` — Implementation that loads from `assets/icons/`
+
+**Application Layer** (`src/ApplicationLayer/textures/`):
+- `TexturesService` — Service with caching (QHash for icons and textures)
+
+**Usage:**
+```cpp
+// Get icon (automatically cached)
+auto* texturesService = services->texturesService();
+QPixmap icon = texturesService->getIcon("login.png");  // Loads from assets/icons/login.png
+
+// Get texture by path
+QPixmap texture = texturesService->getTexture("textures/ground.png");
+
+// Preload icon to cache
+texturesService->preloadIcon("sword.png");
+
+// Clear all caches
+texturesService->clearCache();
+```
+
+**Key Features:**
+- Automatic caching prevents repeated disk reads
+- Returns stub icon if file not found
+- Single point of configuration for all image loading
 
 ### 6. Register Window in `windows_builder.cpp`
 

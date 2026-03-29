@@ -74,19 +74,19 @@ public:
 		bottomRow->setSpacing(16);
 		bottomRow->addStretch();
 
-		// Левые перчатки
-		auto glovesLeftSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::GlovesLeft, q);
-		allSlots[EquipmentSlotType::GlovesLeft] = glovesLeftSlot;
+		// Перчатки
+		auto glovesLeftSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::Gloves, q);
+		allSlots[EquipmentSlotType::Gloves] = glovesLeftSlot;
 		bottomRow->addWidget(glovesLeftSlot);
 
-		// Обувь
-		auto bootsSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::Boots, q);
-		allSlots[EquipmentSlotType::Boots] = bootsSlot;
+		// Амулет
+		auto bootsSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::Amulet, q);
+		allSlots[EquipmentSlotType::Amulet] = bootsSlot;
 		bottomRow->addWidget(bootsSlot);
 
-		// Правые перчатки
-		auto glovesRightSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::GlovesRight, q);
-		allSlots[EquipmentSlotType::GlovesRight] = glovesRightSlot;
+		// Обувь
+		auto glovesRightSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::Boots, q);
+		allSlots[EquipmentSlotType::Boots] = glovesRightSlot;
 		bottomRow->addWidget(glovesRightSlot);
 
 		bottomRow->addSpacing(24);
@@ -95,16 +95,16 @@ public:
 		auto accessoriesLayout = new QVBoxLayout();
 		accessoriesLayout->setSpacing(8);
 
-		auto amuletSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::Amulet, q);
-		allSlots[EquipmentSlotType::Amulet] = amuletSlot;
+		auto amuletSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::Ring1, q);
+		allSlots[EquipmentSlotType::Ring1] = amuletSlot;
 		accessoriesLayout->addWidget(amuletSlot);
 
-		auto ringLeftSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::RingLeft, q);
-		allSlots[EquipmentSlotType::RingLeft] = ringLeftSlot;
+		auto ringLeftSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::Ring2, q);
+		allSlots[EquipmentSlotType::Ring2] = ringLeftSlot;
 		accessoriesLayout->addWidget(ringLeftSlot);
 
-		auto ringRightSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::RingRight, q);
-		allSlots[EquipmentSlotType::RingRight] = ringRightSlot;
+		auto ringRightSlot = new EquipmentSlot(equipmentService, EquipmentSlotType::Ring3, q);
+		allSlots[EquipmentSlotType::Ring3] = ringRightSlot;
 		accessoriesLayout->addWidget(ringRightSlot);
 
 		bottomRow->addLayout(accessoriesLayout);

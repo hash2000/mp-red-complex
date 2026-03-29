@@ -147,8 +147,6 @@ bool CommandProcessor::execute(const QString& commandLine, CommandContext* conte
 			}
 		}
 
-
-
 		return false;
 	}
 

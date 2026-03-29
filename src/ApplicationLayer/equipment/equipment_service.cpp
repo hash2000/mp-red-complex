@@ -85,13 +85,13 @@ int EquipmentService::canPlaceItem(const ItemMimeData& item, int col, int row, b
 		return (equipmentType == ItemEquipmentType::Weapon || equipmentType == ItemEquipmentType::Shield) ? 1 : 0;
 	case EquipmentSlotType::WeaponRight:
 		return equipmentType == ItemEquipmentType::Weapon ? 1 : 0;
-	case EquipmentSlotType::GlovesLeft:
-	case EquipmentSlotType::GlovesRight:
+	case EquipmentSlotType::Gloves:
 		return equipmentType == ItemEquipmentType::Gloves ? 1 : 0;
 	case EquipmentSlotType::Boots:
 		return equipmentType == ItemEquipmentType::Boots ? 1 : 0;
-	case EquipmentSlotType::RingLeft:
-	case EquipmentSlotType::RingRight:
+	case EquipmentSlotType::Ring1:
+	case EquipmentSlotType::Ring2:
+	case EquipmentSlotType::Ring3:
 		return equipmentType == ItemEquipmentType::Ring ? 1 : 0;
 	case EquipmentSlotType::Amulet:
 		return equipmentType == ItemEquipmentType::Amulet ? 1 : 0;
@@ -234,4 +234,14 @@ bool EquipmentService::unequipItem(const ItemMimeData& item, EquipmentSlotType s
 
 	emit itemUnequipped(*eqItem, slot);
 	return true;
+}
+
+void EquipmentService::clearResourcesPermissions() {
+
+}
+
+void EquipmentService::addResourcesPermissions(
+	const std::list<ItemResourceType>& all,
+	const std::list<ItemResourceType>& any) {
+
 }

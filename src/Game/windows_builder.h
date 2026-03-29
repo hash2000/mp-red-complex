@@ -1,5 +1,6 @@
 #pragma once
 #include <QString>
+#include <QWidget>
 #include <memory>
 
 class ApplicationController;
@@ -10,7 +11,7 @@ public:
 	WindowsBuilder(ApplicationController* appController);
 	~WindowsBuilder();
 
-	MdiChildWindow* build(const QString& name, const QString& id);
+	MdiChildWindow* build(const QString& name, const QString& id, QWidget* parent);
 
 private:
 	class Private;

@@ -18,48 +18,53 @@ public:
 
 	WindowsBuilder* q;
 	ApplicationController* appController;
-	std::map<QString, std::function<MdiChildWindow*(Services*, const QString&)>> factory;
+	std::map<QString, std::function<MdiChildWindow*(Services*, const QString&, QWidget*)>> factory;
 };
 
 WindowsBuilder::WindowsBuilder(ApplicationController* appController)
 : d(std::make_unique<Private>(this)) {
 	d->appController = appController;
 
-	d->factory.emplace("map", [](Services* services, const QString& id) {
+	d->factory.emplace("map", [](Services* services, const QString& id, QWidget* parent) {
 		return new MapWindow(
 			services->worldService(),
 			services->timeService(),
-			id);
+			id,
+			parent);
 		});
-	d->factory.emplace("equipment", [](Services* services, const QString& id) {
+	d->factory.emplace("equipment", [](Services* services, const QString& id, QWidget* parent) {
 		return new EquipmentWindow(
 			services->inventoriesService(),
-			id);
+			id,
+			parent);
 		});
-	d->factory.emplace("inventory", [](Services* services, const QString& id) {
+	d->factory.emplace("inventory", [](Services* services, const QString& id, QWidget* parent) {
 		return new InventoryWindow(
 			services->inventoriesService(),
-			id);
+			id,
+			parent);
 		});
-	d->factory.emplace("item-entities", [](Services* services, const QString& id) {
+	d->factory.emplace("item-entities", [](Services* services, const QString& id, QWidget* parent) {
 		return new EntitiesWindow(
 			services->itemsService(),
-			id);
+			id,
+			parent);
 		});
-	d->factory.emplace("login", [](Services* services, const QString& id) {
+	d->factory.emplace("login", [](Services* services, const QString& id, QWidget* parent) {
 		return new LoginWindow(
 			services->usersService(),
-			id);
+			id,
+			parent);
 		});
 }
 
 WindowsBuilder::~WindowsBuilder() = default;
 
-MdiChildWindow* WindowsBuilder::build(const QString& name, const QString& id) {
+MdiChildWindow* WindowsBuilder::build(const QString& name, const QString& id, QWidget* parent) {
 	const auto &it = d->factory.find(name);
 	if (it == d->factory.end()) {
 		return nullptr;
 	}
 
-	return it->second(d->appController->services(), id);
+	return it->second(d->appController->services(), id, parent);
 }

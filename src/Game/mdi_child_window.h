@@ -3,8 +3,10 @@
 #include <QWidget>
 #include <QString>
 #include <QSize>
+#include <QPointer>
 
 class CommandContext;
+class QMdiArea;
 
 class MdiChildWindow : public QMdiSubWindow {
 	Q_OBJECT
@@ -15,8 +17,16 @@ public:
 	virtual QString windowType() const;
 	virtual QString windowTitle() const;
 	QString windowId() const;
+	virtual bool NeedCentering() const;
+	virtual bool NeedFixedSize() const;
 
 	virtual QSize windowDefaultSizes() const;
+
+	/// Установить MDI area для центрирования
+	void setMdiArea(QMdiArea* mdiArea);
+
+	/// Центрировать окно относительно родительского MDI area
+	void setupMdiArea();
 
 	virtual bool handleCommand(const QString& commandName,
 		const QStringList& args,

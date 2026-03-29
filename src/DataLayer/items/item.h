@@ -2,23 +2,11 @@
 #include <QString>
 #include <QPixmap>
 #include <QUuid>
+#include <list>
 
 enum class ItemResourceType {
-	Sand,
-	Soil,
-	Clay,
-	Stone,
-	Granite,
-	Basalt,
-	Limestone,
-	Coal,
-	IronOre,
-	GoldVein,
-	OilShale,
-	Aquifer,
-	GasPocket,
-	DiamondPipe,
-	TitaniumDeposit,
+	Ore, // Руда
+	Chemical, // Химикаты
 };
 
 enum class ItemType {
@@ -66,10 +54,19 @@ public:
 	std::vector<Ingredient> ingredients;
 };
 
+struct ItemContainerPermissions {
+	struct {
+		std::list<ItemResourceType> all;
+		std::list<ItemResourceType> any;
+	} resources;
+};
+
 class ItemContainer {
 public:
 	int rows = 1;
 	int cols = 1;
+
+	ItemContainerPermissions permissions;
 };
 
 class ItemEntity {
@@ -93,8 +90,12 @@ public:
 
 	// рецепт
 	std::optional<ItemRecipe> recipe;
+
 	// контейнер
 	std::optional<ItemContainer> container;
+
+	// тип ресурса
+	std::list<ItemResourceType> resourceType;
 };
 
 class Item {

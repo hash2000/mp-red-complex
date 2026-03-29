@@ -7,6 +7,7 @@
 #include "ApplicationLayer/items/items_service.h"
 #include "DataLayer/inventory/inventory_item.h"
 #include "DataLayer/equipment/equipment.h"
+#include "DataLayer/items/item.h"
 #include <QDebug>
 
 class InventoryLoader::Private {
@@ -14,6 +15,17 @@ public:
     Private(InventoryLoader* parent)
         : q(parent) {
     }
+
+		void loadPermissions(IItemPlacementService* service, const QUuid& id) {
+			const auto itemPtr = itemsService->itemById(id);
+			if (!itemPtr || !itemPtr->entity || !itemPtr->entity->container.has_value()) {
+				return;
+			}
+
+			service->addResourcesPermissions(
+				itemPtr->entity->container->permissions.resources.all,
+				itemPtr->entity->container->permissions.resources.any);
+		}
 
     InventoryLoader* q;
     std::shared_ptr<IInventoryRepository> inventoryRepository;
@@ -47,6 +59,8 @@ std::unique_ptr<IItemPlacementService> InventoryLoader::load(const QUuid& id) {
             qWarning() << "InventoryLoader::load: failed to load inventory" << id;
             return nullptr;
         }
+
+				d->loadPermissions(inventoryService.get(), id);
         return inventoryService;
     }
 
@@ -58,19 +72,21 @@ std::unique_ptr<IItemPlacementService> InventoryLoader::load(const QUuid& id) {
             qWarning() << "InventoryLoader::load: failed to load equipment" << id;
             return nullptr;
         }
+
+				d->loadPermissions(equipmentService.get(), id);
         return equipmentService;
     }
 
     return nullptr;
 }
 
-std::unique_ptr<IItemPlacementService> InventoryLoader::createInventory(const QUuid& id, const QString& name, int rows, int cols) {
+std::unique_ptr<IItemPlacementService> InventoryLoader::createInventory(const QUuid& id, const QString& name, const ItemContainer& container) {
     // Создаём пустой инвентарь в памяти
     Inventory inventory;
     inventory.id = id;
     inventory.name = name;
-    inventory.rows = rows;
-    inventory.cols = cols;
+    inventory.rows = container.rows;
+    inventory.cols = container.cols;
     // items пуст по умолчанию
 
     auto inventoryService = std::make_unique<InventoryService>(d->itemsService);
@@ -78,6 +94,8 @@ std::unique_ptr<IItemPlacementService> InventoryLoader::createInventory(const QU
         qWarning() << "InventoryLoader::createInventory: failed to initialize inventory" << id;
         return nullptr;
     }
+
+		d->loadPermissions(inventoryService.get(), id);
     return inventoryService;
 }
 
@@ -93,5 +111,7 @@ std::unique_ptr<IItemPlacementService> InventoryLoader::createEquipment(const QU
         qWarning() << "InventoryLoader::createEquipment: failed to initialize equipment" << id;
         return nullptr;
     }
+
+		d->loadPermissions(equipmentService.get(), id);
     return equipmentService;
 }

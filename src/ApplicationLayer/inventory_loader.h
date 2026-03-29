@@ -9,6 +9,7 @@ class IItemRepository;
 class IInventoryRepository;
 class IEquipmentRepository;
 class ItemsService;
+class ItemContainer;
 
 /// Фасад для загрузки инвентарей и экипировок по требованию
 /// Загружает данные через репозитории и создаёт сервисы для работы с ними
@@ -34,7 +35,7 @@ public:
     /// @param rows Количество рядов
     /// @param cols Количество колонок
     /// @return Сервис размещения предметов
-    std::unique_ptr<IItemPlacementService> createInventory(const QUuid& id, const QString& name, int rows, int cols);
+    std::unique_ptr<IItemPlacementService> createInventory(const QUuid& id, const QString& name, const ItemContainer& contaiter);
 
     /// Создать пустую экипировку в памяти
     /// @param id Идентификатор экипировки

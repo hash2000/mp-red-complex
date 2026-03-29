@@ -221,12 +221,12 @@ void EquipmentSlot::paintEvent(QPaintEvent* event) {
 		case EquipmentSlotType::Body: painter.drawText(rect(), Qt::AlignCenter, "B"); break;
 		case EquipmentSlotType::WeaponLeft: painter.drawText(rect(), Qt::AlignCenter, "L"); break;
 		case EquipmentSlotType::WeaponRight: painter.drawText(rect(), Qt::AlignCenter, "R"); break;
-		case EquipmentSlotType::GlovesLeft: painter.drawText(rect(), Qt::AlignCenter, "GL"); break;
-		case EquipmentSlotType::GlovesRight: painter.drawText(rect(), Qt::AlignCenter, "GR"); break;
-		case EquipmentSlotType::Boots: painter.drawText(rect(), Qt::AlignCenter, "F"); break;
-		case EquipmentSlotType::RingLeft: painter.drawText(rect(), Qt::AlignCenter, "RL"); break;
-		case EquipmentSlotType::RingRight: painter.drawText(rect(), Qt::AlignCenter, "RR"); break;
+		case EquipmentSlotType::Gloves: painter.drawText(rect(), Qt::AlignCenter, "G"); break;
 		case EquipmentSlotType::Amulet: painter.drawText(rect(), Qt::AlignCenter, "A"); break;
+		case EquipmentSlotType::Boots: painter.drawText(rect(), Qt::AlignCenter, "F"); break;
+		case EquipmentSlotType::Ring1: painter.drawText(rect(), Qt::AlignCenter, "R1"); break;
+		case EquipmentSlotType::Ring2: painter.drawText(rect(), Qt::AlignCenter, "R2"); break;
+		case EquipmentSlotType::Ring3: painter.drawText(rect(), Qt::AlignCenter, "R3"); break;
 		case EquipmentSlotType::Backpack: painter.drawText(rect(), Qt::AlignCenter, "Bp"); break;
 		case EquipmentSlotType::Bag1: painter.drawText(rect(), Qt::AlignCenter, "B1"); break;
 		case EquipmentSlotType::Bag2: painter.drawText(rect(), Qt::AlignCenter, "B2"); break;

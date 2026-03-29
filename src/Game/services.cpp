@@ -12,12 +12,16 @@
 #include "DataLayer/inventory/inventory_repository_json_impl.h"
 #include "DataLayer/equipment/equipment_repository_json_impl.h"
 #include "DataLayer/users/users_data_provider_json_impl.h"
+#include "DataLayer/textures/textures_data_provider_json_impl.h"
+#include "DataLayer/textures/i_textures_data_provider.h"
+#include "DataLayer/users/i_users_data_provider.h"
 #include "ApplicationLayer/items/items_service.h"
 #include "ApplicationLayer/inventories_service.h"
 #include "ApplicationLayer/inventory_loader.h"
 #include "ApplicationLayer/inventories_save_manager.h"
 #include "ApplicationLayer/items_save_manager.h"
 #include "ApplicationLayer/users/users_service.h"
+#include "ApplicationLayer/textures/textures_service.h"
 #include <list>
 
 class Services::Private {
@@ -51,6 +55,11 @@ public:
 	std::unique_ptr<InventoriesSaveManager> inventoriesSaveManager;
 	std::unique_ptr<ItemsSaveManager> itemsSaveManager;
 	std::unique_ptr<UsersService> usersService;
+	std::unique_ptr<TexturesService> texturesService;
+
+	// Data providers (хранятся в Services)
+	std::unique_ptr<IUsersDataProvider> usersDataProvider;
+	std::unique_ptr<ITexturesDataProvider> texturesDataProvider;
 };
 
 Services::Services(Resources* resources)
@@ -102,8 +111,12 @@ Services::Services(Resources* resources)
 		d->itemsDataWriter.get());
 
 	// Создаём сервис пользователей
-	d->usersService = std::make_unique<UsersService>(
-		std::make_unique<UsersDataProviderJsonImpl>(resources));
+	d->usersDataProvider = std::make_unique<UsersDataProviderJsonImpl>(resources);
+	d->usersService = std::make_unique<UsersService>(d->usersDataProvider.get());
+
+	// Создаём сервис текстур
+	d->texturesDataProvider = std::make_unique<TexturesDataProviderJsonImpl>(resources);
+	d->texturesService = std::make_unique<TexturesService>(d->texturesDataProvider.get());
 
 	// Подключаем сохранение к сигналу save()
 	connect(this, &Services::save,
@@ -154,4 +167,8 @@ IInventoryRepository* Services::inventoryRepository() const {
 
 UsersService* Services::usersService() const {
 	return d->usersService.get();
+}
+
+TexturesService* Services::texturesService() const {
+	return d->texturesService.get();
 }

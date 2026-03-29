@@ -8,7 +8,7 @@
 class UsersService : public QObject {
 	Q_OBJECT
 public:
-	explicit UsersService(std::unique_ptr<IUsersDataProvider> dataProvider, QObject* parent = nullptr);
+	explicit UsersService(IUsersDataProvider* dataProvider, QObject* parent = nullptr);
 	~UsersService() override;
 
 	/// Войти пользователя по логину и паролю
