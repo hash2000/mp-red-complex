@@ -77,10 +77,18 @@ bool WindowsController::registerWindow(MdiChildWindow* window) {
 	d->windowToId[window] = windowId;
 
 	// Отслеживание уничтожения окна
-	connect(window, &QObject::destroyed,
+	auto connection = connect(window, &QObject::destroyed,
 		this, &WindowsController::onSubWindowDestroyed);
-
+	
 	qInfo() << "Window registered:" << windowId << "type:" << window->windowType();
+	qInfo() << "  window pointer:" << window;
+	qInfo() << "  window parent:" << window->parent();
+	qInfo() << "  connection:" << (connection ? "connected" : "failed");
+	
+	// Если это QMdiSubWindow, проверим его widget
+	if (auto subWindow = qobject_cast<QMdiSubWindow*>(window)) {
+		qInfo() << "  subWindow widget:" << subWindow->widget();
+	}
 
 	emit windowCreated(window, windowId);
 	return true;
@@ -143,17 +151,55 @@ void WindowsController::onSubWindowActivated(QMdiSubWindow* subWindow) {
 }
 
 void WindowsController::onSubWindowDestroyed(QObject* obj) {
-	// obj может быть как MdiChildWindow, так и QMdiSubWindow
-	if (auto window = qobject_cast<MdiChildWindow*>(obj)) {
-		unregisterWindow(window);
+	qDebug() << "Window destroyed, obj type:" << obj->metaObject()->className();
+	qDebug() << "obj pointer:" << obj;
+	
+	// Ищем окно в реестре по указателю (не по типу!)
+	// Во время уничтожения qobject_cast может не работать, так как объект уже частично разрушен
+	MdiChildWindow* windowToUnregister = nullptr;
+	
+	// Проверяем, является ли obj зарегистрированным окном
+	for (auto it = d->windowToId.constBegin(); it != d->windowToId.constEnd(); ++it) {
+		if (it.key() == obj) {
+			qDebug() << "Found window by pointer match:" << it.key();
+			windowToUnregister = it.key();
+			break;
+		}
 	}
-	else if (auto subWindow = qobject_cast<QMdiSubWindow*>(obj)) {
-		// Если уничтожено само подокно — ищем widget внутри реестра
+	
+	// Если не нашли по точному совпадению, проверяем через qobject_cast
+	if (!windowToUnregister) {
+		if (auto window = qobject_cast<MdiChildWindow*>(obj)) {
+			qDebug() << "Cast to MdiChildWindow succeeded:" << window;
+			windowToUnregister = window;
+		}
+	}
+	
+	// Если не нашли, проверяем, является ли obj виджетом внутри QMdiSubWindow
+	if (!windowToUnregister) {
 		for (auto it = d->windowToId.constBegin(); it != d->windowToId.constEnd(); ++it) {
-			if (it.key()->parent() == subWindow) {
-				unregisterWindow(it.key());
-				break;
+			auto window = it.key();
+			if (auto subWindow = qobject_cast<QMdiSubWindow*>(window)) {
+				if (subWindow->widget() == obj) {
+					qDebug() << "Found window by widget():" << window;
+					windowToUnregister = window;
+					break;
+				}
 			}
+		}
+	}
+	
+	if (windowToUnregister) {
+		unregisterWindow(windowToUnregister);
+	}
+	else {
+		qDebug() << "Window not found in registry, obj:" << obj;
+		// Выведем все окна в реестре для отладки
+		for (auto it = d->windowToId.constBegin(); it != d->windowToId.constEnd(); ++it) {
+			auto window = it.key();
+			qDebug() << "Registered window:" << window << "id:" << it.value() 
+					 << "parent:" << window->parent() 
+					 << "parent type:" << (window->parent() ? window->parent()->metaObject()->className() : "null");
 		}
 	}
 }
