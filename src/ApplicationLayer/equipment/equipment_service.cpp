@@ -235,3 +235,13 @@ bool EquipmentService::unequipItem(const ItemMimeData& item, EquipmentSlotType s
 	emit itemUnequipped(*eqItem, slot);
 	return true;
 }
+
+void EquipmentService::clearResourcesPermissions() {
+
+}
+
+void EquipmentService::addResourcesPermissions(
+	const std::list<ItemResourceType>& all,
+	const std::list<ItemResourceType>& any) {
+
+}

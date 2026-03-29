@@ -6,6 +6,7 @@
 #include <QHash>
 #include <QDebug>
 #include <vector>
+#include <algorithm>
 
 struct InventoryViewCell {
 	bool occupied = false;
@@ -270,12 +271,43 @@ int InventoryService::canPlaceItem(const ItemMimeData& item, int col, int row, b
 		return 0;
 	}
 
-	const auto itemPtr = itemById(item.id);
+	const auto itemPtr = d->itemsService->itemById(item.id);
 	if (!itemPtr) {
 		return 0;
 	}
 
-	
+	// Проверка соответствия типов ресурсов правилам контейнера
+	const auto& itemResourceTypes = itemPtr->entity->resourceType;
+	const auto& resourcesPermissions = d->permissions.resources;
+
+	// Проверка правила "all" — все указанные типы должны присутствовать у предмета
+	if (!resourcesPermissions.all.empty()) {
+		for (const auto& requiredType : resourcesPermissions.all) {
+			const auto hasType = std::find(
+				itemResourceTypes.begin(),
+				itemResourceTypes.end(),
+				requiredType) != itemResourceTypes.end();
+			if (!hasType) {
+				return 0; // Предмет не имеет требуемого типа ресурса
+			}
+		}
+	}
+
+	// Проверка правила "any" — хотя бы один из указанных типов должен присутствовать у предмета
+	if (!resourcesPermissions.any.empty()) {
+		const auto hasAny = std::any_of(
+			resourcesPermissions.any.begin(),
+			resourcesPermissions.any.end(),
+			[&itemResourceTypes](const ItemResourceType& type) {
+				return std::find(
+					itemResourceTypes.begin(),
+					itemResourceTypes.end(),
+					type) != itemResourceTypes.end();
+			});
+		if (!hasAny) {
+			return 0; // Предмет не имеет ни одного из допустимых типов ресурсов
+		}
+	}
 
 	// Проверяем все ячейки области предмета
 	for (int dy = 0; dy < item.height; dy++) {
@@ -580,5 +612,12 @@ void InventoryService::clearResourcesPermissions() {
 void InventoryService::addResourcesPermissions(
 	const std::list<ItemResourceType>& all,
 	const std::list<ItemResourceType>& any) {
-
+	d->permissions.resources.all.insert(
+		d->permissions.resources.all.end(),
+		all.begin(),
+		all.end());
+	d->permissions.resources.any.insert(
+		d->permissions.resources.any.end(),
+		any.begin(),
+		any.end());
 }

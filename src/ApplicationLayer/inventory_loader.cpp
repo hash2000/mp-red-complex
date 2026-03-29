@@ -16,6 +16,17 @@ public:
         : q(parent) {
     }
 
+		void loadPermissions(IItemPlacementService* service, const QUuid& id) {
+			const auto itemPtr = itemsService->itemById(id);
+			if (!itemPtr || !itemPtr->entity || !itemPtr->entity->container.has_value()) {
+				return;
+			}
+
+			service->addResourcesPermissions(
+				itemPtr->entity->container->permissions.resources.all,
+				itemPtr->entity->container->permissions.resources.any);
+		}
+
     InventoryLoader* q;
     std::shared_ptr<IInventoryRepository> inventoryRepository;
     std::shared_ptr<IEquipmentRepository> equipmentRepository;
@@ -48,6 +59,8 @@ std::unique_ptr<IItemPlacementService> InventoryLoader::load(const QUuid& id) {
             qWarning() << "InventoryLoader::load: failed to load inventory" << id;
             return nullptr;
         }
+
+				d->loadPermissions(inventoryService.get(), id);
         return inventoryService;
     }
 
@@ -59,6 +72,8 @@ std::unique_ptr<IItemPlacementService> InventoryLoader::load(const QUuid& id) {
             qWarning() << "InventoryLoader::load: failed to load equipment" << id;
             return nullptr;
         }
+
+				d->loadPermissions(equipmentService.get(), id);
         return equipmentService;
     }
 
@@ -80,6 +95,7 @@ std::unique_ptr<IItemPlacementService> InventoryLoader::createInventory(const QU
         return nullptr;
     }
 
+		d->loadPermissions(inventoryService.get(), id);
     return inventoryService;
 }
 
@@ -95,5 +111,7 @@ std::unique_ptr<IItemPlacementService> InventoryLoader::createEquipment(const QU
         qWarning() << "InventoryLoader::createEquipment: failed to initialize equipment" << id;
         return nullptr;
     }
+
+		d->loadPermissions(equipmentService.get(), id);
     return equipmentService;
 }

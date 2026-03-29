@@ -47,6 +47,12 @@ public:
 	using ItemsMap = const std::map<EquipmentSlotType, std::unique_ptr<EquipmentItemHandler>>&;
 	ItemsMap items() const;
 
+	void clearResourcesPermissions() override;
+
+	void addResourcesPermissions(
+		const std::list<ItemResourceType>& all,
+		const std::list<ItemResourceType>& any) override;
+
 signals:
 	void itemEquipped(const EquipmentItemHandler& item, EquipmentSlotType slot, const QUuid& inventoryId);
 	void itemUnequipped(const EquipmentItemHandler& item, EquipmentSlotType slot);
