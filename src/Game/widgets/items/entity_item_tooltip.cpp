@@ -1,4 +1,4 @@
-#include "Game/widgets/items/item_tooltip.h"
+#include "Game/widgets/items/entity_item_tooltip.h"
 #include "Game/styles/items_styles.h"
 #include <QLabel>
 #include <QVBoxLayout>
@@ -7,13 +7,13 @@
 #include <QScreen>
 #include <QGuiApplication>
 
-class ItemTooltip::Private {
+class EntityItemTooltip::Private {
 public:
-	Private(ItemTooltip* parent)
+	Private(EntityItemTooltip* parent)
 		: q(parent) {
 	}
 
-	ItemTooltip* q;
+	EntityItemTooltip* q;
 
 	QLabel* iconLabel;
 	QLabel* nameLabel;
@@ -111,7 +111,7 @@ public:
 		QString bg = ItemsStyles::backgroundColor(item.rarity);
 
 		q->setStyleSheet(QString(R"(
-            ItemTooltip {
+            EntityItemTooltip {
                 background: transparent;
             }
             #tooltipContainer {
@@ -180,7 +180,7 @@ public:
 	}
 };
 
-ItemTooltip::ItemTooltip(QWidget* parent)
+EntityItemTooltip::EntityItemTooltip(QWidget* parent)
 	: d(std::make_unique<Private>(this))
 	, QWidget(parent, Qt::ToolTip) {
 	setWindowFlags(Qt::ToolTip | Qt::FramelessWindowHint);
@@ -242,15 +242,15 @@ ItemTooltip::ItemTooltip(QWidget* parent)
 	d->showTimer = new QTimer(this);
 	d->showTimer->setSingleShot(true);
 	d->showTimer->setInterval(400); // 400ms задержка
-	connect(d->showTimer, &QTimer::timeout, this, &ItemTooltip::showAnimated);
+	connect(d->showTimer, &QTimer::timeout, this, &EntityItemTooltip::showAnimated);
 
 	// Анимация появления
 	setWindowOpacity(0.0);
 }
 
-ItemTooltip::~ItemTooltip() = default;
+EntityItemTooltip::~EntityItemTooltip() = default;
 
-void ItemTooltip::showForItem(const ItemEntity& item, const QPoint& globalPos) {
+void EntityItemTooltip::showForItem(const ItemEntity& item, const QPoint& globalPos) {
 	d->iconLabel->setFixedSize(
 		item.width * ItemsStyles::CELL_SIZE,
 		item.height * ItemsStyles::CELL_SIZE);
@@ -268,18 +268,18 @@ void ItemTooltip::showForItem(const ItemEntity& item, const QPoint& globalPos) {
 	d->currentItem = item.id;
 }
 
-void ItemTooltip::hideImmediately() {
+void EntityItemTooltip::hideImmediately() {
 	d->showTimer->stop();
 	hide();
 	setWindowOpacity(0.0);
 }
 
-QString ItemTooltip::currentItem() const {
+QString EntityItemTooltip::currentItem() const {
 	return d->currentItem;
 }
 
 
-void ItemTooltip::showAnimated() {
+void EntityItemTooltip::showAnimated() {
 	// Плавное появление
 	setWindowOpacity(0.0);
 	show();
@@ -287,7 +287,7 @@ void ItemTooltip::showAnimated() {
 	d->opacity = 0.0;
 }
 
-void ItemTooltip::timerEvent(QTimerEvent* event) {
+void EntityItemTooltip::timerEvent(QTimerEvent* event) {
 	if (event->timerId() == d->animationTimer.timerId()) {
 		d->opacity += 0.15;
 		if (d->opacity >= 1.0) {

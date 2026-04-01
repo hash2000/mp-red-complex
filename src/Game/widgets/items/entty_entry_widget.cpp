@@ -1,6 +1,6 @@
 #include "Game/widgets/items/entty_entry_widget.h"
 #include "Game/styles/items_styles.h"
-#include "Game/widgets/items/item_tooltip.h"
+#include "Game/widgets/items/entity_item_tooltip.h"
 #include <QApplication>
 #include <QScrollArea>
 #include <QVBoxLayout>
@@ -14,7 +14,7 @@ public:
 	Private(EntityEntryWidget* parent)
 	: q(parent) {
 		if (!s_tooltipInstance) {
-			s_tooltipInstance = new ItemTooltip(qApp->activeWindow());
+			s_tooltipInstance = new EntityItemTooltip(qApp->activeWindow());
 		}
 	}
 
@@ -22,10 +22,10 @@ public:
 	ItemEntity entity;
 	QPushButton* createButton;
 	QLabel* iconLabel;
-	static ItemTooltip* s_tooltipInstance;
+	static EntityItemTooltip* s_tooltipInstance;
 };
 
-ItemTooltip* EntityEntryWidget::Private::s_tooltipInstance = nullptr;
+EntityItemTooltip* EntityEntryWidget::Private::s_tooltipInstance = nullptr;
 
 EntityEntryWidget::EntityEntryWidget(const ItemEntity& entity, QWidget* parent)
 	: d(std::make_unique<Private>(this))

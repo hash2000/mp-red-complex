@@ -2,13 +2,13 @@
 #include "DataLayer/items/item.h"
 #include <QWidget>
 
-class ItemTooltip : public QWidget {
+class EntityItemTooltip : public QWidget {
 	Q_OBJECT
 
 public:
-	explicit ItemTooltip(QWidget* parent = nullptr);
+	explicit EntityItemTooltip(QWidget* parent = nullptr);
 
-	~ItemTooltip() override;
+	~EntityItemTooltip() override;
 
 	void showForItem(const ItemEntity& item, const QPoint& globalPos);
 	void hideImmediately();
