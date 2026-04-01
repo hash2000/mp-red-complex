@@ -8,6 +8,7 @@
 class EquipmentItemHandler : public EquipmentItem {
 public:
 	const ItemEntity* entity;
+	const Item* item;
 
 public:
 	QPoint slotToPosition() const;

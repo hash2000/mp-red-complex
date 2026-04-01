@@ -28,6 +28,7 @@ public:
 		auto newItemPtr = std::make_unique<InventoryItemHandler>();
 		auto result = newItemPtr.get();
 		newItemPtr->entity = item->entity;
+		newItemPtr->item = item;
 		newItemPtr->id = item->id;
 		newItemPtr->count = 0;
 		newItemPtr->x = 0;

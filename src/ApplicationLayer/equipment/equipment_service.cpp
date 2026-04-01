@@ -51,6 +51,7 @@ bool EquipmentService::load(const Equipment& equipment) {
 		eq->id = it.id;
 		eq->slot = it.slot;
 		eq->entity = item->entity;
+		eq->item = item;
 
 		if (d->items.contains(eq->slot)) {
 			qWarning() << "EquipmentService::load: equipment" << d->equipmentId <<
@@ -174,6 +175,7 @@ bool EquipmentService::placeItem(const ItemMimeData& item) {
 
 	auto eq = std::make_unique<EquipmentItemHandler>();
 	eq->entity = itemPtr->entity;
+	eq->item = itemPtr;
 	eq->id = itemPtr->id;
 	eq->slot = slot;
 
@@ -208,6 +210,7 @@ const EquipmentItemHandler* EquipmentService::equipItem(const ItemMimeData& item
 
 	auto eq = std::make_unique<EquipmentItemHandler>();
 	eq->entity = itemPtr->entity;
+	eq->item = itemPtr;
 	eq->id = itemPtr->id;
 	eq->slot = slot;
 
