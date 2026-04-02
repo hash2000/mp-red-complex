@@ -9,7 +9,9 @@ public:
 	CharacterDataProviderJsonImpl(Resources* resources);
 	~CharacterDataProviderJsonImpl() override;
 
-	bool loadCharacter(const QUuid& id, Character& character) override;
+	bool loadCharacter(const QUuid& id, Character& character) const override;
+	bool saveCharacter(const Character& character) override;
+	bool deleteCharacter(const QUuid& id) override;
 
 private:
 	class Private;
