@@ -40,6 +40,13 @@ public:
 	/// Возвращает указатель на CharacterItemHandler или nullptr если персонаж не найден
 	CharacterItemHandler* getCharacter(const QUuid& characterId) const;
 
+	/// Получить список всех идентификаторов персонажей текущего пользователя
+	std::list<QUuid> getAllCharacterIds() const;
+
+	/// Получить идентификатор сундука текущего аккаунта
+	/// Возвращает QUuid или пустой QUuid если пользователь не авторизован
+	QUuid getChestId() const;
+
 	/// Создать хэш пароля (для тестирования и отладки)
 	static QString hashPassword(const QString& password);
 

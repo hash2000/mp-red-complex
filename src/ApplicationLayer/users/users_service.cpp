@@ -14,6 +14,7 @@ public:
 	IUsersDataProvider* usersDataProvider = nullptr;
 	ICharacterDataProvider* characterDataProvider = nullptr;
 	QString currentUserId;
+	QUuid chestId;
 	bool authenticated = false;
 	std::map<QUuid, std::unique_ptr<CharacterItemHandler>> characters;
 
@@ -75,6 +76,7 @@ std::optional<QString> UsersService::login(const QString& login, const QString& 
 
 	// Успешный вход
 	d->currentUserId = user.loginHash;
+	d->chestId = user.chestId;
 	d->authenticated = true;
 
 	// Загружаем персонажей текущего пользователя
@@ -88,6 +90,7 @@ void UsersService::logout() {
 	d->currentUserId.clear();
 	d->authenticated = false;
 	d->characters.clear();
+	d->chestId = QUuid();
 	emit loggedOut();
 }
 
@@ -117,6 +120,22 @@ CharacterItemHandler* UsersService::getCharacter(const QUuid& characterId) const
 		return it->second.get();
 	}
 	return nullptr;
+}
+
+std::list<QUuid> UsersService::getAllCharacterIds() const {
+	std::list<QUuid> characterIds;
+	if (!d->authenticated) {
+		return characterIds;
+	}
+
+	for (const auto& [id, handler] : d->characters) {
+		characterIds.push_back(id);
+	}
+	return characterIds;
+}
+
+QUuid UsersService::getChestId() const {
+	return d->chestId;
 }
 
 std::optional<QString> UsersService::registerUser(const QString& login, const QString& password, const QString& displayName) {
