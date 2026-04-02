@@ -8,5 +8,4 @@ public:
 	virtual ~IEquipmentDataProvider() = default;
 
 	virtual bool loadEquipment(const QUuid& id, Equipment& equipment) = 0;
-
 };

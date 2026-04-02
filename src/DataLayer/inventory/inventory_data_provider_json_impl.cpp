@@ -28,11 +28,6 @@ bool InventoryDataProviderJsonImpl::loadInventory(const QUuid& id, Inventory& in
 	const auto path = QString("inventory/%1.json")
 		.arg(id.toString(QUuid::StringFormat::WithoutBraces).toLower());
 
-	auto stream = d->resources->getStream("data", path);
-	if (!stream) {
-		return false;
-	}
-
 	QJsonObject json;
 	Format::Json::DataReader reader(d->resources, "data", path);
 	if (!reader.read(json)) {

@@ -1,15 +1,9 @@
-#pragma once
+	#pragma once
 #include <QString>
-#include <QHash>
 #include <optional>
+#include <list>
 
-/// Данные пользователя
-struct UserData {
-	QString loginHash;
-	QString passwordHash;
-	QString displayName;
-	QHash<QString, QString> metadata;
-};
+struct UserData;
 
 /// Интерфейс провайдера данных пользователей
 class IUsersDataProvider {

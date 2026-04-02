@@ -1,4 +1,5 @@
 #include "DataLayer/users/users_data_provider_json_impl.h"
+#include "DataLayer/users/user.h"
 #include "DataStream/format/json/data_reader.h"
 #include "Resources/resources.h"
 #include <QJsonObject>
@@ -35,12 +36,20 @@ public:
 		user.loginHash = json["login"].toString();
 		user.passwordHash = json["passwordHash"].toString();
 		user.displayName = json["displayName"].toString();
+		user.chestId = QUuid::fromString(json["chestId"].toString());
 
 		// Метаданные
 		if (json.contains("metadata")) {
 			QJsonObject metaObj = json["metadata"].toObject();
-			for (auto it = metaObj.begin(); it != metaObj.end(); ++it) {
+			for (auto it = metaObj.begin(); it != metaObj.end(); it++) {
 				user.metadata[it.key()] = it.value().toString();
+			}
+		}
+
+		if (json.contains("characters")) {
+			QJsonArray chars = json["characters"].toArray();
+			for (auto it = chars.begin(); it != chars.end(); it++) {
+				user.characters.push_back(QUuid::fromString(it->toString()));
 			}
 		}
 
@@ -53,13 +62,21 @@ public:
 		json["login"] = user.loginHash;
 		json["passwordHash"] = user.passwordHash;
 		json["displayName"] = user.displayName;
+		json["chestId"] = user.chestId
+			.toString(QUuid::StringFormat::WithoutBraces);
 
 		// Метаданные
 		QJsonObject metaObj;
-		for (auto it = user.metadata.begin(); it != user.metadata.end(); ++it) {
+		for (auto it = user.metadata.begin(); it != user.metadata.end(); it++) {
 			metaObj[it.key()] = it.value();
 		}
 		json["metadata"] = metaObj;
+
+		QJsonArray chars;
+		for (auto it = user.characters.begin(); it != user.characters.end(); it++) {
+			chars.push_back(it->toString(QUuid::StringFormat::WithoutBraces));
+		}
+		json["characters"] = chars;
 
 		return json;
 	}
@@ -74,7 +91,7 @@ public:
 };
 
 UsersDataProviderJsonImpl::UsersDataProviderJsonImpl(Resources* resources)
-	: d(std::make_unique<Private>(this)) {
+: d(std::make_unique<Private>(this)) {
 	d->resources = resources;
 }
 

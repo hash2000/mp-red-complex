@@ -1,4 +1,5 @@
 #include "ApplicationLayer/users/users_service.h"
+#include "DataLayer/users/user.h"
 #include <QCryptographicHash>
 #include <QUuid>
 

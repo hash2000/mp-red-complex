@@ -1,11 +1,12 @@
 #include "Game/widgets/user/login_window.h"
 #include "Game/widgets/user/login_widget.h"
-#include "ApplicationLayer/users/users_service.h"
 #include "Game/app_controller.h"
 #include "Game/commands/command_context.h"
 #include "Game/controllers.h"
 #include "Game/widgets/action_panel/action_panel_by_user_builder.h"
 #include "Game/controllers/action_panel_controller.h"
+#include "DataLayer/users/user.h"
+#include "ApplicationLayer/users/users_service.h"
 #include <QMessageBox>
 
 class LoginWindow::Private {
