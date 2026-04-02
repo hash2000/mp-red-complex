@@ -12,9 +12,11 @@
 #include "DataLayer/inventory/inventory_repository_json_impl.h"
 #include "DataLayer/equipment/equipment_repository_json_impl.h"
 #include "DataLayer/users/users_data_provider_json_impl.h"
+#include "DataLayer/characters/character_data_provider_json_impl.h"
 #include "DataLayer/textures/textures_data_provider_json_impl.h"
 #include "DataLayer/textures/i_textures_data_provider.h"
 #include "DataLayer/users/i_users_data_provider.h"
+#include "DataLayer/characters/i_character_data_provider.h"
 #include "ApplicationLayer/items/items_service.h"
 #include "ApplicationLayer/inventories_service.h"
 #include "ApplicationLayer/inventory_loader.h"
@@ -59,6 +61,7 @@ public:
 
 	// Data providers (хранятся в Services)
 	std::unique_ptr<IUsersDataProvider> usersDataProvider;
+	std::unique_ptr<ICharacterDataProvider> characterDataProvider;
 	std::unique_ptr<ITexturesDataProvider> texturesDataProvider;
 };
 
@@ -112,7 +115,10 @@ Services::Services(Resources* resources)
 
 	// Создаём сервис пользователей
 	d->usersDataProvider = std::make_unique<UsersDataProviderJsonImpl>(resources);
-	d->usersService = std::make_unique<UsersService>(d->usersDataProvider.get());
+	d->characterDataProvider = std::make_unique<CharacterDataProviderJsonImpl>(resources);
+	d->usersService = std::make_unique<UsersService>(
+		d->usersDataProvider.get(),
+		d->characterDataProvider.get());
 
 	// Создаём сервис текстур
 	d->texturesDataProvider = std::make_unique<TexturesDataProviderJsonImpl>(resources);
