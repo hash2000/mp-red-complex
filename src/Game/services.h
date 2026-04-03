@@ -21,19 +21,12 @@ public:
 	~Services();
 
 	TimeService* timeService() const;
-
 	WorldService* worldService() const;
-
 	ItemsService* itemsService() const;
-
 	InventoriesService* inventoriesService() const;
-
 	InventoryLoader* inventoryLoader() const;
-
 	IInventoryRepository* inventoryRepository() const;
-
 	UsersService* usersService() const;
-
 	TexturesService* texturesService() const;
 
 	void run();

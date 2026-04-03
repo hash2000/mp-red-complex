@@ -9,7 +9,8 @@ public:
 	virtual ~GameMainFrame() = default;
 
 private slots:
-	void toggleCommandConsole(bool visible);
+	void onToggleCommandConsole(bool visible);
+	void onUserLogout();
 
 private:
 	class Private;

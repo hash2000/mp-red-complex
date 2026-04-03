@@ -24,6 +24,7 @@
 #include "ApplicationLayer/items_save_manager.h"
 #include "ApplicationLayer/users/users_service.h"
 #include "ApplicationLayer/textures/textures_service.h"
+
 #include <list>
 
 class Services::Private {
@@ -134,7 +135,6 @@ Services::Services(Resources* resources)
 Services::~Services() = default;
 
 void Services::run() {
-	// Загружаем все сущности предметов (eager loading для сущностей)
 	d->itemsService->loadEntities();
 	d->timeService->start();
 }
