@@ -5,7 +5,8 @@
 #include <QPixmap>
 
 /// Данные пользователя
-struct UserData {
+class UserData {
+public:
 	QString loginHash;
 	QString passwordHash;
 	QString displayName;

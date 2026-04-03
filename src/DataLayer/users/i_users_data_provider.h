@@ -3,7 +3,7 @@
 #include <optional>
 #include <list>
 
-struct UserData;
+class UserData;
 
 /// Интерфейс провайдера данных пользователей
 class IUsersDataProvider {

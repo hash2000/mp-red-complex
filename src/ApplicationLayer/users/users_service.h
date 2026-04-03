@@ -52,7 +52,7 @@ public:
 
 signals:
 	/// Сигнал об успешном входе
-	void loginSuccess(const QString& userId);
+	void loginSuccess(const UserData& user);
 
 	/// Сигнал о выходе
 	void loggedOut();

@@ -7,8 +7,10 @@
 #include "Game/controllers/action_panel_controller.h"
 #include "Game/controllers/action_button_config.h"
 #include "Game/widgets/action_panel/action_panel_login_builder.h"
+#include "Game/widgets/action_panel/action_panel_by_user_builder.h"
 #include "Game/widgets/action_panel/action_panel_widget.h"
 #include "ApplicationLayer/users/users_service.h"
+#include "DataLayer/users/user.h"
 #include "BaseWidgets/mdi_area.h"
 #include "Resources/resources.h"
 
@@ -121,8 +123,9 @@ GameMainFrame::GameMainFrame(Resources* resources)
 		onToggleCommandConsole(newState);
 		});
 
-	connect(d->controller->services()->usersService(), &UsersService::loggedOut,
-		this, &GameMainFrame::onUserLogout);
+	auto userService = d->controller->services()->usersService();
+	connect(userService, &UsersService::loggedOut, this, &GameMainFrame::onUserLogout);
+	connect(userService, &UsersService::loginSuccess, this, &GameMainFrame::onUserLogin);
 
 	addAction(toggleAction);
 }
@@ -138,4 +141,12 @@ void GameMainFrame::onToggleCommandConsole(bool visible) {
 
 void GameMainFrame::onUserLogout() {
 	d->setupActionPanel();
+}
+
+void GameMainFrame::onUserLogin(const UserData& user) {
+	qDebug() << "User login" << user.displayName;
+	ActionPanelByUserBuilder builder(
+		d->controller->controllers()->actionPanelController(),
+		d->controller->services()->usersService());
+	builder.build();
 }

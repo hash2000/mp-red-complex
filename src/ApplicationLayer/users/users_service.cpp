@@ -82,7 +82,7 @@ std::optional<QString> UsersService::login(const QString& login, const QString& 
 	// Загружаем персонажей текущего пользователя
 	d->loadCharacters();
 
-	emit loginSuccess(user.displayName);
+	emit loginSuccess(user);
 	return user.loginHash;
 }
 
