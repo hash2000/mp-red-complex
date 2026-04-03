@@ -123,7 +123,8 @@ Services::Services(Resources* resources)
 	d->characterDataProvider = std::make_unique<CharacterDataProviderJsonImpl>(resources);
 	d->usersService = std::make_unique<UsersService>(
 		d->usersDataProvider.get(),
-		d->characterDataProvider.get());
+		d->characterDataProvider.get(),
+		d->texturesService.get());
 
 	// Подключаем сохранение к сигналу save()
 	connect(this, &Services::save,

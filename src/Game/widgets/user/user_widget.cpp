@@ -88,8 +88,8 @@ void UserWidget::setupLayout() {
 
 	// Иконка пользователя (слева)
 	d->userIconLabel = new QLabel(headerFrame);
-	d->userIconLabel->setFixedSize(40, 40);
-	d->userIconLabel->setScaledContents(false);
+	d->userIconLabel->setFixedSize(54, 54);
+	d->userIconLabel->setScaledContents(true);
 	d->userIconLabel->setStyleSheet(
 		"background-color: #1a202c; "
 		"border: 1px solid #4a5568; "
@@ -194,7 +194,7 @@ void UserWidget::loadUserData() {
 
 	// Иконка пользователя
 	if (!user.iconPath.isEmpty() && d->texturesService) {
-		auto pixmap = d->texturesService->getTexture(user.iconPath, TextureType::Icon);
+		auto pixmap = d->texturesService->getTexture(user.iconPath, TextureType::Users);
 		if (!pixmap.isNull()) {
 			d->userIconLabel->setPixmap(pixmap.scaled(48, 48, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 		}

@@ -16,11 +16,12 @@ public:
 		const char* directory;
 	};
 
-	static constexpr std::array<TexturePathMapping, 5> s_textureMappings = {{
+	static constexpr std::array<TexturePathMapping, static_cast<size_t>(TextureType::LastSlot)> s_textureMappings = {{
 		{ TextureType::Icon,      "icons" },
 		{ TextureType::Entity,    "entities" },
 		{ TextureType::Item,      "items" },
 		{ TextureType::Character, "characters" },
+		{ TextureType::Users,			"users" },
 		{ TextureType::Equipment, "equipment" },
 	}};
 

@@ -9,6 +9,7 @@ enum class TextureType {
 	Item,       // assets/items/
 	Character,  // assets/characters/
 	Equipment,  // assets/equipment/
+	Users,			// assets/users/
 	LastSlot,   // Маркер конца (для итерации)
 };
 

@@ -52,8 +52,8 @@ void CharacterEntryWidget::setupLayout() {
 
 	// Иконка персонажа (слева)
 	d->iconLabel = new QLabel(this);
-	d->iconLabel->setFixedSize(48, 48);
-	d->iconLabel->setScaledContents(false);
+	d->iconLabel->setFixedSize(54, 54);
+	d->iconLabel->setScaledContents(true);
 	d->iconLabel->setStyleSheet(
 		"background-color: #1a202c; "
 		"border: 1px solid #4a5568; "

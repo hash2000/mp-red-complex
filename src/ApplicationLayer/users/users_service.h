@@ -8,6 +8,7 @@
 #include <list>
 
 class CharacterItemHandler;
+class TexturesService;
 
 /// Сервис управления пользователями
 class UsersService : public QObject {
@@ -16,6 +17,7 @@ public:
 	explicit UsersService(
 		IUsersDataProvider* usersDataProvider,
 		ICharacterDataProvider* characterDataProvider,
+		TexturesService* texturesService,
 		QObject* parent = nullptr);
 	~UsersService() override;
 
