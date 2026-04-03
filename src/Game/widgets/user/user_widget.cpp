@@ -36,10 +36,23 @@ public:
 };
 
 UserWidget::UserWidget(UsersService* usersService, TexturesService* texturesService, QWidget* parent)
-	: QWidget(parent)
+	: QFrame(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->usersService = usersService;
 	d->texturesService = texturesService;
+
+	setObjectName("UserWidget");
+	setFrameStyle(QFrame::StyledPanel | QFrame::Plain);
+	setLineWidth(1);
+
+	setStyleSheet(R"(
+        #UserWidget {
+            background-color: #1a202c;
+            border: 1px solid #4a5568;
+            border-radius: 8px;
+            padding: 12px;
+        }
+    )");
 
 	setupLayout();
 	loadUserData();
@@ -54,32 +67,33 @@ UserWidget::~UserWidget() = default;
 
 void UserWidget::setupLayout() {
 	auto* mainLayout = new QVBoxLayout(this);
-	mainLayout->setContentsMargins(0, 0, 0, 0);
-	mainLayout->setSpacing(0);
+	mainLayout->setContentsMargins(10, 10, 10, 10);
+	mainLayout->setSpacing(12);
 
 	// === Заголовок пользователя ===
 	auto* headerFrame = new QFrame(this);
 	headerFrame->setFrameStyle(QFrame::StyledPanel);
 	headerFrame->setStyleSheet(
 		"QFrame { "
-		"  background-color: #2a2a2a; "
-		"  border-bottom: 2px solid #444; "
-		"  padding: 12px; "
+		"  background-color: #2d3748; "
+		"  border: 1px solid #4a5568; "
+		"  border-radius: 6px; "
+		"  padding: 8px; "
 		"}"
 	);
 
 	auto* headerLayout = new QHBoxLayout(headerFrame);
 	headerLayout->setSpacing(12);
-	headerLayout->setContentsMargins(12, 8, 12, 8);
+	headerLayout->setContentsMargins(10, 6, 10, 6);
 
 	// Иконка пользователя (слева)
 	d->userIconLabel = new QLabel(headerFrame);
 	d->userIconLabel->setFixedSize(48, 48);
 	d->userIconLabel->setScaledContents(false);
 	d->userIconLabel->setStyleSheet(
-		"background-color: #3d3d3d; "
-		"border: 2px solid #555; "
-		"border-radius: 24px;"
+		"background-color: #1a202c; "
+		"border: 1px solid #4a5568; "
+		"border-radius: 6px;"
 	);
 	headerLayout->addWidget(d->userIconLabel, 0, Qt::AlignVCenter);
 
@@ -90,10 +104,11 @@ void UserWidget::setupLayout() {
 	// ID пользователя (серое поле)
 	d->userIdLabel = new QLabel(headerFrame);
 	d->userIdLabel->setStyleSheet(
-		"background-color: #3d3d3d; "
-		"color: #888; "
+		"background-color: #1a202c; "
+		"color: #a0aec0; "
 		"padding: 2px 8px; "
-		"border-radius: 3px; "
+		"border: 1px solid #4a5568; "
+		"border-radius: 4px; "
 		"font-size: 10px; "
 		"font-family: monospace;"
 	);
@@ -103,7 +118,7 @@ void UserWidget::setupLayout() {
 	// DisplayName
 	d->displayNameLabel = new QLabel(headerFrame);
 	d->displayNameLabel->setStyleSheet(
-		"color: #ffffff; "
+		"color: #e2e8f0; "
 		"font-size: 16px; "
 		"font-weight: bold;"
 	);
@@ -121,27 +136,31 @@ void UserWidget::setupLayout() {
 	d->scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 	d->scrollArea->setStyleSheet(
 		"QScrollArea { "
-		"  background-color: #1e1e1e; "
-		"  border: none; "
+		"  background-color: #1a202c; "
+		"  border: 1px solid #4a5568; "
+		"  border-radius: 6px; "
 		"}"
 		"QScrollBar:vertical { "
-		"  background-color: #2d2d2d; "
+		"  background-color: #2d3748; "
 		"  width: 10px; "
 		"  border-radius: 5px; "
 		"}"
 		"QScrollBar::handle:vertical { "
-		"  background-color: #555; "
+		"  background-color: #4a5568; "
 		"  border-radius: 5px; "
 		"  min-height: 20px; "
 		"}"
 		"QScrollBar::handle:vertical:hover { "
-		"  background-color: #666; "
+		"  background-color: #718096; "
+		"}"
+		"QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { "
+		"  height: 0px; "
 		"}"
 	);
 
 	// Контейнер для персонажей внутри прокрутки
 	d->charactersContainer = new QWidget();
-	d->charactersContainer->setStyleSheet("background-color: #1e1e1e;");
+	d->charactersContainer->setStyleSheet("background-color: #1a202c;");
 	d->charactersLayout = new QVBoxLayout(d->charactersContainer);
 	d->charactersLayout->setContentsMargins(8, 8, 8, 8);
 	d->charactersLayout->setSpacing(6);
@@ -190,14 +209,18 @@ void UserWidget::loadCharacters() {
 	const auto characterIds = d->usersService->getAllCharacterIds();
 	if (characterIds.empty()) {
 		auto* noCharsLabel = new QLabel("Нет персонажей", d->charactersContainer);
-		noCharsLabel->setStyleSheet("color: #666; padding: 20px; font-size: 13px;");
+		noCharsLabel->setStyleSheet("color: #718096; padding: 20px; font-size: 13px;");
 		noCharsLabel->setAlignment(Qt::AlignCenter);
 		d->charactersLayout->insertWidget(0, noCharsLabel);
 		return;
 	}
 
 	for (const auto& charId : characterIds) {
-		auto* charWidget = new CharacterEntryWidget(d->usersService, charId, d->charactersContainer);
+		auto* charWidget = new CharacterEntryWidget(
+			d->usersService,
+			d->texturesService,
+			charId,
+			d->charactersContainer);
 
 		// Подключаем сигналы кнопок
 		connect(charWidget, &CharacterEntryWidget::equipmentClicked,
@@ -212,7 +235,7 @@ void UserWidget::loadCharacters() {
 		if (charId != characterIds.back()) {
 			auto* line = new QFrame(d->charactersContainer);
 			line->setFrameShape(QFrame::HLine);
-			line->setStyleSheet("background-color: #333;");
+			line->setStyleSheet("background-color: #4a5568;");
 			d->charactersLayout->insertWidget(d->charactersLayout->count() - 1, line);
 		}
 	}

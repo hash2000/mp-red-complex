@@ -1,5 +1,5 @@
 #pragma once
-#include <QWidget>
+#include <QFrame>
 #include <memory>
 
 class UsersService;
@@ -9,7 +9,7 @@ class QVBoxLayout;
 class QScrollArea;
 
 /// Основной виджет профиля пользователя с заголовком и списком персонажей
-class UserWidget : public QWidget {
+class UserWidget : public QFrame {
 	Q_OBJECT
 public:
 	explicit UserWidget(UsersService* usersService, TexturesService* texturesService, QWidget* parent = nullptr);

@@ -16,7 +16,7 @@ public:
 
 	QString windowType() const override { return "user-profile"; }
 	QString windowTitle() const override { return "Профиль пользователя"; }
-	QSize windowDefaultSizes() const override { return QSize(300, 600); }
+	QSize windowDefaultSizes() const override { return QSize(400, 600); }
 
 	bool handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) override;
 

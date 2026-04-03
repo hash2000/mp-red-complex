@@ -30,12 +30,13 @@ public:
 
 CharacterEntryWidget::CharacterEntryWidget(
 	UsersService* usersService,
+	TexturesService* texturesService,
 	const QUuid& characterId,
 	QWidget* parent)
 	: QWidget(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->usersService = usersService;
-	d->texturesService = usersService->texturesService();
+	d->texturesService = texturesService;
 	d->characterId = characterId;
 
 	setupLayout();
@@ -46,14 +47,18 @@ CharacterEntryWidget::~CharacterEntryWidget() = default;
 
 void CharacterEntryWidget::setupLayout() {
 	auto* mainLayout = new QHBoxLayout(this);
-	mainLayout->setContentsMargins(8, 8, 8, 8);
+	mainLayout->setContentsMargins(10, 10, 10, 10);
 	mainLayout->setSpacing(12);
 
 	// Иконка персонажа (слева)
 	d->iconLabel = new QLabel(this);
 	d->iconLabel->setFixedSize(64, 64);
 	d->iconLabel->setScaledContents(false);
-	d->iconLabel->setStyleSheet("background-color: #2d2d2d; border: 1px solid #555;");
+	d->iconLabel->setStyleSheet(
+		"background-color: #1a202c; "
+		"border: 1px solid #4a5568; "
+		"border-radius: 6px;"
+	);
 	mainLayout->addWidget(d->iconLabel, 0, Qt::AlignTop);
 
 	// Правая часть (вертикальная)
@@ -67,17 +72,22 @@ void CharacterEntryWidget::setupLayout() {
 	// Уровень
 	d->levelLabel = new QLabel(this);
 	d->levelLabel->setStyleSheet(
-		"background-color: #3d3d3d; "
-		"color: #aaa; "
+		"background-color: #2d3748; "
+		"color: #a0aec0; "
 		"padding: 2px 8px; "
-		"border-radius: 3px; "
+		"border: 1px solid #4a5568; "
+		"border-radius: 4px; "
 		"font-size: 11px;"
 	);
 	infoLayout->addWidget(d->levelLabel, 0, Qt::AlignTop);
 
 	// Имя персонажа
 	d->nameLabel = new QLabel(this);
-	d->nameLabel->setStyleSheet("font-size: 14px; font-weight: bold; color: #ffffff;");
+	d->nameLabel->setStyleSheet(
+		"font-size: 14px; "
+		"font-weight: bold; "
+		"color: #e2e8f0;"
+	);
 	infoLayout->addWidget(d->nameLabel, 1, Qt::AlignTop);
 
 	rightLayout->addLayout(infoLayout);
@@ -88,6 +98,23 @@ void CharacterEntryWidget::setupLayout() {
 
 	d->equipmentButton = new QPushButton("Экипировка", this);
 	d->equipmentButton->setFixedHeight(28);
+	d->equipmentButton->setCursor(Qt::PointingHandCursor);
+	d->equipmentButton->setStyleSheet(
+		"QPushButton { "
+		"  background-color: #2d3748; "
+		"  color: #e2e8f0; "
+		"  border: 1px solid #4a5568; "
+		"  border-radius: 4px; "
+		"  padding: 4px 12px; "
+		"}"
+		"QPushButton:hover { "
+		"  background-color: #4a5568; "
+		"  border: 1px solid #718096; "
+		"}"
+		"QPushButton:pressed { "
+		"  background-color: #1a202c; "
+		"}"
+	);
 	connect(d->equipmentButton, &QPushButton::clicked, this, [this]() {
 		emit equipmentClicked(d->characterId);
 	});
@@ -95,6 +122,23 @@ void CharacterEntryWidget::setupLayout() {
 
 	d->inventoryButton = new QPushButton("Инвентарь", this);
 	d->inventoryButton->setFixedHeight(28);
+	d->inventoryButton->setCursor(Qt::PointingHandCursor);
+	d->inventoryButton->setStyleSheet(
+		"QPushButton { "
+		"  background-color: #2d3748; "
+		"  color: #e2e8f0; "
+		"  border: 1px solid #4a5568; "
+		"  border-radius: 4px; "
+		"  padding: 4px 12px; "
+		"}"
+		"QPushButton:hover { "
+		"  background-color: #4a5568; "
+		"  border: 1px solid #718096; "
+		"}"
+		"QPushButton:pressed { "
+		"  background-color: #1a202c; "
+		"}"
+	);
 	connect(d->inventoryButton, &QPushButton::clicked, this, [this]() {
 		emit inventoryClicked(d->characterId);
 	});
@@ -120,7 +164,8 @@ void CharacterEntryWidget::loadCharacterData() {
 	d->nameLabel->setText(d->character->name);
 
 	// Уровень
-	d->levelLabel->setText(QString("Ур. %1").arg(d->character->level));
+	d->levelLabel->setText(QString("Ур. %1")
+		.arg(d->character->level));
 
 	// Иконка
 	if (!d->character->iconPath.isEmpty() && d->texturesService) {
