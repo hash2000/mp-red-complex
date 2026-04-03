@@ -76,7 +76,7 @@ public:
 	ItemType type;
 	QString description;
 	QString iconPath;
-	QPixmap icon;
+	QPixmap icon;  // Загружается через TexturesService при загрузке сущностей
 
 	int width = 1;
 	int height = 1;

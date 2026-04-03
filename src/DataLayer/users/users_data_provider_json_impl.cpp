@@ -37,6 +37,7 @@ public:
 		user.passwordHash = json["passwordHash"].toString();
 		user.displayName = json["displayName"].toString();
 		user.chestId = QUuid::fromString(json["chestId"].toString());
+		user.iconPath = json["iconPath"].toString();
 
 		// Метаданные
 		if (json.contains("metadata")) {
@@ -64,6 +65,7 @@ public:
 		json["displayName"] = user.displayName;
 		json["chestId"] = user.chestId
 			.toString(QUuid::StringFormat::WithoutBraces);
+		json["iconPath"] = user.iconPath;
 
 		// Метаданные
 		QJsonObject metaObj;

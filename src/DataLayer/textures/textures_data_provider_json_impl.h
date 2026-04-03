@@ -9,7 +9,7 @@ public:
 	explicit TexturesDataProviderJsonImpl(Resources* resources);
 	~TexturesDataProviderJsonImpl() override;
 
-	std::optional<QPixmap> loadTexture(const QString& path) const override;
+	std::optional<QPixmap> loadTexture(const QString& path, TextureType type = TextureType::Icon) const override;
 
 private:
 	class Private;

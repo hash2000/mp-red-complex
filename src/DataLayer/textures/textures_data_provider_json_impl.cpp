@@ -2,11 +2,43 @@
 #include "DataStream/format/pixmap/data_reader.h"
 #include "Resources/resources.h"
 #include <QPainter>
+#include <array>
 
 class TexturesDataProviderJsonImpl::Private {
 public:
 	Private(TexturesDataProviderJsonImpl* parent)
 		: q(parent) {
+	}
+
+	// Таблица маппинга TextureType к директориям
+	struct TexturePathMapping {
+		TextureType type;
+		const char* directory;
+	};
+
+	static constexpr std::array<TexturePathMapping, 5> s_textureMappings = {{
+		{ TextureType::Icon,      "icons" },
+		{ TextureType::Entity,    "entities" },
+		{ TextureType::Item,      "items" },
+		{ TextureType::Character, "characters" },
+		{ TextureType::Equipment, "equipment" },
+	}};
+
+	// Получить директорию по типу текстуры
+	static const char* getDirectoryForType(TextureType type) {
+		for (const auto& mapping : s_textureMappings) {
+			if (mapping.type == type) {
+				return mapping.directory;
+			}
+		}
+		// По умолчанию - icons
+		return "icons";
+	}
+
+	// Построить полный путь к текстуре
+	static QString buildTexturePath(const QString& relativePath, TextureType type) {
+		const char* directory = getDirectoryForType(type);
+		return QString("%1/%2").arg(directory, relativePath);
 	}
 
 	QPixmap loadEmptyStubIcon(const QString& name) {
@@ -29,13 +61,12 @@ TexturesDataProviderJsonImpl::TexturesDataProviderJsonImpl(Resources* resources)
 
 TexturesDataProviderJsonImpl::~TexturesDataProviderJsonImpl() = default;
 
-std::optional<QPixmap> TexturesDataProviderJsonImpl::loadTexture(const QString& path) const {
-	// Путь к иконке в папке icons
-	const auto iconsPath = QString("icons/%1")
-		.arg(path);
+std::optional<QPixmap> TexturesDataProviderJsonImpl::loadTexture(const QString& path, TextureType type) const {
+	// Строим полный путь на основе типа текстуры
+	const auto fullPath = Private::buildTexturePath(path, type);
 
 	QPixmap pixmap;
-	Format::Pixmap::DataReader reader(d->resources, "assets", iconsPath);
+	Format::Pixmap::DataReader reader(d->resources, "assets", fullPath);
 	if (!reader.read(pixmap)) {
 		return std::nullopt;
 	}

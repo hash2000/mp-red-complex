@@ -2,6 +2,7 @@
 #include <QUuid>
 #include <QString>
 #include <QHash>
+#include <QPixmap>
 
 /// Данные пользователя
 struct UserData {
@@ -11,4 +12,7 @@ struct UserData {
 	QHash<QString, QString> metadata;
 	std::list<QUuid> characters;
 	QUuid chestId;
+
+	QString iconPath;
+	QPixmap icon;
 };

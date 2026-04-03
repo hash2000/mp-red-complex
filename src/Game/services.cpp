@@ -90,8 +90,12 @@ Services::Services(Resources* resources)
 
 	d->worldService = std::make_unique<WorldService>();
 
-	// Передаём репозиторий в ItemsService (вместо provider)
-	d->itemsService = std::make_unique<ItemsService>(d->itemRepository);
+	// Создаём сервис текстур (нужен перед ItemsService)
+	d->texturesDataProvider = std::make_unique<TexturesDataProviderJsonImpl>(resources);
+	d->texturesService = std::make_unique<TexturesService>(d->texturesDataProvider.get());
+
+	// Передаём репозиторий и TexturesService в ItemsService
+	d->itemsService = std::make_unique<ItemsService>(d->itemRepository, d->texturesService.get());
 
 	// Создаём InventoryLoader перед InventoriesService (он нужен для загрузки)
 	d->inventoryLoader = std::make_unique<InventoryLoader>(
@@ -119,10 +123,6 @@ Services::Services(Resources* resources)
 	d->usersService = std::make_unique<UsersService>(
 		d->usersDataProvider.get(),
 		d->characterDataProvider.get());
-
-	// Создаём сервис текстур
-	d->texturesDataProvider = std::make_unique<TexturesDataProviderJsonImpl>(resources);
-	d->texturesService = std::make_unique<TexturesService>(d->texturesDataProvider.get());
 
 	// Подключаем сохранение к сигналу save()
 	connect(this, &Services::save,

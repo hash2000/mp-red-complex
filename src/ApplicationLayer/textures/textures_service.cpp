@@ -26,7 +26,7 @@ TexturesService::TexturesService(
 
 TexturesService::~TexturesService() = default;
 
-QPixmap TexturesService::getTexture(const QString& path) {
+QPixmap TexturesService::getTexture(const QString& path, TextureType type) {
 	// Проверяем кэш
 	auto it = d->texturesCache.find(path);
 	if (it != d->texturesCache.end()) {
@@ -34,7 +34,7 @@ QPixmap TexturesService::getTexture(const QString& path) {
 	}
 
 	// Загружаем из провайдера
-	auto pixmap = d->dataProvider->loadTexture(path);
+	auto pixmap = d->dataProvider->loadTexture(path, type);
 	if (pixmap.has_value()) {
 		d->texturesCache.insert(path, *pixmap);
 		return *pixmap;
@@ -48,10 +48,10 @@ void TexturesService::clearCache() {
 	d->texturesCache.clear();
 }
 
-void TexturesService::preloadTexture(const QString& name) {
+void TexturesService::preloadTexture(const QString& name, TextureType type) {
 	// Предварительная загрузка в кэш (без возврата значения)
 	if (!d->texturesCache.contains(name)) {
-		auto pixmap = d->dataProvider->loadTexture(name);
+		auto pixmap = d->dataProvider->loadTexture(name, type);
 		if (pixmap.has_value()) {
 			d->texturesCache.insert(name, *pixmap);
 		}

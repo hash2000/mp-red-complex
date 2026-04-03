@@ -52,7 +52,9 @@ void LoginWindow::onLoginSuccess() {
 	auto userOpt = d->usersService->currentUser();
 	if (userOpt.has_value()) {
 		qDebug() << "User login" << userOpt->displayName;
-		ActionPanelByUserBuilder builder(d->controller->controllers()->actionPanelController());
+		ActionPanelByUserBuilder builder(
+			d->controller->controllers()->actionPanelController(),
+			d->usersService);
 		builder.build();
 		close();
 	}

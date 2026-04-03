@@ -1,6 +1,7 @@
 #pragma once
 #include <QUuid>
 #include <QString>
+#include <QPixmap>
 #include <array>
 
 enum class CharacterStats {
@@ -18,4 +19,7 @@ public:
 	QString name;
 	QUuid equipmentId;
 	QUuid inventoryId;
+
+	QString iconPath;
+	QPixmap icon;
 };
