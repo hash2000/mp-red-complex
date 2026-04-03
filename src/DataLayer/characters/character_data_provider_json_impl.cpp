@@ -36,6 +36,7 @@ bool CharacterDataProviderJsonImpl::loadCharacter(const QUuid& id, Character& ch
 	}
 
 	character.id = id;
+	character.name = json["name"].toString();
 	character.equipmentId = QUuid::fromString(json["equipmentId"].toString());
 	character.inventoryId = QUuid::fromString(json["inventoryId"].toString());
 	character.iconPath = json["iconPath"].toString();
@@ -55,6 +56,7 @@ bool CharacterDataProviderJsonImpl::saveCharacter(const Character& character) {
 
 	QJsonObject json;
 	json["id"] = character.id.toString(QUuid::StringFormat::WithoutBraces);
+	json["name"] = character.name;
 	json["equipmentId"] = character.equipmentId.toString(QUuid::StringFormat::WithoutBraces);
 	json["inventoryId"] = character.inventoryId.toString(QUuid::StringFormat::WithoutBraces);
 	json["iconPath"] = character.iconPath;

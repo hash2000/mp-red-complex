@@ -30,8 +30,8 @@ UserWindow::UserWindow(UsersService* usersService, TexturesService* texturesServ
 	// Подключаем сигналы
 	connect(d->userWidget, &UserWidget::equipmentRequested,
 		this, &UserWindow::onEquipmentRequested);
-	connect(d->userWidget, &UserWidget::inventoryRequested,
-		this, &UserWindow::onInventoryRequested);
+	connect(d->userWidget, &UserWidget::specificationsRequested,
+		this, &UserWindow::onSpecificationsRequested);
 	connect(d->usersService, &UsersService::loggedOut,
 		this, &UserWindow::onUserLoggedOut);
 
@@ -58,14 +58,14 @@ void UserWindow::onEquipmentRequested(const QUuid& characterId) {
 		"equipment", chr->equipmentId.toString(QUuid::StringFormat::WithoutBraces) });
 }
 
-void UserWindow::onInventoryRequested(const QUuid& characterId) {
+void UserWindow::onSpecificationsRequested(const QUuid& characterId) {
 	const auto chr = d->usersService->getCharacter(characterId);
 	if (!chr) {
 		return;
 	}
 
 	d->controller->executeCommandByName("window-create", QStringList{
-		"inventory", chr->inventoryId.toString(QUuid::StringFormat::WithoutBraces) });
+		"character-specifications", chr->id.toString(QUuid::StringFormat::WithoutBraces) });
 }
 
 void UserWindow::onUserLoggedOut() {

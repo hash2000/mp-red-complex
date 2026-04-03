@@ -1,6 +1,5 @@
 #include "ApplicationLayer/users/users_service.h"
 #include "ApplicationLayer/character/character_item_handler.h"
-#include "ApplicationLayer/textures/textures_service.h"
 #include "DataLayer/users/user.h"
 #include <QCryptographicHash>
 #include <QUuid>
@@ -14,7 +13,6 @@ public:
 	UsersService* q;
 	IUsersDataProvider* usersDataProvider = nullptr;
 	ICharacterDataProvider* characterDataProvider = nullptr;
-	TexturesService* texturesService = nullptr;
 	QString currentUserId;
 	QUuid chestId;
 	bool authenticated = false;
@@ -56,20 +54,14 @@ public:
 UsersService::UsersService(
 	IUsersDataProvider* usersDataProvider,
 	ICharacterDataProvider* characterDataProvider,
-	TexturesService* texturesService,
 	QObject* parent)
 	: QObject(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->usersDataProvider = usersDataProvider;
 	d->characterDataProvider = characterDataProvider;
-	d->texturesService = texturesService;
 }
 
 UsersService::~UsersService() = default;
-
-TexturesService* UsersService::texturesService() const {
-	return d->texturesService;
-}
 
 std::optional<QString> UsersService::login(const QString& login, const QString& password) {
 	const auto loginHash = Private::hashLogin(login);

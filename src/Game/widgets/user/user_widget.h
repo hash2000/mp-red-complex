@@ -17,7 +17,7 @@ public:
 
 signals:
 	void equipmentRequested(const QUuid& characterId);
-	void inventoryRequested(const QUuid& characterId);
+	void specificationsRequested(const QUuid& characterId);
 
 private:
 	void setupLayout();

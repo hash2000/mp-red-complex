@@ -14,14 +14,14 @@ class CharacterEntryWidget : public QWidget {
 public:
 	explicit CharacterEntryWidget(
 		UsersService* usersService,
-		TexturesService* texturesService, 
+		TexturesService* texturesService,
 		const QUuid& characterId,
 		QWidget* parent = nullptr);
 	~CharacterEntryWidget() override;
 
 signals:
 	void equipmentClicked(const QUuid& characterId);
-	void inventoryClicked(const QUuid& characterId);
+	void specificationsClicked(const QUuid& characterId);
 
 private:
 	void setupLayout();

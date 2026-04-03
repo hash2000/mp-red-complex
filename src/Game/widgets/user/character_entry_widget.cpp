@@ -25,7 +25,7 @@ public:
 	QLabel* levelLabel = nullptr;
 	QLabel* nameLabel = nullptr;
 	QPushButton* equipmentButton = nullptr;
-	QPushButton* inventoryButton = nullptr;
+	QPushButton* specificationsButton = nullptr;
 };
 
 CharacterEntryWidget::CharacterEntryWidget(
@@ -47,65 +47,67 @@ CharacterEntryWidget::~CharacterEntryWidget() = default;
 
 void CharacterEntryWidget::setupLayout() {
 	auto* mainLayout = new QHBoxLayout(this);
-	mainLayout->setContentsMargins(10, 10, 10, 10);
-	mainLayout->setSpacing(12);
+	mainLayout->setContentsMargins(6, 4, 6, 4);
+	mainLayout->setSpacing(10);
 
 	// Иконка персонажа (слева)
 	d->iconLabel = new QLabel(this);
-	d->iconLabel->setFixedSize(64, 64);
+	d->iconLabel->setFixedSize(48, 48);
 	d->iconLabel->setScaledContents(false);
 	d->iconLabel->setStyleSheet(
 		"background-color: #1a202c; "
 		"border: 1px solid #4a5568; "
-		"border-radius: 6px;"
+		"border-radius: 4px;"
 	);
 	mainLayout->addWidget(d->iconLabel, 0, Qt::AlignTop);
 
-	// Правая часть (вертикальная)
-	auto* rightLayout = new QVBoxLayout();
-	rightLayout->setSpacing(4);
-
-	// Верхняя строка: уровень и имя
-	auto* infoLayout = new QHBoxLayout();
-	infoLayout->setSpacing(8);
+	// Центральная часть: уровень и имя
+	auto* infoLayout = new QVBoxLayout();
+	infoLayout->setSpacing(2);
+	infoLayout->setContentsMargins(0, 0, 0, 0);
 
 	// Уровень
 	d->levelLabel = new QLabel(this);
 	d->levelLabel->setStyleSheet(
 		"background-color: #2d3748; "
 		"color: #a0aec0; "
-		"padding: 2px 8px; "
+		"padding: 1px 6px; "
 		"border: 1px solid #4a5568; "
-		"border-radius: 4px; "
-		"font-size: 11px;"
+		"border-radius: 3px; "
+		"font-size: 10px;"
 	);
-	infoLayout->addWidget(d->levelLabel, 0, Qt::AlignTop);
+	infoLayout->addWidget(d->levelLabel, 0, Qt::AlignLeft);
 
 	// Имя персонажа
 	d->nameLabel = new QLabel(this);
 	d->nameLabel->setStyleSheet(
-		"font-size: 14px; "
+		"font-size: 13px; "
 		"font-weight: bold; "
 		"color: #e2e8f0;"
 	);
-	infoLayout->addWidget(d->nameLabel, 1, Qt::AlignTop);
+	infoLayout->addWidget(d->nameLabel, 0, Qt::AlignTop);
 
-	rightLayout->addLayout(infoLayout);
+	infoLayout->addStretch();
 
-	// Кнопки (экипировка, инвентарь)
-	auto* buttonsLayout = new QHBoxLayout();
-	buttonsLayout->setSpacing(6);
+	mainLayout->addLayout(infoLayout, 1);
 
-	d->equipmentButton = new QPushButton("Экипировка", this);
-	d->equipmentButton->setFixedHeight(28);
+	// Кнопки справа (вертикально)
+	auto* buttonsLayout = new QVBoxLayout();
+	buttonsLayout->setSpacing(4);
+	buttonsLayout->setContentsMargins(0, 0, 0, 0);
+
+	// Кнопка экипировки (символ меча ⚔)
+	d->equipmentButton = new QPushButton("⚔", this);
+	d->equipmentButton->setFixedSize(24, 24);
 	d->equipmentButton->setCursor(Qt::PointingHandCursor);
+	d->equipmentButton->setToolTip("Экипировка");
 	d->equipmentButton->setStyleSheet(
 		"QPushButton { "
 		"  background-color: #2d3748; "
 		"  color: #e2e8f0; "
 		"  border: 1px solid #4a5568; "
-		"  border-radius: 4px; "
-		"  padding: 4px 12px; "
+		"  border-radius: 3px; "
+		"  font-size: 12px; "
 		"}"
 		"QPushButton:hover { "
 		"  background-color: #4a5568; "
@@ -120,16 +122,18 @@ void CharacterEntryWidget::setupLayout() {
 	});
 	buttonsLayout->addWidget(d->equipmentButton);
 
-	d->inventoryButton = new QPushButton("Инвентарь", this);
-	d->inventoryButton->setFixedHeight(28);
-	d->inventoryButton->setCursor(Qt::PointingHandCursor);
-	d->inventoryButton->setStyleSheet(
+	// Кнопка инвентаря (символ рюкзака 🎒)
+	d->specificationsButton = new QPushButton("🎒", this);
+	d->specificationsButton->setFixedSize(24, 24);
+	d->specificationsButton->setCursor(Qt::PointingHandCursor);
+	d->specificationsButton->setToolTip("Характеристики");
+	d->specificationsButton->setStyleSheet(
 		"QPushButton { "
 		"  background-color: #2d3748; "
 		"  color: #e2e8f0; "
 		"  border: 1px solid #4a5568; "
-		"  border-radius: 4px; "
-		"  padding: 4px 12px; "
+		"  border-radius: 3px; "
+		"  font-size: 12px; "
 		"}"
 		"QPushButton:hover { "
 		"  background-color: #4a5568; "
@@ -139,17 +143,15 @@ void CharacterEntryWidget::setupLayout() {
 		"  background-color: #1a202c; "
 		"}"
 	);
-	connect(d->inventoryButton, &QPushButton::clicked, this, [this]() {
-		emit inventoryClicked(d->characterId);
+	connect(d->specificationsButton, &QPushButton::clicked, this, [this]() {
+		emit specificationsClicked(d->characterId);
 	});
-	buttonsLayout->addWidget(d->inventoryButton);
+	buttonsLayout->addWidget(d->specificationsButton);
 
 	buttonsLayout->addStretch();
 
-	rightLayout->addLayout(buttonsLayout);
-	rightLayout->addStretch();
-
-	mainLayout->addLayout(rightLayout, 1);
+	mainLayout->addLayout(buttonsLayout);
+	mainLayout->setAlignment(Qt::AlignTop);
 }
 
 void CharacterEntryWidget::loadCharacterData() {

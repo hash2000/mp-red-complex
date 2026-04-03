@@ -22,7 +22,7 @@ public:
 
 private slots:
 	void onEquipmentRequested(const QUuid& characterId);
-	void onInventoryRequested(const QUuid& characterId);
+	void onSpecificationsRequested(const QUuid& characterId);
 	void onUserLoggedOut();
 
 private:

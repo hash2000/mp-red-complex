@@ -21,7 +21,7 @@ public:
 
 	void addEntitiesButton() {
 		panel->addButton(ActionButtonConfig("Entities", "entities.png", "Библиотека предметов",
-			"window-create item-entities 1d6abf2e-9d77-4cf7-9444-2b54aca14259", 2));
+			"window-create item-entities item-entities", 2));
 	}
 
 	void addMapButton() {
