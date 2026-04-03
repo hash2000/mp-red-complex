@@ -7,6 +7,7 @@
 #include "Game/widgets/inventory/inventory_window.h"
 #include "Game/widgets/items/entities_window.h"
 #include "Game/widgets/user/login_window.h"
+#include "Game/widgets/user/user_window.h"
 #include <map>
 #include <functional>
 
@@ -50,9 +51,16 @@ WindowsBuilder::WindowsBuilder(ApplicationController* appController)
 			id,
 			parent);
 		});
-	d->factory.emplace("login", [](Services* services, const QString& id, QWidget* parent) {
+	d->factory.emplace("user-login", [](Services* services, const QString& id, QWidget* parent) {
 		return new LoginWindow(
 			services->usersService(),
+			id,
+			parent);
+		});
+	d->factory.emplace("user-profile", [](Services* services, const QString& id, QWidget* parent) {
+		return new UserWindow(
+			services->usersService(),
+			services->texturesService(),
 			id,
 			parent);
 		});

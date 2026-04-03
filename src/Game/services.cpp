@@ -118,12 +118,13 @@ Services::Services(Resources* resources)
 		d->itemsService.get(),
 		d->itemsDataWriter.get());
 
-	// Создаём сервис пользователей
+	// Создаём сервис пользователей (TexturesService уже создан ранее)
 	d->usersDataProvider = std::make_unique<UsersDataProviderJsonImpl>(resources);
 	d->characterDataProvider = std::make_unique<CharacterDataProviderJsonImpl>(resources);
 	d->usersService = std::make_unique<UsersService>(
 		d->usersDataProvider.get(),
-		d->characterDataProvider.get());
+		d->characterDataProvider.get(),
+		d->texturesService.get());
 
 	// Подключаем сохранение к сигналу save()
 	connect(this, &Services::save,

@@ -8,13 +8,21 @@
 #include <list>
 
 class CharacterItemHandler;
+class TexturesService;
 
 /// Сервис управления пользователями
 class UsersService : public QObject {
 	Q_OBJECT
 public:
-	explicit UsersService(IUsersDataProvider* usersDataProvider, ICharacterDataProvider* characterDataProvider, QObject* parent = nullptr);
+	explicit UsersService(
+		IUsersDataProvider* usersDataProvider,
+		ICharacterDataProvider* characterDataProvider,
+		TexturesService* texturesService,
+		QObject* parent = nullptr);
 	~UsersService() override;
+
+	/// Получить сервис текстур
+	TexturesService* texturesService() const;
 
 	/// Войти пользователя по логину и паролю
 	/// Возвращает ID пользователя или nullopt при неудаче

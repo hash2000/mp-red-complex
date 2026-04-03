@@ -1,0 +1,30 @@
+#pragma once
+#include <QWidget>
+#include <memory>
+
+class UsersService;
+class TexturesService;
+class QLabel;
+class QVBoxLayout;
+class QScrollArea;
+
+/// Основной виджет профиля пользователя с заголовком и списком персонажей
+class UserWidget : public QWidget {
+	Q_OBJECT
+public:
+	explicit UserWidget(UsersService* usersService, TexturesService* texturesService, QWidget* parent = nullptr);
+	~UserWidget() override;
+
+signals:
+	void equipmentRequested(const QUuid& characterId);
+	void inventoryRequested(const QUuid& characterId);
+
+private:
+	void setupLayout();
+	void loadUserData();
+	void loadCharacters();
+	void clearCharacters();
+
+	class Private;
+	std::unique_ptr<Private> d;
+};
