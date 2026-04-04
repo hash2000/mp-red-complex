@@ -44,7 +44,7 @@ bool CreateWindowCommand::execute(CommandContext* context, const QStringList& ar
 
 	const auto title = widget->windowTitle();
 	const auto sizes = widget->windowDefaultSizes();
-	
+
 	auto subWndow = mdiArea->addSubWindow(widget);
 	subWndow->setWindowTitle(title);
 	subWndow->setAttribute(Qt::WA_DeleteOnClose, true);

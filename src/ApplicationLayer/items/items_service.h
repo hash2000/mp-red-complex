@@ -7,10 +7,15 @@
 #include <map>
 #include <ranges>
 
+class TexturesService;
+
 class ItemsService : public QObject {
 	Q_OBJECT
 public:
-	explicit ItemsService(std::shared_ptr<IItemRepository> repository, QObject* parent = nullptr);
+	explicit ItemsService(
+		std::shared_ptr<IItemRepository> repository,
+		TexturesService* texturesService,
+		QObject* parent = nullptr);
 	~ItemsService() override;
 
 	/// Загрузить все сущности предметов (вызывать после создания сервиса)

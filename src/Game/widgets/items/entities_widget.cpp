@@ -109,28 +109,28 @@ EntitiesWidget::EntitiesWidget(
 	d->scrollArea->setWidgetResizable(true);
 	d->scrollArea->setFrameShape(QFrame::NoFrame);
 	d->scrollArea->setStyleSheet(R"(
-            QScrollArea {
-                background-color: #0f172a;
-                border: none;
-            }
-            QScrollBar:vertical {
-                border: none;
-                background: #1e293b;
-                width: 12px;
-                margin: 0px;
-            }
-            QScrollBar::handle:vertical {
-                background: #4a5568;
-                min-height: 30px;
-                border-radius: 6px;
-            }
-            QScrollBar::handle:vertical:hover {
-                background: #64748b;
-            }
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-                height: 0px;
-            }
-        )");
+      QScrollArea {
+          background-color: #0f172a;
+          border: none;
+      }
+      QScrollBar:vertical {
+          border: none;
+          background: #1e293b;
+          width: 12px;
+          margin: 0px;
+      }
+      QScrollBar::handle:vertical {
+          background: #4a5568;
+          min-height: 30px;
+          border-radius: 6px;
+      }
+      QScrollBar::handle:vertical:hover {
+          background: #64748b;
+      }
+      QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+          height: 0px;
+      }
+  )");
 
 	// Контент для прокрутки
 	d->contentWidget = new QWidget();

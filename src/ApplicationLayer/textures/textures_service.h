@@ -14,13 +14,13 @@ public:
 	~TexturesService() override;
 
 	// Получение текстуры (с кэшированием)
-	QPixmap getTexture(const QString& path);
+	QPixmap getTexture(const QString& path, TextureType type = TextureType::Icon);
 
 	// Очистка кэша
 	void clearCache();
 
 	// Предварительная загрузка иконки в кэш
-	void preloadTexture(const QString& name);
+	void preloadTexture(const QString& name, TextureType type = TextureType::Icon);
 
 private:
 	class Private;

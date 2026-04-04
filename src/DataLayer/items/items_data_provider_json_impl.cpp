@@ -1,8 +1,6 @@
 #include "DataLayer/items/items_data_provider_json_impl.h"
 #include "DataStream/format/json/data_reader.h"
-#include "DataStream/format/pixmap/data_reader.h"
 #include "Resources/resources.h"
-#include <QPainter>
 #include <QJsonObject>
 #include <QJsonArray>
 
@@ -12,7 +10,7 @@ public:
 		: q(paren) {
 	}
 
-	void itemEntityFromJson(const QJsonObject& json, ItemEntity& entity) {
+	bool itemEntityFromJson(const QJsonObject& json, ItemEntity& entity) {
 		entity.id = json["id"].toString();
 		entity.name = json["name"].toString();
 		entity.description = json["description"].toString();
@@ -128,28 +126,8 @@ public:
 					});
 			}
 		}
-	}
-
-	QPixmap loadIcon(const ItemEntity& entity) {
-		const auto path = QString("items/%1")
-			.arg(entity.iconPath);
-
-		QPixmap pixmap;
-		Format::Pixmap::DataReader reader(resources, "assets", path);
-		if (!reader.read(pixmap)) {
-			return loadEmptyStubIcon(entity.id);
-		}
-
-		return pixmap;
-	}
-
-	QPixmap loadEmptyStubIcon(const QString& id) {
-		QPixmap result = QPixmap(64, 64);
-		result.fill(Qt::darkGray);
-		QPainter painter(&result);
-		painter.setPen(Qt::white);
-		painter.drawText(result.rect(), Qt::AlignCenter, id.left(2));
-		return result;
+		
+		return true;
 	}
 
 	ItemsDataProviderJsonImpl* q;
@@ -174,8 +152,6 @@ bool ItemsDataProviderJsonImpl::loadEntity(const QString& id, ItemEntity& entity
 	}
 
 	d->itemEntityFromJson(json, entity);
-
-	entity.icon = d->loadIcon(entity);
 
 	return true;
 }

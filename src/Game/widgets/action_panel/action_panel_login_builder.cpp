@@ -6,5 +6,6 @@ ActionPanelLoginBuilder::ActionPanelLoginBuilder(ActionPanelController* panel)
 }
 
 void ActionPanelLoginBuilder::build() {
-	_panel->addButton(ActionButtonConfig("Login", "login.png", "Войти в систему", "window-create login login", 1));
+	_panel->clearAllButtons();
+	_panel->addButton(ActionButtonConfig("Login", "login.png", "Войти в систему", "window-create user-login login", 1));
 }

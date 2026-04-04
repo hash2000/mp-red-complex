@@ -2,6 +2,7 @@
 #include "Engine/main_frame.h"
 
 class Resources;
+class UserData;
 
 class GameMainFrame : public MainFrame {
 public:
@@ -9,7 +10,9 @@ public:
 	virtual ~GameMainFrame() = default;
 
 private slots:
-	void toggleCommandConsole(bool visible);
+	void onToggleCommandConsole(bool visible);
+	void onUserLogin(const UserData& user);
+	void onUserLogout();
 
 private:
 	class Private;

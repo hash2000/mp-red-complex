@@ -55,7 +55,7 @@ ActionPanelWidget::~ActionPanelWidget() = default;
 void ActionPanelWidget::setupLayout() {
 	// Основной layout - горизонтальный, чтобы разделить кнопки и переключатель
 	d->mainLayout = new QHBoxLayout(this);
-	d->mainLayout->setContentsMargins(0, 0, 0, 0);
+	d->mainLayout->setContentsMargins(0, 40, 0, 40);
 	d->mainLayout->setSpacing(2);
 
 	// Контейнер для кнопок действий (левая часть)

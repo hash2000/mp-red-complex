@@ -31,6 +31,9 @@ MapWidget::MapWidget(QWidget* parent)
 : d(std::make_unique<Private>(this))
 , QOpenGLWidget(parent) {
 	setFocusPolicy(Qt::StrongFocus);
+	// Устанавливаем атрибуты для избежания мерцания при создании
+	setAttribute(Qt::WA_OpaquePaintEvent, true);
+	setAttribute(Qt::WA_NoSystemBackground, true);
 }
 
 MapWidget::~MapWidget() = default;

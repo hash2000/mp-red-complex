@@ -7,7 +7,10 @@
 #include "Game/controllers/action_panel_controller.h"
 #include "Game/controllers/action_button_config.h"
 #include "Game/widgets/action_panel/action_panel_login_builder.h"
+#include "Game/widgets/action_panel/action_panel_by_user_builder.h"
 #include "Game/widgets/action_panel/action_panel_widget.h"
+#include "ApplicationLayer/users/users_service.h"
+#include "DataLayer/users/user.h"
 #include "BaseWidgets/mdi_area.h"
 #include "Resources/resources.h"
 
@@ -18,6 +21,7 @@
 #include <QTextEdit>
 #include <QStatusBar>
 #include <QToolButton>
+#include <QTimer>
 #include <memory>
 
 
@@ -42,7 +46,7 @@ public:
 		controller = new ApplicationController(resources);
 		commandConsole = new CommandConsole(controller, q);
 		commandConsole->setWindowFlags(Qt::Dialog | Qt::WindowStaysOnTopHint);
-		q->toggleCommandConsole(false);
+		q->onToggleCommandConsole(false);
 
 		controller->controllers()->windowsController()->setMdiArea(mdiArea);
 
@@ -109,7 +113,7 @@ GameMainFrame::GameMainFrame(Resources* resources)
 	d->setupConsole();
 	d->setupView();
 
-	connect(d->consoleToggleButton, &QToolButton::toggled, this, &GameMainFrame::toggleCommandConsole);
+	connect(d->consoleToggleButton, &QToolButton::toggled, this, &GameMainFrame::onToggleCommandConsole);
 
 	// Горячая клавиша
 	auto toggleAction = new QAction(this);
@@ -117,17 +121,37 @@ GameMainFrame::GameMainFrame(Resources* resources)
 	connect(toggleAction, &QAction::triggered, this, [this]() {
 		bool newState = !d->commandConsole->isVisible();
 		d->consoleToggleButton->setChecked(newState);
-		toggleCommandConsole(newState);
+		onToggleCommandConsole(newState);
 		});
 
+	auto userService = d->controller->services()->usersService();
+	connect(userService, &UsersService::loggedOut, this, &GameMainFrame::onUserLogout);
+	connect(userService, &UsersService::loginSuccess, this, &GameMainFrame::onUserLogin);
+
 	addAction(toggleAction);
+
+	d->controller->executeCommandByName("window-create", QStringList{ "warmup", "opengl-warmup" });
+
+//	d->controller->executeCommand("window-create map map");
 }
 
-void GameMainFrame::toggleCommandConsole(bool visible) {
+void GameMainFrame::onToggleCommandConsole(bool visible) {
 	if (visible) {
 		d->commandConsole->showConsole();
 	}
 	else {
 		d->commandConsole->hideConsole();
 	}
+}
+
+void GameMainFrame::onUserLogout() {
+	d->setupActionPanel();
+}
+
+void GameMainFrame::onUserLogin(const UserData& user) {
+	qDebug() << "User login" << user.displayName;
+	ActionPanelByUserBuilder builder(
+		d->controller->controllers()->actionPanelController(),
+		d->controller->services()->usersService());
+	builder.build();
 }

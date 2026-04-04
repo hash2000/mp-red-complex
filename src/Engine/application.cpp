@@ -25,11 +25,12 @@ public:
 		fmt.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
 		fmt.setSamples(4);
 		fmt.setStencilBufferSize(8);
-		fmt.setStereo(true);
+		// fmt.setStereo(true);  // Отключено: вызывает перезагрузку окна при первом OpenGL виджете
 
 		QSurfaceFormat::setDefaultFormat(fmt);
 
 		QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+		QGuiApplication::setAttribute(Qt::AA_ShareOpenGLContexts);  // Общий OpenGL контекст для всех виджетов
 		QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
 
 
