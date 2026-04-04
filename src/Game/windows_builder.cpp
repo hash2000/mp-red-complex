@@ -8,6 +8,7 @@
 #include "Game/widgets/items/entities_window.h"
 #include "Game/widgets/user/login_window.h"
 #include "Game/widgets/user/user_window.h"
+#include "Game/widgets/warmup/warmup_window.h"
 #include <map>
 #include <functional>
 
@@ -63,6 +64,9 @@ WindowsBuilder::WindowsBuilder(ApplicationController* appController)
 			services->texturesService(),
 			id,
 			parent);
+		});
+	d->factory.emplace("warmup", [](Services* services, const QString& id, QWidget* parent) {
+		return new WarmupWindow(id, parent);
 		});
 }
 

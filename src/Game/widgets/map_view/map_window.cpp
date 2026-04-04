@@ -3,6 +3,7 @@
 #include "Game/services/world_service/world_service.h"
 #include "Game/services/time_service/time_service.h"
 #include <QVBoxLayout>
+#include <QDebug>
 
 class MapWindow::Private {
 public:
@@ -18,7 +19,6 @@ public:
 MapWindow::MapWindow(WorldService* worldService, TimeService* timeService, const QString& id, QWidget* parent)
 	: MdiChildWindow(id, parent)
 	, d(std::make_unique<Private>(this)) {
-
 	// Создаём внутренний виджет карты
 	d->widget = new MapWidget(this);
 

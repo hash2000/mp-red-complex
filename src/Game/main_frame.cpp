@@ -21,6 +21,7 @@
 #include <QTextEdit>
 #include <QStatusBar>
 #include <QToolButton>
+#include <QTimer>
 #include <memory>
 
 
@@ -128,6 +129,10 @@ GameMainFrame::GameMainFrame(Resources* resources)
 	connect(userService, &UsersService::loginSuccess, this, &GameMainFrame::onUserLogin);
 
 	addAction(toggleAction);
+
+	d->controller->executeCommandByName("window-create", QStringList{ "warmup", "opengl-warmup" });
+
+//	d->controller->executeCommand("window-create map map");
 }
 
 void GameMainFrame::onToggleCommandConsole(bool visible) {
