@@ -39,6 +39,9 @@ CharacterEntryWidget::CharacterEntryWidget(
 	d->texturesService = texturesService;
 	d->characterId = characterId;
 
+	// Растягиваемся по горизонтали, фиксируемся по вертикали
+	setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+
 	setupLayout();
 	loadCharacterData();
 }
