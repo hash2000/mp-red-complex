@@ -5,6 +5,9 @@
 #include <QHash>
 #include <QPixmap>
 
+// Стандартный тег для постоянного кеша (UI элементы)
+inline constexpr const char* kDefaultTextureTag = "default";
+
 class TexturesService : public QObject {
 	Q_OBJECT
 public:
@@ -13,14 +16,17 @@ public:
 		QObject* parent = nullptr);
 	~TexturesService() override;
 
-	// Получение текстуры (с кэшированием)
-	QPixmap getTexture(const QString& path, TextureType type = TextureType::Icon);
+	// Получение текстуры (с кэшированием в указанный тег)
+	QPixmap getTexture(const QString& path, TextureType type = TextureType::Icon, const QString& tag = kDefaultTextureTag);
 
-	// Очистка кэша
+	// Очистка всего кеша
 	void clearCache();
 
-	// Предварительная загрузка иконки в кэш
-	void preloadTexture(const QString& name, TextureType type = TextureType::Icon);
+	// Очистка кеша по тегу
+	void clearCacheByTag(const QString& tag);
+
+	// Предварительная загрузка текстуры в кэш (с указанием тега)
+	void preloadTexture(const QString& name, TextureType type = TextureType::Icon, const QString& tag = kDefaultTextureTag);
 
 private:
 	class Private;

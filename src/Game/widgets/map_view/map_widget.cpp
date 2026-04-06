@@ -14,9 +14,7 @@
 
 class MapWidget::Private {
 public:
-	Private(MapWidget* parent) : q(parent) {
-
-	}
+	Private(MapWidget* parent) : q(parent) { }
 
 	MapWidget* q;
 
