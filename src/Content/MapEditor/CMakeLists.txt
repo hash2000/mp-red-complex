@@ -23,9 +23,9 @@ target_link_libraries(Content.MapEditor
 		Qt6::OpenGLWidgets
 
 		Base
+		Graphics
 		DataFormat
 		DataStream
 		Resources
-		Content.Shared
 )
 

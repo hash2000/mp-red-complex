@@ -1,5 +1,5 @@
 #pragma once
-#include "Content/Shared/camera.h"
+#include "Graphics/camera.h"
 #include "Content/MapEditor/Draw/draw_program.h"
 #include <QWidget>
 #include <QVariantMap>

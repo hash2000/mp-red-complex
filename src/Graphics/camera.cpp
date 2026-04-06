@@ -1,4 +1,4 @@
-#include "Content/Shared/camera.h"
+#include "Graphics/camera.h"
 
 Camera::Camera(const QVector3D& center, const QVector3D& eye)
 : _center(center)

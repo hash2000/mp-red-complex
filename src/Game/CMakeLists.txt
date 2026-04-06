@@ -22,10 +22,10 @@ target_link_libraries(Game
 
 		Base
 		BaseWidgets
+		Graphics
 		Resources
 		DataLayer
 		ApplicationLayer
 		Engine
-		Content.Shared
 )
 
