@@ -71,3 +71,7 @@ void TexturesService::preloadTexture(const QString& name, TextureType type, cons
 		d->texturesCache[tag].insert(name, *pixmap);
 	}
 }
+
+QStringList TexturesService::listTextures(TextureType type) const {
+	return d->dataProvider->listTextures(type);
+}

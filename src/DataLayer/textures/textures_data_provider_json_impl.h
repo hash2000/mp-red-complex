@@ -10,6 +10,7 @@ public:
 	~TexturesDataProviderJsonImpl() override;
 
 	std::optional<QPixmap> loadTexture(const QString& path, TextureType type = TextureType::Icon) const override;
+	QStringList listTextures(TextureType type) const override;
 
 private:
 	class Private;

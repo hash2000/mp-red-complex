@@ -22,6 +22,7 @@ public:
 		{ TextureType::Item,      "items" },
 		{ TextureType::Character, "characters" },
 		{ TextureType::Users,			"users" },
+		{ TextureType::TileSets,	"textures/tiles" },
 		{ TextureType::Equipment, "equipment" },
 	}};
 
@@ -72,4 +73,26 @@ std::optional<QPixmap> TexturesDataProviderJsonImpl::loadTexture(const QString& 
 		return std::nullopt;
 	}
 	return pixmap;
+}
+
+QStringList TexturesDataProviderJsonImpl::listTextures(TextureType type) const {
+	QStringList result;
+	const char* directory = Private::getDirectoryForType(type);
+	const QString prefix = QString("%1/").arg(directory);
+
+	// Получаем все потоки из ресурсов
+	for (const auto& container : d->resources->items()) {
+		const auto items = container.items();
+		for (const auto& [path, stream] : items) {
+			// Проверяем, что путь начинается с нужной директории и имеет расширение .png
+			if (stream->containerName() == "assets" && path.startsWith(prefix) && path.endsWith(".png", Qt::CaseInsensitive)) {
+				// Извлекаем только имя файла
+				const QString fileName = path.mid(prefix.length());
+				result.append(fileName);
+			}
+		}
+	}
+
+	result.sort();
+	return result;
 }

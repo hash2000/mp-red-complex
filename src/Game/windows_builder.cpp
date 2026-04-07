@@ -9,6 +9,7 @@
 #include "Game/widgets/user/login_window.h"
 #include "Game/widgets/user/user_window.h"
 #include "Game/widgets/warmup/warmup_window.h"
+#include "Game/widgets/textures/texture_editor_window.h"
 #include <map>
 #include <functional>
 
@@ -67,6 +68,12 @@ WindowsBuilder::WindowsBuilder(ApplicationController* appController)
 		});
 	d->factory.emplace("warmup", [](Services* services, const QString& id, QWidget* parent) {
 		return new WarmupWindow(id, parent);
+		});
+	d->factory.emplace("texture-editor", [](Services* services, const QString& id, QWidget* parent) {
+		return new TextureEditorWindow(
+			services->texturesService(),
+			id,
+			parent);
 		});
 }
 
