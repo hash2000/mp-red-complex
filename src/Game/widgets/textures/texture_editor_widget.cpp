@@ -1,14 +1,17 @@
 #include "Game/widgets/textures/texture_editor_widget.h"
+#include "Game/widgets/textures/zoomable_image_view.h"
 #include "ApplicationLayer/textures/textures_service.h"
 #include "DataLayer/textures/i_textures_data_provider.h"
 #include <QSplitter>
 #include <QListWidget>
 #include <QListWidgetItem>
-#include <QLabel>
 #include <QComboBox>
+#include <QLabel>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QScrollBar>
+
+// === TextureEditorWidget::Private ===
 
 class TextureEditorWidget::Private {
 public:
@@ -19,7 +22,7 @@ public:
 
 	// Компоненты UI
 	QSplitter* splitter = nullptr;
-	QLabel* previewLabel = nullptr;
+	ZoomableImageView* previewLabel = nullptr;
 	QComboBox* textureTypeCombo = nullptr;
 	QListWidget* textureList = nullptr;
 
@@ -59,8 +62,7 @@ void TextureEditorWidget::setupLayout() {
 	auto* previewLayout = new QVBoxLayout(previewWidget);
 	previewLayout->setContentsMargins(0, 0, 0, 0);
 
-	d->previewLabel = new QLabel("Выберите текстуру", previewWidget);
-	d->previewLabel->setAlignment(Qt::AlignCenter);
+	d->previewLabel = new ZoomableImageView(previewWidget);
 	d->previewLabel->setObjectName("TexturePreviewLabel");
 	d->previewLabel->setStyleSheet(R"(
 		#TexturePreviewLabel {
@@ -216,11 +218,8 @@ void TextureEditorWidget::loadTexturesPage() {
 void TextureEditorWidget::updatePreview(const QString& fileName) {
 	const auto pixmap = d->texturesService->getTexture(fileName, d->currentType, "texture-editor");
 	if (!pixmap.isNull()) {
-		d->previewLabel->setPixmap(pixmap.scaled(
-			d->previewLabel->size(),
-			Qt::KeepAspectRatio,
-			Qt::SmoothTransformation));
+		d->previewLabel->setPixmap(pixmap);
 	} else {
-		d->previewLabel->setText("Не удалось загрузить\n" + fileName);
+		d->previewLabel->setPixmap(QPixmap());
 	}
 }

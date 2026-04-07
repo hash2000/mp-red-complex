@@ -5,7 +5,6 @@
 class TexturesService;
 class QListWidget;
 class QListWidgetItem;
-class QLabel;
 class QComboBox;
 
 class TextureEditorWidget : public QWidget {
