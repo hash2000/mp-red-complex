@@ -4,6 +4,10 @@
 #include <QtOpenGLWidgets/QOpenGLWidget>
 #include <QOpenGLFunctions_3_3_Core>
 
+class TileRenderer;
+class TextureAtlas;
+class Tileset;
+
 class MapWidget : public QOpenGLWidget, protected QOpenGLFunctions_3_3_Core {
 	Q_OBJECT
 public:
@@ -13,7 +17,7 @@ public:
 	void mousePressEvent(QMouseEvent* event) override;
 	void mouseMoveEvent(QMouseEvent* event) override;
 	void mouseReleaseEvent(QMouseEvent* event) override;
-	void wheelEvent(QWheelEvent* event) override;	
+	void wheelEvent(QWheelEvent* event) override;
 
 protected:
 	void initializeGL() override;
@@ -22,6 +26,7 @@ protected:
 
 private:
 	void setupViewport();
+	void initializeTileSystem();
 
 public slots:
 	void onTick(const TickEvent& event);

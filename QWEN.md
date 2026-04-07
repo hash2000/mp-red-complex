@@ -84,6 +84,12 @@ ctest --output-on-failure
 - **Braces**: Same-line opening brace for functions/classes
 - **Trailing whitespace**: Trimmed
 - **Final newline**: Required
+- **Increment/Decrement Operators**: Use postfix form (`x++`, `x--`) instead of prefix (`++x`, `--x`)
+
+```cpp
+for (int z = 0; z < 16; z++) // Да
+for (int z = 0; z < 16; ++z) // Нет
+```
 
 ### Imports and Forward Declarations
 - Use forward declarations to avoid unnecessary includes in headers

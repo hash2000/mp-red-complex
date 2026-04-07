@@ -1,6 +1,9 @@
 #include "Game/widgets/map_view/map_widget.h"
 #include "Game/services/time_service/time_events.h"
 #include "Graphics/camera.h"
+#include "Graphics/tiles/tile_renderer.h"
+#include "Graphics/tiles/tileset.h"
+#include "Graphics/textures/texture_atlas.h"
 #include <QOpenGLShaderProgram>
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLTexture>
@@ -9,6 +12,8 @@
 #include <QMatrix4x4>
 #include <QTimer>
 #include <QWheelEvent>
+#include <QPixmap>
+#include <QPainter>
 #include <memory>
 #include <list>
 
@@ -18,10 +23,15 @@ public:
 
 	MapWidget* q;
 
-	Camera camera{ QVector3D(5.0f, 0.0f, 5.0f), QVector3D(5.0f, 12.0f, 12.0f) };
+	Camera camera{ QVector3D(5.0f, 0.0f, 5.0f), QVector3D(5.0f, 12.0f, 9.0f) };
 	bool rightMousePressed = false;
 	QPoint lastMousePos;
 	std::optional<QPoint> selectedNode;
+
+	// Система тайлов
+	std::unique_ptr<TileRenderer> tileRenderer;
+	std::unique_ptr<TextureAtlas> textureAtlas;
+	std::unique_ptr<Tileset> tileset;
 };
 
 
@@ -32,6 +42,11 @@ MapWidget::MapWidget(QWidget* parent)
 	// Устанавливаем атрибуты для избежания мерцания при создании
 	setAttribute(Qt::WA_OpaquePaintEvent, true);
 	setAttribute(Qt::WA_NoSystemBackground, true);
+
+	// Создаем объекты системы тайлов
+	d->tileRenderer = std::make_unique<TileRenderer>();
+	d->textureAtlas = std::make_unique<TextureAtlas>(32, 32); // Тайлы 32x32
+	d->tileset = std::make_unique<Tileset>();
 }
 
 MapWidget::~MapWidget() = default;
@@ -44,6 +59,59 @@ void MapWidget::initializeGL() {
 	glEnable(GL_DEPTH_TEST);
 	glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
 	setupViewport();
+
+	// Инициализируем систему тайлов
+	initializeTileSystem();
+}
+
+void MapWidget::initializeTileSystem() {
+	// Инициализируем рендерер
+	if (!d->tileRenderer->initialize()) {
+		qWarning() << "Failed to initialize TileRenderer";
+		return;
+	}
+
+	// Создаем тестовый тайлсет (заглушку)
+	// В реальном проекте здесь будет загрузка из файла
+	QPixmap testAtlas(256, 256);
+	testAtlas.fill(Qt::gray);
+
+	// Рисуем несколько цветных квадратов для тестирования
+	QPainter painter(&testAtlas);
+	for (int y = 0; y < 8; y++) {
+		for (int x = 0; x < 8; x++) {
+			QColor color = QColor::fromHsv((x + y) * 20, 150, 200);
+			painter.fillRect(x * 32, y * 32, 32, 32, color);
+		}
+	}
+	painter.end();
+
+	// Загружаем атлас
+	if (d->textureAtlas->loadFromPixmap(testAtlas, 8, 8)) {
+		qInfo() << "Test texture atlas loaded successfully";
+
+		// Инициализируем тайлсет
+		d->tileset->initialize(d->textureAtlas.get(), 8, 8);
+		d->tileRenderer->setTileset(d->tileset.get());
+
+		// Создаем тестовые чанки (4 чанка 16x16 = 64x64 тайла)
+		for (int cz = 0; cz < 2; cz++) {
+			for (int cx = 0; cx < 2; cx++) {
+				auto* chunk = d->tileRenderer->getOrCreateChunk(cx, cz);
+
+				// Заполняем тестовыми тайлами
+				for (int z = 0; z < 16; z++) {
+					for (int x = 0; x < 16; x++) {
+						// Чередуем тайлы
+						int tileId = (x + z) % 16;
+						chunk->setTile(x, z, tileId);
+					}
+				}
+			}
+		}
+
+		qInfo() << "Created" << d->tileRenderer->chunkCount() << "chunks";
+	}
 }
 
 void MapWidget::resizeGL(int w, int h) {
@@ -53,6 +121,12 @@ void MapWidget::resizeGL(int w, int h) {
 void MapWidget::paintGL() {
 	glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	// Рендерим тайлы
+	if (d->tileRenderer) {
+		d->tileRenderer->render(d->camera, width(), height());
+	}
+
 	emit paintView();
 }
 
