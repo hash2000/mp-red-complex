@@ -16,7 +16,14 @@ public:
 	QPoint lastMousePos;
 	bool isPanning = false;
 
+	// Настройки сетки
+	bool gridEnabled = false;
+	int gridSizeX = 16;
+	int gridSizeY = 16;
+	int selectedTileId = -1;
+
 	void adjustOffsets();
+	int tileAtPosition(const QPointF& pos) const;
 };
 
 void ZoomableImageView::Private::adjustOffsets() {
@@ -28,6 +35,32 @@ void ZoomableImageView::Private::adjustOffsets() {
 	const QSizeF scaledSize = QSizeF(pixmap.size()) * zoomLevel;
 	panOffset.setX((q->width() - scaledSize.width()) / 2);
 	panOffset.setY((q->height() - scaledSize.height()) / 2);
+}
+
+int ZoomableImageView::Private::tileAtPosition(const QPointF& pos) const {
+	if (!gridEnabled || pixmap.isNull()) {
+		return -1;
+	}
+
+	// Переводим позицию из экранных координат в координаты изображения
+	const QPointF imagePos = (pos - panOffset) / zoomLevel;
+
+	if (imagePos.x() < 0 || imagePos.y() < 0 ||
+	    imagePos.x() > pixmap.width() || imagePos.y() > pixmap.height()) {
+		return -1;
+	}
+
+	const qreal tileWidth = static_cast<qreal>(pixmap.width()) / gridSizeX;
+	const qreal tileHeight = static_cast<qreal>(pixmap.height()) / gridSizeY;
+
+	const int tileX = static_cast<int>(imagePos.x() / tileWidth);
+	const int tileY = static_cast<int>(imagePos.y() / tileHeight);
+
+	if (tileX < 0 || tileX >= gridSizeX || tileY < 0 || tileY >= gridSizeY) {
+		return -1;
+	}
+
+	return tileY * gridSizeX + tileX;
 }
 
 ZoomableImageView::ZoomableImageView(QWidget* parent)
@@ -61,6 +94,22 @@ void ZoomableImageView::resetZoom() {
 	d->adjustOffsets();
 }
 
+void ZoomableImageView::setGridEnabled(bool enabled) {
+	d->gridEnabled = enabled;
+	update();
+}
+
+void ZoomableImageView::setGridSize(int gridSizeX, int gridSizeY) {
+	d->gridSizeX = gridSizeX;
+	d->gridSizeY = gridSizeY;
+	update();
+}
+
+void ZoomableImageView::setSelectedTileId(int tileId) {
+	d->selectedTileId = tileId;
+	update();
+}
+
 void ZoomableImageView::paintEvent(QPaintEvent* /*event*/) {
 	QPainter painter(this);
 	painter.setRenderHint(QPainter::SmoothPixmapTransform);
@@ -79,6 +128,44 @@ void ZoomableImageView::paintEvent(QPaintEvent* /*event*/) {
 	// Рисуем рамку
 	painter.setPen(QPen(QColor("#4a5568"), 1));
 	painter.drawRect(QRect(topLeft, scaledSize.toSize()));
+
+	// Рисуем сетку
+	if (d->gridEnabled) {
+		painter.setRenderHint(QPainter::Antialiasing, false);
+
+		const qreal tileWidth = scaledSize.width() / d->gridSizeX;
+		const qreal tileHeight = scaledSize.height() / d->gridSizeY;
+
+		// Вертикальные линии
+		for (int x = 0; x <= d->gridSizeX; ++x) {
+			const qreal xPos = topLeft.x() + x * tileWidth;
+			painter.drawLine(QLineF(xPos, topLeft.y(), xPos, topLeft.y() + scaledSize.height()));
+		}
+
+		// Горизонтальные линии
+		for (int y = 0; y <= d->gridSizeY; ++y) {
+			const qreal yPos = topLeft.y() + y * tileHeight;
+			painter.drawLine(QLineF(topLeft.x(), yPos, topLeft.x() + scaledSize.width(), yPos));
+		}
+
+		// Подсветка выбранного тайла
+		if (d->selectedTileId >= 0) {
+			const int tileX = d->selectedTileId % d->gridSizeX;
+			const int tileY = d->selectedTileId / d->gridSizeX;
+
+			const QRectF tileRect(
+				topLeft.x() + tileX * tileWidth,
+				topLeft.y() + tileY * tileHeight,
+				tileWidth,
+				tileHeight
+			);
+
+			// Полупрозрачная подсветка
+			painter.setPen(QPen(QColor("#4299e1"), 2));
+			painter.setBrush(QColor(66, 153, 225, 60));
+			painter.drawRect(tileRect);
+		}
+	}
 }
 
 void ZoomableImageView::wheelEvent(QWheelEvent* event) {
@@ -107,6 +194,18 @@ void ZoomableImageView::wheelEvent(QWheelEvent* event) {
 
 void ZoomableImageView::mousePressEvent(QMouseEvent* event) {
 	if (event->button() == Qt::LeftButton && !d->pixmap.isNull()) {
+		if (d->gridEnabled) {
+			const int tileId = d->tileAtPosition(event->position());
+			if (tileId >= 0) {
+				d->selectedTileId = tileId;
+				update();
+				emit tileClicked(tileId);
+				return;
+			}
+		}
+	}
+
+	if (event->button() == Qt::RightButton && !d->pixmap.isNull()) {
 		d->isPanning = true;
 		d->lastMousePos = event->pos();
 		setCursor(Qt::ClosedHandCursor);
@@ -123,7 +222,7 @@ void ZoomableImageView::mouseMoveEvent(QMouseEvent* event) {
 }
 
 void ZoomableImageView::mouseReleaseEvent(QMouseEvent* event) {
-	if (event->button() == Qt::LeftButton) {
+	if (event->button() == Qt::RightButton) {
 		d->isPanning = false;
 		setCursor(Qt::ArrowCursor);
 	}
