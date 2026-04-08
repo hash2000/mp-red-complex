@@ -55,7 +55,10 @@ TextureEditorWidget::TextureEditorWidget(TexturesService* texturesService, QWidg
 
 	// Загружаем первый тип текстур
 	d->currentType = TextureType::Icon;
-	d->textureTypeCombo->setCurrentIndex(0);
+	const int iconIndex = d->textureTypeCombo->findData(static_cast<int>(TextureType::Icon));
+	if (iconIndex >= 0) {
+		d->textureTypeCombo->setCurrentIndex(iconIndex);
+	}
 	updateTextureList();
 	updateTileSetButton();
 }
@@ -99,13 +102,13 @@ void TextureEditorWidget::setupLayout() {
 
 	d->textureTypeCombo = new QComboBox(rightWidget);
 	d->textureTypeCombo->setObjectName("TextureTypeCombo");
-	d->textureTypeCombo->addItem("Иконки");
-	d->textureTypeCombo->addItem("Сущности");
-	d->textureTypeCombo->addItem("Предметы");
-	d->textureTypeCombo->addItem("Персонажи");
-	d->textureTypeCombo->addItem("Экипировка");
-	d->textureTypeCombo->addItem("Пользователи");
-	d->textureTypeCombo->addItem("Тайлы");
+	d->textureTypeCombo->addItem("Иконки", static_cast<int>(TextureType::Icon));
+	d->textureTypeCombo->addItem("Сущности", static_cast<int>(TextureType::Entity));
+	d->textureTypeCombo->addItem("Предметы", static_cast<int>(TextureType::Item));
+	d->textureTypeCombo->addItem("Персонажи", static_cast<int>(TextureType::Character));
+	d->textureTypeCombo->addItem("Экипировка", static_cast<int>(TextureType::Equipment));
+	d->textureTypeCombo->addItem("Пользователи", static_cast<int>(TextureType::Users));
+	d->textureTypeCombo->addItem("Тайлы", static_cast<int>(TextureType::TileSets));
 
 	d->textureTypeCombo->setStyleSheet(R"(
 		#TextureTypeCombo {
@@ -217,7 +220,7 @@ void TextureEditorWidget::setupLayout() {
 	        this, &TextureEditorWidget::onTileClicked);
 }
 void TextureEditorWidget::onTextureTypeChanged(int index) {
-	d->currentType = static_cast<TextureType>(index);
+	d->currentType = static_cast<TextureType>(d->textureTypeCombo->itemData(index).toInt());
 	d->currentPage = 0;
 	d->allTextures.clear();
 	d->textureList->clear();
@@ -229,7 +232,7 @@ void TextureEditorWidget::onTextureItemSelected(QListWidgetItem* current) {
 	if (current) {
 		const QString fileName = current->text();
 		updatePreview(fileName);
-		emit textureSelected(fileName);
+		emit textureSelected(d->currentType, fileName);
 	}
 }
 

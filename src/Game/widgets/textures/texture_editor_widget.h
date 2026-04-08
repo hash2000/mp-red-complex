@@ -8,6 +8,7 @@ class QListWidgetItem;
 class QComboBox;
 class QPushButton;
 class TileSetParamsPanel;
+enum class TextureType;
 
 class TextureEditorWidget : public QWidget {
 	Q_OBJECT
@@ -16,7 +17,7 @@ public:
 	~TextureEditorWidget() override;
 
 signals:
-	void textureSelected(const QString& fileName);
+	void textureSelected(TextureType textureType, const QString& fileName);
 	void tileSelected(int tileId);
 
 private slots:

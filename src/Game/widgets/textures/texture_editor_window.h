@@ -5,6 +5,7 @@
 
 class TexturesService;
 class TextureEditorWidget;
+enum class TextureType;
 
 class TextureEditorWindow : public MdiChildWindow {
 	Q_OBJECT
@@ -18,6 +19,11 @@ public:
 	QSize windowDefaultSizes() const override { return QSize(900, 600); }
 
 	bool handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) override;
+
+private slots:
+	void onTextureSelected(TextureType textureType, const QString& fileName);
+	void onTileSelected(int tileId);
+
 
 private:
 	class Private;
