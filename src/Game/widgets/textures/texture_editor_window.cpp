@@ -1,6 +1,7 @@
 #include "Game/widgets/textures/texture_editor_window.h"
 #include "Game/widgets/textures/texture_editor_widget.h"
 #include "ApplicationLayer/textures/textures_service.h"
+#include "ApplicationLayer/textures/tiles_service.h"
 #include "Game/app_controller.h"
 #include "Game/commands/command_context.h"
 #include "DataLayer/textures/i_textures_data_provider.h"
@@ -10,18 +11,24 @@ public:
 	Private(TextureEditorWindow* parent) : q(parent) {}
 	TextureEditorWindow* q;
 	TexturesService* texturesService = nullptr;
+	TilesService* tilesService = nullptr;
 	TextureEditorWidget* editorWidget = nullptr;
 	ApplicationController* controller = nullptr;
 
 	QString selectedTexture;
 };
 
-TextureEditorWindow::TextureEditorWindow(TexturesService* texturesService, const QString& id, QWidget* parent)
+TextureEditorWindow::TextureEditorWindow(
+	TexturesService* texturesService,
+	TilesService* tilesService,
+	const QString& id,
+	QWidget* parent)
 	: d(std::make_unique<Private>(this))
 	, MdiChildWindow(id, parent) {
 	d->texturesService = texturesService;
+	d->tilesService = tilesService;
 
-	d->editorWidget = new TextureEditorWidget(texturesService, this);
+	d->editorWidget = new TextureEditorWidget(texturesService, tilesService, this);
 
 	connect(d->editorWidget, &TextureEditorWidget::textureSelected,
 		this, &TextureEditorWindow::onTextureSelected);

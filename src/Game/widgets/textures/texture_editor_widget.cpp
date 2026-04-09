@@ -2,7 +2,9 @@
 #include "Game/widgets/textures/zoomable_image_view.h"
 #include "Game/widgets/textures/texture_toolbar.h"
 #include "Game/widgets/textures/tile_set_params_panel.h"
+#include "Game/widgets/textures/tile_groups_dialog.h"
 #include "ApplicationLayer/textures/textures_service.h"
+#include "ApplicationLayer/textures/tiles_service.h"
 #include "DataLayer/textures/i_textures_data_provider.h"
 #include <QSplitter>
 #include <QListWidget>
@@ -12,6 +14,7 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QScrollBar>
+#include <QUuid>
 
 // === TextureEditorWidget::Private ===
 
@@ -21,6 +24,7 @@ public:
 	TextureEditorWidget* q;
 
 	TexturesService* texturesService = nullptr;
+	TilesService* tilesService = nullptr;
 
 	// Компоненты UI
 	QSplitter* splitter = nullptr;
@@ -32,10 +36,13 @@ public:
 	// Диалог настроек тайлов
 	TileSetParamsPanel* tileSetDialog = nullptr;
 
+	// Диалог групп тайлов
+	TileGroupsDialog* tileGroupsDialog = nullptr;
+
 	// Настройки сетки
 	int tileGridSizeX = 64;
 	int tileGridSizeY = 64;
-	int selectedTileId = -1;
+	QList<int> selectedTileIds;
 	bool showTileGrid = true;
 
 	// Пагинация
@@ -43,12 +50,17 @@ public:
 	int currentPage = 0;
 	QStringList allTextures;
 	TextureType currentType = TextureType::Icon;
+	QString currentTexturePath;  // Текущая выбранная текстура
 };
 
-TextureEditorWidget::TextureEditorWidget(TexturesService* texturesService, QWidget* parent)
+TextureEditorWidget::TextureEditorWidget(
+	TexturesService* texturesService,
+	TilesService* tilesService,
+	QWidget* parent)
 	: QWidget(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->texturesService = texturesService;
+	d->tilesService = tilesService;
 
 	setObjectName("TextureEditorWidget");
 	setupLayout();
@@ -201,8 +213,16 @@ void TextureEditorWidget::setupLayout() {
 	});
 	connect(d->textureToolbar, &TextureToolbar::tileSetSettingsRequested,
 	        this, &TextureEditorWidget::onTileSetSettingsRequested);
+	connect(d->textureToolbar, &TextureToolbar::groupsListRequested,
+	        this, &TextureEditorWidget::onTileGroupsRequested);
+	connect(d->textureToolbar, &TextureToolbar::groupTilesRequested,
+	        this, &TextureEditorWidget::onGroupTilesRequested);
+	connect(d->textureToolbar, &TextureToolbar::ungroupTilesRequested,
+	        this, &TextureEditorWidget::onUngroupTilesRequested);
 	connect(d->previewLabel, &ZoomableImageView::tileClicked,
 	        this, &TextureEditorWidget::onTileClicked);
+	connect(d->tilesService, &TilesService::groupsChanged,
+	        this, &TextureEditorWidget::onGroupsChanged);
 }
 void TextureEditorWidget::onTextureTypeChanged(int index) {
 	d->currentType = static_cast<TextureType>(d->textureTypeCombo->itemData(index).toInt());
@@ -247,6 +267,7 @@ void TextureEditorWidget::loadTexturesPage() {
 }
 
 void TextureEditorWidget::updatePreview(const QString& fileName) {
+	d->currentTexturePath = fileName;  // Сохраняем путь для группировки
 	const auto pixmap = d->texturesService->getTexture(fileName, d->currentType, "texture-editor");
 	if (!pixmap.isNull()) {
 		d->previewLabel->setPixmap(pixmap);
@@ -280,18 +301,122 @@ void TextureEditorWidget::onTileSetSettingsApplied(int gridSizeX, int gridSizeY,
 	d->tileGridSizeX = gridSizeX;
 	d->tileGridSizeY = gridSizeY;
 	d->showTileGrid = showGrid;
-	d->selectedTileId = -1;
+	d->selectedTileIds.clear();
 
 	// Обновляем превью
 	d->previewLabel->setGridEnabled(showGrid);
 	d->previewLabel->setGridSize(gridSizeX, gridSizeY);
-	d->previewLabel->setSelectedTileId(-1);
+	d->previewLabel->setSelectedTileIds({});
+	d->textureToolbar->setSelectedTiles({});
 }
 
-void TextureEditorWidget::onTileClicked(int tileId) {
-	if (d->currentType == TextureType::TileSets) {
-		d->selectedTileId = tileId;
-		d->previewLabel->setSelectedTileId(tileId);
-		emit tileSelected(tileId);
+void TextureEditorWidget::onTileGroupsRequested() {
+	if (d->currentType != TextureType::TileSets || d->currentTexturePath.isEmpty()) {
+		return;
 	}
+
+	// Удаляем старый диалог если есть
+	if (d->tileGroupsDialog) {
+		d->tileGroupsDialog->deleteLater();
+		d->tileGroupsDialog = nullptr;
+	}
+
+	d->tileGroupsDialog = new TileGroupsDialog(d->tilesService, d->currentTexturePath, this);
+	d->tileGroupsDialog->setResult(QDialog::Rejected);
+
+	// Выполняем диалог
+	const int result = d->tileGroupsDialog->exec();
+	if (result == QDialog::Accepted) {
+		const auto selectedGroup = d->tileGroupsDialog->selectedGroup();
+		if (selectedGroup.has_value()) {
+			// Выделяем все тайлы группы
+			d->selectedTileIds = selectedGroup->tileIds;
+			d->previewLabel->setSelectedTileIds(d->selectedTileIds);
+			d->textureToolbar->setSelectedTiles(d->selectedTileIds);
+		}
+	}
+}
+
+void TextureEditorWidget::onTileClicked(int tileId, bool ctrlModifier) {
+	if (d->currentType == TextureType::TileSets) {
+		if (ctrlModifier) {
+			// Множественное выделение с Ctrl
+			updateSelectedTiles(tileId);
+		} else {
+			// Без Ctrl — проверяем, принадлежит ли тайл к группе
+			const auto groupOpt = d->tilesService->getGroupContainingTile(d->currentTexturePath, tileId);
+			if (groupOpt.has_value()) {
+				// Тайл в группе — выделяем всю группу
+				d->selectedTileIds = groupOpt->tileIds;
+			} else {
+				// Тайл не в группе — выделяем только его
+				d->selectedTileIds.clear();
+				d->selectedTileIds.append(tileId);
+			}
+
+			d->previewLabel->setSelectedTileIds(d->selectedTileIds);
+			d->textureToolbar->setSelectedTiles(d->selectedTileIds);
+		}
+
+		// Отправляем сигнал с последним выбранным тайлом
+		if (!d->selectedTileIds.isEmpty()) {
+			emit tileSelected(d->selectedTileIds.last());
+		}
+	}
+}
+
+void TextureEditorWidget::updateSelectedTiles(int tileId) {
+	// Если тайл уже выбран - убираем его
+	const int idx = d->selectedTileIds.indexOf(tileId);
+	if (idx >= 0) {
+		d->selectedTileIds.removeAt(idx);
+	} else {
+		// Добавляем к выбору
+		d->selectedTileIds.append(tileId);
+	}
+
+	// Обновляем UI
+	d->previewLabel->setSelectedTileIds(d->selectedTileIds);
+	d->textureToolbar->setSelectedTiles(d->selectedTileIds);
+}
+
+void TextureEditorWidget::onGroupTilesRequested() {
+	if (d->selectedTileIds.isEmpty() || d->currentTexturePath.isEmpty()) {
+		return;
+	}
+
+	// Создаем группу с именем по умолчанию
+	const QString groupName = QString("Группа %1").arg(d->selectedTileIds.size());
+	const QUuid groupId = d->tilesService->createGroup(d->currentTexturePath, groupName, d->selectedTileIds);
+
+	if (!groupId.isNull()) {
+		// Очищаем выделение после успешного создания группы
+		d->selectedTileIds.clear();
+		d->previewLabel->setSelectedTileIds({});
+		d->textureToolbar->setSelectedTiles({});
+	}
+}
+
+void TextureEditorWidget::onUngroupTilesRequested() {
+	if (d->selectedTileIds.isEmpty()) {
+		return;
+	}
+
+	// Просто очищаем выделение (разгруппирование)
+	d->selectedTileIds.clear();
+	d->previewLabel->setSelectedTileIds({});
+	d->textureToolbar->setSelectedTiles({});
+}
+
+void TextureEditorWidget::onGroupsChanged(const QString& texturePath) {
+	if (texturePath != d->currentTexturePath) {
+		return;
+	}
+
+	// Перечитываем группы и обновляем выделение
+	const auto groups = d->tilesService->getGroups(texturePath);
+
+	// Если текущее выделение больше не соответствует ни одной группе — обновляем
+	// В любом случае обновляем доступность кнопок на основе текущего выделения
+	d->textureToolbar->setSelectedTiles(d->selectedTileIds);
 }

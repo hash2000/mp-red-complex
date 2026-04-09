@@ -72,6 +72,7 @@ WindowsBuilder::WindowsBuilder(ApplicationController* appController)
 	d->factory.emplace("texture-editor", [](Services* services, const QString& id, QWidget* parent) {
 		return new TextureEditorWindow(
 			services->texturesService(),
+			services->tilesService(),
 			id,
 			parent);
 		});

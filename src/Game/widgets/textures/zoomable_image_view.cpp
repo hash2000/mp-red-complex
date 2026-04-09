@@ -17,10 +17,11 @@ public:
 	bool isPanning = false;
 
 	// Настройки сетки
-	bool gridEnabled = false;
+	bool gridEnabled = true;  // По умолчанию сетка включена
 	int gridSizeX = 16;
 	int gridSizeY = 16;
 	int selectedTileId = -1;
+	QList<int> selectedTileIds;  // Множественное выделение
 
 	void adjustOffsets();
 	int tileAtPosition(const QPointF& pos) const;
@@ -110,6 +111,11 @@ void ZoomableImageView::setSelectedTileId(int tileId) {
 	update();
 }
 
+void ZoomableImageView::setSelectedTileIds(const QList<int>& tileIds) {
+	d->selectedTileIds = tileIds;
+	update();
+}
+
 void ZoomableImageView::paintEvent(QPaintEvent* /*event*/) {
 	QPainter painter(this);
 	painter.setRenderHint(QPainter::SmoothPixmapTransform);
@@ -148,7 +154,7 @@ void ZoomableImageView::paintEvent(QPaintEvent* /*event*/) {
 			painter.drawLine(QLineF(topLeft.x(), yPos, topLeft.x() + scaledSize.width(), yPos));
 		}
 
-		// Подсветка выбранного тайла
+		// Подсветка выбранного тайла (одиночное выделение)
 		if (d->selectedTileId >= 0) {
 			const int tileX = d->selectedTileId % d->gridSizeX;
 			const int tileY = d->selectedTileId / d->gridSizeX;
@@ -163,6 +169,26 @@ void ZoomableImageView::paintEvent(QPaintEvent* /*event*/) {
 			// Полупрозрачная подсветка
 			painter.setPen(QPen(QColor("#4299e1"), 2));
 			painter.setBrush(QColor(66, 153, 225, 60));
+			painter.drawRect(tileRect);
+		}
+
+		// Подсветка множественного выделения
+		for (int tileId : d->selectedTileIds) {
+			if (tileId < 0) continue;
+
+			const int tileX = tileId % d->gridSizeX;
+			const int tileY = tileId / d->gridSizeX;
+
+			const QRectF tileRect(
+				topLeft.x() + tileX * tileWidth,
+				topLeft.y() + tileY * tileHeight,
+				tileWidth,
+				tileHeight
+			);
+
+			// Полупрозрачная подсветка (зелёный для множественного)
+			painter.setPen(QPen(QColor("#48bb78"), 2));
+			painter.setBrush(QColor(72, 187, 120, 60));
 			painter.drawRect(tileRect);
 		}
 	}
@@ -197,9 +223,10 @@ void ZoomableImageView::mousePressEvent(QMouseEvent* event) {
 		if (d->gridEnabled) {
 			const int tileId = d->tileAtPosition(event->position());
 			if (tileId >= 0) {
-				d->selectedTileId = tileId;
+				const bool ctrlPressed = (event->modifiers() & Qt::ControlModifier);
+				// НЕ сбрасываем selectedTileId здесь - это делает внешний виджет
 				update();
-				emit tileClicked(tileId);
+				emit tileClicked(tileId, ctrlPressed);
 				return;
 			}
 		}

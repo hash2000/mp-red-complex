@@ -15,6 +15,8 @@
 #include "DataLayer/characters/character_data_provider_json_impl.h"
 #include "DataLayer/textures/textures_data_provider_json_impl.h"
 #include "DataLayer/textures/i_textures_data_provider.h"
+#include "DataLayer/textures/tile_groups_data_provider_json_impl.h"
+#include "DataLayer/textures/i_tile_groups_data_provider.h"
 #include "DataLayer/users/i_users_data_provider.h"
 #include "DataLayer/characters/i_character_data_provider.h"
 #include "ApplicationLayer/items/items_service.h"
@@ -24,6 +26,7 @@
 #include "ApplicationLayer/items_save_manager.h"
 #include "ApplicationLayer/users/users_service.h"
 #include "ApplicationLayer/textures/textures_service.h"
+#include "ApplicationLayer/textures/tiles_service.h"
 
 #include <list>
 
@@ -59,11 +62,13 @@ public:
 	std::unique_ptr<ItemsSaveManager> itemsSaveManager;
 	std::unique_ptr<UsersService> usersService;
 	std::unique_ptr<TexturesService> texturesService;
+	std::unique_ptr<TilesService> tilesService;
 
 	// Data providers (хранятся в Services)
 	std::unique_ptr<IUsersDataProvider> usersDataProvider;
 	std::unique_ptr<ICharacterDataProvider> characterDataProvider;
 	std::unique_ptr<ITexturesDataProvider> texturesDataProvider;
+	std::unique_ptr<ITileGroupsDataProvider> tileGroupsDataProvider;
 };
 
 Services::Services(Resources* resources)
@@ -94,6 +99,10 @@ Services::Services(Resources* resources)
 	// Создаём сервис текстур (нужен перед ItemsService)
 	d->texturesDataProvider = std::make_unique<TexturesDataProviderJsonImpl>(resources);
 	d->texturesService = std::make_unique<TexturesService>(d->texturesDataProvider.get());
+
+	// Создаём сервис тайловых групп
+	d->tileGroupsDataProvider = std::make_unique<TileGroupsDataProviderJsonImpl>(resources);
+	d->tilesService = std::make_unique<TilesService>(d->tileGroupsDataProvider.get());
 
 	// Передаём репозиторий и TexturesService в ItemsService
 	d->itemsService = std::make_unique<ItemsService>(d->itemRepository, d->texturesService.get());
@@ -178,4 +187,8 @@ UsersService* Services::usersService() const {
 
 TexturesService* Services::texturesService() const {
 	return d->texturesService.get();
+}
+
+TilesService* Services::tilesService() const {
+	return d->tilesService.get();
 }

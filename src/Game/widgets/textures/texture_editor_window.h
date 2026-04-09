@@ -4,6 +4,7 @@
 #include <memory>
 
 class TexturesService;
+class TilesService;
 class TextureEditorWidget;
 enum class TextureType;
 
@@ -11,7 +12,11 @@ class TextureEditorWindow : public MdiChildWindow {
 	Q_OBJECT
 
 public:
-	explicit TextureEditorWindow(TexturesService* texturesService, const QString& id, QWidget* parent = nullptr);
+	explicit TextureEditorWindow(
+		TexturesService* texturesService,
+		TilesService* tilesService,
+		const QString& id,
+		QWidget* parent = nullptr);
 	~TextureEditorWindow() override;
 
 	QString windowType() const override { return "texture-editor"; }

@@ -3,6 +3,7 @@
 #include <memory>
 
 class TexturesService;
+class TilesService;
 class QListWidget;
 class QListWidgetItem;
 class QComboBox;
@@ -13,7 +14,10 @@ enum class TextureType;
 class TextureEditorWidget : public QWidget {
 	Q_OBJECT
 public:
-	explicit TextureEditorWidget(TexturesService* texturesService, QWidget* parent = nullptr);
+	explicit TextureEditorWidget(
+		TexturesService* texturesService,
+		TilesService* tilesService,
+		QWidget* parent = nullptr);
 	~TextureEditorWidget() override;
 
 signals:
@@ -26,12 +30,17 @@ private slots:
 	void loadTexturesPage();
 	void onTileSetSettingsRequested();
 	void onTileSetSettingsApplied(int gridSizeX, int gridSizeY, bool showGrid);
-	void onTileClicked(int tileId);
+	void onTileGroupsRequested();
+	void onTileClicked(int tileId, bool ctrlModifier);
+	void onGroupTilesRequested();
+	void onUngroupTilesRequested();
+	void onGroupsChanged(const QString& texturePath);
 
 private:
 	void setupLayout();
 	void updateTextureList();
 	void updatePreview(const QString& fileName);
+	void updateSelectedTiles(int tileId);
 
 	class Private;
 	std::unique_ptr<Private> d;

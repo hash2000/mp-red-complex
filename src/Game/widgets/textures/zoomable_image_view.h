@@ -15,10 +15,11 @@ public:
 	void setGridEnabled(bool enabled);
 	void setGridSize(int gridSizeX, int gridSizeY);
 	void setSelectedTileId(int tileId);
+	void setSelectedTileIds(const QList<int>& tileIds);
 
 signals:
 	void zoomChanged(qreal zoom);
-	void tileClicked(int tileId);
+	void tileClicked(int tileId, bool ctrlModifier);
 
 protected:
 	void paintEvent(QPaintEvent* event) override;
