@@ -33,8 +33,8 @@ public:
 	TileSetParamsPanel* tileSetDialog = nullptr;
 
 	// Настройки сетки
-	int tileGridSizeX = 16;
-	int tileGridSizeY = 16;
+	int tileGridSizeX = 64;
+	int tileGridSizeY = 64;
 	int selectedTileId = -1;
 	bool showTileGrid = true;
 
@@ -296,7 +296,7 @@ void TextureEditorWidget::openTileSetSettings() {
 		d->tileSetDialog = nullptr;
 	}
 
-	d->tileSetDialog = new TileSetParamsPanel(this);
+	d->tileSetDialog = new TileSetParamsPanel(d->tileGridSizeX, d->tileGridSizeY, this);
 	d->tileSetDialog->setResult(QDialog::Rejected);
 
 	// Подключаем сигнал

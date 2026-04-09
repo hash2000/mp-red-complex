@@ -13,9 +13,7 @@ public:
 	TextureEditorWidget* editorWidget = nullptr;
 	ApplicationController* controller = nullptr;
 
-	TextureType selectedTextureType = TextureType::LastSlot;
 	QString selectedTexture;
-	int selectedTileId = -1;
 };
 
 TextureEditorWindow::TextureEditorWindow(TexturesService* texturesService, const QString& id, QWidget* parent)
@@ -45,12 +43,15 @@ bool TextureEditorWindow::handleCommand(const QString& commandName, const QStrin
 
 void TextureEditorWindow::onTextureSelected(TextureType textureType, const QString& fileName) {
 	if (d->selectedTexture != fileName) {
-		d->selectedTileId = -1;
-		d->selectedTextureType = textureType;
 		d->selectedTexture = fileName;
+		auto context = d->controller->commandContext();
+		context->setData("tilemap.tile.id", -1);
+		context->setData("tilemap.tile.type", static_cast<int>(textureType));
+		context->setData("tilemap.file.name", fileName);
 	}
 }
 
 void TextureEditorWindow::onTileSelected(int tileId) {
-	d->selectedTileId = tileId;
+	auto context = d->controller->commandContext();
+	context->setData("tilemap.tile.id", tileId);
 }

@@ -20,14 +20,17 @@ public:
 	QPushButton* applyButton = nullptr;
 
 	// Состояние
-	int tilesCountX = 16;
-	int tilesCountY = 16;
+	int tilesCountX = 0;
+	int tilesCountY = 0;
 	bool showGrid = true;
 };
 
-TileSetParamsPanel::TileSetParamsPanel(QWidget* parent)
+TileSetParamsPanel::TileSetParamsPanel(int tilesCountX, int tilesCountY, QWidget* parent)
 	: QDialog(parent)
 	, d(std::make_unique<Private>(this)) {
+	d->tilesCountX = tilesCountX;
+	d->tilesCountY = tilesCountY;
+
 	setWindowTitle("Параметры тайлового набора");
 	setModal(true);
 	setMinimumWidth(300);
@@ -172,7 +175,7 @@ void TileSetParamsPanel::onApplyClicked() {
 	const int newX = gridSizeX();
 	const int newY = gridSizeY();
 
-	if (newX > 0 && newY > 0 && newX <= 64 && newY <= 64) {
+	if (newX > 0 && newY > 0 && newX <= 128 && newY <= 128) {
 		d->tilesCountX = newX;
 		d->tilesCountY = newY;
 		d->showGrid = showGrid();

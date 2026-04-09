@@ -5,7 +5,7 @@
 class TileSetParamsPanel : public QDialog {
 	Q_OBJECT
 public:
-	explicit TileSetParamsPanel(QWidget* parent = nullptr);
+	explicit TileSetParamsPanel(int tilesCountX, int tilesCountY, QWidget* parent = nullptr);
 	~TileSetParamsPanel() override;
 
 	int gridSizeX() const;
