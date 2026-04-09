@@ -8,7 +8,6 @@
 struct TileGroup {
 	QUuid id;              // Уникальный ID группы
 	QString name;          // Отображаемое имя группы
-	QString texturePath;   // Путь к текстуре тайлового набора
 	QList<int> tileIds;    // Список ID тайлов в группе
 };
 
@@ -21,7 +20,7 @@ public:
 	virtual QList<TileGroup> loadGroups(const QString& texturePath) const = 0;
 
 	// Сохранить группу
-	virtual bool saveGroup(const TileGroup& group) = 0;
+	virtual bool saveGroup(const QString& texturePath, const TileGroup& group) = 0;
 
 	// Удалить группу по ID
 	virtual bool deleteGroup(const QUuid& groupId) = 0;

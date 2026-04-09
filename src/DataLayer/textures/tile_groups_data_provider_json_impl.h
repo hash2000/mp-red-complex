@@ -10,7 +10,7 @@ public:
 	~TileGroupsDataProviderJsonImpl() override;
 
 	QList<TileGroup> loadGroups(const QString& texturePath) const override;
-	bool saveGroup(const TileGroup& group) override;
+	bool saveGroup(const QString& texturePath, const TileGroup& group) override;
 	bool deleteGroup(const QUuid& groupId) override;
 	bool deleteGroupsForTexture(const QString& texturePath) override;
 

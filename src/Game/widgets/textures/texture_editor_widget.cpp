@@ -15,6 +15,7 @@
 #include <QHBoxLayout>
 #include <QScrollBar>
 #include <QUuid>
+#include <QFileInfo>
 
 // === TextureEditorWidget::Private ===
 
@@ -273,6 +274,20 @@ void TextureEditorWidget::updatePreview(const QString& fileName) {
 		d->previewLabel->setPixmap(pixmap);
 	} else {
 		d->previewLabel->setPixmap(QPixmap());
+	}
+
+	// Для тайловых наборов загружаем метаданные сетки из файла
+	if (d->currentType == TextureType::TileSets) {
+		const auto metadata = d->texturesService->getTileSetMetadata(fileName);
+		if (metadata.has_value()) {
+			d->tileGridSizeX = metadata->gridSize.x;
+			d->tileGridSizeY = metadata->gridSize.y;
+		}
+
+		// Применяем настройки сетки к превью
+		d->previewLabel->setGridEnabled(d->showTileGrid);
+		d->previewLabel->setGridSize(d->tileGridSizeX, d->tileGridSizeY);
+		d->previewLabel->setSelectedTileIds(d->selectedTileIds);
 	}
 }
 

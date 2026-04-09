@@ -4,6 +4,15 @@
 #include <QPixmap>
 #include <optional>
 
+// Метаданные тайлового набора
+struct TileSetMetadata {
+	struct Size {
+		int x = 64;
+		int y = 64;
+	};
+	Size gridSize;
+};
+
 enum class TextureType {
 	Icon,       // assets/icons/
 	Entity,     // assets/entities/
@@ -24,4 +33,7 @@ public:
 
 	// Получить список всех доступных PNG текстур для указанного типа
 	virtual QStringList listTextures(TextureType type) const = 0;
+
+	// Загрузить метаданные тайлового набора (если type == TileSets)
+	virtual std::optional<TileSetMetadata> loadTileSetMetadata(const QString& path) const = 0;
 };

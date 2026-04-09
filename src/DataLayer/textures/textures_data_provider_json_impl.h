@@ -11,6 +11,7 @@ public:
 
 	std::optional<QPixmap> loadTexture(const QString& path, TextureType type = TextureType::Icon) const override;
 	QStringList listTextures(TextureType type) const override;
+	std::optional<TileSetMetadata> loadTileSetMetadata(const QString& path) const override;
 
 private:
 	class Private;

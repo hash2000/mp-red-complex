@@ -75,3 +75,7 @@ void TexturesService::preloadTexture(const QString& name, TextureType type, cons
 QStringList TexturesService::listTextures(TextureType type) const {
 	return d->dataProvider->listTextures(type);
 }
+
+std::optional<TileSetMetadata> TexturesService::getTileSetMetadata(const QString& path) const {
+	return d->dataProvider->loadTileSetMetadata(path);
+}

@@ -4,6 +4,7 @@
 #include <memory>
 #include <QHash>
 #include <QPixmap>
+#include <optional>
 
 // Стандартный тег для постоянного кеша (UI элементы)
 inline constexpr const char* kDefaultTextureTag = "default";
@@ -30,6 +31,9 @@ public:
 
 	// Получить список всех доступных текстур для типа
 	QStringList listTextures(TextureType type) const;
+
+	// Загрузить метаданные тайлового набора
+	std::optional<TileSetMetadata> getTileSetMetadata(const QString& path) const;
 
 private:
 	class Private;

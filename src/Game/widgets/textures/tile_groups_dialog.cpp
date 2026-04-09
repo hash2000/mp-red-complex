@@ -260,7 +260,7 @@ void TileGroupsDialog::onRenameClicked() {
 	// Обновляем группу
 	TileGroup updatedGroup = d->cachedGroups[index];
 	updatedGroup.name = newName;
-	d->tilesService->updateGroup(updatedGroup);
+	d->tilesService->updateGroup(d->texturePath, updatedGroup);
 
 	refreshList();
 }

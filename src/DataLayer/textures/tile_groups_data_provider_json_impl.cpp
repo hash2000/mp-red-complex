@@ -28,7 +28,6 @@ public:
 		QJsonObject obj;
 		obj["id"] = group.id.toString();
 		obj["name"] = group.name;
-		obj["texturePath"] = group.texturePath;
 
 		QJsonArray tileIdsArray;
 		for (int tileId : group.tileIds) {
@@ -47,7 +46,6 @@ public:
 			group.id = QUuid::createUuid();
 		}
 		group.name = obj["name"].toString();
-		group.texturePath = obj["texturePath"].toString();
 
 		const QJsonArray tileIdsArray = obj["tileIds"].toArray();
 		for (const QJsonValue& val : tileIdsArray) {
@@ -91,11 +89,11 @@ QList<TileGroup> TileGroupsDataProviderJsonImpl::loadGroups(const QString& textu
 	return groups;
 }
 
-bool TileGroupsDataProviderJsonImpl::saveGroup(const TileGroup& group) {
-	const QString groupsFile = Private::buildGroupsFilePath(group.texturePath);
+bool TileGroupsDataProviderJsonImpl::saveGroup(const QString& texturePath, const TileGroup& group) {
+	const QString groupsFile = Private::buildGroupsFilePath(texturePath);
 
 	// Загружаем существующие группы
-	QList<TileGroup> existingGroups = loadGroups(group.texturePath);
+	QList<TileGroup> existingGroups = loadGroups(texturePath);
 
 	// Ищем группу с таким же ID для обновления
 	bool found = false;

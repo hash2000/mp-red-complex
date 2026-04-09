@@ -1,7 +1,11 @@
 #include "DataLayer/textures/textures_data_provider_json_impl.h"
 #include "DataStream/format/pixmap/data_reader.h"
+#include "DataStream/format/json/data_reader.h"
 #include "Resources/resources.h"
 #include <QPainter>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QFileInfo>
 #include <array>
 
 class TexturesDataProviderJsonImpl::Private {
@@ -95,4 +99,34 @@ QStringList TexturesDataProviderJsonImpl::listTextures(TextureType type) const {
 
 	result.sort();
 	return result;
+}
+
+std::optional<TileSetMetadata> TexturesDataProviderJsonImpl::loadTileSetMetadata(const QString& path) const {
+	// Формируем путь к JSON файлу метаданных: {name}.json вместо {name}.png
+	const QString baseName = QFileInfo(path).baseName();
+	const QString jsonPath = QString("textures/tiles/%1.json").arg(baseName);
+
+	QJsonObject json;
+	Format::Json::DataReader reader(d->resources, "assets", jsonPath);
+	if (!reader.read(json)) {
+		return std::nullopt;
+	}
+
+	TileSetMetadata metadata;
+
+	// Читаем grid.size.x и grid.size.y
+	if (json.contains("grid") && json["grid"].isObject()) {
+		const QJsonObject gridObj = json["grid"].toObject();
+		if (gridObj.contains("size") && gridObj["size"].isObject()) {
+			const QJsonObject sizeObj = gridObj["size"].toObject();
+			if (sizeObj.contains("x")) {
+				metadata.gridSize.x = sizeObj["x"].toInt();
+			}
+			if (sizeObj.contains("y")) {
+				metadata.gridSize.y = sizeObj["y"].toInt();
+			}
+		}
+	}
+
+	return metadata;
 }

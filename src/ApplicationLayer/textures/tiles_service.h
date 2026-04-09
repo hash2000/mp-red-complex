@@ -23,7 +23,7 @@ public:
 	QUuid createGroup(const QString& texturePath, const QString& name, const QList<int>& tileIds);
 
 	// Обновить существующую группу
-	bool updateGroup(const TileGroup& group);
+	bool updateGroup(const QString& texturePath, const TileGroup& group);
 
 	// Удалить группу
 	bool deleteGroup(const QUuid& groupId);

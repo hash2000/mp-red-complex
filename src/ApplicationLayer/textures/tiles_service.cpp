@@ -63,10 +63,9 @@ QUuid TilesService::createGroup(const QString& texturePath, const QString& name,
 	TileGroup group;
 	group.id = QUuid::createUuid();
 	group.name = name;
-	group.texturePath = texturePath;
 	group.tileIds = tileIds;
 
-	const bool success = d->tileGroupsDataProvider->saveGroup(group);
+	const bool success = d->tileGroupsDataProvider->saveGroup(texturePath, group);
 	if (success) {
 		d->invalidateCache(texturePath);
 		emit groupsChanged(texturePath);
@@ -76,11 +75,11 @@ QUuid TilesService::createGroup(const QString& texturePath, const QString& name,
 	return QUuid();
 }
 
-bool TilesService::updateGroup(const TileGroup& group) {
-	const bool success = d->tileGroupsDataProvider->saveGroup(group);
+bool TilesService::updateGroup(const QString& texturePath, const TileGroup& group) {
+	const bool success = d->tileGroupsDataProvider->saveGroup(texturePath, group);
 	if (success) {
-		d->invalidateCache(group.texturePath);
-		emit groupsChanged(group.texturePath);
+		d->invalidateCache(texturePath);
+		emit groupsChanged(texturePath);
 	}
 	return success;
 }
