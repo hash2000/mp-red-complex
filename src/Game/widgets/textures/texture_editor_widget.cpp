@@ -1,5 +1,6 @@
 #include "Game/widgets/textures/texture_editor_widget.h"
 #include "Game/widgets/textures/zoomable_image_view.h"
+#include "Game/widgets/textures/texture_toolbar.h"
 #include "Game/widgets/textures/tile_set_params_panel.h"
 #include "ApplicationLayer/textures/textures_service.h"
 #include "DataLayer/textures/i_textures_data_provider.h"
@@ -8,7 +9,6 @@
 #include <QListWidgetItem>
 #include <QComboBox>
 #include <QLabel>
-#include <QPushButton>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QScrollBar>
@@ -26,7 +26,7 @@ public:
 	QSplitter* splitter = nullptr;
 	ZoomableImageView* previewLabel = nullptr;
 	QComboBox* textureTypeCombo = nullptr;
-	QPushButton* tileSetSettingsButton = nullptr;
+	TextureToolbar* textureToolbar = nullptr;
 	QListWidget* textureList = nullptr;
 
 	// Диалог настроек тайлов
@@ -60,7 +60,7 @@ TextureEditorWidget::TextureEditorWidget(TexturesService* texturesService, QWidg
 		d->textureTypeCombo->setCurrentIndex(iconIndex);
 	}
 	updateTextureList();
-	updateTileSetButton();
+	d->textureToolbar->setTextureType(d->currentType);
 }
 
 TextureEditorWidget::~TextureEditorWidget() = default;
@@ -89,7 +89,7 @@ void TextureEditorWidget::setupLayout() {
 	)");
 	previewLayout->addWidget(d->previewLabel);
 
-	// Правая часть — вертикальный контейнер: список текстур + панель параметров
+	// Правая часть — вертикальный контейнер: панель инструментов + список текстур + панель параметров
 	auto* rightWidget = new QWidget(d->splitter);
 	auto* rightLayout = new QVBoxLayout(rightWidget);
 	rightLayout->setContentsMargins(0, 0, 0, 0);
@@ -128,34 +128,17 @@ void TextureEditorWidget::setupLayout() {
 		}
 	)");
 
-	// Кнопка настроек тайлового набора (скрыта по умолчанию)
-	d->tileSetSettingsButton = new QPushButton("⚙", rightWidget);
-	d->tileSetSettingsButton->setFixedSize(28, 28);
-	d->tileSetSettingsButton->setToolTip("Параметры тайлового набора");
-	d->tileSetSettingsButton->setVisible(false);
-	d->tileSetSettingsButton->setStyleSheet(R"(
-		QPushButton {
-			background-color: #2d3748;
-			color: #e2e8f0;
-			border: 1px solid #4a5568;
-			border-radius: 4px;
-			font-size: 14px;
-		}
-		QPushButton:hover {
-			background-color: #4a5568;
-			border: 1px solid #718096;
-		}
-		QPushButton:pressed {
-			background-color: #1a202c;
-		}
-	)");
+	rightLayout->addWidget(d->textureTypeCombo);
 
-	auto* typeRowLayout = new QHBoxLayout();
-	typeRowLayout->addWidget(d->textureTypeCombo, 1);
-	typeRowLayout->addWidget(d->tileSetSettingsButton);
-	rightLayout->addLayout(typeRowLayout);
+	// Горизонтальный контейнер: панель инструментов + список текстур
+	auto* contentLayout = new QHBoxLayout();
+	contentLayout->setSpacing(4);
 
-	// Список текстур с ленивой загрузкой
+	// Панель инструментов (не растягивается)
+	d->textureToolbar = new TextureToolbar(rightWidget);
+	contentLayout->addWidget(d->textureToolbar);
+
+	// Список текстур с ленивой загрузкой (растягивается)
 	d->textureList = new QListWidget(rightWidget);
 	d->textureList->setObjectName("TextureList");
 	d->textureList->setStyleSheet(R"(
@@ -191,7 +174,9 @@ void TextureEditorWidget::setupLayout() {
 			height: 0px;
 		}
 	)");
-	rightLayout->addWidget(d->textureList, 1);
+	contentLayout->addWidget(d->textureList, 1);
+
+	rightLayout->addLayout(contentLayout, 1);
 
 	// Подключаем сплиттер
 	mainLayout->addWidget(d->splitter);
@@ -214,8 +199,8 @@ void TextureEditorWidget::setupLayout() {
 			loadTexturesPage();
 		}
 	});
-	connect(d->tileSetSettingsButton, &QPushButton::clicked,
-	        this, &TextureEditorWidget::openTileSetSettings);
+	connect(d->textureToolbar, &TextureToolbar::tileSetSettingsRequested,
+	        this, &TextureEditorWidget::onTileSetSettingsRequested);
 	connect(d->previewLabel, &ZoomableImageView::tileClicked,
 	        this, &TextureEditorWidget::onTileClicked);
 }
@@ -225,7 +210,7 @@ void TextureEditorWidget::onTextureTypeChanged(int index) {
 	d->allTextures.clear();
 	d->textureList->clear();
 	updateTextureList();
-	updateTileSetButton();
+	d->textureToolbar->setTextureType(d->currentType);
 }
 
 void TextureEditorWidget::onTextureItemSelected(QListWidgetItem* current) {
@@ -270,22 +255,7 @@ void TextureEditorWidget::updatePreview(const QString& fileName) {
 	}
 }
 
-void TextureEditorWidget::updateTileSetButton() {
-	const bool show = (d->currentType == TextureType::TileSets);
-	d->tileSetSettingsButton->setVisible(show);
-
-	// Применяем настройки сетки к превью
-	if (show) {
-		d->previewLabel->setGridEnabled(d->showTileGrid);
-		d->previewLabel->setGridSize(d->tileGridSizeX, d->tileGridSizeY);
-		d->previewLabel->setSelectedTileId(d->selectedTileId);
-	} else {
-		d->previewLabel->setGridEnabled(false);
-		d->selectedTileId = -1;
-	}
-}
-
-void TextureEditorWidget::openTileSetSettings() {
+void TextureEditorWidget::onTileSetSettingsRequested() {
 	if (d->currentType != TextureType::TileSets) {
 		return;
 	}

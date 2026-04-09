@@ -6,7 +6,7 @@ class TexturesService;
 class QListWidget;
 class QListWidgetItem;
 class QComboBox;
-class QPushButton;
+class TextureToolbar;
 class TileSetParamsPanel;
 enum class TextureType;
 
@@ -24,7 +24,7 @@ private slots:
 	void onTextureTypeChanged(int index);
 	void onTextureItemSelected(QListWidgetItem* current);
 	void loadTexturesPage();
-	void openTileSetSettings();
+	void onTileSetSettingsRequested();
 	void onTileSetSettingsApplied(int gridSizeX, int gridSizeY, bool showGrid);
 	void onTileClicked(int tileId);
 
@@ -32,7 +32,6 @@ private:
 	void setupLayout();
 	void updateTextureList();
 	void updatePreview(const QString& fileName);
-	void updateTileSetButton();
 
 	class Private;
 	std::unique_ptr<Private> d;
