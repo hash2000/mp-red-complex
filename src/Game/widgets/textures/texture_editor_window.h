@@ -25,11 +25,6 @@ public:
 
 	bool handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) override;
 
-private slots:
-	void onTextureSelected(TextureType textureType, const QString& fileName);
-	void onTileSelected(int tileId);
-
-
 private:
 	class Private;
 	std::unique_ptr<Private> d;

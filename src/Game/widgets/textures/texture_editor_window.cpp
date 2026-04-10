@@ -14,8 +14,6 @@ public:
 	TilesService* tilesService = nullptr;
 	TextureEditorWidget* editorWidget = nullptr;
 	ApplicationController* controller = nullptr;
-
-	QString selectedTexture;
 };
 
 TextureEditorWindow::TextureEditorWindow(
@@ -30,11 +28,6 @@ TextureEditorWindow::TextureEditorWindow(
 
 	d->editorWidget = new TextureEditorWidget(texturesService, tilesService, this);
 
-	connect(d->editorWidget, &TextureEditorWidget::textureSelected,
-		this, &TextureEditorWindow::onTextureSelected);
-	connect(d->editorWidget, &TextureEditorWidget::tileSelected,
-		this, &TextureEditorWindow::onTileSelected);
-
 	setWidget(d->editorWidget);
 }
 
@@ -46,19 +39,4 @@ bool TextureEditorWindow::handleCommand(const QString& commandName, const QStrin
 		return true;
 	}
 	return false;
-}
-
-void TextureEditorWindow::onTextureSelected(TextureType textureType, const QString& fileName) {
-	if (d->selectedTexture != fileName) {
-		d->selectedTexture = fileName;
-		auto context = d->controller->commandContext();
-		context->setData("tilemap.tile.id", -1);
-		context->setData("tilemap.tile.type", static_cast<int>(textureType));
-		context->setData("tilemap.file.name", fileName);
-	}
-}
-
-void TextureEditorWindow::onTileSelected(int tileId) {
-	auto context = d->controller->commandContext();
-	context->setData("tilemap.tile.id", tileId);
 }
