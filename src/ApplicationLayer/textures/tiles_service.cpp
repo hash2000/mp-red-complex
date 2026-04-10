@@ -13,6 +13,8 @@ public:
 	// Кэш загруженных групп
 	mutable QHash<QString, QList<TileGroup>> groupsCache;
 
+	QList<int> selectedTileIds;
+
 	std::optional<TileSetMetadata> metadata;
 
 	// Получить кэшированные группы или загрузить
@@ -124,4 +126,12 @@ bool TilesService::deleteGroupsForTexture(const QString& texturePath) {
 std::optional<TileSetMetadata> TilesService::getTileSetMetadata(const QString& path) const {
 	d->metadata = d->tileGroupsDataProvider->loadTileSetMetadata(path);
 	return d->metadata;
+}
+
+void TilesService::setSelectionTiles(const QList<int>& tileIds) {
+	d->selectedTileIds = tileIds;
+}
+
+QList<int> TilesService::getSelectionTiles() const {
+	return d->selectedTileIds;
 }

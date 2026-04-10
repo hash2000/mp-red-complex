@@ -377,6 +377,7 @@ void TextureEditorWidget::onTileClicked(int tileId, bool ctrlModifier) {
 			d->selectedGroupId = QUuid();
 		}
 
+		d->tilesService->setSelectionTiles(d->selectedTileIds);
 		d->previewLabel->setSelectedTileIds(d->selectedTileIds);
 		d->textureToolbar->setSelectedTiles(d->selectedTileIds);
 	}
