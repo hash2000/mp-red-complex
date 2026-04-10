@@ -32,9 +32,6 @@ public:
 	// Получить список всех доступных текстур для типа
 	QStringList listTextures(TextureType type) const;
 
-	// Загрузить метаданные тайлового набора
-	std::optional<TileSetMetadata> getTileSetMetadata(const QString& path) const;
-
 private:
 	class Private;
 	std::unique_ptr<Private> d;

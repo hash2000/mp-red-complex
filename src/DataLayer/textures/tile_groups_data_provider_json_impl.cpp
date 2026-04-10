@@ -17,10 +17,10 @@ public:
 
 	// Получить имя файла групп для текстуры
 	// texturePath — это путь относительно assets/textures/tiles/, например "ground.png"
-	// groups файл хранится в data/tile_groups/{name}.json
+	// groups файл хранится в data/textures/tiles/{name}.json
 	static QString buildGroupsFilePath(const QString& texturePath) {
 		const QString textureName = QFileInfo(texturePath).baseName();
-		return QString("tile_groups/%1.json").arg(textureName);
+		return QString("textures/tiles/%1.json").arg(textureName);
 	}
 
 	// Сериализовать TileGroup в JSON
@@ -54,6 +54,16 @@ public:
 
 		return group;
 	}
+
+	static void addMetadata(QJsonObject& obj, const TileSetMetadata& metadata) {
+		QJsonObject size;
+		size["x"] = metadata.gridSize.x;
+		size["y"] = metadata.gridSize.y;
+
+		QJsonObject grid;
+		grid["size"] = size;
+		obj["grid"] = grid;
+	}
 };
 
 TileGroupsDataProviderJsonImpl::TileGroupsDataProviderJsonImpl(Resources* resources)
@@ -69,7 +79,7 @@ QList<TileGroup> TileGroupsDataProviderJsonImpl::loadGroups(const QString& textu
 	const QString groupsFile = Private::buildGroupsFilePath(texturePath);
 
 	QJsonObject json;
-	Format::Json::DataReader reader(d->resources, "data", groupsFile);
+	Format::Json::DataReader reader(d->resources, "assets", groupsFile);
 	if (!reader.read(json)) {
 		return groups; // Пустой список, файл не найден или невалидный
 	}
@@ -89,7 +99,7 @@ QList<TileGroup> TileGroupsDataProviderJsonImpl::loadGroups(const QString& textu
 	return groups;
 }
 
-bool TileGroupsDataProviderJsonImpl::saveGroup(const QString& texturePath, const TileGroup& group) {
+bool TileGroupsDataProviderJsonImpl::saveGroup(const QString& texturePath, const TileGroup& group, const TileSetMetadata& metadata) {
 	const QString groupsFile = Private::buildGroupsFilePath(texturePath);
 
 	// Загружаем существующие группы
@@ -117,6 +127,7 @@ bool TileGroupsDataProviderJsonImpl::saveGroup(const QString& texturePath, const
 	}
 
 	QJsonObject root;
+	Private::addMetadata(root, metadata);
 	root["groups"] = array;
 	QJsonDocument doc(root);
 
@@ -128,11 +139,11 @@ bool TileGroupsDataProviderJsonImpl::saveGroup(const QString& texturePath, const
 	}
 
 	QDir dir(dataDir);
-	if (!dir.exists("data/tile_groups")) {
-		dir.mkpath("data/tile_groups");
+	if (!dir.exists("assets/textures/tiles")) {
+		dir.mkpath("assets/textures/tiles");
 	}
 
-	QFile file(dir.filePath("data/" + groupsFile));
+	QFile file(dir.filePath("assets/" + groupsFile));
 	if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
 		qWarning() << "TileGroupsDataProviderJsonImpl: can't open file for writing:" << file.fileName();
 		return false;
@@ -142,75 +153,64 @@ bool TileGroupsDataProviderJsonImpl::saveGroup(const QString& texturePath, const
 	return true;
 }
 
-bool TileGroupsDataProviderJsonImpl::deleteGroup(const QUuid& groupId) {
-	// Нужно найти файл, содержащий группу по groupId
-	// Для этого сканируем директорию tile_groups
-	auto dataDir = d->resources->Variables.get("Resources.Path", "")
+bool TileGroupsDataProviderJsonImpl::deleteGroup(const QUuid& groupId, const TileSetMetadata& metadata) {
+	const auto dataDir = d->resources->Variables.get("Resources.Path", "")
 		.toString();
 	if (dataDir.isEmpty()) {
 		qWarning() << "TileGroupsDataProviderJsonImpl: Resources.Path not found in variables";
 		return false;
 	}
 
-	QDir dir(dataDir + "/data/tile_groups");
-	if (!dir.exists()) {
+	const auto filePath = dataDir + "/assets/textures/tiles/" + metadata.fileName + ".json";
+
+	// Пробуем загрузить группы из этого файла
+	QFile file(filePath);
+	if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
 		return false;
 	}
 
-	const auto entries = dir.entryInfoList(QDir::Files | QDir::NoDotAndDotDot);
-	for (const auto& entry : entries) {
-		if (!entry.filePath().endsWith(".json")) {
-			continue;
+	const QByteArray data = file.readAll();
+	file.close();
+
+	QJsonParseError error;
+	QJsonDocument doc = QJsonDocument::fromJson(data, &error);
+	if (error.error != QJsonParseError::NoError || !doc.isObject()) {
+		return false;
+	}
+
+	const QJsonObject root = doc.object();
+	if (!root.contains("groups") || !root["groups"].isArray()) {
+		return false;
+	}
+
+	// Ищем группу с таким ID
+	QJsonArray groupsArray = root["groups"].toArray();
+	bool found = false;
+	for (int i = 0; i < groupsArray.size(); ++i) {
+		const QJsonObject groupObj = groupsArray[i].toObject();
+		const QString existingId = groupObj["id"].toString();
+		if (existingId == groupId.toString()) {
+			groupsArray.removeAt(i);
+			found = true;
+			break;
+		}
+	}
+
+	if (found) {
+		// Сохраняем обновлённый файл
+		QJsonObject updatedRoot;
+		Private::addMetadata(updatedRoot, metadata);
+		updatedRoot["groups"] = groupsArray;
+		QJsonDocument updatedDoc(updatedRoot);
+
+		if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+			qWarning() << "TileGroupsDataProviderJsonImpl: can't open file for writing:" << file.fileName();
+			return false;
 		}
 
-		// Пробуем загрузить группы из этого файла
-		QFile file(entry.filePath());
-		if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-			continue;
-		}
-
-		const QByteArray data = file.readAll();
+		file.write(updatedDoc.toJson());
 		file.close();
-
-		QJsonParseError error;
-		QJsonDocument doc = QJsonDocument::fromJson(data, &error);
-		if (error.error != QJsonParseError::NoError || !doc.isObject()) {
-			continue;
-		}
-
-		const QJsonObject root = doc.object();
-		if (!root.contains("groups") || !root["groups"].isArray()) {
-			continue;
-		}
-
-		// Ищем группу с таким ID
-		QJsonArray groupsArray = root["groups"].toArray();
-		bool found = false;
-		for (int i = 0; i < groupsArray.size(); ++i) {
-			const QJsonObject groupObj = groupsArray[i].toObject();
-			const QString existingId = groupObj["id"].toString();
-			if (existingId == groupId.toString()) {
-				groupsArray.removeAt(i);
-				found = true;
-				break;
-			}
-		}
-
-		if (found) {
-			// Сохраняем обновлённый файл
-			QJsonObject updatedRoot;
-			updatedRoot["groups"] = groupsArray;
-			QJsonDocument updatedDoc(updatedRoot);
-
-			if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-				qWarning() << "TileGroupsDataProviderJsonImpl: can't open file for writing:" << file.fileName();
-				return false;
-			}
-
-			file.write(updatedDoc.toJson());
-			file.close();
-			return true;
-		}
+		return true;
 	}
 
 	return false;
@@ -227,6 +227,38 @@ bool TileGroupsDataProviderJsonImpl::deleteGroupsForTexture(const QString& textu
 	}
 
 	QDir dir(dataDir);
-	const QString fullPath = dir.filePath("data/" + groupsFile);
+	const QString fullPath = dir.filePath("assets/" + groupsFile);
 	return QFile::remove(fullPath);
+}
+
+std::optional<TileSetMetadata> TileGroupsDataProviderJsonImpl::loadTileSetMetadata(const QString& path) const {
+	// Формируем путь к JSON файлу метаданных: {name}.json вместо {name}.png
+	const QString baseName = QFileInfo(path).baseName();
+	const QString jsonPath = Private::buildGroupsFilePath(baseName);
+
+	QJsonObject json;
+	Format::Json::DataReader reader(d->resources, "assets", jsonPath);
+	if (!reader.read(json)) {
+		return std::nullopt;
+	}
+
+	TileSetMetadata metadata;
+
+	// Читаем grid.size.x и grid.size.y
+	if (json.contains("grid") && json["grid"].isObject()) {
+		const QJsonObject gridObj = json["grid"].toObject();
+		if (gridObj.contains("size") && gridObj["size"].isObject()) {
+			const QJsonObject sizeObj = gridObj["size"].toObject();
+			if (sizeObj.contains("x")) {
+				metadata.gridSize.x = sizeObj["x"].toInt();
+			}
+			if (sizeObj.contains("y")) {
+				metadata.gridSize.y = sizeObj["y"].toInt();
+			}
+		}
+	}
+
+	metadata.fileName = baseName;
+
+	return metadata;
 }

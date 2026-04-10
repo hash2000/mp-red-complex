@@ -31,8 +31,8 @@ public:
 	// Удалить все группы для текстуры
 	bool deleteGroupsForTexture(const QString& texturePath);
 
-	// Разгруппировать - удалить группу, но сохранить тайлы
-	// (по сути то же что и deleteGroup)
+	// Загрузить метаданные тайлового набора
+	std::optional<TileSetMetadata> getTileSetMetadata(const QString& path) const;
 
 signals:
 	void groupsChanged(const QString& texturePath);

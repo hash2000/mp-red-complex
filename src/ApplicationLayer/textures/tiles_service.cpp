@@ -13,6 +13,8 @@ public:
 	// Кэш загруженных групп
 	mutable QHash<QString, QList<TileGroup>> groupsCache;
 
+	std::optional<TileSetMetadata> metadata;
+
 	// Получить кэшированные группы или загрузить
 	const QList<TileGroup>& getGroupsCached(const QString& texturePath) {
 		auto it = groupsCache.find(texturePath);
@@ -56,7 +58,7 @@ std::optional<TileGroup> TilesService::getGroupContainingTile(const QString& tex
 }
 
 QUuid TilesService::createGroup(const QString& texturePath, const QString& name, const QList<int>& tileIds) {
-	if (tileIds.isEmpty()) {
+	if (tileIds.isEmpty() || !d->metadata) {
 		return QUuid();
 	}
 
@@ -65,7 +67,7 @@ QUuid TilesService::createGroup(const QString& texturePath, const QString& name,
 	group.name = name;
 	group.tileIds = tileIds;
 
-	const bool success = d->tileGroupsDataProvider->saveGroup(texturePath, group);
+	const bool success = d->tileGroupsDataProvider->saveGroup(texturePath, group, d->metadata.value());
 	if (success) {
 		d->invalidateCache(texturePath);
 		emit groupsChanged(texturePath);
@@ -76,7 +78,11 @@ QUuid TilesService::createGroup(const QString& texturePath, const QString& name,
 }
 
 bool TilesService::updateGroup(const QString& texturePath, const TileGroup& group) {
-	const bool success = d->tileGroupsDataProvider->saveGroup(texturePath, group);
+	if (!d->metadata) {
+		return false;
+	}
+
+	const bool success = d->tileGroupsDataProvider->saveGroup(texturePath, group, d->metadata.value());
 	if (success) {
 		d->invalidateCache(texturePath);
 		emit groupsChanged(texturePath);
@@ -85,15 +91,17 @@ bool TilesService::updateGroup(const QString& texturePath, const TileGroup& grou
 }
 
 bool TilesService::deleteGroup(const QUuid& groupId) {
+	if (!d->metadata) {
+		return false;
+	}
 	// Находим группу по ID
 	for (auto it = d->groupsCache.begin(); it != d->groupsCache.end(); ++it) {
 		auto& groups = it.value();
 		for (int i = 0; i < groups.size(); ++i) {
 			if (groups[i].id == groupId) {
 				const QString texturePath = it.key();
-				// Удаляем из списка
 				groups.removeAt(i);
-				// TODO: сохранить через провайдер (нужен метод deleteGroup)
+				d->tileGroupsDataProvider->deleteGroup(groupId, d->metadata.value());
 				d->invalidateCache(texturePath);
 				emit groupsChanged(texturePath);
 				return true;
@@ -111,4 +119,9 @@ bool TilesService::deleteGroupsForTexture(const QString& texturePath) {
 		emit groupsChanged(texturePath);
 	}
 	return success;
+}
+
+std::optional<TileSetMetadata> TilesService::getTileSetMetadata(const QString& path) const {
+	d->metadata = d->tileGroupsDataProvider->loadTileSetMetadata(path);
+	return d->metadata;
 }

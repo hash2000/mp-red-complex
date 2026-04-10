@@ -44,6 +44,7 @@ public:
 	int tileGridSizeX = 64;
 	int tileGridSizeY = 64;
 	QList<int> selectedTileIds;
+	QUuid selectedGroupId;
 	bool showTileGrid = true;
 
 	// Пагинация
@@ -278,7 +279,7 @@ void TextureEditorWidget::updatePreview(const QString& fileName) {
 
 	// Для тайловых наборов загружаем метаданные сетки из файла
 	if (d->currentType == TextureType::TileSets) {
-		const auto metadata = d->texturesService->getTileSetMetadata(fileName);
+		const auto metadata = d->tilesService->getTileSetMetadata(fileName);
 		if (metadata.has_value()) {
 			d->tileGridSizeX = metadata->gridSize.x;
 			d->tileGridSizeY = metadata->gridSize.y;
@@ -363,10 +364,12 @@ void TextureEditorWidget::onTileClicked(int tileId, bool ctrlModifier) {
 			if (groupOpt.has_value()) {
 				// Тайл в группе — выделяем всю группу
 				d->selectedTileIds = groupOpt->tileIds;
+				d->selectedGroupId = groupOpt->id;
 			} else {
 				// Тайл не в группе — выделяем только его
 				d->selectedTileIds.clear();
 				d->selectedTileIds.append(tileId);
+				d->selectedGroupId = QUuid();
 			}
 
 			d->previewLabel->setSelectedTileIds(d->selectedTileIds);
@@ -413,14 +416,12 @@ void TextureEditorWidget::onGroupTilesRequested() {
 }
 
 void TextureEditorWidget::onUngroupTilesRequested() {
-	if (d->selectedTileIds.isEmpty()) {
+	if (d->selectedGroupId.isNull() || d->selectedTileIds.isEmpty()) {
 		return;
 	}
 
-	// Просто очищаем выделение (разгруппирование)
-	d->selectedTileIds.clear();
-	d->previewLabel->setSelectedTileIds({});
-	d->textureToolbar->setSelectedTiles({});
+	d->tilesService->deleteGroup(d->selectedGroupId);
+	d->selectedGroupId = QUuid();
 }
 
 void TextureEditorWidget::onGroupsChanged(const QString& texturePath) {
@@ -428,10 +429,8 @@ void TextureEditorWidget::onGroupsChanged(const QString& texturePath) {
 		return;
 	}
 
-	// Перечитываем группы и обновляем выделение
 	const auto groups = d->tilesService->getGroups(texturePath);
 
-	// Если текущее выделение больше не соответствует ни одной группе — обновляем
-	// В любом случае обновляем доступность кнопок на основе текущего выделения
+	d->previewLabel->setSelectedTileIds(d->selectedTileIds);
 	d->textureToolbar->setSelectedTiles(d->selectedTileIds);
 }
