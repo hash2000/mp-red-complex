@@ -27,6 +27,7 @@ public:
 	bool rightMousePressed = false;
 	QPoint lastMousePos;
 	std::optional<QPoint> selectedNode;
+	TilesService* tilesService;
 
 	// Система тайлов
 	std::unique_ptr<TileRenderer> tileRenderer;
@@ -34,8 +35,7 @@ public:
 	std::unique_ptr<Tileset> tileset;
 };
 
-
-MapWidget::MapWidget(QWidget* parent)
+MapWidget::MapWidget(TilesService* tilesService, QWidget* parent)
 : d(std::make_unique<Private>(this))
 , QOpenGLWidget(parent) {
 	setFocusPolicy(Qt::StrongFocus);
@@ -43,7 +43,7 @@ MapWidget::MapWidget(QWidget* parent)
 	setAttribute(Qt::WA_OpaquePaintEvent, true);
 	setAttribute(Qt::WA_NoSystemBackground, true);
 
-	// Создаем объекты системы тайлов
+	d->tilesService = tilesService;
 	d->tileRenderer = std::make_unique<TileRenderer>();
 	d->textureAtlas = std::make_unique<TextureAtlas>(32, 32); // Тайлы 32x32
 	d->tileset = std::make_unique<Tileset>();

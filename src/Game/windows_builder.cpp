@@ -30,6 +30,7 @@ WindowsBuilder::WindowsBuilder(ApplicationController* appController)
 
 	d->factory.emplace("map", [](Services* services, const QString& id, QWidget* parent) {
 		return new MapWindow(
+			services->tilesService(),
 			services->worldService(),
 			services->timeService(),
 			id,

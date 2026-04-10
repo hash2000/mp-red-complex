@@ -16,11 +16,10 @@ public:
 };
 
 
-MapWindow::MapWindow(WorldService* worldService, TimeService* timeService, const QString& id, QWidget* parent)
+MapWindow::MapWindow(TilesService* tilesService, WorldService* worldService, TimeService* timeService, const QString& id, QWidget* parent)
 	: MdiChildWindow(id, parent)
 	, d(std::make_unique<Private>(this)) {
-	// Создаём внутренний виджет карты
-	d->widget = new MapWidget(this);
+	d->widget = new MapWidget(tilesService, this);
 
 	setWindowTitle("World Map");
 

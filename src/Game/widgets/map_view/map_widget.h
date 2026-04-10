@@ -7,11 +7,12 @@
 class TileRenderer;
 class TextureAtlas;
 class Tileset;
+class TilesService;
 
 class MapWidget : public QOpenGLWidget, protected QOpenGLFunctions_3_3_Core {
 	Q_OBJECT
 public:
-	MapWidget(QWidget* parent = nullptr);
+	MapWidget(TilesService* tilesService, QWidget* parent = nullptr);
 	~MapWidget() override;
 
 	void mousePressEvent(QMouseEvent* event) override;

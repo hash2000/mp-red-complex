@@ -1,7 +1,9 @@
 #include "ApplicationLayer/textures/tiles_service.h"
+#include "ApplicationLayer/textures/textures_service.h"
 #include "DataLayer/textures/i_tile_groups_data_provider.h"
 #include <QUuid>
 #include <QHash>
+#include <QFileInfo>
 #include <optional>
 
 class TilesService::Private {
@@ -9,12 +11,13 @@ public:
 	Private(TilesService* parent) : q(parent) {}
 	TilesService* q;
 	ITileGroupsDataProvider* tileGroupsDataProvider = nullptr;
+	TexturesService* texturesService = nullptr;
 
 	// Кэш загруженных групп
 	mutable QHash<QString, QList<TileGroup>> groupsCache;
 
 	QList<int> selectedTileIds;
-
+	QString selectedTileName;
 	std::optional<TileSetMetadata> metadata;
 
 	// Получить кэшированные группы или загрузить
@@ -36,11 +39,13 @@ public:
 };
 
 TilesService::TilesService(
+	TexturesService* texturesService,
 	ITileGroupsDataProvider* tileGroupsDataProvider,
 	QObject* parent)
 	: QObject(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->tileGroupsDataProvider = tileGroupsDataProvider;
+	d->texturesService = texturesService;
 }
 
 TilesService::~TilesService() = default;
@@ -96,10 +101,10 @@ bool TilesService::deleteGroup(const QUuid& groupId) {
 	if (!d->metadata) {
 		return false;
 	}
-	// Находим группу по ID
-	for (auto it = d->groupsCache.begin(); it != d->groupsCache.end(); ++it) {
+
+	for (auto it = d->groupsCache.begin(); it != d->groupsCache.end(); it++) {
 		auto& groups = it.value();
-		for (int i = 0; i < groups.size(); ++i) {
+		for (int i = 0; i < groups.size(); i++) {
 			if (groups[i].id == groupId) {
 				const QString texturePath = it.key();
 				groups.removeAt(i);
@@ -123,8 +128,14 @@ bool TilesService::deleteGroupsForTexture(const QString& texturePath) {
 	return success;
 }
 
-std::optional<TileSetMetadata> TilesService::getTileSetMetadata(const QString& path) const {
-	d->metadata = d->tileGroupsDataProvider->loadTileSetMetadata(path);
+std::optional<TileSetMetadata> TilesService::getTileSetMetadata(const QString& texturePath) const {
+	const auto name = QFileInfo(texturePath).baseName();
+	if (d->selectedTileName == name && d->metadata.has_value()) {
+		return d->metadata;
+	}
+
+	d->selectedTileName = name;
+	d->metadata = d->tileGroupsDataProvider->loadTileSetMetadata(texturePath);
 	return d->metadata;
 }
 
@@ -134,4 +145,13 @@ void TilesService::setSelectionTiles(const QList<int>& tileIds) {
 
 QList<int> TilesService::getSelectionTiles() const {
 	return d->selectedTileIds;
+}
+
+std::optional<QPixmap> TilesService::getTilemap() const {
+	if (!d->metadata.has_value()) {
+		return std::nullopt;
+	}
+
+	auto pixmap = d->texturesService->getTexture(d->metadata->fileName + ".png", TextureType::TileSets);
+	return pixmap;
 }

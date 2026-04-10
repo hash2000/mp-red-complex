@@ -1,14 +1,18 @@
 #pragma once
 #include "DataLayer/textures/i_tile_groups_data_provider.h"
 #include <QObject>
-#include <memory>
 #include <QList>
+#include <QPixmap>
+#include <memory>
 #include <optional>
+
+class TexturesService;
 
 class TilesService : public QObject {
 	Q_OBJECT
 public:
 	explicit TilesService(
+		TexturesService* texturesService,
 		ITileGroupsDataProvider* tileGroupsDataProvider,
 		QObject* parent = nullptr);
 	~TilesService() override;
@@ -32,13 +36,16 @@ public:
 	bool deleteGroupsForTexture(const QString& texturePath);
 
 	// Загрузить метаданные тайлового набора
-	std::optional<TileSetMetadata> getTileSetMetadata(const QString& path) const;
+	std::optional<TileSetMetadata> getTileSetMetadata(const QString& texturePath) const;
 
 	// Сохранить текущие выбранные тайлы
 	void setSelectionTiles(const QList<int>& tileIds);
 
 	// Вернуть текущие выбранные тайлы
 	QList<int> getSelectionTiles() const;
+
+	// Выдать тайловую карту
+	std::optional<QPixmap> getTilemap() const;
 
 signals:
 	void groupsChanged(const QString& texturePath);

@@ -102,7 +102,9 @@ Services::Services(Resources* resources)
 
 	// Создаём сервис тайловых групп
 	d->tileGroupsDataProvider = std::make_unique<TileGroupsDataProviderJsonImpl>(resources);
-	d->tilesService = std::make_unique<TilesService>(d->tileGroupsDataProvider.get());
+	d->tilesService = std::make_unique<TilesService>(
+		d->texturesService.get(),
+		d->tileGroupsDataProvider.get());
 
 	// Передаём репозиторий и TexturesService в ItemsService
 	d->itemsService = std::make_unique<ItemsService>(d->itemRepository, d->texturesService.get());
