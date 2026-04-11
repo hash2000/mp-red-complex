@@ -38,6 +38,9 @@ public:
 	// Загрузить метаданные тайлового набора
 	std::optional<TileSetMetadata> getTileSetMetadata(const QString& texturePath) const;
 
+	// Вернуть загруженные метаданные
+	std::optional<TileSetMetadata> getCurrentTileSetMetadata() const;
+	
 	// Сохранить текущие выбранные тайлы
 	void setSelectionTiles(const QList<int>& tileIds);
 
@@ -49,6 +52,7 @@ public:
 
 signals:
 	void groupsChanged(const QString& texturePath);
+	void tilesSelectionChanged(const QList<int>& tileIds);
 
 private:
 	class Private;

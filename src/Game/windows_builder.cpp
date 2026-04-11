@@ -3,6 +3,7 @@
 #include "Game/services.h"
 #include "Game/controllers.h"
 #include "Game/widgets/map_view/map_window.h"
+#include "Game/widgets/map_view/map_editor_window.h"
 #include "Game/widgets/equipment/equipment_window.h"
 #include "Game/widgets/inventory/inventory_window.h"
 #include "Game/widgets/items/entities_window.h"
@@ -74,6 +75,14 @@ WindowsBuilder::WindowsBuilder(ApplicationController* appController)
 		return new TextureEditorWindow(
 			services->texturesService(),
 			services->tilesService(),
+			id,
+			parent);
+		});
+	d->factory.emplace("map-editor", [](Services* services, const QString& id, QWidget* parent) {
+		return new MapEditorWindow(
+			services->mapService(),
+			services->tilesService(),
+			services->timeService(),
 			id,
 			parent);
 		});

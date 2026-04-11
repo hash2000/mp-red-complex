@@ -139,8 +139,13 @@ std::optional<TileSetMetadata> TilesService::getTileSetMetadata(const QString& t
 	return d->metadata;
 }
 
+std::optional<TileSetMetadata> TilesService::getCurrentTileSetMetadata() const {
+	return d->metadata;
+}
+
 void TilesService::setSelectionTiles(const QList<int>& tileIds) {
 	d->selectedTileIds = tileIds;
+	emit tilesSelectionChanged(d->selectedTileIds);
 }
 
 QList<int> TilesService::getSelectionTiles() const {

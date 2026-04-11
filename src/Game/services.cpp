@@ -17,6 +17,8 @@
 #include "DataLayer/textures/i_textures_data_provider.h"
 #include "DataLayer/textures/tile_groups_data_provider_json_impl.h"
 #include "DataLayer/textures/i_tile_groups_data_provider.h"
+#include "DataLayer/maps/i_map_data_provider.h"
+#include "DataLayer/maps/map_data_provider_json_impl.h"
 #include "DataLayer/users/i_users_data_provider.h"
 #include "DataLayer/characters/i_character_data_provider.h"
 #include "ApplicationLayer/items/items_service.h"
@@ -27,6 +29,7 @@
 #include "ApplicationLayer/users/users_service.h"
 #include "ApplicationLayer/textures/textures_service.h"
 #include "ApplicationLayer/textures/tiles_service.h"
+#include "ApplicationLayer/maps/map_service.h"
 
 #include <list>
 
@@ -69,6 +72,8 @@ public:
 	std::unique_ptr<ICharacterDataProvider> characterDataProvider;
 	std::unique_ptr<ITexturesDataProvider> texturesDataProvider;
 	std::unique_ptr<ITileGroupsDataProvider> tileGroupsDataProvider;
+	std::unique_ptr<IMapDataProvider> mapDataProvider;
+	std::unique_ptr<MapService> mapService;
 };
 
 Services::Services(Resources* resources)
@@ -105,6 +110,13 @@ Services::Services(Resources* resources)
 	d->tilesService = std::make_unique<TilesService>(
 		d->texturesService.get(),
 		d->tileGroupsDataProvider.get());
+
+	// Создаём сервис карт
+	d->mapDataProvider = std::make_unique<MapDataProviderJsonImpl>(resources);
+	d->mapService = std::make_unique<MapService>(
+		d->tilesService.get(),
+		d->texturesService.get(),
+		d->mapDataProvider.get());
 
 	// Передаём репозиторий и TexturesService в ItemsService
 	d->itemsService = std::make_unique<ItemsService>(d->itemRepository, d->texturesService.get());
@@ -193,4 +205,8 @@ TexturesService* Services::texturesService() const {
 
 TilesService* Services::tilesService() const {
 	return d->tilesService.get();
+}
+
+MapService* Services::mapService() const {
+	return d->mapService.get();
 }
