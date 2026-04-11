@@ -59,7 +59,7 @@ QList<QString> MapService::getAvailableMaps() const {
 
 std::optional<QPixmap> MapService::getTilemapPixmap(const QString& mapName) const {
     auto metadata = d->mapDataProvider->loadMapMetadata(mapName);
-    if (!metadata.has_value() || metadata->tileTexturePath.isEmpty()) {
+    if (!metadata.has_value()) {
         return std::nullopt;
     }
 
@@ -81,4 +81,38 @@ void MapService::setCurrentMap(const QString& mapName) {
 
 std::optional<QString> MapService::getCurrentMap() const {
     return d->currentMapName;
+}
+
+std::optional<MapChunkData> MapService::loadChunk(int chunkX, int chunkZ) const {
+    const auto mapName = d->currentMapName;
+    if (!mapName.has_value()) {
+        qWarning() << "MapService: no current map selected";
+        return std::nullopt;
+    }
+    return d->mapDataProvider->loadChunk(*mapName, chunkX, chunkZ);
+}
+
+bool MapService::saveChunk(int chunkX, int chunkZ, const MapChunkData& chunkData) {
+    const auto mapName = d->currentMapName;
+    if (!mapName.has_value()) {
+        qWarning() << "MapService: no current map selected";
+        return false;
+    }
+    return d->mapDataProvider->saveChunk(*mapName, chunkX, chunkZ, chunkData);
+}
+
+bool MapService::chunkExists(int chunkX, int chunkZ) const {
+    const auto mapName = d->currentMapName;
+    if (!mapName.has_value()) {
+        return false;
+    }
+    return d->mapDataProvider->chunkExists(*mapName, chunkX, chunkZ);
+}
+
+QList<QPoint> MapService::getChunkCoords() const {
+    const auto mapName = d->currentMapName;
+    if (!mapName.has_value()) {
+        return {};
+    }
+    return d->mapDataProvider->getChunkCoords(*mapName);
 }

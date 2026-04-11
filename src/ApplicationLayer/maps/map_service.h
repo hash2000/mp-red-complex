@@ -39,6 +39,18 @@ public:
     // Получить текущую активную карту
     std::optional<QString> getCurrentMap() const;
 
+    // Загрузить данные чанка для текущей карты
+    std::optional<MapChunkData> loadChunk(int chunkX, int chunkZ) const;
+
+    // Сохранить данные чанка для текущей карты
+    bool saveChunk(int chunkX, int chunkZ, const MapChunkData& chunkData);
+
+    // Проверить существование чанка
+    bool chunkExists(int chunkX, int chunkZ) const;
+
+    // Получить список сохранённых чанков
+    QList<QPoint> getChunkCoords() const;
+
 signals:
     void currentMapChanged(const QString& mapName);
 

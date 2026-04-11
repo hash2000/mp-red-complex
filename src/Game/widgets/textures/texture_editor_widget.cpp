@@ -41,8 +41,8 @@ public:
 	TileGroupsDialog* tileGroupsDialog = nullptr;
 
 	// Настройки сетки
-	int tileGridSizeX = 64;
-	int tileGridSizeY = 64;
+	int tileGridSizeX = 32;
+	int tileGridSizeY = 32;
 	QList<int> selectedTileIds;
 	QUuid selectedGroupId;
 	bool showTileGrid = true;
@@ -51,7 +51,7 @@ public:
 	static constexpr int kPageSize = 50;
 	int currentPage = 0;
 	QStringList allTextures;
-	TextureType currentType = TextureType::Icon;
+	TextureType currentType = TextureType::TileSets;
 	QString currentTexturePath;  // Текущая выбранная текстура
 };
 

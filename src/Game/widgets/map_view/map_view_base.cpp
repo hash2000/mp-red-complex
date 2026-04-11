@@ -34,45 +34,6 @@ public:
     std::unique_ptr<TileRenderer> tileRenderer;
     std::unique_ptr<TextureAtlas> textureAtlas;
     std::unique_ptr<Tileset> tileset;
-
-		void generateTestAtlas() {
-			// Создаём тестовый тайлсет (заглушку)
-			QPixmap testAtlas(256, 256);
-			testAtlas.fill(Qt::gray);
-
-			QPainter painter(&testAtlas);
-			for (int y = 0; y < 8; y++) {
-				for (int x = 0; x < 8; x++) {
-					QColor color = QColor::fromHsv((x + y) * 20, 150, 200);
-					painter.fillRect(x * 32, y * 32, 32, 32, color);
-				}
-			}
-			painter.end();
-
-			// Загружаем атлас
-			if (textureAtlas->loadFromPixmap(testAtlas, 8, 8)) {
-				qInfo() << "Test texture atlas loaded successfully";
-
-				tileset->initialize(textureAtlas.get(), 8, 8);
-				tileRenderer->setTileset(tileset.get());
-
-				// Создаём тестовые чанки (2x2 = 32x32 тайла)
-				for (int cz = 0; cz < 2; cz++) {
-					for (int cx = 0; cx < 2; cx++) {
-						auto* chunk = tileRenderer->getOrCreateChunk(cx, cz);
-
-						for (int z = 0; z < 16; z++) {
-							for (int x = 0; x < 16; x++) {
-								int tileId = (x + z) % 16;
-								chunk->setTile(x, z, tileId);
-							}
-						}
-					}
-				}
-
-				qInfo() << "Created" << tileRenderer->chunkCount() << "chunks";
-			}
-		}
 };
 
 MapViewBase::MapViewBase(QWidget* parent)

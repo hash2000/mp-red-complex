@@ -17,7 +17,6 @@ public:
 	mutable QHash<QString, QList<TileGroup>> groupsCache;
 
 	QList<int> selectedTileIds;
-	QString selectedTileName;
 	std::optional<TileSetMetadata> metadata;
 
 	// Получить кэшированные группы или загрузить
@@ -130,11 +129,10 @@ bool TilesService::deleteGroupsForTexture(const QString& texturePath) {
 
 std::optional<TileSetMetadata> TilesService::getTileSetMetadata(const QString& texturePath) const {
 	const auto name = QFileInfo(texturePath).baseName();
-	if (d->selectedTileName == name && d->metadata.has_value()) {
+	if (d->metadata.has_value() && d->metadata->fileName == name) {
 		return d->metadata;
 	}
 
-	d->selectedTileName = name;
 	d->metadata = d->tileGroupsDataProvider->loadTileSetMetadata(texturePath);
 	return d->metadata;
 }
@@ -159,4 +157,12 @@ std::optional<QPixmap> TilesService::getTilemap() const {
 
 	auto pixmap = d->texturesService->getTexture(d->metadata->fileName + ".png", TextureType::TileSets);
 	return pixmap;
+}
+
+QString TilesService::getTileSetName() const {
+	if (!d->metadata.has_value()) {
+		return QString();
+	}
+
+	return d->metadata->fileName;
 }

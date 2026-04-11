@@ -50,6 +50,9 @@ public:
 	// Выдать тайловую карту
 	std::optional<QPixmap> getTilemap() const;
 
+	// Вернуть название атласа
+	QString getTileSetName() const;
+
 signals:
 	void groupsChanged(const QString& texturePath);
 	void tilesSelectionChanged(const QList<int>& tileIds);

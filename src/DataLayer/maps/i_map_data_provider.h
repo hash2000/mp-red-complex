@@ -1,16 +1,27 @@
 #pragma once
 #include <QString>
 #include <QSize>
+#include <QPoint>
 #include <QUuid>
 #include <optional>
+#include <QVector>
 
 // Метаданные карты
 struct MapMetadata {
     QUuid id;                          // Уникальный ID карты
-    QString name;                      // Название карты
-    QString tileTexturePath;           // Путь к тайловой текстуре (для TilesService::getTilemap)
+    QString name;                      // Название карты (дублируется из пути)
     QSize mapSize = { 100, 100 };      // Размер карты в тайлах
     QSize tileSize = { 32, 32 };       // Размер одного тайла в пикселях
+    QSize chunkSize = { 32, 32 };      // Размер чанка в тайлах
+};
+
+// Данные чанка карты
+struct MapChunkData {
+    QString atlasName;                 // Имя атласа для этого чанка
+    QSize chunkSize = { 32, 32 };      // Размер чанка в тайлах
+    QVector<int> tileGrid;             // Сетка тайлов (chunkSize.width * chunkSize.height)
+                                       // Индекс: z * chunkSize.width + x
+                                       // -1 = пустой тайл
 };
 
 // Интерфейс провайдера данных для карт
@@ -29,4 +40,16 @@ public:
 
     // Получить список всех доступных карт
     virtual QList<QString> getAvailableMaps() const = 0;
+
+    // Загрузить данные чанка по координатам
+    virtual std::optional<MapChunkData> loadChunk(const QString& mapName, int chunkX, int chunkZ) const = 0;
+
+    // Сохранить данные чанка
+    virtual bool saveChunk(const QString& mapName, int chunkX, int chunkZ, const MapChunkData& chunkData) = 0;
+
+    // Проверить существование чанка
+    virtual bool chunkExists(const QString& mapName, int chunkX, int chunkZ) const = 0;
+
+    // Получить список сохранённых чанков для карты
+    virtual QList<QPoint> getChunkCoords(const QString& mapName) const = 0;
 };

@@ -14,6 +14,11 @@ public:
     bool deleteMap(const QString& mapName) override;
     QList<QString> getAvailableMaps() const override;
 
+    std::optional<MapChunkData> loadChunk(const QString& mapName, int chunkX, int chunkZ) const override;
+    bool saveChunk(const QString& mapName, int chunkX, int chunkZ, const MapChunkData& chunkData) override;
+    bool chunkExists(const QString& mapName, int chunkX, int chunkZ) const override;
+    QList<QPoint> getChunkCoords(const QString& mapName) const override;
+
 private:
     class Private;
     std::unique_ptr<Private> d;
