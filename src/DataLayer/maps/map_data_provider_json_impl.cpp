@@ -34,11 +34,6 @@ public:
         obj["id"] = metadata.id.toString();
         obj["name"] = metadata.name;
 
-        QJsonObject mapSize;
-        mapSize["width"] = metadata.mapSize.width();
-        mapSize["height"] = metadata.mapSize.height();
-        obj["mapSize"] = mapSize;
-
         QJsonObject tileSize;
         tileSize["width"] = metadata.tileSize.width();
         tileSize["height"] = metadata.tileSize.height();
@@ -60,12 +55,6 @@ public:
             metadata.id = QUuid::createUuid();
         }
         metadata.name = obj["name"].toString();
-
-        if (obj.contains("mapSize") && obj["mapSize"].isObject()) {
-            const QJsonObject sizeObj = obj["mapSize"].toObject();
-            metadata.mapSize.setWidth(sizeObj["width"].toInt(100));
-            metadata.mapSize.setHeight(sizeObj["height"].toInt(100));
-        }
 
         if (obj.contains("tileSize") && obj["tileSize"].isObject()) {
             const QJsonObject sizeObj = obj["tileSize"].toObject();

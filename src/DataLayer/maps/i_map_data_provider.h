@@ -10,7 +10,6 @@
 struct MapMetadata {
     QUuid id;                          // Уникальный ID карты
     QString name;                      // Название карты (дублируется из пути)
-    QSize mapSize = { 100, 100 };      // Размер карты в тайлах
     QSize tileSize = { 32, 32 };       // Размер одного тайла в пикселях
     QSize chunkSize = { 32, 32 };      // Размер чанка в тайлах
 };
