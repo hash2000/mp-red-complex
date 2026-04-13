@@ -19,6 +19,7 @@ public:
 	bool initialized = false;
 	Tileset* tileset = nullptr;
 	float zLevel = 0.0f;
+	DebugRenderPassFlags debugRenderPasses = DebugRenderPass::None;
 
 	// Чанки: ключ = (chunkX << 16) | chunkZ
 	std::unordered_map<int, std::unique_ptr<Chunk>> chunks;
@@ -135,9 +136,13 @@ void TileRenderer::rebuildDirtyChunks() {
 }
 
 void TileRenderer::render(const Camera& camera, int viewportWidth, int viewportHeight) {
-	if (!d->initialized || !d->shaderProgram || !d->tileset || !d->tileset->atlas()) {
+	if (!d->initialized || !d->shaderProgram) {
 		return;
 	}
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glEnable(GL_DEPTH_TEST);
 
 	// Перестраиваем грязные чанки
 	rebuildDirtyChunks();
@@ -150,41 +155,39 @@ void TileRenderer::render(const Camera& camera, int viewportWidth, int viewportH
 	d->shaderProgram->setUniformValue("uView", camera.view());
 	d->shaderProgram->setUniformValue("zLevel", d->zLevel);
 
-	// Биндим текстуру атласа
-	d->tileset->atlas()->bind();
-	d->shaderProgram->setUniformValue("uTexture", 0); // Привязан к GL_TEXTURE0
+	if (d->tileset && d->tileset->atlas()) {
+		// Биндим текстуру атласа
+		d->tileset->atlas()->bind();
+		d->shaderProgram->setUniformValue("uTexture", 0); // Привязан к GL_TEXTURE0
 
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		// Рисуем все чанки (frustum culling временно отключен для отладки)
+		int visibleCount = 0;
+		for (auto& [key, chunk] : d->chunks) {
+			if (!chunk->isInitialized()) {
+				continue;
+			}
 
-	glEnable(GL_DEPTH_TEST);
-
-	// Рисуем видимые чанки
-	int visibleCount = 0;
-	for (auto& [key, chunk] : d->chunks) {
-		if (!chunk->isInitialized()) {
-			continue;
+			if (isChunkVisible(chunk.get(), camera, viewportWidth, viewportHeight)) {
+				chunk->render();
+				visibleCount++;
+			}
 		}
 
-		if (isChunkVisible(chunk.get(), camera, viewportWidth, viewportHeight)) {
-			chunk->render();
-			visibleCount++;
+		if (visibleCount > 0) {
+			// qDebug() << "TileRenderer: rendered" << visibleCount << "chunks";
 		}
 	}
+
+	// Отладочные проходы
+	renderDebugPasses(camera, viewportWidth, viewportHeight);
 
 	glDisable(GL_BLEND);
 
 	d->shaderProgram->release();
-
-	if (visibleCount > 0) {
-		// qDebug() << "TileRenderer: rendered" << visibleCount << "chunks";
-	}
 }
 
 bool TileRenderer::isChunkVisible(const Chunk* chunk, const Camera& camera, int viewportWidth, int viewportHeight) const {
-	// Упрощенная проверка: используем bounding box чанка
-	// Преобразуем 4 угла чанка в экранные координаты и проверяем попадание во viewport
-
+	// Проверяем 4 угла чанка в NDC с запасом
 	QVector3D corners[4] = {
 		QVector3D(chunk->worldMinX(), d->zLevel, chunk->worldMinZ()),
 		QVector3D(chunk->worldMaxX(), d->zLevel, chunk->worldMinZ()),
@@ -193,22 +196,23 @@ bool TileRenderer::isChunkVisible(const Chunk* chunk, const Camera& camera, int 
 	};
 
 	QMatrix4x4 mvp = camera.projection() * camera.view();
+	
+	// Запас на размер чанка (чтобы рисовать чанки, которые частично видны)
+	const float margin = 2.0f;
 
-	bool anyVisible = false;
 	for (int i = 0; i < 4; ++i) {
 		QVector4D clipSpace = mvp * QVector4D(corners[i], 1.0f);
 		if (clipSpace.w() > 0) {
 			clipSpace /= clipSpace.w();
-			// Проверяем, находится ли вNormalized Device Coordinates
-			if (clipSpace.x() >= -1.1f && clipSpace.x() <= 1.1f &&
-				clipSpace.z() >= -1.1f && clipSpace.z() <= 1.1f) {
-				anyVisible = true;
-				break;
+			// Проверяем X и Y в NDC с запасом
+			if (clipSpace.x() >= -1.0f - margin && clipSpace.x() <= 1.0f + margin &&
+				clipSpace.y() >= -1.0f - margin && clipSpace.y() <= 1.0f + margin) {
+				return true;
 			}
 		}
 	}
 
-	return anyVisible;
+	return false;
 }
 
 float TileRenderer::zLevel() const {
@@ -221,4 +225,37 @@ void TileRenderer::setZLevel(float level) {
 
 size_t TileRenderer::chunkCount() const {
 	return d->chunks.size();
+}
+
+void TileRenderer::setDebugRenderPasses(DebugRenderPassFlags passes) {
+	d->debugRenderPasses = passes;
+}
+
+TileRenderer::DebugRenderPassFlags TileRenderer::debugRenderPasses() const {
+	return d->debugRenderPasses;
+}
+
+bool TileRenderer::testDebugRenderPass(DebugRenderPass pass) const {
+	return d->debugRenderPasses.testFlag(pass);
+}
+
+void TileRenderer::renderDebugPasses(const Camera& camera, int viewportWidth, int viewportHeight) {
+	if (d->debugRenderPasses == DebugRenderPass::None) {
+		return;
+	}
+
+	// Отключаем тест глубины для отладочных проходов, чтобы они всегда были поверх
+	glDisable(GL_DEPTH_TEST);
+
+	if (testDebugRenderPass(DebugRenderPass::ChunkBorders)) {
+		for (auto& [key, chunk] : d->chunks) {
+			if (!chunk->isInitialized()) {
+				continue;
+			}
+
+			chunk->renderBorder();
+		}
+	}
+
+	glEnable(GL_DEPTH_TEST);
 }

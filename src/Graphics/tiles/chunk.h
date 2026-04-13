@@ -48,6 +48,9 @@ public:
 	/// Отрисовка чанка
 	void render();
 
+	/// Отрисовка рамки чанка (всегда доступна, управление на уровне TileRenderer)
+	void renderBorder();
+
 	/// Проверка инициализации
 	bool isInitialized() const;
 
@@ -58,6 +61,9 @@ public:
 	float worldMaxZ() const;
 
 private:
+	/// Перестроить VBO рамки
+	void rebuildBorderVBO();
+
 	class Private;
 	std::unique_ptr<Private> d;
 };

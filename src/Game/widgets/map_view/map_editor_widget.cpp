@@ -200,6 +200,9 @@ void MapEditorWidget::setupUI() {
   // Панель свойств
   setupPropertiesPanel();
   mainLayout->addWidget(d->propertiesGroup);
+
+	// Включаем отладочную отрисовку рамок чанков
+	tileRenderer()->setDebugRenderPasses(TileRenderer::DebugRenderPass::ChunkBorders);
 }
 
 void MapEditorWidget::setupToolbar() {
@@ -317,21 +320,7 @@ void MapEditorWidget::setupPropertiesPanel() {
 }
 
 void MapEditorWidget::onApplySelectedAtlas() {
-	const auto service = tilesService();
-	const auto atlas = service->getTilemap();
-	const auto metadata = service->getCurrentTileSetMetadata();
-	if (!atlas.has_value() || !metadata.has_value()) {
-		return;
-	}
-
-	auto texture = textureAtlas();
-	if (!texture->loadFromPixmap(atlas.value(), metadata->gridSize.x, metadata->gridSize.y)) {
-		return;
-	}
-
-	const auto tiles = tileset();
-	tiles->initialize(texture, metadata->gridSize.x, metadata->gridSize.y);
-	tileRenderer()->setTileset(tiles);
+	loadTilemap();
 }
 
 void MapEditorWidget::placeTile(int x, int y) {

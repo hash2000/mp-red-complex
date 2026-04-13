@@ -9,7 +9,8 @@ class Chunk::Private {
 public:
 	Private(Chunk* parent)
 		: q(parent)
-		, vbo(QOpenGLBuffer::VertexBuffer) {
+		, vbo(QOpenGLBuffer::VertexBuffer)
+		, borderVbo(QOpenGLBuffer::VertexBuffer) {
 	}
 
 	Chunk* q;
@@ -27,6 +28,10 @@ public:
 	QOpenGLVertexArrayObject vao;
 	QOpenGLBuffer vbo;
 	int vertexCount = 0; // Количество вершин для отрисовки
+
+	// VBO для рамки чанка (4 линии = 8 вершин, 2D позиция)
+	QOpenGLBuffer borderVbo;
+	int borderVertexCount = 0;
 };
 
 Chunk::Chunk()
@@ -45,10 +50,14 @@ void Chunk::initialize() {
 		return;
 	}
 
+	d->initialized = true;
+	d->dirty = true;
+
 	initializeOpenGLFunctions();
 
 	d->vao.create();
 	d->vbo.create();
+	d->borderVbo.create();
 
 	// Инициализируем пустой буфер
 	d->vao.bind();
@@ -64,14 +73,14 @@ void Chunk::initialize() {
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), reinterpret_cast<void*>(2 * sizeof(float)));
 
+	// Инициализируем данные для рамки (4 линии по периметру чанка)
+	rebuildBorderVBO();
+
 	d->vao.release();
 	d->vbo.release();
 
 	// Инициализируем данные тайлов
 	d->tileData.resize(d->chunkSize * d->chunkSize, -1);
-
-	d->initialized = true;
-	d->dirty = true;
 }
 
 void Chunk::setChunkPosition(int chunkX, int chunkZ) {
@@ -223,4 +232,62 @@ float Chunk::worldMinZ() const {
 
 float Chunk::worldMaxZ() const {
 	return static_cast<float>((d->chunkZ + 1) * d->chunkSize);
+}
+
+void Chunk::rebuildBorderVBO() {
+	if (!d->initialized) {
+		return;
+	}
+
+	// Создаем 4 линии по периметру чанка (8 вершин, 2D позиция)
+	// Линии: нижняя, правая, верхняя, левая
+	std::vector<float> borderVertices;
+	borderVertices.reserve(8 * 2); // 8 вершин, 2 float каждая
+
+	float minX = static_cast<float>(d->chunkX * d->chunkSize);
+	float maxX = static_cast<float>((d->chunkX + 1) * d->chunkSize);
+	float minZ = static_cast<float>(d->chunkZ * d->chunkSize);
+	float maxZ = static_cast<float>((d->chunkZ + 1) * d->chunkSize);
+
+	// Нижняя линия: (minX, minZ) -> (maxX, minZ)
+	borderVertices.push_back(minX); borderVertices.push_back(minZ);
+	borderVertices.push_back(maxX); borderVertices.push_back(minZ);
+
+	// Правая линия: (maxX, minZ) -> (maxX, maxZ)
+	borderVertices.push_back(maxX); borderVertices.push_back(minZ);
+	borderVertices.push_back(maxX); borderVertices.push_back(maxZ);
+
+	// Верхняя линия: (maxX, maxZ) -> (minX, maxZ)
+	borderVertices.push_back(maxX); borderVertices.push_back(maxZ);
+	borderVertices.push_back(minX); borderVertices.push_back(maxZ);
+
+	// Левая линия: (minX, maxZ) -> (minX, minZ)
+	borderVertices.push_back(minX); borderVertices.push_back(maxZ);
+	borderVertices.push_back(minX); borderVertices.push_back(minZ);
+
+	d->borderVertexCount = 8;
+
+	d->borderVbo.bind();
+	d->borderVbo.allocate(borderVertices.data(), static_cast<int>(borderVertices.size() * sizeof(float)));
+	d->borderVbo.release();
+}
+
+void Chunk::renderBorder() {
+	if (!d->initialized || d->borderVertexCount == 0) {
+		return;
+	}
+
+	// Привязываем VAO, чтобы не нарушать состояние
+	d->vao.bind();
+	
+	// Привязываем VBO рамки и настраиваем атрибут
+	d->borderVbo.bind();
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), reinterpret_cast<void*>(0));
+	
+	glDrawArrays(GL_LINES, 0, d->borderVertexCount);
+	
+	glDisableVertexAttribArray(0);
+	d->borderVbo.release();
+	d->vao.release();
 }

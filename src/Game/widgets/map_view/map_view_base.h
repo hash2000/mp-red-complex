@@ -26,7 +26,7 @@ public:
 	void resetCamera();
 
 	// Загрузить тайловую карту
-	virtual void loadTilemap(const QString& tileTexturePath);
+	virtual void loadTilemap();
 
 signals:
 	void initializeContext();
