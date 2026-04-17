@@ -3,7 +3,10 @@
 #include "Graphics/tiles/tileset.h"
 #include "Graphics/textures/texture_atlas.h"
 #include <QFile>
+#include <QHash>
+#include <QSharedPointer>
 #include <QOpenGLShaderProgram>
+#include <QOpenGLFunctions>
 #include <qdebug.h>
 #include <unordered_map>
 #include <memory>
@@ -12,20 +15,36 @@ class TileRenderer::Private {
 public:
 	Private(TileRenderer* parent)
 		: q(parent)
-		, shaderProgram(std::make_unique<QOpenGLShaderProgram>()) {
+		, shaderProgram(std::make_unique<QOpenGLShaderProgram>())
+		, debugShaderProgram(std::make_unique<QOpenGLShaderProgram>()) {
 	}
 
 	TileRenderer* q;
 	bool initialized = false;
 	Tileset* tileset = nullptr;
 	float zLevel = 0.0f;
+	QSize chunkSize;
 	DebugRenderPassFlags debugRenderPasses = DebugRenderPass::None;
 
 	// Чанки: ключ = (chunkX << 16) | chunkZ
-	std::unordered_map<int, std::unique_ptr<Chunk>> chunks;
+	QHash<QPair<int, int>, QSharedPointer<Chunk>> chunks;
 
-	// Шейдерная программа
+	// Основной шейдер для тайлов
 	std::unique_ptr<QOpenGLShaderProgram> shaderProgram;
+	
+	// Отладочный шейдер (просто цвет, без текстуры)
+	std::unique_ptr<QOpenGLShaderProgram> debugShaderProgram;
+
+	QPair<int, int> getChunkKey(int worldX, int worldZ) const {
+		int cx = worldX >= 0 ? worldX / chunkSize.width()
+			: (worldX - chunkSize.width() + 1) / chunkSize.width();
+		int cz = worldZ >= 0 ? worldZ / chunkSize.height()
+			: (worldZ - chunkSize.height() + 1) / chunkSize.height();
+
+		QPair<int, int> key{ cx, cz };
+		return key;
+	}
+
 };
 
 TileRenderer::TileRenderer()
@@ -89,6 +108,31 @@ bool TileRenderer::initialize() {
 		return false;
 	}
 
+	// Инициализируем отладочный шейдер
+	d->debugShaderProgram->addShaderFromSourceCode(QOpenGLShader::Vertex, R"(
+		#version 330 core
+		layout (location = 0) in vec2 aPosition;
+		uniform mat4 uProjection;
+		uniform mat4 uView;
+		uniform float zLevel;
+		void main() {
+			gl_Position = uProjection * uView * vec4(aPosition.x, zLevel, aPosition.y, 1.0);
+		}
+	)");
+
+	d->debugShaderProgram->addShaderFromSourceCode(QOpenGLShader::Fragment, R"(
+		#version 330 core
+		out vec4 FragColor;
+		void main() {
+			FragColor = vec4(1.0, 0.0, 0.0, 1.0); // Красная рамка
+		}
+	)");
+
+	if (!d->debugShaderProgram->link()) {
+		qWarning() << "TileRenderer: failed to link debug shader program:" << d->debugShaderProgram->log();
+		return false;
+	}
+
 	d->initialized = true;
 	qInfo() << "TileRenderer initialized";
 	return true;
@@ -99,28 +143,28 @@ void TileRenderer::setTileset(Tileset* tileset) {
 }
 
 Chunk* TileRenderer::getOrCreateChunk(int chunkX, int chunkZ) {
-	int key = (chunkX << 16) | (chunkZ & 0xFFFF);
+	auto key = d->getChunkKey(chunkX, chunkZ);
 
 	auto it = d->chunks.find(key);
 	if (it != d->chunks.end()) {
-		return it->second.get();
+		return it.value().get();
 	}
 
-	auto chunk = std::make_unique<Chunk>();
-	chunk->initialize();
-	chunk->setChunkPosition(chunkX, chunkZ);
+	auto chunk = QSharedPointer<Chunk>::create();
+	chunk->setChunkSize(d->chunkSize);
+	chunk->setChunkPosition(key.first, key.second);
 	if (d->tileset) {
 		chunk->setTileset(d->tileset);
 	}
 
 	Chunk* ptr = chunk.get();
-	d->chunks[key] = std::move(chunk);
+	d->chunks[key] = chunk;
 	return ptr;
 }
 
 void TileRenderer::removeChunk(int chunkX, int chunkZ) {
-	int key = (chunkX << 16) | (chunkZ & 0xFFFF);
-	d->chunks.erase(key);
+	auto key = d->getChunkKey(chunkX, chunkZ);
+	d->chunks.remove(key);
 }
 
 void TileRenderer::clearChunks() {
@@ -128,7 +172,7 @@ void TileRenderer::clearChunks() {
 }
 
 void TileRenderer::rebuildDirtyChunks() {
-	for (auto& [key, chunk] : d->chunks) {
+	for (auto& chunk : d->chunks) {
 		if (chunk->isDirty()) {
 			chunk->rebuild();
 		}
@@ -139,51 +183,62 @@ void TileRenderer::render(const Camera& camera, int viewportWidth, int viewportH
 	if (!d->initialized || !d->shaderProgram) {
 		return;
 	}
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	glEnable(GL_DEPTH_TEST);
 
 	// Перестраиваем грязные чанки
 	rebuildDirtyChunks();
 
-	// Биндим шейдер
-	d->shaderProgram->bind();
-
-	// Передаем юниформы
-	d->shaderProgram->setUniformValue("uProjection", camera.projection());
-	d->shaderProgram->setUniformValue("uView", camera.view());
-	d->shaderProgram->setUniformValue("zLevel", d->zLevel);
-
+	// Рисуем чанки только если есть tileset
 	if (d->tileset && d->tileset->atlas()) {
+
+		auto f = QOpenGLContext::currentContext()->functions();
+
+		// Отладочный вывод (только первый кадр после изменений)
+		static int frameCount = 0;
+		if (frameCount++ < 3) {
+			qInfo() << "TileRenderer::render - tileset atlas:" << d->tileset->atlas()
+				<< "textureId:" << d->tileset->atlas()->textureId()
+				<< "chunks:" << d->chunks.size();
+		}
+
+		f->glEnable(GL_BLEND);
+		f->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		f->glEnable(GL_DEPTH_TEST);
+
+		// Биндим шейдер
+		d->shaderProgram->bind();
+
+		// Передаем юниформы
+		d->shaderProgram->setUniformValue("uProjection", camera.projection());
+		d->shaderProgram->setUniformValue("uView", camera.view());
+		d->shaderProgram->setUniformValue("zLevel", d->zLevel);
+
 		// Биндим текстуру атласа
+		f->glActiveTexture(GL_TEXTURE0);
 		d->tileset->atlas()->bind();
 		d->shaderProgram->setUniformValue("uTexture", 0); // Привязан к GL_TEXTURE0
 
 		// Рисуем все чанки (frustum culling временно отключен для отладки)
 		int visibleCount = 0;
-		for (auto& [key, chunk] : d->chunks) {
+		for (auto& chunk : d->chunks) {
 			if (!chunk->isInitialized()) {
 				continue;
 			}
 
-			if (isChunkVisible(chunk.get(), camera, viewportWidth, viewportHeight)) {
-				chunk->render();
-				visibleCount++;
-			}
+			chunk->render();
+			visibleCount++;
 		}
 
-		if (visibleCount > 0) {
-			// qDebug() << "TileRenderer: rendered" << visibleCount << "chunks";
+		if (frameCount <= 3) {
+			qInfo() << "TileRenderer::render - rendered" << visibleCount << "chunks";
 		}
+
+		glDisable(GL_BLEND);
+
+		d->shaderProgram->release();
 	}
 
-	// Отладочные проходы
+	// Отладочные проходы (рисуются всегда, даже без tileset)
 	renderDebugPasses(camera, viewportWidth, viewportHeight);
-
-	glDisable(GL_BLEND);
-
-	d->shaderProgram->release();
 }
 
 bool TileRenderer::isChunkVisible(const Chunk* chunk, const Camera& camera, int viewportWidth, int viewportHeight) const {
@@ -215,6 +270,14 @@ bool TileRenderer::isChunkVisible(const Chunk* chunk, const Camera& camera, int 
 	return false;
 }
 
+void TileRenderer::setChunkSize(const QSize& chunkSize) {
+	d->chunkSize = chunkSize;
+}
+
+QSize TileRenderer::chunkSize() const {
+	return d->chunkSize;
+}
+
 float TileRenderer::zLevel() const {
 	return d->zLevel;
 }
@@ -244,11 +307,17 @@ void TileRenderer::renderDebugPasses(const Camera& camera, int viewportWidth, in
 		return;
 	}
 
+	// Биндим отладочный шейдер
+	d->debugShaderProgram->bind();
+	d->debugShaderProgram->setUniformValue("uProjection", camera.projection());
+	d->debugShaderProgram->setUniformValue("uView", camera.view());
+	d->debugShaderProgram->setUniformValue("zLevel", d->zLevel);
+
 	// Отключаем тест глубины для отладочных проходов, чтобы они всегда были поверх
 	glDisable(GL_DEPTH_TEST);
 
 	if (testDebugRenderPass(DebugRenderPass::ChunkBorders)) {
-		for (auto& [key, chunk] : d->chunks) {
+		for (auto& chunk : d->chunks) {
 			if (!chunk->isInitialized()) {
 				continue;
 			}
@@ -257,5 +326,6 @@ void TileRenderer::renderDebugPasses(const Camera& camera, int viewportWidth, in
 		}
 	}
 
+	d->debugShaderProgram->release();
 	glEnable(GL_DEPTH_TEST);
 }

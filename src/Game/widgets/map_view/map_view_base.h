@@ -30,7 +30,6 @@ public:
 
 signals:
 	void initializeContext();
-	void paintView();
 	void tileClicked(std::optional<QPoint> point);
 	void tileHovered(std::optional<QPoint> point);
 
@@ -53,6 +52,7 @@ protected:
 	virtual void onMapServiceConnected();
 	virtual void onRightMouseDrag(QPoint delta);
 	virtual void onZoom(float zoomFactor);
+	virtual void onBeginFrame();
 
 	// Инициализация тайловой системы
 	virtual void initializeTileSystem();
@@ -67,6 +67,8 @@ protected:
 	// Камера
 	Camera& camera();
 	const Camera& camera() const;
+	const Camera& cameraDefault() const;
+	void setDefaultCamera();
 
 private:
 	void setupViewport();

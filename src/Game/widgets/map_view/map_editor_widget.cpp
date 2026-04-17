@@ -5,6 +5,7 @@
 #include "Graphics/textures/texture_atlas.h"
 #include "Graphics/tiles/tileset.h"
 #include "Graphics/tiles/tile_renderer.h"
+#include "Graphics/tiles/chunk.h"
 #include <QToolBar>
 #include <QComboBox>
 #include <QLabel>
@@ -38,10 +39,14 @@ public:
   QLabel* currentAtlasLabel = nullptr;
 
   // Состояние
+	std::optional<MapMetadata> currentMapMetadata;
+	std::optional<QString> currentMapName;
   MapEditorMode currentMode = MapEditorMode::Draw;
   QList<int> selectedTileIds;
   std::optional<QPoint> hoveredTile;
   bool isDrawing = false;
+	bool needLoadTestAtlas = false;
+	bool needLoadAtlas = false;
 
   void generateTestAtlas() {
 		auto tileset = q->tileset();
@@ -49,13 +54,13 @@ public:
 		auto tileRenderer = q->tileRenderer();
 
 		// Создаём тестовый тайлсет (заглушку)
-		QPixmap testAtlas(256, 256);
+		QPixmap testAtlas(1024, 1024);
 		testAtlas.fill(Qt::gray);
 
 		QPainter painter(&testAtlas);
-		for (int y = 0; y < 8; y++) {
-			for (int x = 0; x < 8; x++) {
-				QColor color = QColor::fromHsv((x + y) * 20, 150, 200);
+		for (int y = 0; y < 32; y++) {
+			for (int x = 0; x < 32; x++) {
+				QColor color = QColor::fromHsv(((x + y) % 18) * 20, 150, 200);
 				painter.fillRect(x * 32, y * 32, 32, 32, color);
 			}
 		}
@@ -63,16 +68,23 @@ public:
 		painter.end();
 
 		// Загружаем атлас
-		if (textureAtlas->loadFromPixmap(testAtlas, 8, 8)) {
-			qInfo() << "Test texture atlas loaded successfully";
+		if (textureAtlas->loadFromPixmap(testAtlas, 32, 32)) {
+			qInfo() << "Tilemap loaded successfully from TilesService";
+			qInfo() << "  - atlas texture ID:" << textureAtlas->textureId();
+			qInfo() << "  - tiles:" << 32 << "x" << 32;
 
-			tileset->initialize(textureAtlas, 8, 8);
+			tileset->initialize(textureAtlas, 32, 32);
+			qInfo() << "  - tileset initialized, atlas:" << tileset->atlas();
+
 			tileRenderer->setTileset(tileset);
+			qInfo() << "  - tileset set to renderer";
+
+			tileRenderer->clearChunks();
 
 			// Создаём тестовые чанки (2x2 = 32x32 тайла)
-			for (int cz = 0; cz < 2; cz++) {
-				for (int cx = 0; cx < 2; cx++) {
-					auto* chunk = tileRenderer->getOrCreateChunk(cx, cz);
+			//for (int cz = 0; cz < 2; cz++) {
+			//	for (int cx = 0; cx < 2; cx++) {
+					auto* chunk = tileRenderer->getOrCreateChunk(0, 0);
 
 					for (int z = 0; z < 16; z++) {
 						for (int x = 0; x < 16; x++) {
@@ -80,8 +92,8 @@ public:
 							chunk->setTile(x, z, tileId);
 						}
 					}
-				}
-			}
+			//	}
+			//}
 
 			qInfo() << "Created" << tileRenderer->chunkCount() << "chunks";
 		}
@@ -107,6 +119,9 @@ MapEditorWidget::MapEditorWidget(
 		connect(d->mapService, &MapService::currentMapChanged,
 			this, &MapEditorWidget::onMapChanged);
   }
+
+	connect(this, &MapViewBase::initializeContext, this, &MapEditorWidget::onInitializeContext);
+	//connect(this, &MapViewBase::beginFrame, this, &MapEditorWidget::onBeginFrame);
 }
 
 MapEditorWidget::~MapEditorWidget() = default;
@@ -221,10 +236,16 @@ void MapEditorWidget::setupToolbar() {
 
   d->toolbar->addWidget(d->modeComboBox);
 
-	auto* applyPixmap = new QPushButton("Применить текущий атлас");
+	auto* applyPixmap = new QPushButton("> атлас");
 	connect(applyPixmap, &QPushButton::clicked, this, &MapEditorWidget::onApplySelectedAtlas);
 
 	d->toolbar->addWidget(applyPixmap);
+
+	auto* applyTestPixmap = new QPushButton("test");
+	connect(applyTestPixmap, &QPushButton::clicked, this, &MapEditorWidget::onApplTestAtlas);
+
+	d->toolbar->addWidget(applyTestPixmap);
+
 
   d->toolbar->addSeparator();
 
@@ -237,14 +258,25 @@ void MapEditorWidget::setupToolbar() {
 		d->mapComboBox->addItems(maps);
   }
 
-  connect(d->mapComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
-		this, [this](int index) {
-			const QString mapName = d->mapComboBox->itemText(index);
-			if (d->mapService) {
-				d->mapService->setCurrentMap(mapName);
+	auto selectCurrentMap = [this](int index) {
+		const QString mapName = d->mapComboBox->itemText(index);
+		if (d->mapService) {
+			d->mapService->setCurrentMap(mapName);
+			d->currentMapMetadata = d->mapService->getCurrentMapMetadata();
+			d->currentMapName = d->mapService->getCurrentMapName();
+
+			if (d->currentMapMetadata.has_value()) {
+				tileRenderer()->setChunkSize(d->currentMapMetadata->chunkSize);
 			}
-	});
+		}
+	};
+
+  connect(d->mapComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
+		this, selectCurrentMap);
   d->toolbar->addWidget(d->mapComboBox);
+
+	const auto currentMapIndex = d->mapComboBox->currentIndex();
+	selectCurrentMap(currentMapIndex);
 
   // Кнопка создания новой карты
   auto* newMapButton = new QPushButton("Новая карта");
@@ -263,8 +295,7 @@ void MapEditorWidget::setupToolbar() {
 			metadata.name = mapName;
 			metadata.chunkSize.setWidth(dialog.getChunkWidth());
 			metadata.chunkSize.setHeight(dialog.getChunkHeight());
-			metadata.tileSize.setWidth(dialog.getTileWidth());
-			metadata.tileSize.setHeight(dialog.getTileHeight());
+			metadata.tileSize = dialog.getTileSize();
 			// mapSize оставляем по умолчанию, он будет определяться динамически
 
 			// Сохраняем метаданные
@@ -319,17 +350,38 @@ void MapEditorWidget::setupPropertiesPanel() {
   layout->addRow("Атлас:", d->currentAtlasLabel);
 }
 
-void MapEditorWidget::onApplySelectedAtlas() {
-	loadTilemap();
-}
-
 void MapEditorWidget::placeTile(int x, int y) {
-	auto tilesRenderer = tileRenderer();
-	auto chunk = tilesRenderer->getOrCreateChunk(x, y);
+	const auto tiles = tilesService();
+	const auto renderer = tileRenderer();
+	if (!renderer) {
+		return;
+	}
 
+	//const auto chuncSize = renderer->chunkSize();
 
-  qDebug() << "Placing tile:" << d->selectedTileIds.count() << "at" << x << y;
+	//// Вычисляем координаты чанка и локальные координаты
+	//const int chunkX = x / chuncSize.width();
+	//const int chunkZ = y / chuncSize.height();
+	//const int localX = x % chuncSize.width();
+	//const int localZ = y % chuncSize.height();
+
+	auto chunk = renderer->getOrCreateChunk(x, y);
+	if (!chunk) {
+		return;
+	}
+
+	const auto ids = tiles->getSelectionTiles();
+
+	if (ids.isEmpty()) {
+		return;
+	}
+
+	chunk->setTile(x, y, ids.first());
+
+  //qDebug() << "Placing tile:" << ids.first() << "at world(" << x << "," << y << ")"
+		//<< "chunk(" << chunkX << "," << chunkZ << ") local(" << localX << "," << localZ << ")";
   emit tilesPlaced(x, y, d->selectedTileIds);
+	updatePropertiesPanel();
   update();
 }
 
@@ -365,5 +417,34 @@ void MapEditorWidget::updatePropertiesPanel() {
 void MapEditorWidget::onTileServiceConnected() {
   auto service = tilesService();
   connect(service, &TilesService::tilesSelectionChanged, this, &MapEditorWidget::onTileSelected);
+}
 
+void MapEditorWidget::onInitializeContext() {
+//	d->generateTestAtlas();
+}
+
+
+void MapEditorWidget::onApplySelectedAtlas() {
+	d->needLoadAtlas = true;
+	update();
+}
+
+void MapEditorWidget::onApplTestAtlas() {
+	d->needLoadTestAtlas = true;
+	update();
+}
+
+void MapEditorWidget::onBeginFrame() {
+
+	if (d->needLoadTestAtlas) {
+		d->needLoadTestAtlas = false;
+		d->generateTestAtlas();
+	}
+
+	if (d->needLoadAtlas) {
+		d->needLoadAtlas = false;
+		loadTilemap();
+	}
+
+	MapViewBase::onBeginFrame();
 }

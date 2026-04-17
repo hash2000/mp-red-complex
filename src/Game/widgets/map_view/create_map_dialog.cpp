@@ -22,8 +22,7 @@ public:
     QLineEdit* nameEdit = nullptr;
     QSpinBox* chunkWidthSpin = nullptr;
     QSpinBox* chunkHeightSpin = nullptr;
-    QSpinBox* tileWidthSpin = nullptr;
-    QSpinBox* tileHeightSpin = nullptr;
+    QSpinBox* tileSizeSpin = nullptr;
 
     QString mapId;
 };
@@ -100,19 +99,12 @@ void CreateMapDialog::setupUI() {
     auto* tileGroup = new QGroupBox("Размер одного тайла (в пикселях)");
     auto* tileLayout = new QHBoxLayout(tileGroup);
 
-    d->tileWidthSpin = new QSpinBox();
-    d->tileWidthSpin->setRange(1, 256);
-    d->tileWidthSpin->setValue(32);
-    d->tileWidthSpin->setToolTip("Ширина тайла в пикселях");
+    d->tileSizeSpin = new QSpinBox();
+    d->tileSizeSpin->setRange(1, 256);
+    d->tileSizeSpin->setValue(32);
+    d->tileSizeSpin->setToolTip("Размер тайла в пикселях");
     tileLayout->addWidget(new QLabel("Ширина:"));
-    tileLayout->addWidget(d->tileWidthSpin);
-
-    d->tileHeightSpin = new QSpinBox();
-    d->tileHeightSpin->setRange(1, 256);
-    d->tileHeightSpin->setValue(32);
-    d->tileHeightSpin->setToolTip("Высота тайла в пикселях");
-    tileLayout->addWidget(new QLabel("Высота:"));
-    tileLayout->addWidget(d->tileHeightSpin);
+    tileLayout->addWidget(d->tileSizeSpin);
 
     mainLayout->addWidget(tileGroup);
 
@@ -164,10 +156,7 @@ int CreateMapDialog::getChunkHeight() const {
     return d->chunkHeightSpin->value();
 }
 
-int CreateMapDialog::getTileWidth() const {
-    return d->tileWidthSpin->value();
+int CreateMapDialog::getTileSize() const {
+    return d->tileSizeSpin->value();
 }
 
-int CreateMapDialog::getTileHeight() const {
-    return d->tileHeightSpin->value();
-}

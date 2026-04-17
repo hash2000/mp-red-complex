@@ -8,6 +8,7 @@
 
 // Стандартный тег для постоянного кеша (UI элементы)
 inline constexpr const char* kDefaultTextureTag = "default";
+inline constexpr const char* kTestTexturePath = "test-texture-stub";
 
 class TexturesService : public QObject {
 	Q_OBJECT

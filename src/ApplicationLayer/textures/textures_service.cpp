@@ -1,6 +1,7 @@
 #include "ApplicationLayer/textures/textures_service.h"
 #include "DataLayer/textures/i_textures_data_provider.h"
 #include <QPixmap>
+#include <QPainter>
 #include <QHash>
 
 class TexturesService::Private {
@@ -16,6 +17,22 @@ public:
 	// Внешний QHash: ключ = тег, значение = внутренний QHash
 	// Внутренний QHash: ключ = путь к текстуре, значение = QPixmap
 	QHash<QString, QHash<QString, QPixmap>> texturesCache;
+
+	QPixmap generateTestPixmap() {
+		QPixmap pixmap(1024, 1024);
+		pixmap.fill(Qt::gray);
+
+		QPainter painter(&pixmap);
+		for (int y = 0; y < 32; y++) {
+			for (int x = 0; x < 32; x++) {
+				QColor color = QColor::fromHsv(((x + y) % 18) * 20, 150, 200);
+				painter.fillRect(x * 32, y * 32, 32, 32, color);
+			}
+		}
+
+		painter.end();
+		return pixmap;
+	}
 };
 
 TexturesService::TexturesService(
@@ -24,6 +41,7 @@ TexturesService::TexturesService(
 	: QObject(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->dataProvider = dataProvider;
+	d->texturesCache[kDefaultTextureTag][kTestTexturePath] = d->generateTestPixmap();
 }
 
 TexturesService::~TexturesService() = default;

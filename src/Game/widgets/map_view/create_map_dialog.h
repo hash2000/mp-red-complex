@@ -17,8 +17,7 @@ public:
     QString getMapName() const;
     int getChunkWidth() const;
     int getChunkHeight() const;
-    int getTileWidth() const;
-    int getTileHeight() const;
+    int getTileSize() const;
 
 private:
     class Private;

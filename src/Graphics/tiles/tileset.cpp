@@ -11,6 +11,7 @@ public:
 	TextureAtlas* atlas = nullptr;
 	int tilesCountX = 0;
 	int tilesCountY = 0;
+	int chuncSize = 0;
 };
 
 Tileset::Tileset()

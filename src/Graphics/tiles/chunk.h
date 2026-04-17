@@ -2,6 +2,7 @@
 #include "Graphics/tiles/tile_data.h"
 #include <QOpenGLFunctions_3_3_Core>
 #include <QPoint>
+#include <QSize>
 #include <memory>
 
 class QOpenGLVertexArrayObject;
@@ -13,13 +14,10 @@ class Tileset;
 class Chunk : protected QOpenGLFunctions_3_3_Core {
 public:
 	/// Размер чанка по умолчанию
-	static constexpr int kDefaultChunkSize = 16;
+	static constexpr int kDefaultChunkSize = 32;
 
 	Chunk();
 	~Chunk();
-
-	/// Инициализация (вызвать после создания OpenGL контекста)
-	void initialize();
 
 	/// Установить позицию чанка в мире (в чанках, не в пикселях)
 	void setChunkPosition(int chunkX, int chunkZ);
@@ -30,7 +28,7 @@ public:
 	void setTileset(Tileset* tileset);
 
 	/// Установить размер чанка
-	void setChunkSize(int size);
+	void setChunkSize(const QSize& size);
 
 	/// Установить тайл по локальным координатам (0..chunkSize-1)
 	void setTile(int localX, int localZ, int tileId);
@@ -63,6 +61,10 @@ public:
 private:
 	/// Перестроить VBO рамки
 	void rebuildBorderVBO();
+	void rebuildVertexes();
+
+	/// Инициализация (вызвать после создания OpenGL контекста)
+	void initialize();
 
 	class Private;
 	std::unique_ptr<Private> d;

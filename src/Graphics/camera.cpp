@@ -1,5 +1,8 @@
 #include "Graphics/camera.h"
 
+Camera::Camera() {
+}
+
 Camera::Camera(const QVector3D& center, const QVector3D& eye)
 : _center(center)
 , _eye(eye) {
@@ -32,7 +35,7 @@ void Camera::setupViewport(int w, int h)
 {
 	float aspect = static_cast<float>(w) / h;
 	_projection.setToIdentity();
-	_projection.perspective(45.0f, aspect, 0.1f, 100.0f);
+	_projection.perspective(45.0f, aspect, 0.1f, 1000.0f);
 	update();
 }
 

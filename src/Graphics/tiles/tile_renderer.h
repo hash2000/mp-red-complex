@@ -1,6 +1,7 @@
 #pragma once
 #include "Graphics/tiles/chunk.h"
 #include <QOpenGLFunctions_3_3_Core>
+#include <QSize>
 #include <memory>
 
 class Camera;
@@ -49,6 +50,11 @@ public:
 	float zLevel() const;
 	void setZLevel(float level);
 
+	/// Размер чанка
+	void setChunkSize(const QSize& chunkSize);
+
+	QSize chunkSize() const;
+
 	/// Количество загруженных чанков
 	size_t chunkCount() const;
 
@@ -61,7 +67,6 @@ private:
 	/// Проверка видимости чанка во frustum камеры
 	bool isChunkVisible(const Chunk* chunk, const Camera& camera, int viewportWidth, int viewportHeight) const;
 
-	/// Отрисовка отладочных проходов
 	void renderDebugPasses(const Camera& camera, int viewportWidth, int viewportHeight);
 
 	class Private;

@@ -37,6 +37,18 @@ bool TextureAtlas::loadFromPixmap(const QPixmap& pixmap, int tilesCountX, int ti
 
 	// Конвертируем в QImage для переворота
 	QImage image = pixmap.toImage().mirrored(false, true);
+	
+	// Конвертируем в RGBA8888 — стандартный формат для OpenGL
+	// Без этого ARGB32_Premultiplied интерпретируется неправильно
+	//if (image.format() != QImage::Format_RGBA8888) {
+	//	image = image.convertToFormat(QImage::Format_RGBA8888);
+	//}
+	
+	// Отладочный вывод формата изображения
+	qInfo() << "TextureAtlas::loadFromPixmap - image format:" << image.format()
+		<< "depth:" << image.depth()
+		<< "bytesPerLine:" << image.bytesPerLine()
+		<< "size:" << image.size();
 
 	// Создаем OpenGL текстуру
 	d->texture = std::make_unique<QOpenGLTexture>(image);
@@ -46,7 +58,8 @@ bool TextureAtlas::loadFromPixmap(const QPixmap& pixmap, int tilesCountX, int ti
 
 	qInfo() << "TextureAtlas loaded:" << pixmap.width() << "x" << pixmap.height()
 		<< "tiles:" << tilesCountX << "x" << tilesCountY
-		<< "tile size:" << d->tileSizeX << "x" << d->tileSizeY;
+		<< "tile size:" << d->tileSizeX << "x" << d->tileSizeY
+		<< "glTextureId:" << d->texture->textureId();
 
 	return true;
 }
@@ -70,6 +83,11 @@ TextureRegion TextureAtlas::getRegion(int tileX, int tileY) const {
 
 void TextureAtlas::bind() const {
 	if (d->texture) {
+		if (!d->texture->isCreated()) {
+			qWarning() << "Texture is not created";
+			return;
+		}
+
 		d->texture->bind();
 	}
 }

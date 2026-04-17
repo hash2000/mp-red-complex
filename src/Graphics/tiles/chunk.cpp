@@ -2,6 +2,8 @@
 #include "Graphics/tiles/tileset.h"
 #include <QOpenGLBuffer>
 #include <QOpenGLVertexArrayObject>
+#include <QOpenGLFunctions>
+#include <QSize>
 #include <qdebug.h>
 #include <vector>
 
@@ -18,7 +20,7 @@ public:
 	bool dirty = false;
 	int chunkX = 0;
 	int chunkZ = 0;
-	int chunkSize = Chunk::kDefaultChunkSize;
+	QSize chunkSize = { Chunk::kDefaultChunkSize, Chunk::kDefaultChunkSize };
 	Tileset* tileset = nullptr;
 
 	// Данные тайлов чанка (хранятся как tileId)
@@ -54,33 +56,6 @@ void Chunk::initialize() {
 	d->dirty = true;
 
 	initializeOpenGLFunctions();
-
-	d->vao.create();
-	d->vbo.create();
-	d->borderVbo.create();
-
-	// Инициализируем пустой буфер
-	d->vao.bind();
-	d->vbo.bind();
-	d->vbo.allocate(nullptr, 0);
-
-	// Настраиваем атрибуты
-	// Атрибут 0: позиция (x, z) - 2 float
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), reinterpret_cast<void*>(0));
-
-	// Атрибут 1: UV координаты (u, v) - 2 float
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), reinterpret_cast<void*>(2 * sizeof(float)));
-
-	// Инициализируем данные для рамки (4 линии по периметру чанка)
-	rebuildBorderVBO();
-
-	d->vao.release();
-	d->vbo.release();
-
-	// Инициализируем данные тайлов
-	d->tileData.resize(d->chunkSize * d->chunkSize, -1);
 }
 
 void Chunk::setChunkPosition(int chunkX, int chunkZ) {
@@ -101,29 +76,29 @@ void Chunk::setTileset(Tileset* tileset) {
 	markDirty();
 }
 
-void Chunk::setChunkSize(int size) {
-	if (size <= 0 || size > 64) {
-		qWarning() << "Chunk: invalid chunk size" << size;
+void Chunk::setChunkSize(const QSize& size) {
+	if ((size.width() <= 0 || size.width() > 64) || (size.height() <= 0 || size.height() > 64)) {
+		qWarning() << "Chunk: invalid chunk size width" << size.width() << "size height" << size.height();
 		return;
 	}
 	d->chunkSize = size;
-	d->tileData.resize(d->chunkSize * d->chunkSize, -1);
+	d->tileData.resize(d->chunkSize.width() * d->chunkSize.height(), -1);
 	markDirty();
 }
 
 void Chunk::setTile(int localX, int localZ, int tileId) {
-	if (localX < 0 || localX >= d->chunkSize || localZ < 0 || localZ >= d->chunkSize) {
+	if (localX < 0 || localX >= d->chunkSize.width() || localZ < 0 || localZ >= d->chunkSize.height()) {
 		return;
 	}
-	d->tileData[localZ * d->chunkSize + localX] = tileId;
+	d->tileData[localZ * d->chunkSize.width() + localX] = tileId;
 	markDirty();
 }
 
 int Chunk::getTile(int localX, int localZ) const {
-	if (localX < 0 || localX >= d->chunkSize || localZ < 0 || localZ >= d->chunkSize) {
+	if (localX < 0 || localX >= d->chunkSize.width() || localZ < 0 || localZ >= d->chunkSize.height()) {
 		return -1;
 	}
-	return d->tileData[localZ * d->chunkSize + localX];
+	return d->tileData[localZ * d->chunkSize.width() + localX];
 }
 
 void Chunk::markDirty() {
@@ -135,21 +110,87 @@ bool Chunk::isDirty() const {
 }
 
 void Chunk::rebuild() {
-	if (!d->initialized || !d->dirty) {
+	if (!d->dirty) {
 		return;
 	}
 
-	if (!d->tileset || !d->tileset->isInitialized()) {
+	if (!d->initialized) {
+		initialize();
+	}
+
+	if (!d->initialized) {
 		return;
 	}
 
+	rebuildBorderVBO();
+
+	if (d->tileset && d->tileset->isInitialized()) {
+		rebuildVertexes();
+	}
+
+	d->dirty = false;
+}
+
+void Chunk::render() {
+	if (!d->initialized || d->dirty || d->vertexCount == 0) {
+		return;
+	}
+
+	auto f = QOpenGLContext::currentContext()->functions();
+
+	d->vao.bind();
+	f->glDrawArrays(GL_TRIANGLES, 0, d->vertexCount);
+	d->vao.release();
+}
+
+void Chunk::renderBorder() {
+	if (!d->initialized || d->borderVertexCount == 0) {
+		return;
+	}
+
+	auto f = QOpenGLContext::currentContext()->functions();
+
+	// Рисуем рамку без VAO — просто настраиваем атрибут позиции
+	d->borderVbo.bind();
+
+	f->glEnableVertexAttribArray(0);
+	f->glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), reinterpret_cast<void*>(0));
+
+	f->glDrawArrays(GL_LINES, 0, d->borderVertexCount);
+
+	f->glDisableVertexAttribArray(0);
+	d->borderVbo.release();
+}
+
+bool Chunk::isInitialized() const {
+	return d->initialized;
+}
+
+float Chunk::worldMinX() const {
+	return static_cast<float>(d->chunkX * d->chunkSize.width());
+}
+
+float Chunk::worldMaxX() const {
+	return static_cast<float>((d->chunkX + 1) * d->chunkSize.width());
+}
+
+float Chunk::worldMinZ() const {
+	return static_cast<float>(d->chunkZ * d->chunkSize.height());
+}
+
+float Chunk::worldMaxZ() const {
+	return static_cast<float>((d->chunkZ + 1) * d->chunkSize.height());
+}
+
+void Chunk::rebuildVertexes() {
 	std::vector<float> vertices;
 	// Резервируем память: 6 вершин на тайл, 4 float на вершину
-	vertices.reserve(d->chunkSize * d->chunkSize * 6 * 4);
+	vertices.reserve(d->chunkSize.width() * d->chunkSize.height() * 6 * 4);
 
-	for (int z = 0; z < d->chunkSize; ++z) {
-		for (int x = 0; x < d->chunkSize; ++x) {
-			int tileId = d->tileData[z * d->chunkSize + x];
+	int tileCount = 0;
+	for (int z = 0; z < d->chunkSize.height(); z++) {
+		for (int x = 0; x < d->chunkSize.width(); x++) {
+			int tileId = d->tileData[z * d->chunkSize.width() + x];
 			if (tileId < 0) {
 				continue; // Пустой тайл
 			}
@@ -159,9 +200,11 @@ void Chunk::rebuild() {
 				continue;
 			}
 
+			tileCount++;
+
 			// Позиция тайла в мировых координатах
-			float worldX = static_cast<float>(d->chunkX * d->chunkSize + x);
-			float worldZ = static_cast<float>(d->chunkZ * d->chunkSize + z);
+			float worldX = static_cast<float>(d->chunkX * d->chunkSize.width() + x);
+			float worldZ = static_cast<float>(d->chunkZ * d->chunkSize.height() + z);
 
 			// Два треугольника = 6 вершин
 			// Треугольник 1: верхний левый, нижний левый, нижний правый
@@ -194,44 +237,26 @@ void Chunk::rebuild() {
 
 	d->vertexCount = static_cast<int>(vertices.size() / 4);
 
-	// Обновляем VBO
+	if (!d->vao.isCreated()) {
+		d->vao.create();
+	}
+
 	d->vao.bind();
+
+	if (!d->vbo.isCreated()) {
+		d->vbo.create();
+	}
+
 	d->vbo.bind();
 	d->vbo.allocate(vertices.data(), static_cast<int>(vertices.size() * sizeof(float)));
 	d->vbo.release();
 	d->vao.release();
 
-	d->dirty = false;
-}
 
-void Chunk::render() {
-	if (!d->initialized || d->dirty || d->vertexCount == 0) {
-		return;
-	}
-
-	d->vao.bind();
-	glDrawArrays(GL_TRIANGLES, 0, d->vertexCount);
-	d->vao.release();
-}
-
-bool Chunk::isInitialized() const {
-	return d->initialized;
-}
-
-float Chunk::worldMinX() const {
-	return static_cast<float>(d->chunkX * d->chunkSize);
-}
-
-float Chunk::worldMaxX() const {
-	return static_cast<float>((d->chunkX + 1) * d->chunkSize);
-}
-
-float Chunk::worldMinZ() const {
-	return static_cast<float>(d->chunkZ * d->chunkSize);
-}
-
-float Chunk::worldMaxZ() const {
-	return static_cast<float>((d->chunkZ + 1) * d->chunkSize);
+	qInfo() << "Chunk::rebuild - chunk("
+		<< d->chunkX << "x" << d->chunkSize.width() << ","
+		<< d->chunkZ << "x" << d->chunkSize.height() << ")"
+		<< "tiles:" << tileCount << "vertices:" << d->vertexCount;
 }
 
 void Chunk::rebuildBorderVBO() {
@@ -244,10 +269,12 @@ void Chunk::rebuildBorderVBO() {
 	std::vector<float> borderVertices;
 	borderVertices.reserve(8 * 2); // 8 вершин, 2 float каждая
 
-	float minX = static_cast<float>(d->chunkX * d->chunkSize);
-	float maxX = static_cast<float>((d->chunkX + 1) * d->chunkSize);
-	float minZ = static_cast<float>(d->chunkZ * d->chunkSize);
-	float maxZ = static_cast<float>((d->chunkZ + 1) * d->chunkSize);
+	float minX = static_cast<float>(d->chunkX * d->chunkSize.width());
+	float maxX = static_cast<float>((d->chunkX + 1) * d->chunkSize.width());
+	float minZ = static_cast<float>(d->chunkZ * d->chunkSize.height());
+	float maxZ = static_cast<float>((d->chunkZ + 1) * d->chunkSize.height());
+
+	qInfo() << "Rebuild border x(" << minX << "," << maxX << ") y(" << minZ << "," << maxZ << ")";
 
 	// Нижняя линия: (minX, minZ) -> (maxX, minZ)
 	borderVertices.push_back(minX); borderVertices.push_back(minZ);
@@ -267,27 +294,12 @@ void Chunk::rebuildBorderVBO() {
 
 	d->borderVertexCount = 8;
 
+	if (!d->borderVbo.isCreated()) {
+		d->borderVbo.create();
+	}
+
 	d->borderVbo.bind();
 	d->borderVbo.allocate(borderVertices.data(), static_cast<int>(borderVertices.size() * sizeof(float)));
 	d->borderVbo.release();
 }
 
-void Chunk::renderBorder() {
-	if (!d->initialized || d->borderVertexCount == 0) {
-		return;
-	}
-
-	// Привязываем VAO, чтобы не нарушать состояние
-	d->vao.bind();
-	
-	// Привязываем VBO рамки и настраиваем атрибут
-	d->borderVbo.bind();
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), reinterpret_cast<void*>(0));
-	
-	glDrawArrays(GL_LINES, 0, d->borderVertexCount);
-	
-	glDisableVertexAttribArray(0);
-	d->borderVbo.release();
-	d->vao.release();
-}

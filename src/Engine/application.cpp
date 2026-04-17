@@ -25,7 +25,7 @@ public:
 		fmt.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
 		fmt.setSamples(4);
 		fmt.setStencilBufferSize(8);
-		// fmt.setStereo(true);  // Отключено: вызывает перезагрузку окна при первом OpenGL виджете
+		fmt.setStereo(true);
 
 		QSurfaceFormat::setDefaultFormat(fmt);
 

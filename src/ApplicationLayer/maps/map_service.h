@@ -24,6 +24,12 @@ public:
     // Сохранить метаданные карты
     bool saveMapMetadata(const QString& mapName, const MapMetadata& metadata);
 
+		// Вернуть текущие даные о карте, если они есть 
+		std::optional<MapMetadata> getCurrentMapMetadata() const;
+
+		// Вернуть текущее имя карты, если она была загружена
+		std::optional<QString> getCurrentMapName() const;
+
     // Удалить карту
     bool deleteMap(const QString& mapName);
 

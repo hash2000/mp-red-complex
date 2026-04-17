@@ -33,11 +33,7 @@ public:
         QJsonObject obj;
         obj["id"] = metadata.id.toString();
         obj["name"] = metadata.name;
-
-        QJsonObject tileSize;
-        tileSize["width"] = metadata.tileSize.width();
-        tileSize["height"] = metadata.tileSize.height();
-        obj["tileSize"] = tileSize;
+        obj["tileSize"] = metadata.tileSize;
 
         QJsonObject chunkSize;
         chunkSize["width"] = metadata.chunkSize.width();
@@ -57,9 +53,7 @@ public:
         metadata.name = obj["name"].toString();
 
         if (obj.contains("tileSize") && obj["tileSize"].isObject()) {
-            const QJsonObject sizeObj = obj["tileSize"].toObject();
-            metadata.tileSize.setWidth(sizeObj["width"].toInt(32));
-            metadata.tileSize.setHeight(sizeObj["height"].toInt(32));
+					metadata.tileSize = obj["tileSize"].toInt(32);
         }
 
         if (obj.contains("chunkSize") && obj["chunkSize"].isObject()) {
