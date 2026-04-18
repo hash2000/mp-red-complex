@@ -298,18 +298,34 @@ void MapEditorWidget::placeTile(int x, int y) {
 		return;
 	}
 
-	auto chunk = renderer->getOrCreateChunk(x, y);
-	if (!chunk) {
-		return;
-	}
-
+	const auto chunkSizes = renderer->chunkSize();
 	const auto ids = tiles->getSelectionTiles();
 
 	if (ids.isEmpty()) {
 		return;
 	}
 
-	chunk->setTile(x, y, ids.first());
+	const int tilesetWidth = chunkSizes.width();
+	const int tilesetHeight = chunkSizes.height();
+	const int baseId = ids.first();
+	const int startX = x;
+	const int startZ = y;
+
+	for (int i = 0; i < ids.size(); i++) {
+		const int tileId = ids[i];
+		const int diff = tileId - baseId;
+		const int offsetX = diff % tilesetWidth;
+		const int offsetZ = diff / tilesetWidth;
+		const int worldX = startX + offsetX;
+		const int worldZ = startZ + offsetZ;
+
+		auto chunk = renderer->getOrCreateChunk(worldX, worldZ);
+		if (!chunk) {
+			return;
+		}
+
+		chunk->setTile(worldX, worldZ, tileId);
+	}
 
   emit tilesPlaced(x, y, d->selectedTileIds);
 	updatePropertiesPanel();
