@@ -20,9 +20,13 @@ bool CreateWindowCommand::execute(CommandContext* context, const QStringList& ar
 
 	const auto target = args.at(0);
 	QString id;
+	QString alternateTitle;
 
 	if (args.count() >= 2) {
 		id = args.at(1);
+		if (args.count() >= 3) {
+			alternateTitle = args.at(2);
+		}
 	}
 	else {
 		id = QUuid::createUuid()
@@ -44,9 +48,15 @@ bool CreateWindowCommand::execute(CommandContext* context, const QStringList& ar
 
 	const auto title = widget->windowTitle();
 	const auto sizes = widget->windowDefaultSizes();
-
 	auto subWndow = mdiArea->addSubWindow(widget);
-	subWndow->setWindowTitle(title);
+
+	if (alternateTitle.isEmpty()) {
+		subWndow->setWindowTitle(title);
+	}
+	else {
+		subWndow->setWindowTitle(alternateTitle);
+	}
+
 	subWndow->setAttribute(Qt::WA_DeleteOnClose, true);
 	subWndow->resize(sizes.width(), sizes.height());
 	widget->setMdiArea(mdiArea);

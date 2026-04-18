@@ -55,7 +55,7 @@ void UserWindow::onEquipmentRequested(const QUuid& characterId) {
 	}
 
 	d->controller->executeCommandByName("window-create", QStringList{
-		"equipment", chr->equipmentId.toString(QUuid::StringFormat::WithoutBraces) });
+		"equipment", chr->equipmentId.toString(QUuid::StringFormat::WithoutBraces), chr->name });
 }
 
 void UserWindow::onSpecificationsRequested(const QUuid& characterId) {
@@ -65,7 +65,7 @@ void UserWindow::onSpecificationsRequested(const QUuid& characterId) {
 	}
 
 	d->controller->executeCommandByName("window-create", QStringList{
-		"character-specifications", chr->id.toString(QUuid::StringFormat::WithoutBraces) });
+		"character-specifications", chr->id.toString(QUuid::StringFormat::WithoutBraces), chr->name });
 }
 
 void UserWindow::onUserLoggedOut() {

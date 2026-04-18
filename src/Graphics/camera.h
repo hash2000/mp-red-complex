@@ -5,6 +5,7 @@
 
 class Camera {
 public:
+	Camera();
 	Camera(const QVector3D& center, const QVector3D& eye);
 
 	QMatrix4x4 lookAt(const QVector3D& eye, const QVector3D& center, const QVector3D& up);

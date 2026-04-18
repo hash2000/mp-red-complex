@@ -29,6 +29,10 @@ public:
 			"window-create map 30f2aed5-5c42-4e6b-8179-f270a80159fe", 2));
 	}
 
+	void addDefaultEditors() {
+		panel->addButton(ActionButtonConfig("TextureEditor", "map-editor.png", "Редактор текстур", "window-create texture-editor texture-editor", 2));
+	}
+
 	ActionPanelByUserBuilder* q;
 	ActionPanelController* panel;
 	UsersService* usersService;
@@ -53,4 +57,5 @@ void ActionPanelByUserBuilder::build() {
 	d->addChestButton();
 	d->addEntitiesButton();
 	d->addMapButton();
+	d->addDefaultEditors();
 }

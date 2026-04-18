@@ -84,6 +84,12 @@ ctest --output-on-failure
 - **Braces**: Same-line opening brace for functions/classes
 - **Trailing whitespace**: Trimmed
 - **Final newline**: Required
+- **Increment/Decrement Operators**: Use postfix form (`x++`, `x--`) instead of prefix (`++x`, `--x`)
+
+```cpp
+for (int z = 0; z < 16; z++) // Да
+for (int z = 0; z < 16; ++z) // Нет
+```
 
 ### Imports and Forward Declarations
 - Use forward declarations to avoid unnecessary includes in headers
@@ -305,291 +311,45 @@ QTEST_MAIN(TestMyClass)
 
 ## Creating New MDI Windows
 
-To add a new MDI child window to the application, follow the established pattern:
-
-### 1. Create Data Layer (if needed)
-
-For windows that need data persistence, create a data provider interface and implementation:
-
-```cpp
-// src/DataLayer/your_module/i_your_data_provider.h
-#pragma once
-#include <QString>
-#include <QHash>
-#include <optional>
-
-struct YourData {
-    QString id;
-    QString name;
-    // ... other fields
-};
-
-class IYourDataProvider {
-public:
-    virtual ~IYourDataProvider() = default;
-    virtual std::optional<YourData> loadItem(const QString& id) const = 0;
-    virtual bool saveItem(const YourData& item) = 0;
-};
-```
-
-```cpp
-// src/DataLayer/your_module/your_data_provider_json_impl.h
-#pragma once
-#include "DataLayer/your_module/i_your_data_provider.h"
-#include <memory>
-
-class Resources;
-
-class YourDataProviderJsonImpl : public IYourDataProvider {
-public:
-    YourDataProviderJsonImpl(Resources* resources);
-    ~YourDataProviderJsonImpl() override;
+> **/create-mdi-window** — Полная пошаговая инструкция по созданию нового MDI окна (Data Layer → Application Layer → UI Layer → Registration)
 
-    std::optional<YourData> loadItem(const QString& id) const override;
-    bool saveItem(const YourData& item) override;
+---
 
-private:
-    class Private;
-    std::unique_ptr<Private> d;
-};
-```
+## Widget Styling
 
-### 2. Create Application Layer Service
-
-Create a service that uses the data provider:
-
-```cpp
-// src/ApplicationLayer/your_module/your_service.h
-#pragma once
-#include "DataLayer/your_module/i_your_data_provider.h"
-#include <QObject>
-#include <memory>
-
-class YourService : public QObject {
-    Q_OBJECT
-public:
-    explicit YourService(std::unique_ptr<IYourDataProvider> dataProvider, QObject* parent = nullptr);
-    ~YourService() override;
-
-    // Business logic methods
-    void doSomething();
-
-signals:
-    void dataChanged();
-
-private:
-    class Private;
-    std::unique_ptr<Private> d;
-};
-```
-
-### 3. Create Widget (UI Component)
-
-Create the actual UI widget:
-
-```cpp
-// src/Game/widgets/your_module/your_widget.h
-#pragma once
-#include <QWidget>
-#include <memory>
-
-class YourService;
-class QPushButton;
-class QLineEdit;
-
-class YourWidget : public QWidget {
-    Q_OBJECT
-public:
-    explicit YourWidget(YourService* service, QWidget* parent = nullptr);
-    ~YourWidget() override;
-
-signals:
-    void actionCompleted();
-
-private slots:
-    void onButtonClicked();
-
-private:
-    void setupLayout();
-
-    class Private;
-    std::unique_ptr<Private> d;
-};
-```
-
-### 4. Create MDI Window
-
-Create the MDI child window that wraps the widget:
+> **/widget-styling** — Цветовая палитра Tailwind Slate, стили компонентов, layout guidelines
 
-```cpp
-// src/Game/widgets/your_module/your_window.h
-#pragma once
-#include "Game/mdi_child_window.h"
-#include <QObject>
-#include <memory>
+---
 
-class YourService;
-class YourWidget;
-
-class YourWindow : public MdiChildWindow {
-    Q_OBJECT
+## Working with Resources
 
-public:
-    explicit YourWindow(YourService* service, const QString& id, QWidget* parent = nullptr);
-    ~YourWindow() override;
+> **/resources-io** — Чтение и запись файлов через Resources system (assets/data контейнеры)
 
-    QString windowType() const override { return "your-window-type"; }
-    QString windowTitle() const override { return "Window Title"; }
-    QSize windowDefaultSizes() const override { return QSize(400, 300); }
+---
 
-    bool handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) override;
-
-private slots:
-    void onWidgetAction();
-
-private:
-    class Private;
-    std::unique_ptr<Private> d;
-};
-```
-
-```cpp
-// src/Game/widgets/your_module/your_window.cpp
-#include "Game/widgets/your_module/your_window.h"
-#include "Game/widgets/your_module/your_widget.h"
-#include "ApplicationLayer/your_module/your_service.h"
-#include "Game/app_controller.h"
-#include "Game/commands/command_context.h"
-
-class YourWindow::Private {
-public:
-    Private(YourWindow* parent) : q(parent) {}
-    YourWindow* q;
-    YourService* service;
-    YourWidget* widget = nullptr;
-    ApplicationController* controller = nullptr;
-};
-
-YourWindow::YourWindow(YourService* service, const QString& id, QWidget* parent)
-    : d(std::make_unique<Private>(this))
-    , MdiChildWindow(id, parent) {
-    d->service = service;
-    d->widget = new YourWidget(service, this);
-
-    connect(d->widget, &YourWidget::actionCompleted, this, &YourWindow::onWidgetAction);
-
-    setWidget(d->widget);
-    resize(windowDefaultSizes());
-}
-
-YourWindow::~YourWindow() = default;
-
-bool YourWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) {
-    if (commandName == "create") {
-        d->controller = context->applicationController();
-        return true;
-    }
-    return false;
-}
-
-void YourWindow::onWidgetAction() {
-    // Handle widget action
-}
-```
-
-### 5. Register Service in `services.cpp`
-
-Add the service to the Services class:
-
-```cpp
-// src/Game/services.h - add forward declaration
-class YourService;
-class IYourDataProvider;  // Forward declaration of interface
-
-// src/Game/services.h - add method
-YourService* yourService() const;
-
-// src/Game/services.cpp - add include
-#include "ApplicationLayer/your_module/your_service.h"
-#include "DataLayer/your_module/your_data_provider_json_impl.h"
-#include "DataLayer/your_module/i_your_data_provider.h"
-
-// src/Game/services.cpp - add to Private class
-std::unique_ptr<YourService> yourService;
-
-// Data providers are stored in Services (ownership)
-std::unique_ptr<IYourDataProvider> yourDataProvider;
-
-// src/Game/services.cpp - create in constructor
-// First, create the data provider (Services owns it)
-d->yourDataProvider = std::make_unique<YourDataProviderJsonImpl>(resources);
-
-// Then, pass raw pointer to service (service doesn't own it)
-d->yourService = std::make_unique<YourService>(d->yourDataProvider.get());
-
-// src/Game/services.cpp - add accessor
-YourService* Services::yourService() const {
-    return d->yourService.get();
-}
-```
-
-**Important: Service-Provider Ownership Pattern**
-
-The project follows a specific ownership pattern for services and data providers:
-
-1. **`Services` class owns all data providers** via `std::unique_ptr<IYourDataProvider>`
-2. **Services receive non-owning raw pointers** to the interface
-3. This ensures:
-   - Clear ownership (Services lifetime > Service lifetime)
-   - No double-deletion issues
-   - Easy testing (can inject mock providers)
-   - Consistent architecture across all services
-
-```cpp
-// ❌ WRONG: Service takes ownership
-d->yourService = std::make_unique<YourService>(
-    std::make_unique<YourDataProviderJsonImpl>(resources));
-
-// ✅ CORRECT: Services owns provider, service gets pointer
-d->yourDataProvider = std::make_unique<YourDataProviderJsonImpl>(resources);
-d->yourService = std::make_unique<YourService>(d->yourDataProvider.get());
-```
-
-**Service Header Pattern:**
-```cpp
-// src/ApplicationLayer/your_module/your_service.h
-#pragma once
-#include "DataLayer/your_module/i_your_data_provider.h"
-#include <QObject>
-#include <memory>
-
-class YourService : public QObject {
-    Q_OBJECT
-public:
-    // Service receives raw pointer (non-owning)
-    explicit YourService(IYourDataProvider* dataProvider, QObject* parent = nullptr);
-    ~YourService() override;
-
-    // ...
-};
-```
-
-**Service Implementation Pattern:**
-```cpp
-// src/ApplicationLayer/your_module/your_service.cpp
-class YourService::Private {
-public:
-    Private(YourService* parent) : q(parent) {}
-    YourService* q;
-    IYourDataProvider* dataProvider = nullptr;  // Raw pointer, not owned
-};
-
-YourService::YourService(IYourDataProvider* dataProvider, QObject* parent)
-    : QObject(parent)
-    , d(std::make_unique<Private>(this)) {
-    d->dataProvider = dataProvider;  // Just store the pointer
-}
-```
+---
+
+## Development Workflow
+
+1. **Create feature branch**: `git checkout -b feature/your-feature`
+2. **Make changes** following the code style above
+3. **Build and test** — Use Qt Test Framework for automated testing
+4. **Commit with clear messages**: `git commit -m "Description of changes"`
+5. **Push and create PR** when ready
+
+---
+
+## Creating New MDI Windows
+
+> **/create-mdi-window** — Полная пошаговая инструкция по созданию нового MDI окна
+
+## Widget Styling
+
+> **/widget-styling** — Цветовая палитра Tailwind Slate, стили компонентов, layout guidelines
+
+## Working with Resources
+
+> **/resources-io** — Чтение и запись файлов через Resources system (assets/data контейнеры)
 
 ---
 
@@ -603,209 +363,21 @@ For loading and caching textures/icons, use the `TexturesService`:
 
 **Application Layer** (`src/ApplicationLayer/textures/`):
 - `TexturesService` — Service with caching (QHash for icons and textures)
-
-**Usage:**
-```cpp
-// Get icon (automatically cached)
-auto* texturesService = services->texturesService();
-QPixmap icon = texturesService->getIcon("login.png");  // Loads from assets/icons/login.png
-
-// Get texture by path
-QPixmap texture = texturesService->getTexture("textures/ground.png");
-
-// Preload icon to cache
-texturesService->preloadIcon("sword.png");
-
-// Clear all caches
-texturesService->clearCache();
-```
+- `TileSetMetadata` — Metadata structure with `gridSize.x/y` for tile sets
 
 **Key Features:**
 - Automatic caching prevents repeated disk reads
 - Returns stub icon if file not found
 - Single point of configuration for all image loading
 
-### 6. Register Window in `windows_builder.cpp`
+### Item Stack Management (Пачки предметов)
+- Items can be stacked if `entity->maxStack > 1`
+- When moving a **full stack** between inventories, the item ID is preserved
+- When moving a **partial stack**, a new item is created with a new ID
+- `InventoryService::transferItem()` — Move/add item with preserved ID
+- `InventoriesService::moveItem()` — Handles full/partial stack logic
 
-Add the window factory:
-
-```cpp
-#include "Game/widgets/your_module/your_window.h"
-
-// In constructor:
-d->factory.emplace("your-window-type", [](Services* services, const QString& id) {
-    return new YourWindow(
-        services->yourService(),
-        id);
-});
-```
-
-### 7. Create Window via Command
-
-```cpp
-// Via code:
-controller->executeCommandByName("window-create", QStringList{ "your-window-type", "unique-id" });
-
-// Via console:
-window-create your-window-type unique-id
-```
-
-### Example: Login Window
-
-The Login window (`src/Game/widgets/user/`) demonstrates the complete pattern:
-
-1. **Data Layer**: `IUsersDataProvider`, `UsersDataProviderJsonImpl`
-2. **Service**: `UsersService` with `login()`, `logout()`, `registerUser()` methods
-3. **Widget**: `LoginWidget` with login/password fields
-4. **Window**: `LoginWindow` wrapping the widget
-5. **Registration**: Added to `services.cpp` and `windows_builder.cpp`
-
----
-
-## Widget Styling
-
-Проект использует единую цветовую палитру (Tailwind Slate) для всех виджетов.
-
-### Color Palette
-
-| Элемент | Цвет |
-|---------|------|
-| Основной фон | `#1a202c` |
-| Фон панелей/рамок | `#2d3748` |
-| Рамки | `#4a5568` |
-| Рамки (hover) | `#718096` |
-| Текст основной | `#e2e8f0` |
-| Текст вторичный | `#a0aec0` |
-| Текст подсказок | `#718096` |
-
-### EquipmentWidget Pattern
-
-```cpp
-setObjectName("WidgetName");
-setFrameStyle(QFrame::StyledPanel | QFrame::Plain);
-setLineWidth(1);
-
-setStyleSheet(R"(
-    #WidgetName {
-        background-color: #1a202c;
-        border: 1px solid #4a5568;
-        border-radius: 8px;
-        padding: 12px;
-    }
-)");
-```
-
-### Standard Widget Styles
-
-**Заголовок/панель:**
-```cpp
-"background-color: #2d3748; "
-"border: 1px solid #4a5568; "
-"border-radius: 4px; "
-"padding: 6px;"
-```
-
-**Иконки/аватары:**
-```cpp
-"background-color: #1a202c; "
-"border: 1px solid #4a5568; "
-"border-radius: 4px;"
-```
-
-**Метки с информацией (ID, уровень):**
-```cpp
-"background-color: #1a202c; "
-"color: #a0aec0; "
-"padding: 1px 6px; "
-"border: 1px solid #4a5568; "
-"border-radius: 3px; "
-"font-size: 10px; "
-"font-family: monospace;"
-```
-
-**Кнопки-иконки (UTF-8 символы):**
-```cpp
-"QPushButton { "
-"  background-color: #2d3748; "
-"  color: #e2e8f0; "
-"  border: 1px solid #4a5568; "
-"  border-radius: 3px; "
-"  font-size: 12px; "
-"}"
-"QPushButton:hover { "
-"  background-color: #4a5568; "
-"  border: 1px solid #718096; "
-"}"
-"QPushButton:pressed { "
-"  background-color: #1a202c; "
-"}"
-```
-
-**Скроллбар:**
-```cpp
-"QScrollArea { "
-"  background-color: #1a202c; "
-"  border: none; "
-"  border-left: 2px solid #4a5568; "
-"  padding-left: 4px; "
-"}"
-"QScrollBar:vertical { "
-"  background-color: #2d3748; "
-"  width: 8px; "
-"  border-radius: 4px; "
-"}"
-"QScrollBar::handle:vertical { "
-"  background-color: #4a5568; "
-"  border-radius: 4px; "
-"  min-height: 20px; "
-"}"
-"QScrollBar::handle:vertical:hover { "
-"  background-color: #718096; "
-"}"
-"QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { "
-"  height: 0px; "
-"}"
-```
-
-**Разделители:**
-```cpp
-line->setFrameShape(QFrame::HLine);
-line->setStyleSheet("background-color: #2d3748;");
-```
-
-### Layout Guidelines
-
-- **Отступы виджетов**: `8px` по краям, `8px` между элементами
-- **Отступы записей списка**: `6px` горизонтально, `4px` вертикально
-- **Список персонажей**: без рамки, линия слева `border-left: 2px solid #4a5568`
-- **Кнопки-иконки**: `24x24`, UTF-8 символы, подсказки через `setToolTip()`
-- **Выравнивание**: `Qt::AlignTop` для вертикального расположения элементов
-
-### Example: User Profile Widget
-
-```
-UserWidget (QFrame)
-├── Header (QFrame, #2d3748)
-│   ├── Icon (40x40, #1a202c)
-│   └── Info
-│       ├── UserId (monospace, #a0aec0)
-│       └── DisplayName (bold, #e2e8f0)
-└── ScrollArea (#1a202c, border-left only)
-    └── CharactersContainer
-        ├── CharacterEntryWidget
-        │   ├── Icon (48x48)
-        │   ├── Info (level + name)
-        │   └── Buttons (⚔, 🎒, 24x24, vertical)
-        ├── Separator (#2d3748)
-        └── CharacterEntryWidget
-```
-
----
-
-## Development Workflow
-
-1. **Create feature branch**: `git checkout -b feature/your-feature`
-2. **Make changes** following the code style above
-3. **Build and test** — Use Qt Test Framework for automated testing
-4. **Commit with clear messages**: `git commit -m "Description of changes"`
-5. **Push and create PR** when ready
+### Item Save System
+- `ItemsSaveManager` — Saves all created items
+- `ItemsDataWriterJsonImpl` — JSON writer for item persistence
+- Items are saved to `data/items/{uuid}.json`

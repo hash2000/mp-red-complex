@@ -8,4 +8,6 @@ ActionPanelLoginBuilder::ActionPanelLoginBuilder(ActionPanelController* panel)
 void ActionPanelLoginBuilder::build() {
 	_panel->clearAllButtons();
 	_panel->addButton(ActionButtonConfig("Login", "login.png", "Войти в систему", "window-create user-login login", 1));
+	_panel->addButton(ActionButtonConfig("TextureEditor", "map-editor.png", "Редактор текстур", "window-create texture-editor texture-editor", 2));
+	_panel->addButton(ActionButtonConfig("MapEditor", "map-editor.png", "Редактор карты", "window-create map-editor map-editor", 2));
 }

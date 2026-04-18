@@ -1,0 +1,47 @@
+#pragma once
+#include <QWidget>
+#include <memory>
+
+class TexturesService;
+class TilesService;
+class QListWidget;
+class QListWidgetItem;
+class QComboBox;
+class TextureToolbar;
+class TileSetParamsPanel;
+enum class TextureType;
+
+class TextureEditorWidget : public QWidget {
+	Q_OBJECT
+public:
+	explicit TextureEditorWidget(
+		TexturesService* texturesService,
+		TilesService* tilesService,
+		QWidget* parent = nullptr);
+	~TextureEditorWidget() override;
+
+signals:
+	void textureSelected(TextureType textureType, const QString& fileName);
+	void tileSelected(int tileId);
+
+private slots:
+	void onTextureTypeChanged(int index);
+	void onTextureItemSelected(QListWidgetItem* current);
+	void loadTexturesPage();
+	void onTileSetSettingsRequested();
+	void onTileSetSettingsApplied(int gridSizeX, int gridSizeY, bool showGrid);
+	void onTileGroupsRequested();
+	void onTileClicked(int tileId, bool ctrlModifier);
+	void onGroupTilesRequested();
+	void onUngroupTilesRequested();
+	void onGroupsChanged(const QString& texturePath);
+
+private:
+	void setupLayout();
+	void updateTextureList();
+	void updatePreview(const QString& fileName);
+	void updateSelectedTiles(int tileId);
+
+	class Private;
+	std::unique_ptr<Private> d;
+};

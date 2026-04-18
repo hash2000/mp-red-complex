@@ -3,12 +3,14 @@
 #include "Game/services.h"
 #include "Game/controllers.h"
 #include "Game/widgets/map_view/map_window.h"
+#include "Game/widgets/map_view/map_editor_window.h"
 #include "Game/widgets/equipment/equipment_window.h"
 #include "Game/widgets/inventory/inventory_window.h"
 #include "Game/widgets/items/entities_window.h"
 #include "Game/widgets/user/login_window.h"
 #include "Game/widgets/user/user_window.h"
 #include "Game/widgets/warmup/warmup_window.h"
+#include "Game/widgets/textures/texture_editor_window.h"
 #include <map>
 #include <functional>
 
@@ -29,6 +31,7 @@ WindowsBuilder::WindowsBuilder(ApplicationController* appController)
 
 	d->factory.emplace("map", [](Services* services, const QString& id, QWidget* parent) {
 		return new MapWindow(
+			services->tilesService(),
 			services->worldService(),
 			services->timeService(),
 			id,
@@ -67,6 +70,21 @@ WindowsBuilder::WindowsBuilder(ApplicationController* appController)
 		});
 	d->factory.emplace("warmup", [](Services* services, const QString& id, QWidget* parent) {
 		return new WarmupWindow(id, parent);
+		});
+	d->factory.emplace("texture-editor", [](Services* services, const QString& id, QWidget* parent) {
+		return new TextureEditorWindow(
+			services->texturesService(),
+			services->tilesService(),
+			id,
+			parent);
+		});
+	d->factory.emplace("map-editor", [](Services* services, const QString& id, QWidget* parent) {
+		return new MapEditorWindow(
+			services->mapService(),
+			services->tilesService(),
+			services->timeService(),
+			id,
+			parent);
 		});
 }
 
