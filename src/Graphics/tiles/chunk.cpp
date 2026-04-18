@@ -7,6 +7,18 @@
 #include <qdebug.h>
 #include <vector>
 
+#ifdef QT_DEBUG
+#define GL_CHECK() { \
+    auto f = QOpenGLContext::currentContext()->functions(); \
+    GLenum err; \
+    while ((err = f->glGetError()) != GL_NO_ERROR) { \
+        qWarning() << "OpenGL error:" << err << "at" << __FILE__ << ":" << __LINE__; \
+    } \
+}
+#else
+#define GL_CHECK()
+#endif
+
 class Chunk::Private {
 public:
 	Private(Chunk* parent)
@@ -34,6 +46,34 @@ public:
 	// VBO для рамки чанка (4 линии = 8 вершин, 2D позиция)
 	QOpenGLBuffer borderVbo;
 	int borderVertexCount = 0;
+
+	bool isCoordInChunk(int localX, int localZ) {
+		const auto cx = chunkX * chunkSize.width();
+		const auto cz = chunkZ + chunkSize.height();
+		const auto result =
+			localX >= cx && localX < (cx + chunkSize.width()) ||
+			localZ >= cx && localZ < (cx + chunkSize.height());
+
+		return result;
+	}
+
+	int toLocalChunkXCoord(int worldX) const {
+		const int chunkX = worldX / chunkSize.width();
+		const int localX = worldX % chunkSize.width();
+		return localX;
+	}
+
+	int toLocalChunkZCoord(int worldZ) const {
+		const int chunkX = worldZ / chunkSize.height();
+		const int localX = worldZ % chunkSize.height();
+		return localX;
+	}
+
+	int getTileDataIndex(int worldX, int worldZ) const {
+		const auto localX = toLocalChunkXCoord(worldX);
+		const auto localZ = toLocalChunkZCoord(worldZ);
+		return localZ * chunkSize.width() + localX;
+	}
 };
 
 Chunk::Chunk()
@@ -86,19 +126,23 @@ void Chunk::setChunkSize(const QSize& size) {
 	markDirty();
 }
 
-void Chunk::setTile(int localX, int localZ, int tileId) {
-	if (localX < 0 || localX >= d->chunkSize.width() || localZ < 0 || localZ >= d->chunkSize.height()) {
+void Chunk::setTile(int worldX, int worldZ, int tileId) {
+	if (!d->isCoordInChunk(worldX, worldZ)) {
 		return;
 	}
-	d->tileData[localZ * d->chunkSize.width() + localX] = tileId;
+
+	const auto index = d->getTileDataIndex(worldX, worldZ);
+	d->tileData[index] = tileId;
 	markDirty();
 }
 
-int Chunk::getTile(int localX, int localZ) const {
-	if (localX < 0 || localX >= d->chunkSize.width() || localZ < 0 || localZ >= d->chunkSize.height()) {
+int Chunk::getTile(int worldX, int worldZ) const {
+	if (!d->isCoordInChunk(worldX, worldZ)) {
 		return -1;
 	}
-	return d->tileData[localZ * d->chunkSize.width() + localX];
+
+	const auto index = d->getTileDataIndex(worldX, worldZ);
+	return d->tileData[index];
 }
 
 void Chunk::markDirty() {
@@ -140,6 +184,7 @@ void Chunk::render() {
 
 	d->vao.bind();
 	f->glDrawArrays(GL_TRIANGLES, 0, d->vertexCount);
+	GL_CHECK();
 	d->vao.release();
 }
 
@@ -186,7 +231,6 @@ void Chunk::rebuildVertexes() {
 	std::vector<float> vertices;
 	// Резервируем память: 6 вершин на тайл, 4 float на вершину
 	vertices.reserve(d->chunkSize.width() * d->chunkSize.height() * 6 * 4);
-
 	int tileCount = 0;
 	for (int z = 0; z < d->chunkSize.height(); z++) {
 		for (int x = 0; x < d->chunkSize.width(); x++) {
@@ -235,13 +279,9 @@ void Chunk::rebuildVertexes() {
 		}
 	}
 
+	auto f = QOpenGLContext::currentContext()->functions();
+
 	d->vertexCount = static_cast<int>(vertices.size() / 4);
-
-	if (!d->vao.isCreated()) {
-		d->vao.create();
-	}
-
-	d->vao.bind();
 
 	if (!d->vbo.isCreated()) {
 		d->vbo.create();
@@ -249,6 +289,36 @@ void Chunk::rebuildVertexes() {
 
 	d->vbo.bind();
 	d->vbo.allocate(vertices.data(), static_cast<int>(vertices.size() * sizeof(float)));
+	GL_CHECK();
+
+	if (!d->vao.isCreated()) {
+		d->vao.create();
+	}
+
+	d->vao.bind();
+
+	f->glEnableVertexAttribArray(0);
+	f->glVertexAttribPointer(
+		0,
+		2,
+		GL_FLOAT,
+		GL_FALSE,
+		4 * sizeof(float),
+		nullptr
+	);
+	GL_CHECK();
+
+	f->glEnableVertexAttribArray(1);
+	f->glVertexAttribPointer(
+		1,
+		2,
+		GL_FLOAT,
+		GL_FALSE,
+		4 * sizeof(float),
+		(void*)(2 * sizeof(float))
+	);
+	GL_CHECK();
+
 	d->vbo.release();
 	d->vao.release();
 

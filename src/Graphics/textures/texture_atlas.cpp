@@ -1,6 +1,7 @@
 #include "Graphics/textures/texture_atlas.h"
 #include <QImage>
 #include <QOpenGLTexture>
+#include <QOpenGLFunctions>
 #include <QPixmap>
 #include <qdebug.h>
 
@@ -34,32 +35,46 @@ bool TextureAtlas::loadFromPixmap(const QPixmap& pixmap, int tilesCountX, int ti
 
 	d->tilesCountX = tilesCountX;
 	d->tilesCountY = tilesCountY;
+	d->tileSizeX = pixmap.width() / tilesCountX;
+	d->tileSizeY = pixmap.height() / tilesCountY;
 
-	// Конвертируем в QImage для переворота
+	// 1. Конвертируем в QImage и переворачиваем по Y (OpenGL: (0,0) — нижний левый)
 	QImage image = pixmap.toImage().mirrored(false, true);
-	
-	// Конвертируем в RGBA8888 — стандартный формат для OpenGL
-	// Без этого ARGB32_Premultiplied интерпретируется неправильно
-	//if (image.format() != QImage::Format_RGBA8888) {
-	//	image = image.convertToFormat(QImage::Format_RGBA8888);
-	//}
-	
-	// Отладочный вывод формата изображения
+
+	// 2. 🔥 ОБЯЗАТЕЛЬНО: конвертируем в формат, понятный OpenGL
+	if (image.format() != QImage::Format_RGBA8888) {
+		image = image.convertToFormat(QImage::Format_RGBA8888);
+	}
+
 	qInfo() << "TextureAtlas::loadFromPixmap - image format:" << image.format()
-		<< "depth:" << image.depth()
-		<< "bytesPerLine:" << image.bytesPerLine()
 		<< "size:" << image.size();
 
-	// Создаем OpenGL текстуру
+	// 3. Создаём текстуру ЯВНО, с контролем формата
 	d->texture = std::make_unique<QOpenGLTexture>(image);
+
+	if (!d->texture->isCreated()) {
+		qWarning() << "TextureAtlas: failed to create OpenGL texture";
+		return false;
+	}
+
+	// 4. 🔥 Порядок важен: сначала генерация мипмапов, потом фильтры!
+	d->texture->generateMipMaps();
+
 	d->texture->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
 	d->texture->setMagnificationFilter(QOpenGLTexture::Linear);
+
+	// 5. Wrap mode: для атласа с тайлами лучше ClampToEdge, чтобы не «затекать» в соседние тайлы
 	d->texture->setWrapMode(QOpenGLTexture::ClampToEdge);
 
-	qInfo() << "TextureAtlas loaded:" << pixmap.width() << "x" << pixmap.height()
+	// 6. Опционально: отключаем сглаживание краёв мипмапов, если видны артефакты
+	// d->texture->setMipBaseLevel(0);
+	// d->texture->setMipMaxLevel(d->texture->mipLevels() - 1);
+
+	qInfo() << "TextureAtlas loaded:" << pixmap.size()
 		<< "tiles:" << tilesCountX << "x" << tilesCountY
-		<< "tile size:" << d->tileSizeX << "x" << d->tileSizeY
-		<< "glTextureId:" << d->texture->textureId();
+		<< "tileSize:" << d->tileSizeX << "x" << d->tileSizeY
+		<< "glId:" << d->texture->textureId()
+		<< "mipLevels:" << d->texture->mipLevels();
 
 	return true;
 }
@@ -70,13 +85,10 @@ TextureRegion TextureAtlas::getRegion(int tileX, int tileY) const {
 		return TextureRegion();
 	}
 
-	float tileWidth = static_cast<float>(d->tileSizeX) / d->texture->width();
-	float tileHeight = static_cast<float>(d->tileSizeY) / d->texture->height();
-
-	float u1 = tileX * tileWidth;
-	float v1 = tileY * tileHeight;
-	float u2 = u1 + tileWidth;
-	float v2 = v1 + tileHeight;
+	float u1 = static_cast<float>(tileX) / d->tilesCountX;
+	float u2 = static_cast<float>(tileX + 1) / d->tilesCountX;
+	float v1 = 1.0f - static_cast<float>(tileY + 1) / d->tilesCountY;
+	float v2 = 1.0f - static_cast<float>(tileY) / d->tilesCountY;
 
 	return TextureRegion(u1, v1, u2, v2);
 }

@@ -32,6 +32,7 @@ signals:
 	void initializeContext();
 	void tileClicked(std::optional<QPoint> point);
 	void tileHovered(std::optional<QPoint> point);
+	void beginFrame();
 
 protected:
 	// OpenGL методы
@@ -52,7 +53,6 @@ protected:
 	virtual void onMapServiceConnected();
 	virtual void onRightMouseDrag(QPoint delta);
 	virtual void onZoom(float zoomFactor);
-	virtual void onBeginFrame();
 
 	// Инициализация тайловой системы
 	virtual void initializeTileSystem();

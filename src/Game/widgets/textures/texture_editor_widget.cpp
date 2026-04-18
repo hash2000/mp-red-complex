@@ -270,7 +270,7 @@ void TextureEditorWidget::loadTexturesPage() {
 
 void TextureEditorWidget::updatePreview(const QString& fileName) {
 	d->currentTexturePath = fileName;  // Сохраняем путь для группировки
-	const auto pixmap = d->texturesService->getTexture(fileName, d->currentType, "texture-editor");
+	const auto pixmap = d->texturesService->getTexture(fileName, d->currentType);
 	if (!pixmap.isNull()) {
 		d->previewLabel->setPixmap(pixmap);
 	} else {

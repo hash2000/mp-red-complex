@@ -145,7 +145,7 @@ void MapViewBase::paintGL() {
   glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	onBeginFrame();
+	emit beginFrame();
 
   if (d->tileRenderer) {
 		d->tileRenderer->render(d->camera, width(), height());
@@ -164,7 +164,7 @@ void MapViewBase::mousePressEvent(QMouseEvent* event) {
 		if (hit) {
 			int worldX = qRound(hit->x());
 			int worldZ = qRound(hit->z());
-			if (worldX >= 0 && worldZ >= 0 && worldX < 128 && worldZ < 128) {
+			if (worldX >= 0 && worldZ >= 0 && worldX < 1024 && worldZ < 1024) {
 				std::optional<QPoint> point = QPoint(worldX, worldZ);
 				onTileClicked(point);
 				emit tileClicked(point);
@@ -234,10 +234,6 @@ void MapViewBase::onTileHovered(std::optional<QPoint> point) {
 }
 
 void MapViewBase::onMapServiceConnected() {
-
-}
-
-void MapViewBase::onBeginFrame() {
 
 }
 

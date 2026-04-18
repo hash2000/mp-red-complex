@@ -87,6 +87,22 @@ bool TileRenderer::initialize() {
 	}
 
 	if (!QFile::exists(fragmentShaderPath)) {
+		//#version 330 core
+		//out vec4 FragColor;
+		//void main() {
+		//		FragColor = vec4(1.0, 0.0, 0.0, 1.0); // Ярко-красный
+		//}
+
+			//#version 330 core
+			//in vec2 vTexCoord;
+			//uniform sampler2D uTexture;
+			//out vec4 FragColor;
+			//void main() {
+			//	vec4 texColor = texture(uTexture, vTexCoord);
+			//	if (texColor.a < 0.1)
+			//		discard;
+			//	FragColor = texColor;
+			//}
 		d->shaderProgram->addShaderFromSourceCode(QOpenGLShader::Fragment, R"(
 			#version 330 core
 			in vec2 vTexCoord;
@@ -95,7 +111,7 @@ bool TileRenderer::initialize() {
 			void main() {
 				vec4 texColor = texture(uTexture, vTexCoord);
 				if (texColor.a < 0.1)
-					discard;
+						discard;
 				FragColor = texColor;
 			}
 		)");
@@ -190,6 +206,7 @@ void TileRenderer::render(const Camera& camera, int viewportWidth, int viewportH
 	// Рисуем чанки только если есть tileset
 	if (d->tileset && d->tileset->atlas()) {
 
+		auto atlas = d->tileset->atlas();
 		auto f = QOpenGLContext::currentContext()->functions();
 
 		// Отладочный вывод (только первый кадр после изменений)
@@ -214,7 +231,8 @@ void TileRenderer::render(const Camera& camera, int viewportWidth, int viewportH
 
 		// Биндим текстуру атласа
 		f->glActiveTexture(GL_TEXTURE0);
-		d->tileset->atlas()->bind();
+		atlas->bind();
+
 		d->shaderProgram->setUniformValue("uTexture", 0); // Привязан к GL_TEXTURE0
 
 		// Рисуем все чанки (frustum culling временно отключен для отладки)
@@ -234,6 +252,7 @@ void TileRenderer::render(const Camera& camera, int viewportWidth, int viewportH
 
 		glDisable(GL_BLEND);
 
+		atlas->unbind();
 		d->shaderProgram->release();
 	}
 

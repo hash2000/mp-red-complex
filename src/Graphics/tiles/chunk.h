@@ -31,10 +31,10 @@ public:
 	void setChunkSize(const QSize& size);
 
 	/// Установить тайл по локальным координатам (0..chunkSize-1)
-	void setTile(int localX, int localZ, int tileId);
+	void setTile(int worldX, int worldZ, int tileId);
 
 	/// Получить тайл по локальным координатам
-	int getTile(int localX, int localZ) const;
+	int getTile(int worldX, int worldZ) const;
 
 	/// Пометить как грязный (требует перестройки VBO)
 	void markDirty();
