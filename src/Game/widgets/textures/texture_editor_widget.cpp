@@ -354,7 +354,16 @@ void TextureEditorWidget::onTileGroupsRequested() {
 }
 
 void TextureEditorWidget::onTileClicked(int tileId, bool ctrlModifier) {
-	if (d->currentType == TextureType::TileSets) {
+	if (d->currentType != TextureType::TileSets) {
+		return;
+	}
+
+	if (d->selectedTileIds.contains(tileId)) {
+		if (ctrlModifier) {
+			d->selectedTileIds.removeAll(tileId);
+		}
+	}
+	else {
 		// Без Ctrl — проверяем, принадлежит ли тайл к группе
 		const auto groupOpt = d->tilesService->getGroupContainingTile(d->currentTexturePath, tileId);
 		if (groupOpt.has_value()) {
@@ -367,7 +376,8 @@ void TextureEditorWidget::onTileClicked(int tileId, bool ctrlModifier) {
 			}
 
 			d->selectedGroupId = groupOpt->id;
-		} else {
+		}
+		else {
 			// Тайл не в группе — выделяем только его
 			if (!ctrlModifier) {
 				d->selectedTileIds.clear();
@@ -376,11 +386,11 @@ void TextureEditorWidget::onTileClicked(int tileId, bool ctrlModifier) {
 			d->selectedTileIds.append(tileId);
 			d->selectedGroupId = QUuid();
 		}
-
-		d->tilesService->setSelectionTiles(d->selectedTileIds);
-		d->previewLabel->setSelectedTileIds(d->selectedTileIds);
-		d->textureToolbar->setSelectedTiles(d->selectedTileIds);
 	}
+
+	d->tilesService->setSelectionTiles(d->selectedTileIds);
+	d->previewLabel->setSelectedTileIds(d->selectedTileIds);
+	d->textureToolbar->setSelectedTiles(d->selectedTileIds);
 
 	// Отправляем сигнал с последним выбранным тайлом
 	if (!d->selectedTileIds.isEmpty()) {
