@@ -162,8 +162,8 @@ void MapViewBase::mousePressEvent(QMouseEvent* event) {
   if (event->button() == Qt::LeftButton) {
 		const auto hit = d->camera.raycastToGround(event->pos(), width(), height());
 		if (hit) {
-			int worldX = qRound(hit->x());
-			int worldZ = qRound(hit->z());
+			int worldX = int(hit->x());
+			int worldZ = int(hit->z());
 			if (worldX >= 0 && worldZ >= 0 && worldX < 1024 && worldZ < 1024) {
 				std::optional<QPoint> point = QPoint(worldX, worldZ);
 				onTileClicked(point);
