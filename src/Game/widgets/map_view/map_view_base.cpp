@@ -61,10 +61,6 @@ void MapViewBase::setMapService(MapService* mapService) {
   onMapServiceConnected();
 }
 
-const Camera& MapViewBase::cameraDefault() const {
-	return Camera{ QVector3D(5.0f, 0.0f, 5.0f), QVector3D(5.0f, 12.0f, 9.0f) };
-}
-
 void MapViewBase::resetCamera() {
 	setDefaultCamera();
   d->camera.update();
@@ -72,7 +68,7 @@ void MapViewBase::resetCamera() {
 }
 
 void MapViewBase::setDefaultCamera() {
-	d->camera = cameraDefault();
+	d->camera.apply(QVector3D(0.0f, 0.0f, 0.0f), QVector3D(0.0f, 12.0f, 4.0f));
 }
 
 void MapViewBase::loadTilemap() {
@@ -196,10 +192,18 @@ void MapViewBase::mouseMoveEvent(QMouseEvent* event) {
 
   // Правая кнопка — движение камеры
   if (d->rightMousePressed) {
+		const bool ctrlPressed = (event->modifiers() & Qt::ControlModifier);
 		QPoint delta = event->pos() - d->lastMousePos;
 		d->lastMousePos = event->pos();
-		d->camera.move(delta);
-		d->camera.update();
+
+		if (ctrlPressed) {
+			d->camera.rotate(delta.x(), delta.y());
+		}
+		else {
+			d->camera.move(delta);
+		}
+
+		// d->camera.update();
 		onRightMouseDrag(delta);
 		update();
   }

@@ -237,13 +237,16 @@ void TileRenderer::render(const Camera& camera, int viewportWidth, int viewportH
 
 		// Рисуем все чанки (frustum culling временно отключен для отладки)
 		int visibleCount = 0;
-		for (auto& chunk : d->chunks) {
-			if (!chunk->isInitialized()) {
+		for (const auto& chunk : d->chunks) {
+			const auto ptr = chunk.get();
+			if (!ptr->isInitialized()) {
 				continue;
 			}
 
-			chunk->render();
-			visibleCount++;
+			if (isChunkVisible(ptr, camera, viewportWidth, viewportHeight)) {
+				ptr->render();
+				visibleCount++;
+			}
 		}
 
 		if (frameCount <= 3) {
@@ -276,11 +279,15 @@ bool TileRenderer::isChunkVisible(const Chunk* chunk, const Camera& camera, int 
 
 	for (int i = 0; i < 4; ++i) {
 		QVector4D clipSpace = mvp * QVector4D(corners[i], 1.0f);
-		if (clipSpace.w() > 0) {
-			clipSpace /= clipSpace.w();
+		auto w = clipSpace.w();
+		if (w > 0) {
+			clipSpace /= w;
 			// Проверяем X и Y в NDC с запасом
-			if (clipSpace.x() >= -1.0f - margin && clipSpace.x() <= 1.0f + margin &&
-				clipSpace.y() >= -1.0f - margin && clipSpace.y() <= 1.0f + margin) {
+			auto x = clipSpace.x();
+			auto y = clipSpace.y();
+			if (
+				x >= -1.0f - margin && x <= 1.0f + margin &&
+				y >= -1.0f - margin && y <= 1.0f + margin) {
 				return true;
 			}
 		}

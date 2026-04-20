@@ -67,7 +67,6 @@ protected:
 	// Камера
 	Camera& camera();
 	const Camera& camera() const;
-	const Camera& cameraDefault() const;
 	void setDefaultCamera();
 
 private:
