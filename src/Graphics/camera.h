@@ -29,6 +29,8 @@ public:
 
 	std::optional<QVector3D> raycastToGround(const QPoint& screenPos, int screenWidth, int screenHeight);
 
+	void setFov(float value);
+	float fov() const;
 
 private:
 	class Private;

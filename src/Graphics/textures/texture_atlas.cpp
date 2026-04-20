@@ -18,6 +18,9 @@ public:
 	int tileSizeY;
 	int tilesCountX = 0;
 	int tilesCountY = 0;
+	bool useMipMaps = true;
+	bool useMipMapsSmoothing = true;
+	TextureFilter textureFilter = TextureFilter::Linear;
 	std::unique_ptr<QOpenGLTexture> texture;
 };
 
@@ -26,6 +29,18 @@ TextureAtlas::TextureAtlas(int tileSizeX, int tileSizeY)
 }
 
 TextureAtlas::~TextureAtlas() = default;
+
+void TextureAtlas::useMipMaps(bool use) {
+	d->useMipMaps = use;
+}
+
+void TextureAtlas::useMipMapsSmoothing(bool use) {
+	d->useMipMapsSmoothing = use;
+}
+
+void TextureAtlas::setTextureFilter(TextureFilter filter) {
+	d->textureFilter = filter;
+}
 
 bool TextureAtlas::loadFromPixmap(const QPixmap& pixmap, int tilesCountX, int tilesCountY) {
 	if (pixmap.isNull()) {
@@ -57,18 +72,32 @@ bool TextureAtlas::loadFromPixmap(const QPixmap& pixmap, int tilesCountX, int ti
 		return false;
 	}
 
-	// 4. 🔥 Порядок важен: сначала генерация мипмапов, потом фильтры!
-	d->texture->generateMipMaps();
-
-	d->texture->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
-	d->texture->setMagnificationFilter(QOpenGLTexture::Linear);
-
-	// 5. Wrap mode: для атласа с тайлами лучше ClampToEdge, чтобы не «затекать» в соседние тайлы
 	d->texture->setWrapMode(QOpenGLTexture::ClampToEdge);
 
-	// 6. Опционально: отключаем сглаживание краёв мипмапов, если видны артефакты
-	// d->texture->setMipBaseLevel(0);
-	// d->texture->setMipMaxLevel(d->texture->mipLevels() - 1);
+	if (d->useMipMaps) {
+		d->texture->generateMipMaps();
+		if (d->textureFilter == TextureFilter::Nearest) {
+			d->texture->setMinificationFilter(QOpenGLTexture::NearestMipMapNearest);
+		}
+		else {
+			d->texture->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
+		}
+		if (d->useMipMapsSmoothing) {
+			d->texture->setMipBaseLevel(0);
+			d->texture->setMipMaxLevel(d->texture->mipLevels() - 1);
+		}
+	}
+	else {
+
+		if (d->textureFilter == TextureFilter::Nearest) {
+			d->texture->setMinificationFilter(QOpenGLTexture::Nearest);
+		}
+		else {
+			d->texture->setMinificationFilter(QOpenGLTexture::Linear);
+		}
+	}
+
+	d->texture->setMagnificationFilter(QOpenGLTexture::Linear);
 
 	qInfo() << "TextureAtlas loaded:" << pixmap.size()
 		<< "tiles:" << tilesCountX << "x" << tilesCountY

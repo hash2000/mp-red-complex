@@ -10,6 +10,11 @@ class QPixmap;
 /// и рассчитывает UV координаты для каждого тайла
 class TextureAtlas {
 public:
+	enum class TextureFilter {
+		Linear,
+		Nearest,
+	};
+
 	/// Конструктор
 	/// @param tileSizeX Ширина одного тайла в пикселях
 	/// @param tileSizeY Высота одного тайла в пикселях
@@ -26,6 +31,12 @@ public:
 	/// @param tileX Позиция тайла по X (0..tilesCountX-1)
 	/// @param tileY Позиция тайла по Y (0..tilesCountY-1)
 	TextureRegion getRegion(int tileX, int tileY) const;
+
+	void useMipMaps(bool use);
+
+	void useMipMapsSmoothing(bool use);
+
+	void setTextureFilter(TextureFilter filter);
 
 	/// Забиндить текстуру для рендеринга
 	void bind() const;

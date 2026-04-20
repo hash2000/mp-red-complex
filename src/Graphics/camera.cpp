@@ -7,6 +7,7 @@ public:
 
 	Camera* q;
 
+	float fov = 45.0f;
 	float moveSpeed = 0.01f;
 	QVector3D eye = QVector3D(5.0f, 8.0f, 5.0f);
 	QVector3D center = QVector3D(0.0f, 0.0f, 0.0f);
@@ -152,8 +153,16 @@ void Camera::setupViewport(int w, int h)
 {
 	float aspect = static_cast<float>(w) / h;
 	d->projection.setToIdentity();
-	d->projection.perspective(45.0f, aspect, 0.1f, 1000.0f);
+	d->projection.perspective(d->fov, aspect, 0.001f, 1000.0f);
 	update();
+}
+
+void Camera::setFov(float value) {
+	d->fov = value;
+}
+
+float Camera::fov() const {
+	return d->fov;
 }
 
 void Camera::move(const QPoint& delta)
@@ -169,7 +178,8 @@ void Camera::move(const QPoint& delta)
 	}
 
 	viewDir.normalize();
-	QVector3D rightDir = QVector3D::crossProduct(viewDir, QVector3D(0.0f, 1.0f, 0.0f)).normalized();
+	QVector3D rightDir = QVector3D::crossProduct(viewDir, QVector3D(0.0f, 1.0f, 0.0f))
+		.normalized();
 
 	// Масштабируем скорость в зависимости от расстояния до центра
 	// Можно использовать линейную или логарифмическую зависимость

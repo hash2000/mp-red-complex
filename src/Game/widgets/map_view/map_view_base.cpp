@@ -203,7 +203,6 @@ void MapViewBase::mouseMoveEvent(QMouseEvent* event) {
 			d->camera.move(delta);
 		}
 
-		// d->camera.update();
 		onRightMouseDrag(delta);
 		update();
   }
