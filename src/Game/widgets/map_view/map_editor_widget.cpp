@@ -1,5 +1,6 @@
 #include "Game/widgets/map_view/map_editor_widget.h"
 #include "Game/widgets/map_view/create_map_dialog.h"
+#include "Game/widgets/map_view/apply_map_filter_dialog.h"
 #include "ApplicationLayer/maps/map_service.h"
 #include "ApplicationLayer/textures/tiles_service.h"
 #include "Graphics/textures/texture_atlas.h"
@@ -367,8 +368,14 @@ void MapEditorWidget::onTileServiceConnected() {
 }
 
 void MapEditorWidget::onApplySelectedAtlas() {
-	d->needLoadAtlas = true;
-	update();
+	ApplyMapAtlasDialog dlg(this);
+	if (dlg.exec() == QDialog::Accepted) {
+		auto settings = dlg.settings();
+
+		d->needLoadAtlas = true;
+		update();
+	}
+
 }
 
 void MapEditorWidget::onBeginFrame() {

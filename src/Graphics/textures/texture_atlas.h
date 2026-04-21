@@ -1,5 +1,6 @@
 #pragma once
 #include "Graphics/textures/texture_region.h"
+#include "Graphics/textures/texture_filter.h"
 #include <QOpenGLFunctions_3_3_Core>
 #include <memory>
 
@@ -10,11 +11,6 @@ class QPixmap;
 /// и рассчитывает UV координаты для каждого тайла
 class TextureAtlas {
 public:
-	enum class TextureFilter {
-		Linear,
-		Nearest,
-	};
-
 	/// Конструктор
 	/// @param tileSizeX Ширина одного тайла в пикселях
 	/// @param tileSizeY Высота одного тайла в пикселях
