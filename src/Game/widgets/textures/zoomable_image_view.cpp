@@ -39,7 +39,7 @@ void ZoomableImageView::Private::adjustOffsets() {
 }
 
 int ZoomableImageView::Private::tileAtPosition(const QPointF& pos) const {
-	if (!gridEnabled || pixmap.isNull()) {
+	if (pixmap.isNull()) {
 		return -1;
 	}
 
@@ -135,13 +135,12 @@ void ZoomableImageView::paintEvent(QPaintEvent* /*event*/) {
 	painter.setPen(QPen(QColor("#4a5568"), 1));
 	painter.drawRect(QRect(topLeft, scaledSize.toSize()));
 
+	const qreal tileWidth = scaledSize.width() / d->gridSizeX;
+	const qreal tileHeight = scaledSize.height() / d->gridSizeY;
+
 	// Рисуем сетку
 	if (d->gridEnabled) {
 		painter.setRenderHint(QPainter::Antialiasing, false);
-
-		const qreal tileWidth = scaledSize.width() / d->gridSizeX;
-		const qreal tileHeight = scaledSize.height() / d->gridSizeY;
-
 		// Вертикальные линии
 		for (int x = 0; x <= d->gridSizeX; ++x) {
 			const qreal xPos = topLeft.x() + x * tileWidth;
@@ -153,44 +152,44 @@ void ZoomableImageView::paintEvent(QPaintEvent* /*event*/) {
 			const qreal yPos = topLeft.y() + y * tileHeight;
 			painter.drawLine(QLineF(topLeft.x(), yPos, topLeft.x() + scaledSize.width(), yPos));
 		}
+	}
 
-		// Подсветка выбранного тайла (одиночное выделение)
-		if (d->selectedTileId >= 0) {
-			const int tileX = d->selectedTileId % d->gridSizeX;
-			const int tileY = d->selectedTileId / d->gridSizeX;
+	// Подсветка выбранного тайла (одиночное выделение)
+	if (d->selectedTileId >= 0) {
+		const int tileX = d->selectedTileId % d->gridSizeX;
+		const int tileY = d->selectedTileId / d->gridSizeX;
 
-			const QRectF tileRect(
-				topLeft.x() + tileX * tileWidth,
-				topLeft.y() + tileY * tileHeight,
-				tileWidth,
-				tileHeight
-			);
+		const QRectF tileRect(
+			topLeft.x() + tileX * tileWidth,
+			topLeft.y() + tileY * tileHeight,
+			tileWidth,
+			tileHeight
+		);
 
-			// Полупрозрачная подсветка
-			painter.setPen(QPen(QColor("#4299e1"), 2));
-			painter.setBrush(QColor(66, 153, 225, 60));
-			painter.drawRect(tileRect);
-		}
+		// Полупрозрачная подсветка
+		painter.setPen(QPen(QColor("#4299e1"), 2));
+		painter.setBrush(QColor(66, 153, 225, 60));
+		painter.drawRect(tileRect);
+	}
 
-		// Подсветка множественного выделения
-		for (int tileId : d->selectedTileIds) {
-			if (tileId < 0) continue;
+	// Подсветка множественного выделения
+	for (int tileId : d->selectedTileIds) {
+		if (tileId < 0) continue;
 
-			const int tileX = tileId % d->gridSizeX;
-			const int tileY = tileId / d->gridSizeX;
+		const int tileX = tileId % d->gridSizeX;
+		const int tileY = tileId / d->gridSizeX;
 
-			const QRectF tileRect(
-				topLeft.x() + tileX * tileWidth,
-				topLeft.y() + tileY * tileHeight,
-				tileWidth,
-				tileHeight
-			);
+		const QRectF tileRect(
+			topLeft.x() + tileX * tileWidth,
+			topLeft.y() + tileY * tileHeight,
+			tileWidth,
+			tileHeight
+		);
 
-			// Полупрозрачная подсветка (зелёный для множественного)
-			painter.setPen(QPen(QColor("#48bb78"), 2));
-			painter.setBrush(QColor(72, 187, 120, 60));
-			painter.drawRect(tileRect);
-		}
+		// Полупрозрачная подсветка (зелёный для множественного)
+		painter.setPen(QPen(QColor("#48bb78"), 2));
+		painter.setBrush(QColor(72, 187, 120, 60));
+		painter.drawRect(tileRect);
 	}
 }
 
@@ -220,15 +219,13 @@ void ZoomableImageView::wheelEvent(QWheelEvent* event) {
 
 void ZoomableImageView::mousePressEvent(QMouseEvent* event) {
 	if (event->button() == Qt::LeftButton && !d->pixmap.isNull()) {
-		if (d->gridEnabled) {
-			const int tileId = d->tileAtPosition(event->position());
-			if (tileId >= 0) {
-				const bool ctrlPressed = (event->modifiers() & Qt::ControlModifier);
-				// НЕ сбрасываем selectedTileId здесь - это делает внешний виджет
-				update();
-				emit tileClicked(tileId, ctrlPressed);
-				return;
-			}
+		const int tileId = d->tileAtPosition(event->position());
+		if (tileId >= 0) {
+			const bool ctrlPressed = (event->modifiers() & Qt::ControlModifier);
+			// НЕ сбрасываем selectedTileId здесь - это делает внешний виджет
+			update();
+			emit tileClicked(tileId, ctrlPressed);
+			return;
 		}
 	}
 
@@ -236,6 +233,7 @@ void ZoomableImageView::mousePressEvent(QMouseEvent* event) {
 		d->isPanning = true;
 		d->lastMousePos = event->pos();
 		setCursor(Qt::ClosedHandCursor);
+		return;
 	}
 }
 

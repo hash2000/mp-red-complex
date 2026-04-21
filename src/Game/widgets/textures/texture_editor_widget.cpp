@@ -314,16 +314,19 @@ void TextureEditorWidget::onTileSetSettingsRequested() {
 }
 
 void TextureEditorWidget::onTileSetSettingsApplied(int gridSizeX, int gridSizeY, bool showGrid) {
+	if (d->tileGridSizeX != gridSizeX || d->tileGridSizeY != gridSizeY) {
+		d->selectedTileIds.clear();
+		d->previewLabel->setSelectedTileIds({});
+		d->textureToolbar->setSelectedTiles({});
+	}
+
 	d->tileGridSizeX = gridSizeX;
 	d->tileGridSizeY = gridSizeY;
 	d->showTileGrid = showGrid;
-	d->selectedTileIds.clear();
 
 	// Обновляем превью
 	d->previewLabel->setGridEnabled(showGrid);
 	d->previewLabel->setGridSize(gridSizeX, gridSizeY);
-	d->previewLabel->setSelectedTileIds({});
-	d->textureToolbar->setSelectedTiles({});
 }
 
 void TextureEditorWidget::onTileGroupsRequested() {
