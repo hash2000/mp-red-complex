@@ -56,10 +56,6 @@ void TileSetParamsDialog::setupLayout() {
 
 	// Размер X
 	auto* xLayout = new QHBoxLayout();
-	auto* xLabel = new QLabel("Столбцы (X):");
-	xLabel->setStyleSheet("color: #a0aec0; font-size: 12px;");
-	xLayout->addWidget(xLabel);
-
 	d->gridSizeXEdit = new QLineEdit(QString::number(d->tilesCountX));
 	d->gridSizeXEdit->setMaximumWidth(80);
 	d->gridSizeXEdit->setStyleSheet(R"(
@@ -77,14 +73,10 @@ void TileSetParamsDialog::setupLayout() {
 	)");
 	xLayout->addWidget(d->gridSizeXEdit);
 	xLayout->addStretch();
-	formLayout->addRow(xLayout);
+	formLayout->addRow("Столбцы (X):", xLayout);
 
 	// Размер Y
 	auto* yLayout = new QHBoxLayout();
-	auto* yLabel = new QLabel("Строки (Y):");
-	yLabel->setStyleSheet("color: #a0aec0; font-size: 12px;");
-	yLayout->addWidget(yLabel);
-
 	d->gridSizeYEdit = new QLineEdit(QString::number(d->tilesCountY));
 	d->gridSizeYEdit->setMaximumWidth(80);
 	d->gridSizeYEdit->setStyleSheet(R"(
@@ -102,7 +94,7 @@ void TileSetParamsDialog::setupLayout() {
 	)");
 	yLayout->addWidget(d->gridSizeYEdit);
 	yLayout->addStretch();
-	formLayout->addRow(yLayout);
+	formLayout->addRow("Строки (Y):", yLayout);
 
 	mainLayout->addLayout(formLayout);
 
