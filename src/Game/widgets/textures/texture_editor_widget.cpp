@@ -1,7 +1,7 @@
 #include "Game/widgets/textures/texture_editor_widget.h"
 #include "Game/widgets/textures/zoomable_image_view.h"
 #include "Game/widgets/textures/texture_toolbar.h"
-#include "Game/widgets/textures/tile_set_params_panel.h"
+#include "Game/widgets/textures/tile_set_params_dialog.h"
 #include "Game/widgets/textures/tile_groups_dialog.h"
 #include "ApplicationLayer/textures/textures_service.h"
 #include "ApplicationLayer/textures/tiles_service.h"
@@ -35,7 +35,7 @@ public:
 	QListWidget* textureList = nullptr;
 
 	// Диалог настроек тайлов
-	TileSetParamsPanel* tileSetDialog = nullptr;
+	TileSetParamsDialog* tileSetDialog = nullptr;
 
 	// Диалог групп тайлов
 	TileGroupsDialog* tileGroupsDialog = nullptr;
@@ -303,11 +303,11 @@ void TextureEditorWidget::onTileSetSettingsRequested() {
 		d->tileSetDialog = nullptr;
 	}
 
-	d->tileSetDialog = new TileSetParamsPanel(d->tileGridSizeX, d->tileGridSizeY, this);
+	d->tileSetDialog = new TileSetParamsDialog(d->tileGridSizeX, d->tileGridSizeY, this);
 	d->tileSetDialog->setResult(QDialog::Rejected);
 
 	// Подключаем сигнал
-	connect(d->tileSetDialog, &TileSetParamsPanel::settingsApplied,
+	connect(d->tileSetDialog, &TileSetParamsDialog::settingsApplied,
 	        this, &TextureEditorWidget::onTileSetSettingsApplied);
 
 	d->tileSetDialog->exec();

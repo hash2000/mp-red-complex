@@ -1,4 +1,4 @@
-#include "Game/widgets/textures/tile_set_params_panel.h"
+#include "Game/widgets/textures/tile_set_params_dialog.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -8,10 +8,10 @@
 #include <QCheckBox>
 #include <QDialogButtonBox>
 
-class TileSetParamsPanel::Private {
+class TileSetParamsDialog::Private {
 public:
-	Private(TileSetParamsPanel* parent) : q(parent) {}
-	TileSetParamsPanel* q;
+	Private(TileSetParamsDialog* parent) : q(parent) {}
+	TileSetParamsDialog* q;
 
 	// Элементы управления
 	QLineEdit* gridSizeXEdit = nullptr;
@@ -25,7 +25,7 @@ public:
 	bool showGrid = true;
 };
 
-TileSetParamsPanel::TileSetParamsPanel(int tilesCountX, int tilesCountY, QWidget* parent)
+TileSetParamsDialog::TileSetParamsDialog(int tilesCountX, int tilesCountY, QWidget* parent)
 	: QDialog(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->tilesCountX = tilesCountX;
@@ -43,9 +43,9 @@ TileSetParamsPanel::TileSetParamsPanel(int tilesCountX, int tilesCountY, QWidget
 	setupLayout();
 }
 
-TileSetParamsPanel::~TileSetParamsPanel() = default;
+TileSetParamsDialog::~TileSetParamsDialog() = default;
 
-void TileSetParamsPanel::setupLayout() {
+void TileSetParamsDialog::setupLayout() {
 	auto* mainLayout = new QVBoxLayout(this);
 	mainLayout->setContentsMargins(12, 12, 12, 12);
 	mainLayout->setSpacing(12);
@@ -152,26 +152,26 @@ void TileSetParamsPanel::setupLayout() {
 
 	// Сигналы
 	connect(d->applyButton, &QPushButton::clicked,
-	        this, &TileSetParamsPanel::onApplyClicked);
+	        this, &TileSetParamsDialog::onApplyClicked);
 }
 
-int TileSetParamsPanel::gridSizeX() const {
+int TileSetParamsDialog::gridSizeX() const {
 	const auto text = d->gridSizeXEdit->text();
 	const int value = text.toInt();
 	return value > 0 ? value : d->tilesCountX;
 }
 
-int TileSetParamsPanel::gridSizeY() const {
+int TileSetParamsDialog::gridSizeY() const {
 	const auto text = d->gridSizeYEdit->text();
 	const int value = text.toInt();
 	return value > 0 ? value : d->tilesCountY;
 }
 
-bool TileSetParamsPanel::showGrid() const {
+bool TileSetParamsDialog::showGrid() const {
 	return d->showGridCheckBox->isChecked();
 }
 
-void TileSetParamsPanel::onApplyClicked() {
+void TileSetParamsDialog::onApplyClicked() {
 	const int newX = gridSizeX();
 	const int newY = gridSizeY();
 

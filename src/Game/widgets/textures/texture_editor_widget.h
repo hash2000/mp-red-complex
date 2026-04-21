@@ -8,7 +8,7 @@ class QListWidget;
 class QListWidgetItem;
 class QComboBox;
 class TextureToolbar;
-class TileSetParamsPanel;
+class TileSetParamsDialog;
 enum class TextureType;
 
 class TextureEditorWidget : public QWidget {

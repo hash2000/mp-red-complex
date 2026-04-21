@@ -2,11 +2,11 @@
 #include <QDialog>
 #include <memory>
 
-class TileSetParamsPanel : public QDialog {
+class TileSetParamsDialog : public QDialog {
 	Q_OBJECT
 public:
-	explicit TileSetParamsPanel(int tilesCountX, int tilesCountY, QWidget* parent = nullptr);
-	~TileSetParamsPanel() override;
+	explicit TileSetParamsDialog(int tilesCountX, int tilesCountY, QWidget* parent = nullptr);
+	~TileSetParamsDialog() override;
 
 	int gridSizeX() const;
 	int gridSizeY() const;
