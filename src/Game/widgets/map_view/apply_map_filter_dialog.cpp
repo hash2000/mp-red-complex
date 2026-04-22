@@ -1,5 +1,4 @@
 #include "Game/widgets/map_view/apply_map_filter_dialog.h"
-#include "Graphics/textures/texture_filter.h"
 #include <QComboBox>
 #include <QCheckBox>
 #include <QFormLayout>

@@ -48,7 +48,7 @@ public:
 	QList<int> getSelectionTiles() const;
 
 	// Выдать тайловую карту
-	std::optional<QPixmap> getTilemap() const;
+	std::optional<QPixmap> getTilemap(const QString& tag) const;
 
 	// Вернуть название атласа
 	QString getTileSetName() const;

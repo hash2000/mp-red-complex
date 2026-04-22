@@ -4,6 +4,8 @@ set(ApplicationLayer-Sources
 	${RedComplex_SOURCE_DIR}/src/ApplicationLayer
 )
 
+set(CMAKE_AUTOMOC ON)
+
 file(GLOB_RECURSE SRCS ${ApplicationLayer-Sources}/*.cpp)
 add_library(ApplicationLayer
 	${SRCS}

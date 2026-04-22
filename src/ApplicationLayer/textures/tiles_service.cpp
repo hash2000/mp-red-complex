@@ -150,12 +150,12 @@ QList<int> TilesService::getSelectionTiles() const {
 	return d->selectedTileIds;
 }
 
-std::optional<QPixmap> TilesService::getTilemap() const {
+std::optional<QPixmap> TilesService::getTilemap(const QString& tag) const {
 	if (!d->metadata.has_value()) {
 		return std::nullopt;
 	}
 
-	auto pixmap = d->texturesService->getTexture(d->metadata->fileName + ".png", TextureType::TileSets);
+	auto pixmap = d->texturesService->getTexture(d->metadata->fileName + ".png", TextureType::TileSets, tag);
 	return pixmap;
 }
 

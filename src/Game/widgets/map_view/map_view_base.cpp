@@ -32,8 +32,6 @@ public:
 
   // Система тайлов
   std::unique_ptr<TileRenderer> tileRenderer;
-  std::unique_ptr<TextureAtlas> textureAtlas;
-  std::unique_ptr<Tileset> tileset;
 };
 
 MapViewBase::MapViewBase(QWidget* parent)
@@ -44,8 +42,6 @@ MapViewBase::MapViewBase(QWidget* parent)
   setAttribute(Qt::WA_NoSystemBackground, true);
 
   d->tileRenderer = std::make_unique<TileRenderer>();
-  d->textureAtlas = std::make_unique<TextureAtlas>(32, 32);
-  d->tileset = std::make_unique<Tileset>();
 	setDefaultCamera();
 }
 
@@ -86,31 +82,31 @@ void MapViewBase::loadTilemap() {
 
 	const auto tilesCountX = metadata->gridSize.x;
 	const auto tilesCountY = metadata->gridSize.y;
-	auto pixmap = d->tilesService->getTilemap();
-	if (!pixmap.has_value() || pixmap->isNull()) {
-		qWarning() << "MapViewBase::loadTilemap: pixmap is null";
-		return;
-	}
+	//auto pixmap = d->tilesService->getTilemap();
+	//if (!pixmap.has_value() || pixmap->isNull()) {
+	//	qWarning() << "MapViewBase::loadTilemap: pixmap is null";
+	//	return;
+	//}
 
-	qInfo() << "MapViewBase::loadTilemap: loading pixmap" 
-		<< pixmap->width() << "x" << pixmap->height();
+	//qInfo() << "MapViewBase::loadTilemap: loading pixmap" 
+	//	<< pixmap->width() << "x" << pixmap->height();
 
-	// Загружаем в TextureAtlas
-	if (d->textureAtlas->loadFromPixmap(pixmap.value(), tilesCountX, tilesCountY)) {
-		qInfo() << "Tilemap loaded successfully from TilesService";
-		qInfo() << "  - atlas texture ID:" << d->textureAtlas->textureId();
-		qInfo() << "  - tiles:" << tilesCountX << "x" << tilesCountY;
+	//// Загружаем в TextureAtlas
+	//if (d->textureAtlas->loadFromPixmap(pixmap.value(), tilesCountX, tilesCountY)) {
+	//	qInfo() << "Tilemap loaded successfully from TilesService";
+	//	qInfo() << "  - atlas texture ID:" << d->textureAtlas->textureId();
+	//	qInfo() << "  - tiles:" << tilesCountX << "x" << tilesCountY;
 
-		d->tileset->initialize(d->textureAtlas.get(), tilesCountX, tilesCountY);
-		qInfo() << "  - tileset initialized, atlas:" << d->tileset->atlas();
-		
-		d->tileRenderer->setTileset(d->tileset.get());
-		qInfo() << "  - tileset set to renderer";
+	//	d->tileset->initialize(d->textureAtlas.get(), tilesCountX, tilesCountY);
+	//	qInfo() << "  - tileset initialized, atlas:" << d->tileset->atlas();
+	//	
+	//	d->tileRenderer->setTileset(d->tileset.get());
+	//	qInfo() << "  - tileset set to renderer";
 
-		update();
-	} else {
-		qWarning() << "MapViewBase::loadTilemap: failed to load pixmap into atlas";
-	}
+	//	update();
+	//} else {
+	//	qWarning() << "MapViewBase::loadTilemap: failed to load pixmap into atlas";
+	//}
 }
 
 void MapViewBase::initializeGL() {
@@ -255,11 +251,11 @@ TileRenderer* MapViewBase::tileRenderer() const {
 }
 
 TextureAtlas* MapViewBase::textureAtlas() const {
-  return d->textureAtlas.get();
+  return nullptr; //d->textureAtlas.get();
 }
 
 Tileset* MapViewBase::tileset() const {
-  return d->tileset.get();
+	return nullptr; //d->tileset.get();
 }
 
 TilesService* MapViewBase::tilesService() const {

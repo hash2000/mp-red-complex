@@ -1,8 +1,8 @@
 #pragma once
+#include "Graphics/textures/texture_filter.h"
 #include <QDialog>
 #include <memory>
 
-enum class TextureFilter;
 
 struct ApplyMapAtlasSettings {
 	TextureFilter textureFilter = TextureFilter::Linear;
