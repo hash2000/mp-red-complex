@@ -13,10 +13,10 @@
 #include "DataLayer/equipment/equipment_repository_json_impl.h"
 #include "DataLayer/users/users_data_provider_json_impl.h"
 #include "DataLayer/characters/character_data_provider_json_impl.h"
-#include "DataLayer/textures/textures_data_provider_json_impl.h"
-#include "DataLayer/textures/i_textures_data_provider.h"
-#include "DataLayer/textures/tile_groups_data_provider_json_impl.h"
-#include "DataLayer/textures/i_tile_groups_data_provider.h"
+#include "DataLayer/images/images_data_provider_json_impl.h"
+#include "DataLayer/images/i_images_data_provider.h"
+#include "DataLayer/images/tile_groups_data_provider_json_impl.h"
+#include "DataLayer/images/i_tile_groups_data_provider.h"
 #include "DataLayer/maps/i_map_data_provider.h"
 #include "DataLayer/maps/map_data_provider_json_impl.h"
 #include "DataLayer/users/i_users_data_provider.h"
@@ -70,7 +70,7 @@ public:
 	// Data providers (хранятся в Services)
 	std::unique_ptr<IUsersDataProvider> usersDataProvider;
 	std::unique_ptr<ICharacterDataProvider> characterDataProvider;
-	std::unique_ptr<ITexturesDataProvider> texturesDataProvider;
+	std::unique_ptr<IImagesDataProvider> ImagesDataProvider;
 	std::unique_ptr<ITileGroupsDataProvider> tileGroupsDataProvider;
 	std::unique_ptr<IMapDataProvider> mapDataProvider;
 	std::unique_ptr<MapService> mapService;
@@ -102,8 +102,8 @@ Services::Services(Resources* resources)
 	d->worldService = std::make_unique<WorldService>();
 
 	// Создаём сервис текстур (нужен перед ItemsService)
-	d->texturesDataProvider = std::make_unique<TexturesDataProviderJsonImpl>(resources);
-	d->texturesService = std::make_unique<TexturesService>(d->texturesDataProvider.get());
+	d->ImagesDataProvider = std::make_unique<ImagesDataProviderJsonImpl>(resources);
+	d->texturesService = std::make_unique<TexturesService>(d->ImagesDataProvider.get());
 
 	// Создаём сервис тайловых групп
 	d->tileGroupsDataProvider = std::make_unique<TileGroupsDataProviderJsonImpl>(resources);

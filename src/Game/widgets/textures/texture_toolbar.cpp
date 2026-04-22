@@ -1,5 +1,5 @@
 #include "Game/widgets/textures/texture_toolbar.h"
-#include "DataLayer/textures/i_textures_data_provider.h"
+#include "DataLayer/images/i_images_data_provider.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QPushButton>
@@ -13,14 +13,14 @@ public:
 	// Контейнер для кнопок
 	QVBoxLayout* mainLayout = nullptr;
 
-	// Кнопки действий (для разных TextureType)
+	// Кнопки действий (для разных ImageType)
 	QPushButton* tileSetSettingsButton = nullptr;
 	QPushButton* groupsListButton = nullptr;
 	QPushButton* groupTilesButton = nullptr;
 	QPushButton* ungroupTilesButton = nullptr;
 
 	// Текущий тип текстур
-	TextureType currentType = TextureType::Icon;
+	ImageType currentType = ImageType::Icon;
 
 	// Выбранные тайлы (для управления доступностью кнопок)
 	QList<int> selectedTileIds;
@@ -164,7 +164,7 @@ void TextureToolbar::setupLayout() {
 	        this, &TextureToolbar::ungroupTilesRequested);
 }
 
-void TextureToolbar::setTextureType(TextureType type) {
+void TextureToolbar::setImageType(ImageType type) {
 	d->currentType = type;
 	updateButtonsVisibility();
 }
@@ -176,7 +176,7 @@ void TextureToolbar::setSelectedTiles(const QList<int>& tileIds) {
 
 void TextureToolbar::updateButtonsVisibility() {
 	// Показываем кнопки только для TileSets
-	const bool show = (d->currentType == TextureType::TileSets);
+	const bool show = (d->currentType == ImageType::TileSets);
 	d->tileSetSettingsButton->setVisible(show);
 	d->groupsListButton->setVisible(show);
 	d->groupTilesButton->setVisible(show);

@@ -50,7 +50,7 @@ public:
 				handler->iconPath = characterData.iconPath;
 
 				if (!handler->iconPath.isEmpty()) {
-					handler->icon = texturesService->getTexture(handler->iconPath, TextureType::Character);
+					handler->icon = texturesService->getTexture(handler->iconPath, ImageType::Character);
 				}
 
 				characters.emplace(characterId, std::move(handler));

@@ -1,7 +1,7 @@
 #include "ApplicationLayer/items/items_service.h"
 #include "ApplicationLayer/items/i_item_repository.h"
 #include "ApplicationLayer/textures/textures_service.h"
-#include "DataLayer/textures/i_textures_data_provider.h"
+#include "DataLayer/images/i_images_data_provider.h"
 #include <QString>
 #include <QUuid>
 #include <QDebug>
@@ -116,7 +116,7 @@ void ItemsService::loadEntities() {
 		if (entity) {
 			// Загружаем иконку сущности через TexturesService
 			if (!entity->iconPath.isEmpty() && d->texturesService) {
-				entity->icon = d->texturesService->getTexture(entity->iconPath, TextureType::Item);
+				entity->icon = d->texturesService->getTexture(entity->iconPath, ImageType::Item);
 			}
 
 			d->itemEntities.emplace(entityId, std::move(entity));

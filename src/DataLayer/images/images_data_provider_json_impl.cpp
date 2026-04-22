@@ -1,4 +1,4 @@
-#include "DataLayer/textures/textures_data_provider_json_impl.h"
+#include "DataLayer/images/images_data_provider_json_impl.h"
 #include "DataStream/format/pixmap/data_reader.h"
 #include "DataStream/format/json/data_reader.h"
 #include "Resources/resources.h"
@@ -8,30 +8,30 @@
 #include <QFileInfo>
 #include <array>
 
-class TexturesDataProviderJsonImpl::Private {
+class ImagesDataProviderJsonImpl::Private {
 public:
-	Private(TexturesDataProviderJsonImpl* parent)
+	Private(ImagesDataProviderJsonImpl* parent)
 		: q(parent) {
 	}
 
-	// Таблица маппинга TextureType к директориям
+	// Таблица маппинга ImageType к директориям
 	struct TexturePathMapping {
-		TextureType type;
+		ImageType type;
 		const char* directory;
 	};
 
-	static constexpr std::array<TexturePathMapping, static_cast<size_t>(TextureType::LastSlot)> s_textureMappings = {{
-		{ TextureType::Icon,      "icons" },
-		{ TextureType::Entity,    "entities" },
-		{ TextureType::Item,      "items" },
-		{ TextureType::Character, "characters" },
-		{ TextureType::Users,			"users" },
-		{ TextureType::TileSets,	"textures/tiles" },
-		{ TextureType::Equipment, "equipment" },
+	static constexpr std::array<TexturePathMapping, static_cast<size_t>(ImageType::LastSlot)> s_textureMappings = {{
+		{ ImageType::Icon,      "icons" },
+		{ ImageType::Entity,    "entities" },
+		{ ImageType::Item,      "items" },
+		{ ImageType::Character, "characters" },
+		{ ImageType::Users,			"users" },
+		{ ImageType::TileSets,	"textures/tiles" },
+		{ ImageType::Equipment, "equipment" },
 	}};
 
 	// Получить директорию по типу текстуры
-	static const char* getDirectoryForType(TextureType type) {
+	static const char* getDirectoryForType(ImageType type) {
 		for (const auto& mapping : s_textureMappings) {
 			if (mapping.type == type) {
 				return mapping.directory;
@@ -42,7 +42,7 @@ public:
 	}
 
 	// Построить полный путь к текстуре
-	static QString buildTexturePath(const QString& relativePath, TextureType type) {
+	static QString buildTexturePath(const QString& relativePath, ImageType type) {
 		const char* directory = getDirectoryForType(type);
 		return QString("%1/%2").arg(directory, relativePath);
 	}
@@ -56,18 +56,18 @@ public:
 		return result;
 	}
 
-	TexturesDataProviderJsonImpl* q;
+	ImagesDataProviderJsonImpl* q;
 	Resources* resources;
 };
 
-TexturesDataProviderJsonImpl::TexturesDataProviderJsonImpl(Resources* resources)
+ImagesDataProviderJsonImpl::ImagesDataProviderJsonImpl(Resources* resources)
 	: d(std::make_unique<Private>(this)) {
 	d->resources = resources;
 }
 
-TexturesDataProviderJsonImpl::~TexturesDataProviderJsonImpl() = default;
+ImagesDataProviderJsonImpl::~ImagesDataProviderJsonImpl() = default;
 
-std::optional<QPixmap> TexturesDataProviderJsonImpl::loadTexture(const QString& path, TextureType type) const {
+std::optional<QPixmap> ImagesDataProviderJsonImpl::load(const QString& path, ImageType type) const {
 	// Строим полный путь на основе типа текстуры
 	const auto fullPath = Private::buildTexturePath(path, type);
 
@@ -79,7 +79,7 @@ std::optional<QPixmap> TexturesDataProviderJsonImpl::loadTexture(const QString& 
 	return pixmap;
 }
 
-QStringList TexturesDataProviderJsonImpl::listTextures(TextureType type) const {
+QStringList ImagesDataProviderJsonImpl::list(ImageType type) const {
 	QStringList result;
 	const char* directory = Private::getDirectoryForType(type);
 	const QString prefix = QString("%1/").arg(directory);

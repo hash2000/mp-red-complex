@@ -4,7 +4,7 @@
 #include "ApplicationLayer/textures/tiles_service.h"
 #include "Game/app_controller.h"
 #include "Game/commands/command_context.h"
-#include "DataLayer/textures/i_textures_data_provider.h"
+#include "DataLayer/images/i_images_data_provider.h"
 
 class TextureEditorWindow::Private {
 public:

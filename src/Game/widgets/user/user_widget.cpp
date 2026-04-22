@@ -3,7 +3,7 @@
 #include "ApplicationLayer/users/users_service.h"
 #include "ApplicationLayer/textures/textures_service.h"
 #include "DataLayer/users/user.h"
-#include "DataLayer/textures/i_textures_data_provider.h"
+#include "DataLayer/images/i_images_data_provider.h"
 #include <QLabel>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -210,7 +210,7 @@ void UserWidget::loadUserData() {
 
 	// Иконка пользователя
 	if (!user.iconPath.isEmpty() && d->texturesService) {
-		auto pixmap = d->texturesService->getTexture(user.iconPath, TextureType::Users);
+		auto pixmap = d->texturesService->getTexture(user.iconPath, ImageType::Users);
 		if (!pixmap.isNull()) {
 			d->userIconLabel->setPixmap(pixmap.scaled(48, 48, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 		}

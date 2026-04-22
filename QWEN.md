@@ -358,8 +358,8 @@ QTEST_MAIN(TestMyClass)
 For loading and caching textures/icons, use the `TexturesService`:
 
 **Data Layer** (`src/DataLayer/textures/`):
-- `ITexturesDataProvider` — Interface for loading textures
-- `TexturesDataProviderJsonImpl` — Implementation that loads from `assets/icons/`
+- `IImagesDataProvider` — Interface for loading textures
+- `ImagesDataProviderJsonImpl` — Implementation that loads from `assets/icons/`
 
 **Application Layer** (`src/ApplicationLayer/textures/`):
 - `TexturesService` — Service with caching (QHash for icons and textures)

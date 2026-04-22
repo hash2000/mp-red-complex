@@ -4,7 +4,7 @@
 #include <QPixmap>
 #include <optional>
 
-enum class TextureType {
+enum class ImageType {
 	Icon,       // assets/icons/
 	Entity,     // assets/entities/
 	Item,       // assets/items/
@@ -15,13 +15,13 @@ enum class TextureType {
 	LastSlot,   // Маркер конца (для итерации)
 };
 
-class ITexturesDataProvider {
+class IImagesDataProvider {
 public:
-	virtual ~ITexturesDataProvider() = default;
+	virtual ~IImagesDataProvider() = default;
 
 	// Загрузка текстуры по пути с указанием типа
-	virtual std::optional<QPixmap> loadTexture(const QString& path, TextureType type = TextureType::Icon) const = 0;
+	virtual std::optional<QPixmap> load(const QString& path, ImageType type = ImageType::Icon) const = 0;
 
 	// Получить список всех доступных PNG текстур для указанного типа
-	virtual QStringList listTextures(TextureType type) const = 0;
+	virtual QStringList list(ImageType type) const = 0;
 };

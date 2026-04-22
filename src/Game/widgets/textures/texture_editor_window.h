@@ -6,7 +6,7 @@
 class TexturesService;
 class TilesService;
 class TextureEditorWidget;
-enum class TextureType;
+enum class ImageType;
 
 class TextureEditorWindow : public MdiChildWindow {
 	Q_OBJECT

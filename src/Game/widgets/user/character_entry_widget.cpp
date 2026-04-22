@@ -2,7 +2,7 @@
 #include "ApplicationLayer/users/users_service.h"
 #include "ApplicationLayer/character/character_item_handler.h"
 #include "ApplicationLayer/textures/textures_service.h"
-#include "DataLayer/textures/i_textures_data_provider.h"
+#include "DataLayer/images/i_images_data_provider.h"
 #include <QLabel>
 #include <QPushButton>
 #include <QVBoxLayout>
@@ -174,7 +174,7 @@ void CharacterEntryWidget::loadCharacterData() {
 
 	// Иконка
 	if (!d->character->iconPath.isEmpty() && d->texturesService) {
-		auto pixmap = d->texturesService->getTexture(d->character->iconPath, TextureType::Character);
+		auto pixmap = d->texturesService->getTexture(d->character->iconPath, ImageType::Character);
 		if (!pixmap.isNull()) {
 			d->iconLabel->setPixmap(pixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 		}

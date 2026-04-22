@@ -10,7 +10,7 @@ class ItemsService;
 class InventoryLoader;
 class IInventoryRepository;
 class IUsersDataProvider;
-class ITexturesDataProvider;
+class IImagesDataProvider;
 class ITileGroupsDataProvider;
 class UsersService;
 class TexturesService;

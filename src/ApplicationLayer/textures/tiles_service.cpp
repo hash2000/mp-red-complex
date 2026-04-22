@@ -1,6 +1,6 @@
 #include "ApplicationLayer/textures/tiles_service.h"
 #include "ApplicationLayer/textures/textures_service.h"
-#include "DataLayer/textures/i_tile_groups_data_provider.h"
+#include "DataLayer/images/i_tile_groups_data_provider.h"
 #include <QUuid>
 #include <QHash>
 #include <QFileInfo>
@@ -155,7 +155,7 @@ std::optional<QPixmap> TilesService::getTilemap(const QString& tag) const {
 		return std::nullopt;
 	}
 
-	auto pixmap = d->texturesService->getTexture(d->metadata->fileName + ".png", TextureType::TileSets, tag);
+	auto pixmap = d->texturesService->getTexture(d->metadata->fileName + ".png", ImageType::TileSets, tag);
 	return pixmap;
 }
 

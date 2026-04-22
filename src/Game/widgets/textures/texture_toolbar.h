@@ -2,7 +2,7 @@
 #include <QWidget>
 #include <memory>
 
-enum class TextureType;
+enum class ImageType;
 
 class TextureToolbar : public QWidget {
 	Q_OBJECT
@@ -11,7 +11,7 @@ public:
 	~TextureToolbar() override;
 
 	// Обновить видимость кнопок в зависимости от типа текстур
-	void setTextureType(TextureType type);
+	void setImageType(ImageType type);
 
 	// Обновить выбранные тайлы (для управления доступностью кнопок)
 	void setSelectedTiles(const QList<int>& tileIds);

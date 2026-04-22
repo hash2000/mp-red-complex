@@ -1,5 +1,5 @@
 #include "ApplicationLayer/textures/textures_service.h"
-#include "DataLayer/textures/i_textures_data_provider.h"
+#include "DataLayer/images/i_images_data_provider.h"
 #include <QPixmap>
 #include <QPainter>
 #include <QHash>
@@ -11,7 +11,7 @@ public:
 	}
 
 	TexturesService* q;
-	ITexturesDataProvider* dataProvider = nullptr;
+	IImagesDataProvider* dataProvider = nullptr;
 
 	// Тегированный кэш загруженных текстур
 	// Внешний QHash: ключ = тег, значение = внутренний QHash
@@ -36,7 +36,7 @@ public:
 };
 
 TexturesService::TexturesService(
-	ITexturesDataProvider* dataProvider,
+	IImagesDataProvider* dataProvider,
 	QObject* parent)
 	: QObject(parent)
 	, d(std::make_unique<Private>(this)) {
@@ -46,7 +46,7 @@ TexturesService::TexturesService(
 
 TexturesService::~TexturesService() = default;
 
-QPixmap TexturesService::getTexture(const QString& path, TextureType type, const QString& tag) {
+QPixmap TexturesService::getTexture(const QString& path, ImageType type, const QString& tag) {
 	// Проверяем кэш по тегу
 	auto tagIt = d->texturesCache.find(tag);
 	if (tagIt != d->texturesCache.end()) {
@@ -57,7 +57,7 @@ QPixmap TexturesService::getTexture(const QString& path, TextureType type, const
 	}
 
 	// Загружаем из провайдера
-	auto pixmap = d->dataProvider->loadTexture(path, type);
+	auto pixmap = d->dataProvider->load(path, type);
 	if (pixmap.has_value()) {
 		// Сохраняем в кеш с указанным тегом
 		d->texturesCache[tag].insert(path, *pixmap);
@@ -76,7 +76,7 @@ void TexturesService::clearCacheByTag(const QString& tag) {
 	d->texturesCache.remove(tag);
 }
 
-void TexturesService::preloadTexture(const QString& name, TextureType type, const QString& tag) {
+void TexturesService::preloadTexture(const QString& name, ImageType type, const QString& tag) {
 	// Проверяем, есть ли уже в кеше по этому тегу
 	auto tagIt = d->texturesCache.find(tag);
 	if (tagIt != d->texturesCache.end() && tagIt->contains(name)) {
@@ -84,12 +84,12 @@ void TexturesService::preloadTexture(const QString& name, TextureType type, cons
 	}
 
 	// Загружаем и сохраняем в кеш с указанным тегом
-	auto pixmap = d->dataProvider->loadTexture(name, type);
+	auto pixmap = d->dataProvider->load(name, type);
 	if (pixmap.has_value()) {
 		d->texturesCache[tag].insert(name, *pixmap);
 	}
 }
 
-QStringList TexturesService::listTextures(TextureType type) const {
-	return d->dataProvider->listTextures(type);
+QStringList TexturesService::listTextures(ImageType type) const {
+	return d->dataProvider->list(type);
 }

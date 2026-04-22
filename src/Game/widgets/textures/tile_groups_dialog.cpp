@@ -1,6 +1,6 @@
 #include "Game/widgets/textures/tile_groups_dialog.h"
 #include "ApplicationLayer/textures/tiles_service.h"
-#include "DataLayer/textures/i_tile_groups_data_provider.h"
+#include "DataLayer/images/i_tile_groups_data_provider.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QListWidget>

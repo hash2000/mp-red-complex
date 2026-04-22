@@ -9,7 +9,7 @@ class QListWidgetItem;
 class QComboBox;
 class TextureToolbar;
 class TileSetParamsDialog;
-enum class TextureType;
+enum class ImageType;
 
 class TextureEditorWidget : public QWidget {
 	Q_OBJECT
@@ -21,13 +21,13 @@ public:
 	~TextureEditorWidget() override;
 
 signals:
-	void textureSelected(TextureType textureType, const QString& fileName);
+	void textureSelected(ImageType ImageType, const QString& fileName);
 	void tileSelected(int tileId);
 
 private slots:
-	void onTextureTypeChanged(int index);
+	void onImageTypeChanged(int index);
 	void onTextureItemSelected(QListWidgetItem* current);
-	void loadTexturesPage();
+	void loadsPage();
 	void onTileSetSettingsRequested();
 	void onTileSetSettingsApplied(int gridSizeX, int gridSizeY, bool showGrid);
 	void onTileGroupsRequested();
