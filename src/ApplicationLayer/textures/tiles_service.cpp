@@ -1,5 +1,5 @@
 #include "ApplicationLayer/textures/tiles_service.h"
-#include "ApplicationLayer/textures/textures_service.h"
+#include "ApplicationLayer/textures/images_service.h"
 #include "DataLayer/images/i_tile_groups_data_provider.h"
 #include <QUuid>
 #include <QHash>
@@ -11,7 +11,7 @@ public:
 	Private(TilesService* parent) : q(parent) {}
 	TilesService* q;
 	ITileGroupsDataProvider* tileGroupsDataProvider = nullptr;
-	TexturesService* texturesService = nullptr;
+	ImagesService* ImagesService = nullptr;
 
 	// Кэш загруженных групп
 	mutable QHash<QString, QList<TileGroup>> groupsCache;
@@ -38,13 +38,13 @@ public:
 };
 
 TilesService::TilesService(
-	TexturesService* texturesService,
+	ImagesService* ImagesService,
 	ITileGroupsDataProvider* tileGroupsDataProvider,
 	QObject* parent)
 	: QObject(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->tileGroupsDataProvider = tileGroupsDataProvider;
-	d->texturesService = texturesService;
+	d->ImagesService = ImagesService;
 }
 
 TilesService::~TilesService() = default;
@@ -155,7 +155,7 @@ std::optional<QPixmap> TilesService::getTilemap(const QString& tag) const {
 		return std::nullopt;
 	}
 
-	auto pixmap = d->texturesService->getTexture(d->metadata->fileName + ".png", ImageType::TileSets, tag);
+	auto pixmap = d->ImagesService->getImage(d->metadata->fileName + ".png", ImageType::TileSets, tag);
 	return pixmap;
 }
 

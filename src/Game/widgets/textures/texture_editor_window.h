@@ -3,7 +3,7 @@
 #include <QObject>
 #include <memory>
 
-class TexturesService;
+class ImagesService;
 class TilesService;
 class TextureEditorWidget;
 enum class ImageType;
@@ -13,7 +13,7 @@ class TextureEditorWindow : public MdiChildWindow {
 
 public:
 	explicit TextureEditorWindow(
-		TexturesService* texturesService,
+		ImagesService* ImagesService,
 		TilesService* tilesService,
 		const QString& id,
 		QWidget* parent = nullptr);

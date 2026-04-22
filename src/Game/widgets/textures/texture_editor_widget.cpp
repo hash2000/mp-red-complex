@@ -3,7 +3,7 @@
 #include "Game/widgets/textures/texture_toolbar.h"
 #include "Game/widgets/textures/tile_set_params_dialog.h"
 #include "Game/widgets/textures/tile_groups_dialog.h"
-#include "ApplicationLayer/textures/textures_service.h"
+#include "ApplicationLayer/textures/images_service.h"
 #include "ApplicationLayer/textures/tiles_service.h"
 #include "DataLayer/images/i_images_data_provider.h"
 #include <QSplitter>
@@ -24,7 +24,7 @@ public:
 	Private(TextureEditorWidget* parent) : q(parent) {}
 	TextureEditorWidget* q;
 
-	TexturesService* texturesService = nullptr;
+	ImagesService* ImagesService = nullptr;
 	TilesService* tilesService = nullptr;
 
 	// Компоненты UI
@@ -56,12 +56,12 @@ public:
 };
 
 TextureEditorWidget::TextureEditorWidget(
-	TexturesService* texturesService,
+	ImagesService* ImagesService,
 	TilesService* tilesService,
 	QWidget* parent)
 	: QWidget(parent)
 	, d(std::make_unique<Private>(this)) {
-	d->texturesService = texturesService;
+	d->ImagesService = ImagesService;
 	d->tilesService = tilesService;
 
 	setObjectName("TextureEditorWidget");
@@ -244,7 +244,7 @@ void TextureEditorWidget::onTextureItemSelected(QListWidgetItem* current) {
 }
 
 void TextureEditorWidget::updateTextureList() {
-	d->allTextures = d->texturesService->listTextures(d->currentType);
+	d->allTextures = d->ImagesService->listImages(d->currentType);
 	d->currentPage = 0;
 	d->textureList->clear();
 	loadsPage();
@@ -270,7 +270,7 @@ void TextureEditorWidget::loadsPage() {
 
 void TextureEditorWidget::updatePreview(const QString& fileName) {
 	d->currentTexturePath = fileName;  // Сохраняем путь для группировки
-	const auto pixmap = d->texturesService->getTexture(fileName, d->currentType);
+	const auto pixmap = d->ImagesService->getImage(fileName, d->currentType);
 	if (!pixmap.isNull()) {
 		d->previewLabel->setPixmap(pixmap);
 	} else {

@@ -1,7 +1,7 @@
 #include "Game/widgets/user/character_entry_widget.h"
 #include "ApplicationLayer/users/users_service.h"
 #include "ApplicationLayer/character/character_item_handler.h"
-#include "ApplicationLayer/textures/textures_service.h"
+#include "ApplicationLayer/textures/images_service.h"
 #include "DataLayer/images/i_images_data_provider.h"
 #include <QLabel>
 #include <QPushButton>
@@ -16,7 +16,7 @@ public:
 
 	CharacterEntryWidget* q;
 	UsersService* usersService = nullptr;
-	TexturesService* texturesService = nullptr;
+	ImagesService* ImagesService = nullptr;
 	QUuid characterId;
 	CharacterItemHandler* character = nullptr;
 
@@ -30,13 +30,13 @@ public:
 
 CharacterEntryWidget::CharacterEntryWidget(
 	UsersService* usersService,
-	TexturesService* texturesService,
+	ImagesService* ImagesService,
 	const QUuid& characterId,
 	QWidget* parent)
 	: QWidget(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->usersService = usersService;
-	d->texturesService = texturesService;
+	d->ImagesService = ImagesService;
 	d->characterId = characterId;
 
 	// Растягиваемся по горизонтали, фиксируемся по вертикали
@@ -173,8 +173,8 @@ void CharacterEntryWidget::loadCharacterData() {
 		.arg(d->character->level));
 
 	// Иконка
-	if (!d->character->iconPath.isEmpty() && d->texturesService) {
-		auto pixmap = d->texturesService->getTexture(d->character->iconPath, ImageType::Character);
+	if (!d->character->iconPath.isEmpty() && d->ImagesService) {
+		auto pixmap = d->ImagesService->getImage(d->character->iconPath, ImageType::Character);
 		if (!pixmap.isNull()) {
 			d->iconLabel->setPixmap(pixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 		}

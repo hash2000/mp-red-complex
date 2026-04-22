@@ -1,7 +1,7 @@
 #include "Game/widgets/user/user_widget.h"
 #include "Game/widgets/user/character_entry_widget.h"
 #include "ApplicationLayer/users/users_service.h"
-#include "ApplicationLayer/textures/textures_service.h"
+#include "ApplicationLayer/textures/images_service.h"
 #include "DataLayer/users/user.h"
 #include "DataLayer/images/i_images_data_provider.h"
 #include <QLabel>
@@ -19,7 +19,7 @@ public:
 
 	UserWidget* q;
 	UsersService* usersService = nullptr;
-	TexturesService* texturesService = nullptr;
+	ImagesService* ImagesService = nullptr;
 	std::optional<UserData> currentUser;
 
 	// Элементы заголовка
@@ -36,11 +36,11 @@ public:
 	std::list<CharacterEntryWidget*> characterWidgets;
 };
 
-UserWidget::UserWidget(UsersService* usersService, TexturesService* texturesService, QWidget* parent)
+UserWidget::UserWidget(UsersService* usersService, ImagesService* ImagesService, QWidget* parent)
 	: QFrame(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->usersService = usersService;
-	d->texturesService = texturesService;
+	d->ImagesService = ImagesService;
 
 	setObjectName("UserWidget");
 	setFrameStyle(QFrame::StyledPanel | QFrame::Plain);
@@ -209,8 +209,8 @@ void UserWidget::loadUserData() {
 	d->userIdLabel->setText(shortId);
 
 	// Иконка пользователя
-	if (!user.iconPath.isEmpty() && d->texturesService) {
-		auto pixmap = d->texturesService->getTexture(user.iconPath, ImageType::Users);
+	if (!user.iconPath.isEmpty() && d->ImagesService) {
+		auto pixmap = d->ImagesService->getImage(user.iconPath, ImageType::Users);
 		if (!pixmap.isNull()) {
 			d->userIconLabel->setPixmap(pixmap.scaled(48, 48, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 		}
@@ -238,7 +238,7 @@ void UserWidget::loadCharacters() {
 	for (const auto& charId : characterIds) {
 		auto* charWidget = new CharacterEntryWidget(
 			d->usersService,
-			d->texturesService,
+			d->ImagesService,
 			charId,
 			d->charactersContainer);
 

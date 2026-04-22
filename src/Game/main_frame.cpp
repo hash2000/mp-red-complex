@@ -77,7 +77,7 @@ public:
 		// Панель действий
 		actionPanel = new ActionPanelWidget(
 			controller->controllers()->actionPanelController(),
-			controller->services()->texturesService(),
+			controller->services()->imagesService(),
 			q);
 		horizontalSplitter->addWidget(actionPanel);
 

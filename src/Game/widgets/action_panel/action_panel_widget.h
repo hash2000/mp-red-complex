@@ -5,7 +5,7 @@
 #include <vector>
 
 class ActionPanelController;
-class TexturesService;
+class ImagesService;
 class QToolButton;
 class QVBoxLayout;
 
@@ -14,7 +14,7 @@ class ActionPanelWidget : public QWidget {
 public:
 	explicit ActionPanelWidget(
 		ActionPanelController* controller,
-		TexturesService* texturesService,
+		ImagesService* ImagesService,
 		QWidget* parent = nullptr);
 	~ActionPanelWidget() override;
 

@@ -5,13 +5,13 @@
 
 class UsersService;
 class UserWidget;
-class TexturesService;
+class ImagesService;
 
 class UserWindow : public MdiChildWindow {
 	Q_OBJECT
 
 public:
-	explicit UserWindow(UsersService* usersService, TexturesService* texturesService, const QString& id, QWidget* parent = nullptr);
+	explicit UserWindow(UsersService* usersService, ImagesService* ImagesService, const QString& id, QWidget* parent = nullptr);
 	~UserWindow() override;
 
 	QString windowType() const override { return "user-profile"; }

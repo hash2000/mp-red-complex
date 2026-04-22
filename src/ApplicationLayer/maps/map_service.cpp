@@ -1,6 +1,6 @@
 #include "ApplicationLayer/maps/map_service.h"
 #include "ApplicationLayer/textures/tiles_service.h"
-#include "ApplicationLayer/textures/textures_service.h"
+#include "ApplicationLayer/textures/images_service.h"
 #include "DataLayer/maps/i_map_data_provider.h"
 #include <QUuid>
 #include <QFileInfo>
@@ -11,7 +11,7 @@ public:
   MapService* q;
   IMapDataProvider* mapDataProvider = nullptr;
   TilesService* tilesService = nullptr;
-  TexturesService* texturesService = nullptr;
+  ImagesService* ImagesService = nullptr;
 
   std::optional<QString> currentMapName;
   mutable std::optional<MapMetadata> currentMetadata;
@@ -19,14 +19,14 @@ public:
 
 MapService::MapService(
   TilesService* tilesService,
-  TexturesService* texturesService,
+  ImagesService* ImagesService,
   IMapDataProvider* mapDataProvider,
   QObject* parent)
   : QObject(parent)
   , d(std::make_unique<Private>(this)) {
   d->mapDataProvider = mapDataProvider;
   d->tilesService = tilesService;
-  d->texturesService = texturesService;
+  d->ImagesService = ImagesService;
 }
 
 MapService::~MapService() = default;

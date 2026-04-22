@@ -1,6 +1,6 @@
 #include "ApplicationLayer/items/items_service.h"
 #include "ApplicationLayer/items/i_item_repository.h"
-#include "ApplicationLayer/textures/textures_service.h"
+#include "ApplicationLayer/textures/images_service.h"
 #include "DataLayer/images/i_images_data_provider.h"
 #include <QString>
 #include <QUuid>
@@ -9,10 +9,10 @@
 
 class ItemsService::Private {
 public:
-	Private(ItemsService* parent, std::shared_ptr<IItemRepository> repository, TexturesService* texturesService)
+	Private(ItemsService* parent, std::shared_ptr<IItemRepository> repository, ImagesService* ImagesService)
 		: q(parent)
 		, itemRepository(repository)
-		, texturesService(texturesService) {
+		, ImagesService(ImagesService) {
 	}
 
 	const ItemEntity* entityById(const QString& id) const {
@@ -91,16 +91,16 @@ public:
 
 	ItemsService* q;
 	std::shared_ptr<IItemRepository> itemRepository;
-	TexturesService* texturesService = nullptr;
+	ImagesService* ImagesService = nullptr;
 	std::map<QString, std::unique_ptr<ItemEntity>> itemEntities;
 	std::map<QUuid, std::unique_ptr<Item>> items;
 };
 
 ItemsService::ItemsService(
 	std::shared_ptr<IItemRepository> repository,
-	TexturesService* texturesService,
+	ImagesService* ImagesService,
 	QObject* parent)
-	: d(std::make_unique<Private>(this, repository, texturesService))
+	: d(std::make_unique<Private>(this, repository, ImagesService))
 	, QObject(parent) {
 }
 
@@ -114,9 +114,9 @@ void ItemsService::loadEntities() {
 	for (const auto& entityId : entityIds) {
 		auto entity = d->itemRepository->findEntityById(entityId);
 		if (entity) {
-			// Загружаем иконку сущности через TexturesService
-			if (!entity->iconPath.isEmpty() && d->texturesService) {
-				entity->icon = d->texturesService->getTexture(entity->iconPath, ImageType::Item);
+			// Загружаем иконку сущности через ImagesService
+			if (!entity->iconPath.isEmpty() && d->ImagesService) {
+				entity->icon = d->ImagesService->getImage(entity->iconPath, ImageType::Item);
 			}
 
 			d->itemEntities.emplace(entityId, std::move(entity));

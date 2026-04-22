@@ -7,14 +7,14 @@
 #include <map>
 #include <ranges>
 
-class TexturesService;
+class ImagesService;
 
 class ItemsService : public QObject {
 	Q_OBJECT
 public:
 	explicit ItemsService(
 		std::shared_ptr<IItemRepository> repository,
-		TexturesService* texturesService,
+		ImagesService* ImagesService,
 		QObject* parent = nullptr);
 	~ItemsService() override;
 

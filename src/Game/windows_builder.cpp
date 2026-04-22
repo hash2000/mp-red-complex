@@ -64,7 +64,7 @@ WindowsBuilder::WindowsBuilder(ApplicationController* appController)
 	d->factory.emplace("user-profile", [](Services* services, const QString& id, QWidget* parent) {
 		return new UserWindow(
 			services->usersService(),
-			services->texturesService(),
+			services->imagesService(),
 			id,
 			parent);
 		});
@@ -73,7 +73,7 @@ WindowsBuilder::WindowsBuilder(ApplicationController* appController)
 		});
 	d->factory.emplace("texture-editor", [](Services* services, const QString& id, QWidget* parent) {
 		return new TextureEditorWindow(
-			services->texturesService(),
+			services->imagesService(),
 			services->tilesService(),
 			id,
 			parent);

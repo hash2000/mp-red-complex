@@ -1,6 +1,6 @@
 #include "ApplicationLayer/users/users_service.h"
 #include "ApplicationLayer/character/character_item_handler.h"
-#include "ApplicationLayer/textures/textures_service.h"
+#include "ApplicationLayer/textures/images_service.h"
 #include "DataLayer/users/user.h"
 #include <QCryptographicHash>
 #include <QUuid>
@@ -14,7 +14,7 @@ public:
 	UsersService* q;
 	IUsersDataProvider* usersDataProvider = nullptr;
 	ICharacterDataProvider* characterDataProvider = nullptr;
-	TexturesService* texturesService = nullptr;
+	ImagesService* ImagesService = nullptr;
 	QString currentUserId;
 	QUuid chestId;
 	bool authenticated = false;
@@ -50,7 +50,7 @@ public:
 				handler->iconPath = characterData.iconPath;
 
 				if (!handler->iconPath.isEmpty()) {
-					handler->icon = texturesService->getTexture(handler->iconPath, ImageType::Character);
+					handler->icon = ImagesService->getImage(handler->iconPath, ImageType::Character);
 				}
 
 				characters.emplace(characterId, std::move(handler));
@@ -62,13 +62,13 @@ public:
 UsersService::UsersService(
 	IUsersDataProvider* usersDataProvider,
 	ICharacterDataProvider* characterDataProvider,
-	TexturesService* texturesService,
+	ImagesService* ImagesService,
 	QObject* parent)
 	: QObject(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->usersDataProvider = usersDataProvider;
 	d->characterDataProvider = characterDataProvider;
-	d->texturesService = texturesService;
+	d->ImagesService = ImagesService;
 }
 
 UsersService::~UsersService() = default;

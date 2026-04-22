@@ -6,14 +6,14 @@
 #include <optional>
 
 class TilesService;
-class TexturesService;
+class ImagesService;
 
 class MapService : public QObject {
     Q_OBJECT
 public:
     explicit MapService(
         TilesService* tilesService,
-        TexturesService* texturesService,
+        ImagesService* ImagesService,
         IMapDataProvider* mapDataProvider,
         QObject* parent = nullptr);
     ~MapService() override;

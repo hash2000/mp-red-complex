@@ -1,6 +1,6 @@
 #include "Game/widgets/action_panel/action_panel_widget.h"
 #include "Game/controllers/action_panel_controller.h"
-#include "ApplicationLayer/textures/textures_service.h"
+#include "ApplicationLayer/textures/images_service.h"
 #include "Game/styles/items_styles.h"
 #include <QToolButton>
 #include <QVBoxLayout>
@@ -15,7 +15,7 @@ public:
 
 	ActionPanelWidget* q;
 	ActionPanelController* controller = nullptr;
-	TexturesService* texturesService = nullptr;
+	ImagesService* ImagesService = nullptr;
 	QHBoxLayout* mainLayout = nullptr;
 	QWidget* buttonsContainer = nullptr;
 	QVBoxLayout* buttonsLayout = nullptr;
@@ -28,12 +28,12 @@ public:
 
 ActionPanelWidget::ActionPanelWidget(
 	ActionPanelController* controller,
-	TexturesService* texturesService,
+	ImagesService* ImagesService,
 	QWidget* parent)
 	: QWidget(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->controller = controller;
-	d->texturesService = texturesService;
+	d->ImagesService = ImagesService;
 
 	// Подключение сигналов контроллера
 	connect(d->controller, &ActionPanelController::buttonAdded,
@@ -135,7 +135,7 @@ QToolButton* ActionPanelWidget::createToolButton(const ActionButtonConfig& confi
 	auto* button = new QToolButton(this);
 
 	// Загружаем иконку через сервис текстур (с кэшированием)
-	QPixmap pixmap = d->texturesService->getTexture(config.iconName);
+	QPixmap pixmap = d->ImagesService->getImage(config.iconName);
 	button->setIcon(QIcon(pixmap));
 
 	button->setIconSize(QSize(ItemsStyles::ICON_SIZE, ItemsStyles::ICON_SIZE));

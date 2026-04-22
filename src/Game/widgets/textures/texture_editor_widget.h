@@ -2,7 +2,7 @@
 #include <QWidget>
 #include <memory>
 
-class TexturesService;
+class ImagesService;
 class TilesService;
 class QListWidget;
 class QListWidgetItem;
@@ -15,7 +15,7 @@ class TextureEditorWidget : public QWidget {
 	Q_OBJECT
 public:
 	explicit TextureEditorWidget(
-		TexturesService* texturesService,
+		ImagesService* ImagesService,
 		TilesService* tilesService,
 		QWidget* parent = nullptr);
 	~TextureEditorWidget() override;

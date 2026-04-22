@@ -6,13 +6,13 @@
 #include <memory>
 #include <optional>
 
-class TexturesService;
+class ImagesService;
 
 class TilesService : public QObject {
 	Q_OBJECT
 public:
 	explicit TilesService(
-		TexturesService* texturesService,
+		ImagesService* ImagesService,
 		ITileGroupsDataProvider* tileGroupsDataProvider,
 		QObject* parent = nullptr);
 	~TilesService() override;
