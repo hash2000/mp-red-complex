@@ -30,6 +30,7 @@
 #include "ApplicationLayer/textures/images_service.h"
 #include "ApplicationLayer/textures/tiles_service.h"
 #include "ApplicationLayer/maps/map_service.h"
+#include "ApplicationLayer/textures/textures_service.h"
 
 #include <list>
 
@@ -65,6 +66,7 @@ public:
 	std::unique_ptr<UsersService> usersService;
 	std::unique_ptr<ImagesService> imagesService;
 	std::unique_ptr<TilesService> tilesService;
+	std::unique_ptr<TexturesService> texturesService;
 
 	// Data providers (хранятся в Services)
 	std::unique_ptr<IUsersDataProvider> usersDataProvider;
@@ -103,6 +105,7 @@ Services::Services(Resources* resources)
 	// Создаём сервис текстур (нужен перед ItemsService)
 	d->ImagesDataProvider = std::make_unique<ImagesDataProviderJsonImpl>(resources);
 	d->imagesService = std::make_unique<ImagesService>(d->ImagesDataProvider.get());
+	d->texturesService = std::make_unique<TexturesService>(d->imagesService.get());
 
 	// Создаём сервис тайловых групп
 	d->tileGroupsDataProvider = std::make_unique<TileGroupsDataProviderJsonImpl>(resources);
@@ -208,4 +211,8 @@ TilesService* Services::tilesService() const {
 
 MapService* Services::mapService() const {
 	return d->mapService.get();
+}
+
+TexturesService* Services::texturesService() const {
+	return d->texturesService.get();
 }
