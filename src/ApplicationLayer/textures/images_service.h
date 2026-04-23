@@ -7,8 +7,8 @@
 #include <optional>
 
 // Стандартный тег для постоянного кеша (UI элементы)
-inline constexpr const char* kDefaultTextureTag = "default";
-inline constexpr const char* kTestTexturePath = "test-image-stub";
+inline constexpr const char* kDefaultImageTag = "default";
+inline constexpr const char* kStubImagePath = "image-stub";
 
 class ImagesService : public QObject {
 	Q_OBJECT
@@ -20,7 +20,7 @@ public:
 	~ImagesService() override;
 
 	// Получение текстуры (с кэшированием в указанный тег)
-	QPixmap getImage(const QString& path, ImageType type = ImageType::Icon, const QString& tag = kDefaultTextureTag);
+	QPixmap getImage(const QString& path, ImageType type = ImageType::Icon, const QString& tag = kDefaultImageTag);
 
 	// Очистка всего кеша
 	void clearCache();
@@ -29,7 +29,7 @@ public:
 	void clearCacheByTag(const QString& tag);
 
 	// Предварительная загрузка текстуры в кэш (с указанием тега)
-	void preloadImage(const QString& name, ImageType type = ImageType::Icon, const QString& tag = kDefaultTextureTag);
+	void preloadImage(const QString& name, ImageType type = ImageType::Icon, const QString& tag = kDefaultImageTag);
 
 	// Получить список всех доступных текстур для типа
 	QStringList listImages(ImageType type) const;

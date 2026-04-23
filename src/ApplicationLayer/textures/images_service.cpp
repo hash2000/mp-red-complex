@@ -41,7 +41,7 @@ ImagesService::ImagesService(
 	: QObject(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->dataProvider = dataProvider;
-	d->imagesCache[kDefaultTextureTag][kTestTexturePath] = d->generateTestPixmap();
+	d->imagesCache[kDefaultImageTag][kStubImagePath] = d->generateTestPixmap();
 }
 
 ImagesService::~ImagesService() = default;
