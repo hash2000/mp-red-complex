@@ -20,7 +20,7 @@ public:
 		ImageType type = ImageType::Icon,
 		const QString& tag = kDefaultTextureTag);
 
-
+	void clear(const QString& tag);
 
 private:
 	class Private;

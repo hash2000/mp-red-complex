@@ -1,11 +1,11 @@
 {
 	"cmake.configureArgs": [
-    "-DCMAKE_TOOLCHAIN_FILE=$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-    "-DVCPKG_APPLOCAL_DEPS=ON",
-    "-DX_VCPKG_APPLOCAL_DEPS_INSTALL=ON",
-    "-DVCPKG_MANIFEST_MODE=ON",
-    "-DVCPKG_TARGET_TRIPLET="
-  ],
+		"-DCMAKE_TOOLCHAIN_FILE=$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+		"-DVCPKG_APPLOCAL_DEPS=ON",
+		"-DX_VCPKG_APPLOCAL_DEPS_INSTALL=ON",
+		"-DVCPKG_MANIFEST_MODE=ON",
+		"-DVCPKG_TARGET_TRIPLET="
+	],
   "vcpkg.general.enable": true,
 	"vcpkg.target.useStaticLib": false,
 	"cmake.configureSettings": {
@@ -96,5 +96,6 @@
   },
   "C_Cpp.errorSquiggles": "disabled",
   "C_Cpp.default.compilerPath": "/usr/bin/gcc",
-  "vcpkg.target.defaultTriplet": "",
+	"vcpkg.target.hostTriplet": "x64-windows",
+	"vcpkg.target.defaultTriplet": "",
 }
