@@ -3,7 +3,6 @@
 #include "Graphics/tiles/tileset.h"
 #include "Graphics/textures/texture_atlas.h"
 #include "Graphics/textures/uploaded_texture.h"
-#include <QFile>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLFunctions>
 #include <qdebug.h>

@@ -1,22 +1,13 @@
 #include "Graphics/tiles/chunk.h"
 #include "Graphics/tiles/tileset.h"
+#include "Graphics/gl_check_errors.h"
 #include <QOpenGLBuffer>
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLFunctions>
 #include <qdebug.h>
 #include <vector>
 
-#ifdef QT_DEBUG
-#define GL_CHECK() { \
-    auto f = QOpenGLContext::currentContext()->functions(); \
-    GLenum err; \
-    while ((err = f->glGetError()) != GL_NO_ERROR) { \
-        qWarning() << "OpenGL error:" << err << "at" << __FILE__ << ":" << __LINE__; \
-    } \
-}
-#else
-#define GL_CHECK()
-#endif
+
 
 class Chunk::Private {
 public:
@@ -183,7 +174,7 @@ void Chunk::render() {
 
 	d->vao.bind();
 	f->glDrawArrays(GL_TRIANGLES, 0, d->vertexCount);
-	GL_CHECK();
+	GL_CHECK_ERRORS();
 	d->vao.release();
 }
 
@@ -288,7 +279,7 @@ void Chunk::rebuildVertexes() {
 
 	d->vbo.bind();
 	d->vbo.allocate(vertices.data(), static_cast<int>(vertices.size() * sizeof(float)));
-	GL_CHECK();
+	GL_CHECK_ERRORS();
 
 	if (!d->vao.isCreated()) {
 		d->vao.create();
@@ -305,7 +296,7 @@ void Chunk::rebuildVertexes() {
 		4 * sizeof(float),
 		nullptr
 	);
-	GL_CHECK();
+	GL_CHECK_ERRORS();
 
 	f->glEnableVertexAttribArray(1);
 	f->glVertexAttribPointer(
@@ -316,7 +307,7 @@ void Chunk::rebuildVertexes() {
 		4 * sizeof(float),
 		(void*)(2 * sizeof(float))
 	);
-	GL_CHECK();
+	GL_CHECK_ERRORS();
 
 	d->vbo.release();
 	d->vao.release();
