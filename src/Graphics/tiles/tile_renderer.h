@@ -34,6 +34,8 @@ public:
 	/// Получить или создать чанк по координатам
 	Chunk* getOrCreateChunk(int chunkX, int chunkZ);
 
+	Chunk* getChunk(int chunkX, int chunkZ);
+
 	/// Удалить чанк
 	void removeChunk(int chunkX, int chunkZ);
 

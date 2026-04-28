@@ -5,7 +5,7 @@
 class MapWidget : public MapViewBase {
 	Q_OBJECT
 public:
-	explicit MapWidget(TilesService* tilesService, QWidget* parent = nullptr);
+	explicit MapWidget(TilesSelectorService* tilesSelectorService, QWidget* parent = nullptr);
 	~MapWidget() override;
 
 public slots:

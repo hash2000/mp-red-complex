@@ -1,8 +1,5 @@
 #include "Graphics/textures/texture_atlas.h"
-#include <QImage>
-#include <QOpenGLTexture>
-#include <QOpenGLFunctions>
-#include <QPixmap>
+#include "Graphics/textures/uploaded_texture.h"
 #include <qdebug.h>
 
 class TextureAtlas::Private {
@@ -21,7 +18,7 @@ public:
 	bool useMipMaps = true;
 	bool useMipMapsSmoothing = true;
 	TextureFilter textureFilter = TextureFilter::Linear;
-	std::unique_ptr<QOpenGLTexture> texture;
+	std::shared_ptr<UploadedTexture> texture;
 };
 
 TextureAtlas::TextureAtlas(int tileSizeX, int tileSizeY)
@@ -30,80 +27,18 @@ TextureAtlas::TextureAtlas(int tileSizeX, int tileSizeY)
 
 TextureAtlas::~TextureAtlas() = default;
 
-void TextureAtlas::useMipMaps(bool use) {
-	d->useMipMaps = use;
-}
 
-void TextureAtlas::useMipMapsSmoothing(bool use) {
-	d->useMipMapsSmoothing = use;
-}
-
-void TextureAtlas::setTextureFilter(TextureFilter filter) {
-	d->textureFilter = filter;
-}
-
-bool TextureAtlas::loadFromPixmap(const QPixmap& pixmap, int tilesCountX, int tilesCountY) {
-	if (pixmap.isNull()) {
-		qWarning() << "TextureAtlas: pixmap is null";
+bool TextureAtlas::load(std::shared_ptr<UploadedTexture> texture, int tilesCountX, int tilesCountY) {
+	if (!texture) {
+		qWarning() << "TextureAtlas: texture is null";
 		return false;
 	}
 
 	d->tilesCountX = tilesCountX;
 	d->tilesCountY = tilesCountY;
-	d->tileSizeX = pixmap.width() / tilesCountX;
-	d->tileSizeY = pixmap.height() / tilesCountY;
-
-	// 1. Конвертируем в QImage и переворачиваем по Y (OpenGL: (0,0) — нижний левый)
-	QImage image = pixmap.toImage().mirrored(false, true);
-
-	// 2. 🔥 ОБЯЗАТЕЛЬНО: конвертируем в формат, понятный OpenGL
-	if (image.format() != QImage::Format_RGBA8888) {
-		image = image.convertToFormat(QImage::Format_RGBA8888);
-	}
-
-	qInfo() << "TextureAtlas::loadFromPixmap - image format:" << image.format()
-		<< "size:" << image.size();
-
-	// 3. Создаём текстуру ЯВНО, с контролем формата
-	d->texture = std::make_unique<QOpenGLTexture>(image);
-
-	if (!d->texture->isCreated()) {
-		qWarning() << "TextureAtlas: failed to create OpenGL texture";
-		return false;
-	}
-
-	d->texture->setWrapMode(QOpenGLTexture::ClampToEdge);
-
-	if (d->useMipMaps) {
-		d->texture->generateMipMaps();
-		if (d->textureFilter == TextureFilter::Nearest) {
-			d->texture->setMinificationFilter(QOpenGLTexture::NearestMipMapNearest);
-		}
-		else {
-			d->texture->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
-		}
-		if (d->useMipMapsSmoothing) {
-			d->texture->setMipBaseLevel(0);
-			d->texture->setMipMaxLevel(d->texture->mipLevels() - 1);
-		}
-	}
-	else {
-
-		if (d->textureFilter == TextureFilter::Nearest) {
-			d->texture->setMinificationFilter(QOpenGLTexture::Nearest);
-		}
-		else {
-			d->texture->setMinificationFilter(QOpenGLTexture::Linear);
-		}
-	}
-
-	d->texture->setMagnificationFilter(QOpenGLTexture::Linear);
-
-	qInfo() << "TextureAtlas loaded:" << pixmap.size()
-		<< "tiles:" << tilesCountX << "x" << tilesCountY
-		<< "tileSize:" << d->tileSizeX << "x" << d->tileSizeY
-		<< "glId:" << d->texture->textureId()
-		<< "mipLevels:" << d->texture->mipLevels();
+	d->tileSizeX = texture->width() / tilesCountX;
+	d->tileSizeY = texture->height() / tilesCountY;
+	d->texture = texture;
 
 	return true;
 }
@@ -124,23 +59,14 @@ TextureRegion TextureAtlas::getRegion(int tileX, int tileY) const {
 
 void TextureAtlas::bind() const {
 	if (d->texture) {
-		if (!d->texture->isCreated()) {
-			qWarning() << "Texture is not created";
-			return;
-		}
-
 		d->texture->bind();
 	}
 }
 
 void TextureAtlas::unbind() const {
 	if (d->texture) {
-		d->texture->release();
+		d->texture->unbind();
 	}
-}
-
-GLuint TextureAtlas::textureId() const {
-	return d->texture ? d->texture->textureId() : 0;
 }
 
 int TextureAtlas::tileSizeX() const {
@@ -161,4 +87,8 @@ int TextureAtlas::tilesCountY() const {
 
 bool TextureAtlas::isLoaded() const {
 	return d->texture != nullptr;
+}
+
+const UploadedTexture* TextureAtlas::texture() const {
+	return d->texture ? d->texture.get() : nullptr;
 }

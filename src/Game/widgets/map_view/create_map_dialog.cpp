@@ -1,6 +1,5 @@
 #include "Game/widgets/map_view/create_map_dialog.h"
 #include <QVBoxLayout>
-#include <QHBoxLayout>
 #include <QFormLayout>
 #include <QLineEdit>
 #include <QLabel>

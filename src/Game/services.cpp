@@ -28,7 +28,7 @@
 #include "ApplicationLayer/items_save_manager.h"
 #include "ApplicationLayer/users/users_service.h"
 #include "ApplicationLayer/textures/images_service.h"
-#include "ApplicationLayer/textures/tiles_service.h"
+#include "ApplicationLayer/textures/tiles_selector_service.h"
 #include "ApplicationLayer/maps/map_service.h"
 #include "ApplicationLayer/textures/textures_service.h"
 
@@ -65,7 +65,7 @@ public:
 	std::unique_ptr<ItemsSaveManager> itemsSaveManager;
 	std::unique_ptr<UsersService> usersService;
 	std::unique_ptr<ImagesService> imagesService;
-	std::unique_ptr<TilesService> tilesService;
+	std::unique_ptr<TilesSelectorService> tilesSelectorService;
 	std::unique_ptr<TexturesService> texturesService;
 
 	// Data providers (хранятся в Services)
@@ -109,14 +109,14 @@ Services::Services(Resources* resources)
 
 	// Создаём сервис тайловых групп
 	d->tileGroupsDataProvider = std::make_unique<TileGroupsDataProviderJsonImpl>(resources);
-	d->tilesService = std::make_unique<TilesService>(
+	d->tilesSelectorService = std::make_unique<TilesSelectorService>(
 		d->imagesService.get(),
 		d->tileGroupsDataProvider.get());
 
 	// Создаём сервис карт
 	d->mapDataProvider = std::make_unique<MapDataProviderJsonImpl>(resources);
 	d->mapService = std::make_unique<MapService>(
-		d->tilesService.get(),
+		d->tilesSelectorService.get(),
 		d->imagesService.get(),
 		d->mapDataProvider.get());
 
@@ -205,8 +205,8 @@ ImagesService* Services::imagesService() const {
 	return d->imagesService.get();
 }
 
-TilesService* Services::tilesService() const {
-	return d->tilesService.get();
+TilesSelectorService* Services::tilesSelectorService() const {
+	return d->tilesSelectorService.get();
 }
 
 MapService* Services::mapService() const {

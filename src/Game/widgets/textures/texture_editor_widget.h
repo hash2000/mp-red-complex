@@ -3,7 +3,7 @@
 #include <memory>
 
 class ImagesService;
-class TilesService;
+class TilesSelectorService;
 class QListWidget;
 class QListWidgetItem;
 class QComboBox;
@@ -16,7 +16,7 @@ class TextureEditorWidget : public QWidget {
 public:
 	explicit TextureEditorWidget(
 		ImagesService* ImagesService,
-		TilesService* tilesService,
+		TilesSelectorService* tilesSelectorService,
 		QWidget* parent = nullptr);
 	~TextureEditorWidget() override;
 

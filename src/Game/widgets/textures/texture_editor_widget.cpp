@@ -4,7 +4,7 @@
 #include "Game/widgets/textures/tile_set_params_dialog.h"
 #include "Game/widgets/textures/tile_groups_dialog.h"
 #include "ApplicationLayer/textures/images_service.h"
-#include "ApplicationLayer/textures/tiles_service.h"
+#include "ApplicationLayer/textures/tiles_selector_service.h"
 #include "DataLayer/images/i_images_data_provider.h"
 #include <QSplitter>
 #include <QListWidget>
@@ -25,7 +25,7 @@ public:
 	TextureEditorWidget* q;
 
 	ImagesService* ImagesService = nullptr;
-	TilesService* tilesService = nullptr;
+	TilesSelectorService* tilesSelectorService = nullptr;
 
 	// Компоненты UI
 	QSplitter* splitter = nullptr;
@@ -57,12 +57,12 @@ public:
 
 TextureEditorWidget::TextureEditorWidget(
 	ImagesService* ImagesService,
-	TilesService* tilesService,
+	TilesSelectorService* tilesSelectorService,
 	QWidget* parent)
 	: QWidget(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->ImagesService = ImagesService;
-	d->tilesService = tilesService;
+	d->tilesSelectorService = tilesSelectorService;
 
 	setObjectName("TextureEditorWidget");
 	setupLayout();
@@ -223,7 +223,7 @@ void TextureEditorWidget::setupLayout() {
 	        this, &TextureEditorWidget::onUngroupTilesRequested);
 	connect(d->previewLabel, &ZoomableImageView::tileClicked,
 	        this, &TextureEditorWidget::onTileClicked);
-	connect(d->tilesService, &TilesService::groupsChanged,
+	connect(d->tilesSelectorService, &TilesSelectorService::groupsChanged,
 	        this, &TextureEditorWidget::onGroupsChanged);
 }
 void TextureEditorWidget::onImageTypeChanged(int index) {
@@ -279,7 +279,7 @@ void TextureEditorWidget::updatePreview(const QString& fileName) {
 
 	// Для тайловых наборов загружаем метаданные сетки из файла
 	if (d->currentType == ImageType::TileSets) {
-		const auto metadata = d->tilesService->getTileSetMetadata(fileName);
+		const auto metadata = d->tilesSelectorService->getTileSetMetadata(fileName);
 		if (metadata.has_value()) {
 			d->tileGridSizeX = metadata->gridSize.x;
 			d->tileGridSizeY = metadata->gridSize.y;
@@ -340,7 +340,7 @@ void TextureEditorWidget::onTileGroupsRequested() {
 		d->tileGroupsDialog = nullptr;
 	}
 
-	d->tileGroupsDialog = new TileGroupsDialog(d->tilesService, d->currentTexturePath, this);
+	d->tileGroupsDialog = new TileGroupsDialog(d->tilesSelectorService, d->currentTexturePath, this);
 	d->tileGroupsDialog->setResult(QDialog::Rejected);
 
 	// Выполняем диалог
@@ -368,7 +368,7 @@ void TextureEditorWidget::onTileClicked(int tileId, bool ctrlModifier) {
 	}
 	else {
 		// Без Ctrl — проверяем, принадлежит ли тайл к группе
-		const auto groupOpt = d->tilesService->getGroupContainingTile(d->currentTexturePath, tileId);
+		const auto groupOpt = d->tilesSelectorService->getGroupContainingTile(d->currentTexturePath, tileId);
 		if (groupOpt.has_value()) {
 			// Тайл в группе — выделяем всю группу
 			if (ctrlModifier) {
@@ -391,7 +391,7 @@ void TextureEditorWidget::onTileClicked(int tileId, bool ctrlModifier) {
 		}
 	}
 
-	d->tilesService->setSelectionTiles(d->selectedTileIds);
+	d->tilesSelectorService->setSelectionTiles(d->selectedTileIds);
 	d->previewLabel->setSelectedTileIds(d->selectedTileIds);
 	d->textureToolbar->setSelectedTiles(d->selectedTileIds);
 
@@ -423,7 +423,7 @@ void TextureEditorWidget::onGroupTilesRequested() {
 
 	// Создаем группу с именем по умолчанию
 	const QString groupName = QString("Группа %1").arg(d->selectedTileIds.size());
-	const QUuid groupId = d->tilesService->createGroup(d->currentTexturePath, groupName, d->selectedTileIds);
+	const QUuid groupId = d->tilesSelectorService->createGroup(d->currentTexturePath, groupName, d->selectedTileIds);
 
 	if (!groupId.isNull()) {
 		// Очищаем выделение после успешного создания группы
@@ -438,7 +438,7 @@ void TextureEditorWidget::onUngroupTilesRequested() {
 		return;
 	}
 
-	d->tilesService->deleteGroup(d->selectedGroupId);
+	d->tilesSelectorService->deleteGroup(d->selectedGroupId);
 	d->selectedGroupId = QUuid();
 }
 
@@ -447,7 +447,7 @@ void TextureEditorWidget::onGroupsChanged(const QString& texturePath) {
 		return;
 	}
 
-	const auto groups = d->tilesService->getGroups(texturePath);
+	const auto groups = d->tilesSelectorService->getGroups(texturePath);
 
 	d->previewLabel->setSelectedTileIds(d->selectedTileIds);
 	d->textureToolbar->setSelectedTiles(d->selectedTileIds);

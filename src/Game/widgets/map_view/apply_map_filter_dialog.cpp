@@ -1,4 +1,5 @@
 #include "Game/widgets/map_view/apply_map_filter_dialog.h"
+#include "Graphics/textures/uploaded_texture.h"
 #include <QComboBox>
 #include <QCheckBox>
 #include <QFormLayout>
@@ -64,10 +65,10 @@ ApplyMapAtlasDialog::ApplyMapAtlasDialog(QWidget* parent)
 ApplyMapAtlasDialog::~ApplyMapAtlasDialog() = default;
 
 
-ApplyMapAtlasSettings ApplyMapAtlasDialog::settings() const {
+UploadedTextureProperties ApplyMapAtlasDialog::settings() const {
 	return {
-		static_cast<TextureFilter>(d->textureFilterCombo->currentData().toInt()),
 		d->useMipMapCheckBox->isChecked(),
-		d->useMipMapSmoothingCheckBox->isChecked()
+		d->useMipMapSmoothingCheckBox->isChecked(),
+		static_cast<TextureFilter>(d->textureFilterCombo->currentData().toInt()),
 	};
 }

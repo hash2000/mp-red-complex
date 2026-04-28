@@ -4,6 +4,8 @@ set(Resources-Sources
 	${RedComplex_SOURCE_DIR}/src/Resources
 )
 
+set(CMAKE_AUTOMOC ON)
+
 file(GLOB_RECURSE SRCS ${Resources-Sources}/*.cpp)
 add_library(Resources
 	${SRCS}

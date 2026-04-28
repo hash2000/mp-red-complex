@@ -14,7 +14,7 @@ class IImagesDataProvider;
 class ITileGroupsDataProvider;
 class UsersService;
 class ImagesService;
-class TilesService;
+class TilesSelectorService;
 class MapService;
 class IMapDataProvider;
 class TexturesService;
@@ -33,7 +33,7 @@ public:
 	IInventoryRepository* inventoryRepository() const;
 	UsersService* usersService() const;
 	ImagesService* imagesService() const;
-	TilesService* tilesService() const;
+	TilesSelectorService* tilesSelectorService() const;
 	MapService* mapService() const;
 	TexturesService* texturesService() const;
 

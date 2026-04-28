@@ -5,14 +5,14 @@
 #include <memory>
 #include <optional>
 
-class TilesService;
+class TilesSelectorService;
 class ImagesService;
 
 class MapService : public QObject {
     Q_OBJECT
 public:
     explicit MapService(
-        TilesService* tilesService,
+        TilesSelectorService* tilesSelectorService,
         ImagesService* ImagesService,
         IMapDataProvider* mapDataProvider,
         QObject* parent = nullptr);

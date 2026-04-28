@@ -4,7 +4,7 @@
 
 class MapEditorWidget;
 class MapService;
-class TilesService;
+class TilesSelectorService;
 class TimeService;
 
 class MapEditorWindow : public MdiChildWindow {
@@ -13,7 +13,7 @@ class MapEditorWindow : public MdiChildWindow {
 public:
     explicit MapEditorWindow(
         MapService* mapService,
-        TilesService* tilesService,
+        TilesSelectorService* tilesSelectorService,
         TimeService* timeService,
         const QString& id,
         QWidget* parent = nullptr);

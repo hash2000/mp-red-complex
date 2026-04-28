@@ -4,7 +4,7 @@
 #include <memory>
 
 class ImagesService;
-class TilesService;
+class TilesSelectorService;
 class TextureEditorWidget;
 enum class ImageType;
 
@@ -14,7 +14,7 @@ class TextureEditorWindow : public MdiChildWindow {
 public:
 	explicit TextureEditorWindow(
 		ImagesService* ImagesService,
-		TilesService* tilesService,
+		TilesSelectorService* tilesSelectorService,
 		const QString& id,
 		QWidget* parent = nullptr);
 	~TextureEditorWindow() override;

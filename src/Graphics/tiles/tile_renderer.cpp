@@ -2,13 +2,11 @@
 #include "Graphics/camera.h"
 #include "Graphics/tiles/tileset.h"
 #include "Graphics/textures/texture_atlas.h"
+#include "Graphics/textures/uploaded_texture.h"
 #include <QFile>
-#include <QHash>
-#include <QSharedPointer>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLFunctions>
 #include <qdebug.h>
-#include <unordered_map>
 #include <memory>
 
 class TileRenderer::Private {
@@ -63,61 +61,48 @@ bool TileRenderer::initialize() {
 	// Загружаем шейдеры
 	d->shaderProgram = std::make_unique<QOpenGLShaderProgram>();
 
-	// Пробуем загрузить из файлов
-	QString vertexShaderPath = ":/shaders/tile.vert";
-	QString fragmentShaderPath = ":/shaders/tile.frag";
+	d->shaderProgram->addShaderFromSourceCode(QOpenGLShader::Vertex, R"(
+		#version 330 core
+		layout (location = 0) in vec2 aPosition;
+		layout (location = 1) in vec2 aTexCoord;
+		uniform mat4 uProjection;
+		uniform mat4 uView;
+		uniform float zLevel;
+		out vec2 vTexCoord;
+		void main() {
+			vTexCoord = aTexCoord;
+			gl_Position = uProjection * uView * vec4(aPosition.x, zLevel, aPosition.y, 1.0);
+		}
+	)");
 
-	// Если файлов нет в ресурсах, используем встроенные
-	if (!QFile::exists(vertexShaderPath)) {
-		d->shaderProgram->addShaderFromSourceCode(QOpenGLShader::Vertex, R"(
-			#version 330 core
-			layout (location = 0) in vec2 aPosition;
-			layout (location = 1) in vec2 aTexCoord;
-			uniform mat4 uProjection;
-			uniform mat4 uView;
-			uniform float zLevel;
-			out vec2 vTexCoord;
-			void main() {
-				vTexCoord = aTexCoord;
-				gl_Position = uProjection * uView * vec4(aPosition.x, zLevel, aPosition.y, 1.0);
-			}
-		)");
-	} else {
-		d->shaderProgram->addShaderFromSourceFile(QOpenGLShader::Vertex, vertexShaderPath);
-	}
+	//#version 330 core
+	//out vec4 FragColor;
+	//void main() {
+	//		FragColor = vec4(1.0, 0.0, 0.0, 1.0); // Ярко-красный
+	//}
 
-	if (!QFile::exists(fragmentShaderPath)) {
 		//#version 330 core
+		//in vec2 vTexCoord;
+		//uniform sampler2D uTexture;
 		//out vec4 FragColor;
 		//void main() {
-		//		FragColor = vec4(1.0, 0.0, 0.0, 1.0); // Ярко-красный
+		//	vec4 texColor = texture(uTexture, vTexCoord);
+		//	if (texColor.a < 0.1)
+		//		discard;
+		//	FragColor = texColor;
 		//}
-
-			//#version 330 core
-			//in vec2 vTexCoord;
-			//uniform sampler2D uTexture;
-			//out vec4 FragColor;
-			//void main() {
-			//	vec4 texColor = texture(uTexture, vTexCoord);
-			//	if (texColor.a < 0.1)
-			//		discard;
-			//	FragColor = texColor;
-			//}
-		d->shaderProgram->addShaderFromSourceCode(QOpenGLShader::Fragment, R"(
-			#version 330 core
-			in vec2 vTexCoord;
-			uniform sampler2D uTexture;
-			out vec4 FragColor;
-			void main() {
-				vec4 texColor = texture(uTexture, vTexCoord);
-				if (texColor.a < 0.1)
-						discard;
-				FragColor = texColor;
-			}
-		)");
-	} else {
-		d->shaderProgram->addShaderFromSourceFile(QOpenGLShader::Fragment, fragmentShaderPath);
-	}
+	d->shaderProgram->addShaderFromSourceCode(QOpenGLShader::Fragment, R"(
+		#version 330 core
+		in vec2 vTexCoord;
+		uniform sampler2D uTexture;
+		out vec4 FragColor;
+		void main() {
+			vec4 texColor = texture(uTexture, vTexCoord);
+			if (texColor.a < 0.1)
+					discard;
+			FragColor = texColor;
+		}
+	)");
 
 	if (!d->shaderProgram->link()) {
 		qWarning() << "TileRenderer: failed to link shader program:" << d->shaderProgram->log();
@@ -178,6 +163,17 @@ Chunk* TileRenderer::getOrCreateChunk(int chunkX, int chunkZ) {
 	return ptr;
 }
 
+Chunk* TileRenderer::getChunk(int chunkX, int chunkZ) {
+	auto key = d->getChunkKey(chunkX, chunkZ);
+
+	auto it = d->chunks.find(key);
+	if (it != d->chunks.end()) {
+		return it.value().get();
+	}
+
+	return nullptr;
+}
+
 void TileRenderer::removeChunk(int chunkX, int chunkZ) {
 	auto key = d->getChunkKey(chunkX, chunkZ);
 	d->chunks.remove(key);
@@ -204,7 +200,7 @@ void TileRenderer::render(const Camera& camera, int viewportWidth, int viewportH
 	rebuildDirtyChunks();
 
 	// Рисуем чанки только если есть tileset
-	if (d->tileset && d->tileset->atlas()) {
+	if (d->tileset && d->tileset->atlas() && d->tileset->atlas()->isLoaded()) {
 
 		auto atlas = d->tileset->atlas();
 		auto f = QOpenGLContext::currentContext()->functions();
@@ -213,7 +209,7 @@ void TileRenderer::render(const Camera& camera, int viewportWidth, int viewportH
 		static int frameCount = 0;
 		if (frameCount++ < 3) {
 			qInfo() << "TileRenderer::render - tileset atlas:" << d->tileset->atlas()
-				<< "textureId:" << d->tileset->atlas()->textureId()
+				<< "textureId:" << d->tileset->atlas()->texture()->textureId()
 				<< "chunks:" << d->chunks.size();
 		}
 

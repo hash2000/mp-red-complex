@@ -3,7 +3,6 @@
 #include <QOpenGLBuffer>
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLFunctions>
-#include <QSize>
 #include <qdebug.h>
 #include <vector>
 

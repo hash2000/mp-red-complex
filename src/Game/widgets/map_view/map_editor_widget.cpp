@@ -2,22 +2,19 @@
 #include "Game/widgets/map_view/create_map_dialog.h"
 #include "Game/widgets/map_view/apply_map_filter_dialog.h"
 #include "ApplicationLayer/maps/map_service.h"
-#include "ApplicationLayer/textures/tiles_service.h"
+#include "ApplicationLayer/textures/tiles_selector_service.h"
 #include "Graphics/textures/texture_atlas.h"
 #include "Graphics/tiles/tileset.h"
 #include "Graphics/tiles/tile_renderer.h"
 #include "Graphics/tiles/chunk.h"
+#include "Graphics/textures/uploaded_texture.h"
 #include <QToolBar>
 #include <QComboBox>
 #include <QLabel>
-#include <QSpinBox>
 #include <QGroupBox>
 #include <QPushButton>
 #include <QVBoxLayout>
-#include <QHBoxLayout>
 #include <QFormLayout>
-#include <QDebug>
-#include <QPainter>
 
 class MapEditorWidget::Private {
 public:
@@ -25,7 +22,7 @@ public:
 
   MapEditorWidget* q;
   MapService* mapService = nullptr;
-  TilesService* tilesService = nullptr;
+  TilesSelectorService* tilesSelectorService = nullptr;
 
   // UI компоненты
   QToolBar* toolbar = nullptr;
@@ -51,15 +48,15 @@ public:
 
 MapEditorWidget::MapEditorWidget(
   MapService* mapService,
-  TilesService* tilesService,
+  TilesSelectorService* tilesSelectorService,
   QWidget* parent)
   : MapViewBase(parent)
   , d(std::make_unique<Private>(this)) {
   d->mapService = mapService;
-  d->tilesService = tilesService;
+  d->tilesSelectorService = tilesSelectorService;
 
   setMapService(mapService);
-  setTilesService(tilesService);
+  setTilesService(tilesSelectorService);
 
   setupUI();
 
@@ -91,7 +88,7 @@ void MapEditorWidget::setMode(MapEditorMode mode) {
 }
 
 void MapEditorWidget::onModeChanged(int index) {
-  d->currentMode = static_cast<MapEditorMode>(index);
+	d->currentMode = static_cast<MapEditorMode>(d->modeComboBox->itemData(index).toInt());
   emit modeChanged(d->currentMode);
   qDebug() << "Map editor mode changed to:" << index;
 }
@@ -134,7 +131,7 @@ void MapEditorWidget::onTileClicked(std::optional<QPoint> point) {
 		eraseTile(point->x(), point->y());
 		break;
   case MapEditorMode::Select:
-		// TODO: Реализовать выделение области
+		selectTile(point->x(), point->y());
 		break;
   case MapEditorMode::Properties:
 		// TODO: Редактирование свойств тайла
@@ -175,10 +172,10 @@ void MapEditorWidget::setupToolbar() {
   // Выбор режима
   d->toolbar->addWidget(new QLabel("Режим: "));
   d->modeComboBox = new QComboBox();
-  d->modeComboBox->addItem("Рисование");
-  d->modeComboBox->addItem("Стирание");
-  d->modeComboBox->addItem("Выделение");
-  d->modeComboBox->addItem("Свойства");
+  d->modeComboBox->addItem("Рисование", static_cast<int>(MapEditorMode::Draw));
+  d->modeComboBox->addItem("Стирание", static_cast<int>(MapEditorMode::Erase));
+  d->modeComboBox->addItem("Выделение", static_cast<int>(MapEditorMode::Select));
+  d->modeComboBox->addItem("Свойства", static_cast<int>(MapEditorMode::Properties));
   connect(d->modeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
 		this, &MapEditorWidget::onModeChanged);
 
@@ -293,7 +290,7 @@ void MapEditorWidget::setupPropertiesPanel() {
 }
 
 void MapEditorWidget::placeTile(int x, int y) {
-	const auto tiles = tilesService();
+	const auto tiles = tilesSelectorService();
 	const auto renderer = tileRenderer();
 	if (!renderer) {
 		return;
@@ -340,6 +337,20 @@ void MapEditorWidget::eraseTile(int x, int y) {
   update();
 }
 
+void MapEditorWidget::selectTile(int x, int y) {
+	const auto renderer = tileRenderer();
+	if (!renderer) {
+		return;
+	}
+
+	const auto chunk = renderer->getChunk(x, y);
+	if (!chunk) {
+		return;
+	}
+
+
+}
+
 void MapEditorWidget::updatePropertiesPanel() {
   if (d->hoveredTile.has_value()) {
 		d->positionLabel->setText(QString("%1, %2").arg(d->hoveredTile->x()).arg(d->hoveredTile->y()));
@@ -355,7 +366,7 @@ void MapEditorWidget::updatePropertiesPanel() {
 		d->tileIdLabel->setText("Не выбран");
   }
 
-	const auto currentAtlas = d->tilesService ? d->tilesService->getTileSetName() : QString("Не выбран");
+	const auto currentAtlas = d->tilesSelectorService ? d->tilesSelectorService->getTileSetName() : QString("Не выбран");
 	d->currentAtlasLabel->setText(currentAtlas);
 
   const auto currentMap = d->mapService ? d->mapService->getCurrentMap() : std::nullopt;
@@ -363,8 +374,8 @@ void MapEditorWidget::updatePropertiesPanel() {
 }
 
 void MapEditorWidget::onTileServiceConnected() {
-  auto service = tilesService();
-  connect(service, &TilesService::tilesSelectionChanged, this, &MapEditorWidget::onTileSelected);
+  auto service = tilesSelectorService();
+  connect(service, &TilesSelectorService::tilesSelectionChanged, this, &MapEditorWidget::onTileSelected);
 }
 
 void MapEditorWidget::onApplySelectedAtlas() {

@@ -1,11 +1,7 @@
 #include "DataLayer/images/images_data_provider_json_impl.h"
 #include "DataStream/format/pixmap/data_reader.h"
-#include "DataStream/format/json/data_reader.h"
 #include "Resources/resources.h"
 #include <QPainter>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QFileInfo>
 #include <array>
 
 class ImagesDataProviderJsonImpl::Private {

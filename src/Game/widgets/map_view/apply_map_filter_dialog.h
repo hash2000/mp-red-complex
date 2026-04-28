@@ -1,14 +1,8 @@
 #pragma once
-#include "Graphics/textures/texture_filter.h"
 #include <QDialog>
 #include <memory>
 
-
-struct ApplyMapAtlasSettings {
-	TextureFilter textureFilter = TextureFilter::Linear;
-	bool useMipMap = false;
-	bool useMipMapSmoothing = false;
-};
+class UploadedTextureProperties;
 
 class ApplyMapAtlasDialog : public QDialog
 {
@@ -21,10 +15,7 @@ public:
 	ApplyMapAtlasDialog(const ApplyMapAtlasDialog&) = delete;
 	ApplyMapAtlasDialog& operator=(const ApplyMapAtlasDialog&) = delete;
 
-	ApplyMapAtlasSettings settings() const;
-
-signals:
-	void settingsApplied(TextureFilter filter, bool useMipMap, bool useMipMapSmoothing);
+	UploadedTextureProperties settings() const;
 
 private:
 	class Private;

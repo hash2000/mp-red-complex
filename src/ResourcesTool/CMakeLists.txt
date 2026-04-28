@@ -4,6 +4,8 @@ set(ResourcesTool-Sources
 	${RedComplex_SOURCE_DIR}/src/ResourcesTool
 )
 
+set(CMAKE_AUTOMOC ON)
+
 file(GLOB_RECURSE SRCS ${ResourcesTool-Sources}/*.cpp)
 add_executable(ResourcesTool
 	${SRCS}

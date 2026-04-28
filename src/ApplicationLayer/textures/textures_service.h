@@ -5,7 +5,7 @@
 
 class ImagesService;
 class UploadedTexture;
-struct UploadedTextureProperties;
+class UploadedTextureProperties;
 
 inline constexpr const char* kDefaultTextureTag = "default";
 

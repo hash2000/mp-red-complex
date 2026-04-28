@@ -1,15 +1,13 @@
-#include "ApplicationLayer/textures/tiles_service.h"
+#include "ApplicationLayer/textures/tiles_selector_service.h"
 #include "ApplicationLayer/textures/images_service.h"
 #include "DataLayer/images/i_tile_groups_data_provider.h"
-#include <QUuid>
-#include <QHash>
 #include <QFileInfo>
 #include <optional>
 
-class TilesService::Private {
+class TilesSelectorService::Private {
 public:
-	Private(TilesService* parent) : q(parent) {}
-	TilesService* q;
+	Private(TilesSelectorService* parent) : q(parent) {}
+	TilesSelectorService* q;
 	ITileGroupsDataProvider* tileGroupsDataProvider = nullptr;
 	ImagesService* ImagesService = nullptr;
 
@@ -37,7 +35,7 @@ public:
 	}
 };
 
-TilesService::TilesService(
+TilesSelectorService::TilesSelectorService(
 	ImagesService* ImagesService,
 	ITileGroupsDataProvider* tileGroupsDataProvider,
 	QObject* parent)
@@ -47,13 +45,13 @@ TilesService::TilesService(
 	d->ImagesService = ImagesService;
 }
 
-TilesService::~TilesService() = default;
+TilesSelectorService::~TilesSelectorService() = default;
 
-QList<TileGroup> TilesService::getGroups(const QString& texturePath) const {
+QList<TileGroup> TilesSelectorService::getGroups(const QString& texturePath) const {
 	return d->getGroupsCached(texturePath);
 }
 
-std::optional<TileGroup> TilesService::getGroupContainingTile(const QString& texturePath, int tileId) const {
+std::optional<TileGroup> TilesSelectorService::getGroupContainingTile(const QString& texturePath, int tileId) const {
 	const auto& groups = d->getGroupsCached(texturePath);
 	for (const auto& group : groups) {
 		if (group.tileIds.contains(tileId)) {
@@ -63,7 +61,7 @@ std::optional<TileGroup> TilesService::getGroupContainingTile(const QString& tex
 	return std::nullopt;
 }
 
-QUuid TilesService::createGroup(const QString& texturePath, const QString& name, const QList<int>& tileIds) {
+QUuid TilesSelectorService::createGroup(const QString& texturePath, const QString& name, const QList<int>& tileIds) {
 	if (tileIds.isEmpty() || !d->metadata) {
 		return QUuid();
 	}
@@ -83,7 +81,7 @@ QUuid TilesService::createGroup(const QString& texturePath, const QString& name,
 	return QUuid();
 }
 
-bool TilesService::updateGroup(const QString& texturePath, const TileGroup& group) {
+bool TilesSelectorService::updateGroup(const QString& texturePath, const TileGroup& group) {
 	if (!d->metadata) {
 		return false;
 	}
@@ -96,7 +94,7 @@ bool TilesService::updateGroup(const QString& texturePath, const TileGroup& grou
 	return success;
 }
 
-bool TilesService::deleteGroup(const QUuid& groupId) {
+bool TilesSelectorService::deleteGroup(const QUuid& groupId) {
 	if (!d->metadata) {
 		return false;
 	}
@@ -118,7 +116,7 @@ bool TilesService::deleteGroup(const QUuid& groupId) {
 	return false;
 }
 
-bool TilesService::deleteGroupsForTexture(const QString& texturePath) {
+bool TilesSelectorService::deleteGroupsForTexture(const QString& texturePath) {
 	const bool success = d->tileGroupsDataProvider->deleteGroupsForTexture(texturePath);
 	if (success) {
 		d->invalidateCache(texturePath);
@@ -127,7 +125,7 @@ bool TilesService::deleteGroupsForTexture(const QString& texturePath) {
 	return success;
 }
 
-std::optional<TileSetMetadata> TilesService::getTileSetMetadata(const QString& texturePath) const {
+std::optional<TileSetMetadata> TilesSelectorService::getTileSetMetadata(const QString& texturePath) const {
 	const auto name = QFileInfo(texturePath).baseName();
 	if (d->metadata.has_value() && d->metadata->fileName == name) {
 		return d->metadata;
@@ -137,20 +135,20 @@ std::optional<TileSetMetadata> TilesService::getTileSetMetadata(const QString& t
 	return d->metadata;
 }
 
-std::optional<TileSetMetadata> TilesService::getCurrentTileSetMetadata() const {
+std::optional<TileSetMetadata> TilesSelectorService::getCurrentTileSetMetadata() const {
 	return d->metadata;
 }
 
-void TilesService::setSelectionTiles(const QList<int>& tileIds) {
+void TilesSelectorService::setSelectionTiles(const QList<int>& tileIds) {
 	d->selectedTileIds = tileIds;
 	emit tilesSelectionChanged(d->selectedTileIds);
 }
 
-QList<int> TilesService::getSelectionTiles() const {
+QList<int> TilesSelectorService::getSelectionTiles() const {
 	return d->selectedTileIds;
 }
 
-std::optional<QPixmap> TilesService::getTilemap(const QString& tag) const {
+std::optional<QPixmap> TilesSelectorService::getTilemap(const QString& tag) const {
 	if (!d->metadata.has_value()) {
 		return std::nullopt;
 	}
@@ -159,7 +157,7 @@ std::optional<QPixmap> TilesService::getTilemap(const QString& tag) const {
 	return pixmap;
 }
 
-QString TilesService::getTileSetName() const {
+QString TilesSelectorService::getTileSetName() const {
 	if (!d->metadata.has_value()) {
 		return QString();
 	}

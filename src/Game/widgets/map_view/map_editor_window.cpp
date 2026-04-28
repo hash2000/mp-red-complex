@@ -2,7 +2,7 @@
 #include "Game/widgets/map_view/map_editor_widget.h"
 #include "Game/services/time_service/time_service.h"
 #include "ApplicationLayer/maps/map_service.h"
-#include "ApplicationLayer/textures/tiles_service.h"
+#include "ApplicationLayer/textures/tiles_selector_service.h"
 #include <QVBoxLayout>
 #include <memory>
 
@@ -12,25 +12,25 @@ public:
     MapEditorWindow* q;
 
     MapService* mapService = nullptr;
-    TilesService* tilesService = nullptr;
+    TilesSelectorService* tilesSelectorService = nullptr;
     TimeService* timeService = nullptr;
     MapEditorWidget* editorWidget = nullptr;
 };
 
 MapEditorWindow::MapEditorWindow(
     MapService* mapService,
-    TilesService* tilesService,
+    TilesSelectorService* tilesSelectorService,
     TimeService* timeService,
     const QString& id,
     QWidget* parent)
     : MdiChildWindow(id, parent)
     , d(std::make_unique<Private>(this)) {
     d->mapService = mapService;
-    d->tilesService = tilesService;
+    d->tilesSelectorService = tilesSelectorService;
     d->timeService = timeService;
 
     // Создаём виджет редактора
-    d->editorWidget = new MapEditorWidget(mapService, tilesService, this);
+    d->editorWidget = new MapEditorWidget(mapService, tilesSelectorService, this);
     setWidget(d->editorWidget);
 
     // Подписываемся на тики для обновления

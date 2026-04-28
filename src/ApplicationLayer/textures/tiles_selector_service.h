@@ -8,14 +8,14 @@
 
 class ImagesService;
 
-class TilesService : public QObject {
+class TilesSelectorService : public QObject {
 	Q_OBJECT
 public:
-	explicit TilesService(
+	explicit TilesSelectorService(
 		ImagesService* ImagesService,
 		ITileGroupsDataProvider* tileGroupsDataProvider,
 		QObject* parent = nullptr);
-	~TilesService() override;
+	~TilesSelectorService() override;
 
 	// Получить все группы для текстуры
 	QList<TileGroup> getGroups(const QString& texturePath) const;

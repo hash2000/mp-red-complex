@@ -7,7 +7,7 @@
 class TileRenderer;
 class TextureAtlas;
 class Tileset;
-class TilesService;
+class TilesSelectorService;
 class MapService;
 class Camera;
 
@@ -19,7 +19,7 @@ public:
 	~MapViewBase() override;
 
 	// Установка сервисов
-	void setTilesService(TilesService* tilesService);
+	void setTilesService(TilesSelectorService* tilesSelectorService);
 	void setMapService(MapService* mapService);
 
 	// Управление камерой
@@ -61,7 +61,7 @@ protected:
 	TileRenderer* tileRenderer() const;
 	TextureAtlas* textureAtlas() const;
 	Tileset* tileset() const;
-	TilesService* tilesService() const;
+	TilesSelectorService* tilesSelectorService() const;
 	MapService* mapService() const;
 
 	// Камера

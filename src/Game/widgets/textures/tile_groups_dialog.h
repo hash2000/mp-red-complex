@@ -2,7 +2,7 @@
 #include <QDialog>
 #include <memory>
 
-class TilesService;
+class TilesSelectorService;
 class QListWidget;
 class QListWidgetItem;
 class QLineEdit;
@@ -13,7 +13,7 @@ class TileGroupsDialog : public QDialog {
 	Q_OBJECT
 public:
 	explicit TileGroupsDialog(
-		TilesService* tilesService,
+		TilesSelectorService* tilesSelectorService,
 		const QString& texturePath,
 		QWidget* parent = nullptr);
 	~TileGroupsDialog() override;

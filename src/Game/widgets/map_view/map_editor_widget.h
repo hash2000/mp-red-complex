@@ -11,7 +11,7 @@ class QSpinBox;
 class QGroupBox;
 class QPushButton;
 class MapService;
-class TilesService;
+class TilesSelectorService;
 
 // Режимы редактирования карты
 enum class MapEditorMode {
@@ -26,7 +26,7 @@ class MapEditorWidget : public MapViewBase {
 public:
     explicit MapEditorWidget(
         MapService* mapService,
-        TilesService* tilesService,
+        TilesSelectorService* tilesSelectorService,
         QWidget* parent = nullptr);
     ~MapEditorWidget() override;
 
@@ -62,6 +62,7 @@ private:
     void placeTile(int x, int y);
     void eraseTile(int x, int y);
     void updatePropertiesPanel();
+		void selectTile(int x, int y);
 
     class Private;
     std::unique_ptr<Private> d;

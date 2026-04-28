@@ -31,7 +31,7 @@ WindowsBuilder::WindowsBuilder(ApplicationController* appController)
 
 	d->factory.emplace("map", [](Services* services, const QString& id, QWidget* parent) {
 		return new MapWindow(
-			services->tilesService(),
+			services->tilesSelectorService(),
 			services->worldService(),
 			services->timeService(),
 			id,
@@ -74,14 +74,14 @@ WindowsBuilder::WindowsBuilder(ApplicationController* appController)
 	d->factory.emplace("texture-editor", [](Services* services, const QString& id, QWidget* parent) {
 		return new TextureEditorWindow(
 			services->imagesService(),
-			services->tilesService(),
+			services->tilesSelectorService(),
 			id,
 			parent);
 		});
 	d->factory.emplace("map-editor", [](Services* services, const QString& id, QWidget* parent) {
 		return new MapEditorWindow(
 			services->mapService(),
-			services->tilesService(),
+			services->tilesSelectorService(),
 			services->timeService(),
 			id,
 			parent);

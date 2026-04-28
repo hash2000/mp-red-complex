@@ -4,7 +4,8 @@
 #include <memory>
 #include <QHash>
 
-struct UploadedTextureProperties {
+class UploadedTextureProperties {
+public:
 	bool useMipMaps = true;
 	bool useMipMapsSmoothing = true;
 	TextureFilter textureFilter = TextureFilter::Linear;

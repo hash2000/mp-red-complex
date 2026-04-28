@@ -1,5 +1,5 @@
 #include "Game/widgets/textures/tile_groups_dialog.h"
-#include "ApplicationLayer/textures/tiles_service.h"
+#include "ApplicationLayer/textures/tiles_selector_service.h"
 #include "DataLayer/images/i_tile_groups_data_provider.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -14,7 +14,7 @@ public:
 	Private(TileGroupsDialog* parent) : q(parent) {}
 	TileGroupsDialog* q;
 
-	TilesService* tilesService = nullptr;
+	TilesSelectorService* tilesSelectorService = nullptr;
 	QString texturePath;
 
 	// Элементы UI
@@ -32,12 +32,12 @@ public:
 };
 
 TileGroupsDialog::TileGroupsDialog(
-	TilesService* tilesService,
+	TilesSelectorService* tilesSelectorService,
 	const QString& texturePath,
 	QWidget* parent)
 	: QDialog(parent)
 	, d(std::make_unique<Private>(this)) {
-	d->tilesService = tilesService;
+	d->tilesSelectorService = tilesSelectorService;
 	d->texturePath = texturePath;
 
 	setWindowTitle("Группы тайлов");
@@ -210,7 +210,7 @@ void TileGroupsDialog::setupLayout() {
 void TileGroupsDialog::refreshList() {
 	d->groupsList->clear();
 
-	d->cachedGroups = d->tilesService->getGroups(d->texturePath);
+	d->cachedGroups = d->tilesSelectorService->getGroups(d->texturePath);
 	for (int i = 0; i < d->cachedGroups.size(); ++i) {
 		const auto& group = d->cachedGroups[i];
 		auto* item = new QListWidgetItem(QString("%1 (%2 тайлов)").arg(group.name).arg(group.tileIds.size()));
@@ -260,7 +260,7 @@ void TileGroupsDialog::onRenameClicked() {
 	// Обновляем группу
 	TileGroup updatedGroup = d->cachedGroups[index];
 	updatedGroup.name = newName;
-	d->tilesService->updateGroup(d->texturePath, updatedGroup);
+	d->tilesSelectorService->updateGroup(d->texturePath, updatedGroup);
 
 	refreshList();
 }
@@ -289,7 +289,7 @@ void TileGroupsDialog::onDeleteClicked() {
 		return;
 	}
 
-	d->tilesService->deleteGroup(d->cachedGroups[index].id);
+	d->tilesSelectorService->deleteGroup(d->cachedGroups[index].id);
 
 	d->nameEdit->clear();
 	d->renameButton->setEnabled(false);

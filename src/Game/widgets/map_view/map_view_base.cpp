@@ -3,17 +3,9 @@
 #include "Graphics/tiles/tile_renderer.h"
 #include "Graphics/tiles/tileset.h"
 #include "Graphics/textures/texture_atlas.h"
-#include "ApplicationLayer/textures/tiles_service.h"
+#include "ApplicationLayer/textures/tiles_selector_service.h"
 #include "ApplicationLayer/maps/map_service.h"
-#include <QOpenGLShaderProgram>
-#include <QOpenGLVertexArrayObject>
-#include <QOpenGLTexture>
-#include <QOpenGLBuffer>
-#include <QVector3D>
-#include <QMatrix4x4>
 #include <QWheelEvent>
-#include <QPixmap>
-#include <QPainter>
 #include <memory>
 
 class MapViewBase::Private {
@@ -27,7 +19,7 @@ public:
   QPoint lastMousePos;
 
   // Сервисы
-  TilesService* tilesService = nullptr;
+  TilesSelectorService* tilesSelectorService = nullptr;
   MapService* mapService = nullptr;
 
   // Система тайлов
@@ -47,8 +39,8 @@ MapViewBase::MapViewBase(QWidget* parent)
 
 MapViewBase::~MapViewBase() = default;
 
-void MapViewBase::setTilesService(TilesService* tilesService) {
-  d->tilesService = tilesService;
+void MapViewBase::setTilesService(TilesSelectorService* tilesSelectorService) {
+  d->tilesSelectorService = tilesSelectorService;
   onTileServiceConnected();
 }
 
@@ -69,12 +61,12 @@ void MapViewBase::setDefaultCamera() {
 
 void MapViewBase::loadTilemap() {
   // Получаем QPixmap через TilesService
-  if (!d->tilesService) {
-		qWarning() << "MapViewBase::loadTilemap: tilesService is null";
+  if (!d->tilesSelectorService) {
+		qWarning() << "MapViewBase::loadTilemap: tilesSelectorService is null";
 		return;
   }
 
-	const auto metadata = d->tilesService->getCurrentTileSetMetadata();
+	const auto metadata = d->tilesSelectorService->getCurrentTileSetMetadata();
 	if (!metadata.has_value()) {
 		qWarning() << "MapViewBase::loadTilemap: no tileset metadata";
 		return;
@@ -82,7 +74,7 @@ void MapViewBase::loadTilemap() {
 
 	const auto tilesCountX = metadata->gridSize.x;
 	const auto tilesCountY = metadata->gridSize.y;
-	//auto pixmap = d->tilesService->getTilemap();
+	//auto pixmap = d->tilesSelectorService->getTilemap();
 	//if (!pixmap.has_value() || pixmap->isNull()) {
 	//	qWarning() << "MapViewBase::loadTilemap: pixmap is null";
 	//	return;
@@ -258,8 +250,8 @@ Tileset* MapViewBase::tileset() const {
 	return nullptr; //d->tileset.get();
 }
 
-TilesService* MapViewBase::tilesService() const {
-  return d->tilesService;
+TilesSelectorService* MapViewBase::tilesSelectorService() const {
+  return d->tilesSelectorService;
 }
 
 MapService* MapViewBase::mapService() const {
