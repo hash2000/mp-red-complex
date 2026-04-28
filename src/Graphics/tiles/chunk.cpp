@@ -1,9 +1,9 @@
 #include "Graphics/tiles/chunk.h"
 #include "Graphics/tiles/tileset.h"
+#include "Graphics/textures/texture_atlas.h"
 #include "Graphics/gl_check_errors.h"
 #include <QOpenGLBuffer>
 #include <QOpenGLVertexArrayObject>
-#include <QOpenGLFunctions>
 #include <qdebug.h>
 #include <vector>
 
@@ -170,12 +170,23 @@ void Chunk::render() {
 		return;
 	}
 
+	auto atlas = d->tileset->atlas();
+	if (!atlas || !atlas->isLoaded()) {
+		return;
+	}
+
+	atlas->bind();
+	GL_CHECK_ERRORS();
+
 	auto f = QOpenGLContext::currentContext()->functions();
 
 	d->vao.bind();
 	f->glDrawArrays(GL_TRIANGLES, 0, d->vertexCount);
 	GL_CHECK_ERRORS();
+
 	d->vao.release();
+
+	atlas->unbind();
 }
 
 void Chunk::renderBorder() {

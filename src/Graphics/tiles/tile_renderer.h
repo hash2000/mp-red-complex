@@ -28,9 +28,6 @@ public:
 	/// Инициализация (вызвать после создания OpenGL контекста)
 	bool initialize();
 
-	/// Установить тайлсет
-	void setTileset(Tileset* tileset);
-
 	/// Получить или создать чанк по координатам
 	Chunk* getOrCreateChunk(int chunkX, int chunkZ);
 
@@ -69,6 +66,7 @@ private:
 	/// Проверка видимости чанка во frustum камеры
 	bool isChunkVisible(const Chunk* chunk, const Camera& camera, int viewportWidth, int viewportHeight) const;
 
+	void renderTileSet(const Camera& camera, int viewportWidth, int viewportHeight);
 	void renderDebugPasses(const Camera& camera, int viewportWidth, int viewportHeight);
 
 	class Private;

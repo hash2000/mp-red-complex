@@ -28,11 +28,10 @@
 #include "ApplicationLayer/items_save_manager.h"
 #include "ApplicationLayer/users/users_service.h"
 #include "ApplicationLayer/textures/images_service.h"
-#include "ApplicationLayer/textures/tiles_selector_service.h"
 #include "ApplicationLayer/maps/map_service.h"
 #include "ApplicationLayer/textures/textures_service.h"
-
-#include <list>
+#include "ApplicationLayer/textures/tiles_selector_service.h"
+#include "ApplicationLayer/textures/tiles_service.h"
 
 class Services::Private {
 public:
@@ -67,6 +66,7 @@ public:
 	std::unique_ptr<ImagesService> imagesService;
 	std::unique_ptr<TilesSelectorService> tilesSelectorService;
 	std::unique_ptr<TexturesService> texturesService;
+	std::unique_ptr<TilesService> tilesService;
 
 	// Data providers (хранятся в Services)
 	std::unique_ptr<IUsersDataProvider> usersDataProvider;
@@ -100,39 +100,17 @@ Services::Services(Resources* resources)
 
 	d->timeService = std::make_unique<TimeService>();
 
-	d->worldService = std::make_unique<WorldService>();
-
-	// Создаём сервис текстур (нужен перед ItemsService)
 	d->ImagesDataProvider = std::make_unique<ImagesDataProviderJsonImpl>(resources);
-	d->imagesService = std::make_unique<ImagesService>(d->ImagesDataProvider.get());
-	d->texturesService = std::make_unique<TexturesService>(d->imagesService.get());
 
-	// Создаём сервис тайловых групп
-	d->tileGroupsDataProvider = std::make_unique<TileGroupsDataProviderJsonImpl>(resources);
-	d->tilesSelectorService = std::make_unique<TilesSelectorService>(
-		d->imagesService.get(),
-		d->tileGroupsDataProvider.get());
+	d->tileGroupsDataProvider = std::make_unique<TileGroupsDataProviderJsonImpl>(resources);	
 
 	// Создаём сервис карт
 	d->mapDataProvider = std::make_unique<MapDataProviderJsonImpl>(resources);
-	d->mapService = std::make_unique<MapService>(
-		d->tilesSelectorService.get(),
-		d->imagesService.get(),
-		d->mapDataProvider.get());
 
 	// Передаём репозиторий и ImagesService в ItemsService
-	d->itemsService = std::make_unique<ItemsService>(d->itemRepository, d->imagesService.get());
-
-	// Создаём InventoryLoader перед InventoriesService (он нужен для загрузки)
-	d->inventoryLoader = std::make_unique<InventoryLoader>(
-		d->inventoryRepository,
-		d->equipmentRepository,
+	d->itemsService = std::make_unique<ItemsService>(
 		d->itemRepository,
-		d->itemsService.get());
-
-	d->inventoriesService = std::make_unique<InventoriesService>(
-		d->itemsService.get(),
-		d->inventoryLoader.get());
+		imagesService());
 
 	d->inventoriesSaveManager = std::make_unique<InventoriesSaveManager>(
 		d->inventoriesService.get(),
@@ -146,10 +124,6 @@ Services::Services(Resources* resources)
 	// Создаём сервис пользователей
 	d->usersDataProvider = std::make_unique<UsersDataProviderJsonImpl>(resources);
 	d->characterDataProvider = std::make_unique<CharacterDataProviderJsonImpl>(resources);
-	d->usersService = std::make_unique<UsersService>(
-		d->usersDataProvider.get(),
-		d->characterDataProvider.get(),
-		d->imagesService.get());
 
 	// Подключаем сохранение к сигналу save()
 	connect(this, &Services::save,
@@ -178,18 +152,36 @@ TimeService* Services::timeService() const {
 }
 
 WorldService* Services::worldService() const {
+	if (!d->worldService) {
+		d->worldService = std::make_unique<WorldService>();
+	}
 	return d->worldService.get();
 }
 
 ItemsService* Services::itemsService() const {
+	if (!d->imagesService) {
+		d->imagesService = std::make_unique<ImagesService>(d->ImagesDataProvider.get());
+	}
 	return d->itemsService.get();
 }
 
 InventoriesService* Services::inventoriesService() const {
+	if (!d->inventoriesService) {
+		d->inventoriesService = std::make_unique<InventoriesService>(
+			itemsService(),
+			inventoryLoader());
+	}
 	return d->inventoriesService.get();
 }
 
 InventoryLoader* Services::inventoryLoader() const {
+	if (!d->inventoryLoader) {
+		d->inventoryLoader = std::make_unique<InventoryLoader>(
+			d->inventoryRepository,
+			d->equipmentRepository,
+			d->itemRepository,
+			itemsService());
+	}
 	return d->inventoryLoader.get();
 }
 
@@ -198,21 +190,52 @@ IInventoryRepository* Services::inventoryRepository() const {
 }
 
 UsersService* Services::usersService() const {
+	if (!d->usersService) {
+		d->usersService = std::make_unique<UsersService>(
+			d->usersDataProvider.get(),
+			d->characterDataProvider.get(),
+			imagesService());
+	}
 	return d->usersService.get();
 }
 
 ImagesService* Services::imagesService() const {
+	if (!d->imagesService) {
+		d->imagesService = std::make_unique<ImagesService>(
+			d->ImagesDataProvider.get());
+	}
 	return d->imagesService.get();
 }
 
 TilesSelectorService* Services::tilesSelectorService() const {
+	if (!d->tilesSelectorService) {
+		d->tilesSelectorService = std::make_unique<TilesSelectorService>(
+			imagesService(),
+			d->tileGroupsDataProvider.get());
+	}
 	return d->tilesSelectorService.get();
 }
 
 MapService* Services::mapService() const {
+	if (!d->mapService) {
+		d->mapService = std::make_unique<MapService>(
+			tilesSelectorService(),
+			imagesService(),
+			d->mapDataProvider.get());
+	}
 	return d->mapService.get();
 }
 
 TexturesService* Services::texturesService() const {
+	if (!d->texturesService) {
+		d->texturesService = std::make_unique<TexturesService>(imagesService());
+	}
 	return d->texturesService.get();
+}
+
+TilesService* Services::tilesService() const {
+	if (!d->tilesService) {
+		d->tilesService = std::make_unique<TilesService>();
+	}
+	return d->tilesService.get();
 }
