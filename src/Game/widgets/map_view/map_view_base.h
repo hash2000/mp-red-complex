@@ -18,10 +18,6 @@ public:
 	explicit MapViewBase(QWidget* parent = nullptr);
 	~MapViewBase() override;
 
-	// Установка сервисов
-	void setTilesService(TilesSelectorService* tilesSelectorService);
-	void setMapService(MapService* mapService);
-
 	// Управление камерой
 	void resetCamera();
 
@@ -46,23 +42,10 @@ protected:
 	void mouseReleaseEvent(QMouseEvent* event) override;
 	void wheelEvent(QWheelEvent* event) override;
 
-	// Виртуальные методы для переопределения в наследниках
-	virtual void onTileClicked(std::optional<QPoint> point);
-	virtual void onTileServiceConnected();
-	virtual void onTileHovered(std::optional<QPoint> point);
-	virtual void onMapServiceConnected();
-	virtual void onRightMouseDrag(QPoint delta);
-	virtual void onZoom(float zoomFactor);
-
 	// Инициализация тайловой системы
 	virtual void initializeTileSystem();
 
-	// Доступ к внутренним компонентам
 	TileRenderer* tileRenderer() const;
-	TextureAtlas* textureAtlas() const;
-	Tileset* tileset() const;
-	TilesSelectorService* tilesSelectorService() const;
-	MapService* mapService() const;
 
 	// Камера
 	Camera& camera();

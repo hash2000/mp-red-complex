@@ -31,7 +31,6 @@
 #include "ApplicationLayer/maps/map_service.h"
 #include "ApplicationLayer/textures/textures_service.h"
 #include "ApplicationLayer/textures/tiles_selector_service.h"
-#include "ApplicationLayer/textures/tiles_service.h"
 
 class Services::Private {
 public:
@@ -77,7 +76,6 @@ public:
 	std::unique_ptr<ImagesService> imagesService;
 	std::unique_ptr<TilesSelectorService> tilesSelectorService;
 	std::unique_ptr<TexturesService> texturesService;
-	std::unique_ptr<TilesService> tilesService;
 
 	std::unique_ptr<MapService> mapService;
 
@@ -324,11 +322,4 @@ TexturesService* Services::texturesService() const {
 			imagesService());
 	}
 	return d->texturesService.get();
-}
-
-TilesService* Services::tilesService() const {
-	if (!d->tilesService) {
-		d->tilesService = std::make_unique<TilesService>();
-	}
-	return d->tilesService.get();
 }

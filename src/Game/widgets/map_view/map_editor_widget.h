@@ -48,12 +48,8 @@ private slots:
     void onMapChanged(const QString& mapName);
 		void onApplySelectedAtlas();
 		void onBeginFrame();
-
-protected:
-    // Переопределяем обработку кликов
-    void onTileClicked(std::optional<QPoint> point) override;
-    void onTileHovered(std::optional<QPoint> point) override;
-		void onTileServiceConnected() override;
+    void onTileClicked(std::optional<QPoint> point);
+    void onTileHovered(std::optional<QPoint> point);
 
 private:
     void setupUI();

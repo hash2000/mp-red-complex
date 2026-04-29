@@ -1,10 +1,7 @@
 #include "Game/widgets/map_view/map_view_base.h"
 #include "Graphics/camera.h"
 #include "Graphics/tiles/tile_renderer.h"
-#include "Graphics/tiles/tileset.h"
 #include "Graphics/textures/texture_atlas.h"
-#include "ApplicationLayer/textures/tiles_selector_service.h"
-#include "ApplicationLayer/maps/map_service.h"
 #include <QWheelEvent>
 #include <memory>
 
@@ -17,10 +14,6 @@ public:
   Camera camera;
   bool rightMousePressed = false;
   QPoint lastMousePos;
-
-  // Сервисы
-  TilesSelectorService* tilesSelectorService = nullptr;
-  MapService* mapService = nullptr;
 
   // Система тайлов
   std::unique_ptr<TileRenderer> tileRenderer;
@@ -39,16 +32,6 @@ MapViewBase::MapViewBase(QWidget* parent)
 
 MapViewBase::~MapViewBase() = default;
 
-void MapViewBase::setTilesService(TilesSelectorService* tilesSelectorService) {
-  d->tilesSelectorService = tilesSelectorService;
-  onTileServiceConnected();
-}
-
-void MapViewBase::setMapService(MapService* mapService) {
-  d->mapService = mapService;
-  onMapServiceConnected();
-}
-
 void MapViewBase::resetCamera() {
 	setDefaultCamera();
   d->camera.update();
@@ -61,19 +44,19 @@ void MapViewBase::setDefaultCamera() {
 
 void MapViewBase::loadTilemap() {
   // Получаем QPixmap через TilesService
-  if (!d->tilesSelectorService) {
-		qWarning() << "MapViewBase::loadTilemap: tilesSelectorService is null";
-		return;
-  }
+ // if (!d->tilesSelectorService) {
+	//	qWarning() << "MapViewBase::loadTilemap: tilesSelectorService is null";
+	//	return;
+ // }
 
-	const auto metadata = d->tilesSelectorService->getCurrentTileSetMetadata();
-	if (!metadata.has_value()) {
-		qWarning() << "MapViewBase::loadTilemap: no tileset metadata";
-		return;
-	}
+	//const auto metadata = d->tilesSelectorService->getCurrentTileSetMetadata();
+	//if (!metadata.has_value()) {
+	//	qWarning() << "MapViewBase::loadTilemap: no tileset metadata";
+	//	return;
+	//}
 
-	const auto tilesCountX = metadata->gridSize.x;
-	const auto tilesCountY = metadata->gridSize.y;
+	//const auto tilesCountX = metadata->gridSize.x;
+	//const auto tilesCountY = metadata->gridSize.y;
 	//auto pixmap = d->tilesSelectorService->getTilemap();
 	//if (!pixmap.has_value() || pixmap->isNull()) {
 	//	qWarning() << "MapViewBase::loadTilemap: pixmap is null";
@@ -150,12 +133,10 @@ void MapViewBase::mousePressEvent(QMouseEvent* event) {
 			int worldZ = int(hit->z());
 			if (worldX >= 0 && worldZ >= 0 && worldX < 1024 && worldZ < 1024) {
 				std::optional<QPoint> point = QPoint(worldX, worldZ);
-				onTileClicked(point);
 				emit tileClicked(point);
 			}
 		}
 		else {
-			onTileClicked(std::nullopt);
 			emit tileClicked(std::nullopt);
 		}
   }
@@ -173,7 +154,6 @@ void MapViewBase::mouseMoveEvent(QMouseEvent* event) {
 		int worldZ = qRound(hit->z());
 		if (worldX >= 0 && worldZ >= 0 && worldX < 128 && worldZ < 128) {
 			std::optional<QPoint> point = QPoint(worldX, worldZ);
-			onTileHovered(point);
 			emit tileHovered(point);
 		}
   }
@@ -191,7 +171,6 @@ void MapViewBase::mouseMoveEvent(QMouseEvent* event) {
 			d->camera.move(delta);
 		}
 
-		onRightMouseDrag(delta);
 		update();
   }
 }
@@ -206,56 +185,11 @@ void MapViewBase::wheelEvent(QWheelEvent* event) {
   float zoomFactor = event->angleDelta().y() > 0 ? 0.9f : 1.1f;
   d->camera.zoom(zoomFactor);
   d->camera.update();
-  onZoom(zoomFactor);
   update();
-}
-
-void MapViewBase::onTileClicked(std::optional<QPoint> point) {
-  // Базовая реализация — ничего не делает
-  Q_UNUSED(point);
-}
-
-void MapViewBase::onTileServiceConnected() {
-
-}
-
-void MapViewBase::onTileHovered(std::optional<QPoint> point) {
-  // Базовая реализация — ничего не делает
-  Q_UNUSED(point);
-}
-
-void MapViewBase::onMapServiceConnected() {
-
-}
-
-void MapViewBase::onRightMouseDrag(QPoint delta) {
-  // Базовая реализация — ничего не делает
-  Q_UNUSED(delta);
-}
-
-void MapViewBase::onZoom(float zoomFactor) {
-  // Базовая реализация — ничего не делает
-  Q_UNUSED(zoomFactor);
 }
 
 TileRenderer* MapViewBase::tileRenderer() const {
   return d->tileRenderer.get();
-}
-
-TextureAtlas* MapViewBase::textureAtlas() const {
-  return nullptr; //d->textureAtlas.get();
-}
-
-Tileset* MapViewBase::tileset() const {
-	return nullptr; //d->tileset.get();
-}
-
-TilesSelectorService* MapViewBase::tilesSelectorService() const {
-  return d->tilesSelectorService;
-}
-
-MapService* MapViewBase::mapService() const {
-  return d->mapService;
 }
 
 Camera& MapViewBase::camera() {

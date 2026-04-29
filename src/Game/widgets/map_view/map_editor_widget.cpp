@@ -55,10 +55,11 @@ MapEditorWidget::MapEditorWidget(
   d->mapService = mapService;
   d->tilesSelectorService = tilesSelectorService;
 
-  setMapService(mapService);
-  setTilesService(tilesSelectorService);
-
   setupUI();
+
+	if (d->tilesSelectorService) {
+		connect(d->tilesSelectorService, &TilesSelectorService::tilesSelectionChanged, this, &MapEditorWidget::onTileSelected);
+	}
 
   // Подписываемся на изменения карты
   if (d->mapService) {
@@ -67,6 +68,9 @@ MapEditorWidget::MapEditorWidget(
   }
 
 	connect(this, &MapViewBase::beginFrame, this, &MapEditorWidget::onBeginFrame);
+	connect(this, &MapViewBase::tileClicked, this, &MapEditorWidget::onTileClicked);
+	connect(this, &MapViewBase::tileHovered, this, &MapEditorWidget::onTileHovered);
+
 }
 
 MapEditorWidget::~MapEditorWidget() = default;
@@ -290,7 +294,7 @@ void MapEditorWidget::setupPropertiesPanel() {
 }
 
 void MapEditorWidget::placeTile(int x, int y) {
-	const auto tiles = tilesSelectorService();
+	const auto tiles = d->tilesSelectorService;
 	const auto renderer = tileRenderer();
 	if (!renderer) {
 		return;
@@ -371,11 +375,6 @@ void MapEditorWidget::updatePropertiesPanel() {
 
   const auto currentMap = d->mapService ? d->mapService->getCurrentMap() : std::nullopt;
   d->currentMapLabel->setText(currentMap.value_or("Не выбрана"));
-}
-
-void MapEditorWidget::onTileServiceConnected() {
-  auto service = tilesSelectorService();
-  connect(service, &TilesSelectorService::tilesSelectionChanged, this, &MapEditorWidget::onTileSelected);
 }
 
 void MapEditorWidget::onApplySelectedAtlas() {

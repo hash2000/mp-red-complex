@@ -3,7 +3,6 @@
 
 MapWidget::MapWidget(TilesSelectorService* tilesSelectorService, QWidget* parent)
     : MapViewBase(parent) {
-    setTilesService(tilesSelectorService);
 }
 
 MapWidget::~MapWidget() = default;
