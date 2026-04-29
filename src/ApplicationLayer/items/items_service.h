@@ -5,7 +5,6 @@
 #include <QObject>
 #include <memory>
 #include <map>
-#include <ranges>
 
 class ImagesService;
 
@@ -13,8 +12,8 @@ class ItemsService : public QObject {
 	Q_OBJECT
 public:
 	explicit ItemsService(
-		std::shared_ptr<IItemRepository> repository,
-		ImagesService* ImagesService,
+		IItemRepository* itemRepository,
+		ImagesService* imagesService,
 		QObject* parent = nullptr);
 	~ItemsService() override;
 

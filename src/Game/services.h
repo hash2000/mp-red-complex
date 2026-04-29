@@ -31,7 +31,6 @@ public:
 	ItemsService* itemsService() const;
 	InventoriesService* inventoriesService() const;
 	InventoryLoader* inventoryLoader() const;
-	IInventoryRepository* inventoryRepository() const;
 	UsersService* usersService() const;
 	ImagesService* imagesService() const;
 	TilesSelectorService* tilesSelectorService() const;
