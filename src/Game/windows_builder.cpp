@@ -1,7 +1,6 @@
 #include "Game/windows_builder.h"
 #include "Game/app_controller.h"
 #include "Game/services.h"
-#include "Game/controllers.h"
 #include "Game/widgets/map_view/map_window.h"
 #include "Game/widgets/map_view/map_editor_window.h"
 #include "Game/widgets/equipment/equipment_window.h"
@@ -80,6 +79,7 @@ WindowsBuilder::WindowsBuilder(ApplicationController* appController)
 		});
 	d->factory.emplace("map-editor", [](Services* services, const QString& id, QWidget* parent) {
 		return new MapEditorWindow(
+			services->texturesService(),
 			services->mapService(),
 			services->tilesSelectorService(),
 			services->timeService(),

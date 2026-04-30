@@ -3,9 +3,7 @@
 #include <QComboBox>
 #include <QCheckBox>
 #include <QFormLayout>
-#include <QVBoxLayout>
 #include <QDialogButtonBox>
-#include <QObject>
 
 class ApplyMapAtlasDialog::Private {
 public:
@@ -14,7 +12,7 @@ public:
 	QCheckBox* useMipMapCheckBox = nullptr;
 	QCheckBox* useMipMapSmoothingCheckBox = nullptr;
 
-	void setupUI(ApplyMapAtlasDialog* q) {
+	void setupUI(std::optional<UploadedTextureProperties> settings, ApplyMapAtlasDialog* q) {
 		q->setWindowTitle(tr("Apply Map Atlas Settings"));
 
 		auto* mainLayout = new QVBoxLayout(q);
@@ -51,14 +49,20 @@ public:
 		QObject::connect(buttonBox, &QDialogButtonBox::accepted, q, &QDialog::accept);
 		QObject::connect(buttonBox, &QDialogButtonBox::rejected, q, &QDialog::reject);
 		mainLayout->addWidget(buttonBox);
+
+		if (settings.has_value()) {
+			textureFilterCombo->setCurrentIndex(static_cast<int>(settings->textureFilter));
+			useMipMapCheckBox->setChecked(settings->useMipMaps);
+			useMipMapSmoothingCheckBox->setChecked(settings->useMipMapsSmoothing);
+		}
 	}
 };
 
-ApplyMapAtlasDialog::ApplyMapAtlasDialog(QWidget* parent)
+ApplyMapAtlasDialog::ApplyMapAtlasDialog(std::optional<UploadedTextureProperties> settings, QWidget* parent)
 	: QDialog(parent)
 	, d(std::make_unique<Private>())
 {
-	d->setupUI(this);
+	d->setupUI(settings, this);
 }
 
 // Деструктор должен быть определён здесь, где тип `Private` уже завершён.

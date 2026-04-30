@@ -6,13 +6,11 @@
 #include <memory>
 #include <optional>
 
-class ImagesService;
 
 class TilesSelectorService : public QObject {
 	Q_OBJECT
 public:
 	explicit TilesSelectorService(
-		ImagesService* ImagesService,
 		ITileGroupsDataProvider* tileGroupsDataProvider,
 		QObject* parent = nullptr);
 	~TilesSelectorService() override;
@@ -46,9 +44,6 @@ public:
 
 	// Вернуть текущие выбранные тайлы
 	QList<int> getSelectionTiles() const;
-
-	// Выдать тайловую карту
-	std::optional<QPixmap> getTilemap(const QString& tag) const;
 
 	// Вернуть название атласа
 	QString getTileSetName() const;

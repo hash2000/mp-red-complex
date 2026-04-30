@@ -9,7 +9,6 @@ public:
 	Private(TilesSelectorService* parent) : q(parent) {}
 	TilesSelectorService* q;
 	ITileGroupsDataProvider* tileGroupsDataProvider = nullptr;
-	ImagesService* ImagesService = nullptr;
 
 	// Кэш загруженных групп
 	mutable QHash<QString, QList<TileGroup>> groupsCache;
@@ -36,13 +35,11 @@ public:
 };
 
 TilesSelectorService::TilesSelectorService(
-	ImagesService* ImagesService,
 	ITileGroupsDataProvider* tileGroupsDataProvider,
 	QObject* parent)
 	: QObject(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->tileGroupsDataProvider = tileGroupsDataProvider;
-	d->ImagesService = ImagesService;
 }
 
 TilesSelectorService::~TilesSelectorService() = default;
@@ -146,15 +143,6 @@ void TilesSelectorService::setSelectionTiles(const QList<int>& tileIds) {
 
 QList<int> TilesSelectorService::getSelectionTiles() const {
 	return d->selectedTileIds;
-}
-
-std::optional<QPixmap> TilesSelectorService::getTilemap(const QString& tag) const {
-	if (!d->metadata.has_value()) {
-		return std::nullopt;
-	}
-
-	auto pixmap = d->ImagesService->getImage(d->metadata->fileName + ".png", ImageType::TileSets, tag);
-	return pixmap;
 }
 
 QString TilesSelectorService::getTileSetName() const {

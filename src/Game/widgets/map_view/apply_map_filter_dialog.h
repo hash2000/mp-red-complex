@@ -8,7 +8,7 @@ class ApplyMapAtlasDialog : public QDialog
 {
 	Q_OBJECT
 public:
-	explicit ApplyMapAtlasDialog(QWidget* parent = nullptr);
+	explicit ApplyMapAtlasDialog(std::optional<UploadedTextureProperties> settings, QWidget* parent = nullptr);
 	~ApplyMapAtlasDialog() override; // Определение в .cpp обязательно для PIMPL
 
 	// Запрет копирования (стандартная практика для PIMPL)

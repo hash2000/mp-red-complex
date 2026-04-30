@@ -15,7 +15,6 @@ public:
 
 	TileRenderer* q;
 	bool initialized = false;
-	float zLevel = 0.0f;
 	QSize chunkSize;
 	DebugRenderPassFlags debugRenderPasses = DebugRenderPass::None;
 
@@ -119,8 +118,9 @@ bool TileRenderer::initialize() {
 	d->debugShaderProgram->addShaderFromSourceCode(QOpenGLShader::Fragment, R"(
 		#version 330 core
 		out vec4 FragColor;
+		uniform vec4 uColor;
 		void main() {
-			FragColor = vec4(1.0, 0.0, 0.0, 1.0); // Красная рамка
+			FragColor = uColor;
 		}
 	)");
 
@@ -205,7 +205,6 @@ void TileRenderer::renderTileSet(const Camera& camera, int viewportWidth, int vi
 	// Передаем юниформы
 	d->shaderProgram->setUniformValue("uProjection", camera.projection());
 	d->shaderProgram->setUniformValue("uView", camera.view());
-	d->shaderProgram->setUniformValue("zLevel", d->zLevel);
 
 	// Биндим текстуру атласа
 	f->glActiveTexture(GL_TEXTURE0);
@@ -213,7 +212,6 @@ void TileRenderer::renderTileSet(const Camera& camera, int viewportWidth, int vi
 	d->shaderProgram->setUniformValue("uTexture", 0); // Привязан к GL_TEXTURE0
 
 	// Рисуем все чанки (frustum culling временно отключен для отладки)
-	int visibleCount = 0;
 	for (const auto& chunk : d->chunks) {
 		const auto ptr = chunk.get();
 		if (!ptr->isInitialized()) {
@@ -221,8 +219,8 @@ void TileRenderer::renderTileSet(const Camera& camera, int viewportWidth, int vi
 		}
 
 		if (isChunkVisible(ptr, camera, viewportWidth, viewportHeight)) {
+			d->shaderProgram->setUniformValue("zLevel", ptr->zLevel());
 			ptr->render();
-			visibleCount++;
 		}
 	}
 
@@ -235,10 +233,10 @@ void TileRenderer::renderTileSet(const Camera& camera, int viewportWidth, int vi
 bool TileRenderer::isChunkVisible(const Chunk* chunk, const Camera& camera, int viewportWidth, int viewportHeight) const {
 	// Проверяем 4 угла чанка в NDC с запасом
 	QVector3D corners[4] = {
-		QVector3D(chunk->worldMinX(), d->zLevel, chunk->worldMinZ()),
-		QVector3D(chunk->worldMaxX(), d->zLevel, chunk->worldMinZ()),
-		QVector3D(chunk->worldMinX(), d->zLevel, chunk->worldMaxZ()),
-		QVector3D(chunk->worldMaxX(), d->zLevel, chunk->worldMaxZ()),
+		QVector3D(chunk->worldMinX(), chunk->zLevel(), chunk->worldMinZ()),
+		QVector3D(chunk->worldMaxX(), chunk->zLevel(), chunk->worldMinZ()),
+		QVector3D(chunk->worldMinX(), chunk->zLevel(), chunk->worldMaxZ()),
+		QVector3D(chunk->worldMaxX(), chunk->zLevel(), chunk->worldMaxZ()),
 	};
 
 	QMatrix4x4 mvp = camera.projection() * camera.view();
@@ -273,14 +271,6 @@ QSize TileRenderer::chunkSize() const {
 	return d->chunkSize;
 }
 
-float TileRenderer::zLevel() const {
-	return d->zLevel;
-}
-
-void TileRenderer::setZLevel(float level) {
-	d->zLevel = level;
-}
-
 size_t TileRenderer::chunkCount() const {
 	return d->chunks.size();
 }
@@ -306,16 +296,25 @@ void TileRenderer::renderDebugPasses(const Camera& camera, int viewportWidth, in
 	d->debugShaderProgram->bind();
 	d->debugShaderProgram->setUniformValue("uProjection", camera.projection());
 	d->debugShaderProgram->setUniformValue("uView", camera.view());
-	d->debugShaderProgram->setUniformValue("zLevel", d->zLevel);
 
 	// Отключаем тест глубины для отладочных проходов, чтобы они всегда были поверх
 	glDisable(GL_DEPTH_TEST);
 
+	QColor selectedBorderColor;
 	if (testDebugRenderPass(DebugRenderPass::ChunkBorders)) {
 		for (auto& chunk : d->chunks) {
 			if (!chunk->isInitialized()) {
 				continue;
 			}
+
+			const auto borderColor = chunk->borderColor();
+			d->debugShaderProgram->setUniformValue("uColor",
+				borderColor.redF(),
+				borderColor.greenF(),
+				borderColor.blueF(),
+				borderColor.alphaF());
+
+			d->debugShaderProgram->setUniformValue("zLevel", chunk->zLevel());
 
 			chunk->renderBorder();
 		}

@@ -300,7 +300,6 @@ ImagesService* Services::imagesService() const {
 TilesSelectorService* Services::tilesSelectorService() const {
 	if (!d->tilesSelectorService) {
 		d->tilesSelectorService = std::make_unique<TilesSelectorService>(
-			imagesService(),
 			d->getTileGroupsDataProvider());
 	}
 	return d->tilesSelectorService.get();

@@ -3,6 +3,7 @@
 #include "Game/widgets/map_view/apply_map_filter_dialog.h"
 #include "ApplicationLayer/maps/map_service.h"
 #include "ApplicationLayer/textures/tiles_selector_service.h"
+#include "ApplicationLayer/textures/textures_service.h"
 #include "Graphics/textures/texture_atlas.h"
 #include "Graphics/tiles/tileset.h"
 #include "Graphics/tiles/tile_renderer.h"
@@ -15,6 +16,7 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QFormLayout>
+#include <QColor>
 
 class MapEditorWidget::Private {
 public:
@@ -23,6 +25,7 @@ public:
   MapEditorWidget* q;
   MapService* mapService = nullptr;
   TilesSelectorService* tilesSelectorService = nullptr;
+	TexturesService* textureService = nullptr;
 
   // UI компоненты
   QToolBar* toolbar = nullptr;
@@ -39,19 +42,26 @@ public:
   // Состояние
 	std::optional<MapMetadata> currentMapMetadata;
 	std::optional<QString> currentMapName;
+	Chunk* currentChunk = nullptr;
   MapEditorMode currentMode = MapEditorMode::Draw;
-  QList<int> selectedTileIds;
+  QList<int> currentTileIds;
   std::optional<QPoint> hoveredTile;
   bool isDrawing = false;
 	bool needLoadAtlas = false;
+	std::optional<UploadedTextureProperties> tilesetSettings;
+
+	static constexpr QColor selectedBorderColor = QColor(0, 255, 0, 255);
+	static constexpr QColor unselectedBorderColor = QColor(255, 0, 0, 255);
 };
 
 MapEditorWidget::MapEditorWidget(
+	TexturesService* textureService,
   MapService* mapService,
   TilesSelectorService* tilesSelectorService,
   QWidget* parent)
   : MapViewBase(parent)
   , d(std::make_unique<Private>(this)) {
+	d->textureService = textureService;
   d->mapService = mapService;
   d->tilesSelectorService = tilesSelectorService;
 
@@ -70,7 +80,6 @@ MapEditorWidget::MapEditorWidget(
 	connect(this, &MapViewBase::beginFrame, this, &MapEditorWidget::onBeginFrame);
 	connect(this, &MapViewBase::tileClicked, this, &MapEditorWidget::onTileClicked);
 	connect(this, &MapViewBase::tileHovered, this, &MapEditorWidget::onTileHovered);
-
 }
 
 MapEditorWidget::~MapEditorWidget() = default;
@@ -98,7 +107,7 @@ void MapEditorWidget::onModeChanged(int index) {
 }
 
 void MapEditorWidget::onTileSelected(const QList<int>& tileIds) {
-  d->selectedTileIds = tileIds;
+  d->currentTileIds = tileIds;
   updatePropertiesPanel();
   qDebug() << "Tile selected for drawing:" << tileIds.count();
 }
@@ -127,7 +136,7 @@ void MapEditorWidget::onTileClicked(std::optional<QPoint> point) {
 
   switch (d->currentMode) {
   case MapEditorMode::Draw:
-		if (d->selectedTileIds.count() >= 0) {
+		if (d->currentTileIds.count() >= 0) {
 			placeTile(point->x(), point->y());
 		}
 		break;
@@ -329,7 +338,7 @@ void MapEditorWidget::placeTile(int x, int y) {
 		chunk->setTile(worldX, worldZ, tileId);
 	}
 
-  emit tilesPlaced(x, y, d->selectedTileIds);
+  emit tilesPlaced(x, y, d->currentTileIds);
 	updatePropertiesPanel();
   update();
 }
@@ -348,29 +357,42 @@ void MapEditorWidget::selectTile(int x, int y) {
 	}
 
 	const auto chunk = renderer->getChunk(x, y);
-	if (!chunk) {
+	if (!chunk || d->currentChunk == chunk) {
 		return;
 	}
 
+	if (d->currentChunk) {
+		d->currentChunk->setBorderColor(Private::unselectedBorderColor);
+		d->currentChunk->setZLevel(0.0f);
+	}
 
+	d->currentChunk = chunk;
+	d->currentChunk->setBorderColor(Private::selectedBorderColor);
+	d->currentChunk->setZLevel(2.0f);
+	update();
 }
 
 void MapEditorWidget::updatePropertiesPanel() {
   if (d->hoveredTile.has_value()) {
-		d->positionLabel->setText(QString("%1, %2").arg(d->hoveredTile->x()).arg(d->hoveredTile->y()));
+		d->positionLabel->setText(QString("%1, %2")
+			.arg(d->hoveredTile->x())
+			.arg(d->hoveredTile->y()));
   }
   else {
 		d->positionLabel->setText("-");
   }
 
-  if (d->selectedTileIds.count() >= 0) {
-		d->tileIdLabel->setText(QString::number(d->selectedTileIds.count()));
+  if (d->currentTileIds.count() >= 0) {
+		d->tileIdLabel->setText(QString::number(d->currentTileIds.count()));
   }
   else {
 		d->tileIdLabel->setText("Не выбран");
   }
 
-	const auto currentAtlas = d->tilesSelectorService ? d->tilesSelectorService->getTileSetName() : QString("Не выбран");
+	const auto currentAtlas = d->tilesSelectorService ?
+		d->tilesSelectorService->getTileSetName() :
+		QString("Не выбран");
+
 	d->currentAtlasLabel->setText(currentAtlas);
 
   const auto currentMap = d->mapService ? d->mapService->getCurrentMap() : std::nullopt;
@@ -378,9 +400,10 @@ void MapEditorWidget::updatePropertiesPanel() {
 }
 
 void MapEditorWidget::onApplySelectedAtlas() {
-	ApplyMapAtlasDialog dlg(this);
+	ApplyMapAtlasDialog dlg(d->tilesetSettings, this);
 	if (dlg.exec() == QDialog::Accepted) {
-		auto settings = dlg.settings();
+		d->tilesetSettings = dlg.settings();
+
 
 		d->needLoadAtlas = true;
 		update();
@@ -391,6 +414,22 @@ void MapEditorWidget::onApplySelectedAtlas() {
 void MapEditorWidget::onBeginFrame() {
 	if (d->needLoadAtlas) {
 		d->needLoadAtlas = false;
+
+		if (!d->tilesetSettings.has_value() || !d->currentMapName.has_value() || !d->currentChunk) {
+			return;
+		}
+
+		const auto tileName = d->tilesSelectorService->getTileSetName();
+		if (tileName.isEmpty() ) {
+			return;
+		}
+
+		auto texture = d->textureService->upload(QString("%1.png").arg(tileName),
+			d->tilesetSettings.value(), ImageType::TileSets,
+			d->currentMapName.value());
+
+		
+
 		loadTilemap();
 	}
 }

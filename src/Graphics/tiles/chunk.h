@@ -3,6 +3,7 @@
 #include <QOpenGLFunctions_3_3_Core>
 #include <QPoint>
 #include <QSize>
+#include <QColor>
 #include <memory>
 
 class QOpenGLVertexArrayObject;
@@ -23,6 +24,16 @@ public:
 	void setChunkPosition(int chunkX, int chunkZ);
 	int chunkX() const;
 	int chunkZ() const;
+
+	// Цвет рамки
+	void setBorderColor(const QColor& color);
+
+	QColor borderColor() const;
+
+	// zLevel
+	void setZLevel(float level);
+
+	float zLevel() const;
 
 	/// Установить тайлсет
 	void setTileset(Tileset* tileset);

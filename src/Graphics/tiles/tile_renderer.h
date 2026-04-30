@@ -45,10 +45,6 @@ public:
 	/// Отрисовка всех видимых чанков
 	void render(const Camera& camera, int viewportWidth, int viewportHeight);
 
-	/// Уровень высоты (Y), на котором рисуются тайлы
-	float zLevel() const;
-	void setZLevel(float level);
-
 	/// Размер чанка
 	void setChunkSize(const QSize& chunkSize);
 

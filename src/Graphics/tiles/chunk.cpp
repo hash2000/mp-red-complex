@@ -22,6 +22,8 @@ public:
 	bool dirty = false;
 	int chunkX = 0;
 	int chunkZ = 0;
+	float zLevel = 0.0f;
+	QColor borderColor = QColor(255, 0, 0, 255);
 	QSize chunkSize = { Chunk::kDefaultChunkSize, Chunk::kDefaultChunkSize };
 	Tileset* tileset = nullptr;
 
@@ -91,6 +93,22 @@ void Chunk::initialize() {
 void Chunk::setChunkPosition(int chunkX, int chunkZ) {
 	d->chunkX = chunkX;
 	d->chunkZ = chunkZ;
+}
+
+void Chunk::setBorderColor(const QColor& color) {
+	d->borderColor = color;
+}
+
+QColor Chunk::borderColor() const {
+	return d->borderColor;
+}
+
+void Chunk::setZLevel(float level) {
+	d->zLevel = level;
+}
+
+float Chunk::zLevel() const {
+	return d->zLevel;
 }
 
 int Chunk::chunkX() const {
