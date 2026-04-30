@@ -6,7 +6,6 @@
 
 class TileRenderer;
 class TextureAtlas;
-class Tileset;
 class TilesSelectorService;
 class MapService;
 class Camera;
@@ -20,9 +19,6 @@ public:
 
 	// Управление камерой
 	void resetCamera();
-
-	// Загрузить тайловую карту
-	virtual void loadTilemap();
 
 signals:
 	void initializeContext();
@@ -43,7 +39,7 @@ protected:
 	void wheelEvent(QWheelEvent* event) override;
 
 	// Инициализация тайловой системы
-	virtual void initializeTileSystem();
+	void initializeTileSystem();
 
 	TileRenderer* tileRenderer() const;
 

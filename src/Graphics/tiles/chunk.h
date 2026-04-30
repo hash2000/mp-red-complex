@@ -1,5 +1,5 @@
 #pragma once
-#include "Graphics/tiles/tile_data.h"
+#include "Graphics/textures/tile_data.h"
 #include <QOpenGLFunctions_3_3_Core>
 #include <QPoint>
 #include <QSize>
@@ -8,7 +8,7 @@
 
 class QOpenGLVertexArrayObject;
 class QOpenGLBuffer;
-class Tileset;
+class TextureAtlas;
 
 /// Чанк - блок тайлов NxN с собственным VAO/VBO
 /// Координаты: XZ плоскость, Y = высота
@@ -36,7 +36,7 @@ public:
 	float zLevel() const;
 
 	/// Установить тайлсет
-	void setTileset(Tileset* tileset);
+	void setTileset(std::shared_ptr<TextureAtlas> tileset);
 
 	/// Установить размер чанка
 	void setChunkSize(const QSize& size);

@@ -5,7 +5,6 @@
 #include "ApplicationLayer/textures/tiles_selector_service.h"
 #include "ApplicationLayer/textures/textures_service.h"
 #include "Graphics/textures/texture_atlas.h"
-#include "Graphics/tiles/tileset.h"
 #include "Graphics/tiles/tile_renderer.h"
 #include "Graphics/tiles/chunk.h"
 #include "Graphics/textures/uploaded_texture.h"
@@ -403,8 +402,6 @@ void MapEditorWidget::onApplySelectedAtlas() {
 	ApplyMapAtlasDialog dlg(d->tilesetSettings, this);
 	if (dlg.exec() == QDialog::Accepted) {
 		d->tilesetSettings = dlg.settings();
-
-
 		d->needLoadAtlas = true;
 		update();
 	}
@@ -415,7 +412,7 @@ void MapEditorWidget::onBeginFrame() {
 	if (d->needLoadAtlas) {
 		d->needLoadAtlas = false;
 
-		if (!d->tilesetSettings.has_value() || !d->currentMapName.has_value() || !d->currentChunk) {
+		if (!d->currentMapMetadata.has_value() || !d->tilesetSettings.has_value() || !d->currentMapName.has_value() || !d->currentChunk) {
 			return;
 		}
 
@@ -428,8 +425,12 @@ void MapEditorWidget::onBeginFrame() {
 			d->tilesetSettings.value(), ImageType::TileSets,
 			d->currentMapName.value());
 
-		
+		auto atlas = std::make_shared<TextureAtlas>();
 
-		loadTilemap();
+		atlas->load(texture,
+			d->currentMapMetadata->chunkSize.width(),
+			d->currentMapMetadata->chunkSize.height());
+
+		d->currentChunk->setTileset(atlas);
 	}
 }

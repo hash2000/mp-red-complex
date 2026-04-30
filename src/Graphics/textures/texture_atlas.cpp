@@ -4,15 +4,13 @@
 
 class TextureAtlas::Private {
 public:
-	Private(TextureAtlas* parent, int tileSizeX, int tileSizeY)
-		: q(parent)
-		, tileSizeX(tileSizeX)
-		, tileSizeY(tileSizeY) {
+	Private(TextureAtlas* parent)
+		: q(parent) {
 	}
 
 	TextureAtlas* q;
-	int tileSizeX;
-	int tileSizeY;
+	int tileSizeX = 0;
+	int tileSizeY = 0;
 	int tilesCountX = 0;
 	int tilesCountY = 0;
 	bool useMipMaps = true;
@@ -21,8 +19,8 @@ public:
 	std::shared_ptr<UploadedTexture> texture;
 };
 
-TextureAtlas::TextureAtlas(int tileSizeX, int tileSizeY)
-	: d(std::make_unique<Private>(this, tileSizeX, tileSizeY)) {
+TextureAtlas::TextureAtlas()
+	: d(std::make_unique<Private>(this)) {
 }
 
 TextureAtlas::~TextureAtlas() = default;
@@ -91,4 +89,33 @@ bool TextureAtlas::isLoaded() const {
 
 const UploadedTexture* TextureAtlas::texture() const {
 	return d->texture ? d->texture.get() : nullptr;
+}
+
+TileData TextureAtlas::getTile(int tileX, int tileY) const {
+	if (!isLoaded()) {
+		return TileData::empty();
+	}
+
+	if (tileX < 0 || tileX >= d->tilesCountX || tileY < 0 || tileY >= d->tilesCountY) {
+		return TileData::empty();
+	}
+
+	TileData data;
+	data.tileId = tileY * d->tilesCountX + tileX;
+	data.region = getRegion(tileX, tileY);
+	return data;
+}
+
+TileData TextureAtlas::getTileById(int tileId) const {
+	if (tileId < 0 || tileId >= totalTiles()) {
+		return TileData::empty();
+	}
+
+	int tileX = tileId % d->tilesCountX;
+	int tileY = tileId / d->tilesCountX;
+	return getTile(tileX, tileY);
+}
+
+int TextureAtlas::totalTiles() const {
+	return d->tilesCountX * d->tilesCountY;
 }

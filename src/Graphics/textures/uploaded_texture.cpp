@@ -1,9 +1,5 @@
 #include "Graphics/textures/uploaded_texture.h"
-#include <QImage>
 #include <QOpenGLTexture>
-#include <QOpenGLFunctions>
-#include <QOpenGLFunctions_3_3_Core>
-#include <QPixmap>
 #include <qdebug.h>
 
 class UploadedTexture::Private {

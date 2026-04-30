@@ -42,48 +42,6 @@ void MapViewBase::setDefaultCamera() {
 	d->camera.apply(QVector3D(0.0f, 0.0f, 0.0f), QVector3D(0.0f, 12.0f, 4.0f));
 }
 
-void MapViewBase::loadTilemap() {
-  // Получаем QPixmap через TilesService
- // if (!d->tilesSelectorService) {
-	//	qWarning() << "MapViewBase::loadTilemap: tilesSelectorService is null";
-	//	return;
- // }
-
-	//const auto metadata = d->tilesSelectorService->getCurrentTileSetMetadata();
-	//if (!metadata.has_value()) {
-	//	qWarning() << "MapViewBase::loadTilemap: no tileset metadata";
-	//	return;
-	//}
-
-	//const auto tilesCountX = metadata->gridSize.x;
-	//const auto tilesCountY = metadata->gridSize.y;
-	//auto pixmap = d->tilesSelectorService->getTilemap();
-	//if (!pixmap.has_value() || pixmap->isNull()) {
-	//	qWarning() << "MapViewBase::loadTilemap: pixmap is null";
-	//	return;
-	//}
-
-	//qInfo() << "MapViewBase::loadTilemap: loading pixmap" 
-	//	<< pixmap->width() << "x" << pixmap->height();
-
-	//// Загружаем в TextureAtlas
-	//if (d->textureAtlas->loadFromPixmap(pixmap.value(), tilesCountX, tilesCountY)) {
-	//	qInfo() << "Tilemap loaded successfully from TilesService";
-	//	qInfo() << "  - atlas texture ID:" << d->textureAtlas->textureId();
-	//	qInfo() << "  - tiles:" << tilesCountX << "x" << tilesCountY;
-
-	//	d->tileset->initialize(d->textureAtlas.get(), tilesCountX, tilesCountY);
-	//	qInfo() << "  - tileset initialized, atlas:" << d->tileset->atlas();
-	//	
-	//	d->tileRenderer->setTileset(d->tileset.get());
-	//	qInfo() << "  - tileset set to renderer";
-
-	//	update();
-	//} else {
-	//	qWarning() << "MapViewBase::loadTilemap: failed to load pixmap into atlas";
-	//}
-}
-
 void MapViewBase::initializeGL() {
   initializeOpenGLFunctions();
 

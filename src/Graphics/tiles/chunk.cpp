@@ -1,5 +1,4 @@
 #include "Graphics/tiles/chunk.h"
-#include "Graphics/tiles/tileset.h"
 #include "Graphics/textures/texture_atlas.h"
 #include "Graphics/gl_check_errors.h"
 #include <QOpenGLBuffer>
@@ -25,7 +24,7 @@ public:
 	float zLevel = 0.0f;
 	QColor borderColor = QColor(255, 0, 0, 255);
 	QSize chunkSize = { Chunk::kDefaultChunkSize, Chunk::kDefaultChunkSize };
-	Tileset* tileset = nullptr;
+	std::shared_ptr<TextureAtlas> tileset;
 
 	// Данные тайлов чанка (хранятся как tileId)
 	std::vector<int> tileData;
@@ -119,7 +118,7 @@ int Chunk::chunkZ() const {
 	return d->chunkZ;
 }
 
-void Chunk::setTileset(Tileset* tileset) {
+void Chunk::setTileset(std::shared_ptr<TextureAtlas> tileset) {
 	d->tileset = tileset;
 	markDirty();
 }
@@ -176,7 +175,7 @@ void Chunk::rebuild() {
 
 	rebuildBorderVBO();
 
-	if (d->tileset && d->tileset->isInitialized()) {
+	if (d->tileset && d->tileset->isLoaded()) {
 		rebuildVertexes();
 	}
 
@@ -188,12 +187,11 @@ void Chunk::render() {
 		return;
 	}
 
-	auto atlas = d->tileset->atlas();
-	if (!atlas || !atlas->isLoaded()) {
+	if (!d->tileset || !d->tileset->isLoaded()) {
 		return;
 	}
 
-	atlas->bind();
+	d->tileset->bind();
 	GL_CHECK_ERRORS();
 
 	auto f = QOpenGLContext::currentContext()->functions();
@@ -204,7 +202,7 @@ void Chunk::render() {
 
 	d->vao.release();
 
-	atlas->unbind();
+	d->tileset->unbind();
 }
 
 void Chunk::renderBorder() {

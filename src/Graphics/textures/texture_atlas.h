@@ -1,6 +1,7 @@
 #pragma once
 #include "Graphics/textures/texture_region.h"
 #include "Graphics/textures/texture_filter.h"
+#include "Graphics/textures/tile_data.h"
 #include <QOpenGLFunctions_3_3_Core>
 #include <memory>
 
@@ -13,9 +14,7 @@ class UploadedTexture;
 class TextureAtlas {
 public:
 	/// Конструктор
-	/// @param tileSizeX Ширина одного тайла в пикселях
-	/// @param tileSizeY Высота одного тайла в пикселях
-	TextureAtlas(int tileSizeX, int tileSizeY);
+	TextureAtlas();
 	~TextureAtlas();
 
 	bool load(std::shared_ptr<UploadedTexture> texture, int tilesCountX, int tilesCountY);
@@ -40,6 +39,10 @@ public:
 	bool isLoaded() const;
 
 	const UploadedTexture* texture() const;
+
+	TileData getTile(int tileX, int tileY) const;
+	TileData getTileById(int tileId) const;
+	int totalTiles() const;
 
 private:
 	class Private;

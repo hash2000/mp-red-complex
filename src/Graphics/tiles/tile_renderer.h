@@ -6,7 +6,6 @@
 
 class Camera;
 class QOpenGLShaderProgram;
-class Tileset;
 
 /// Рендерер тайлов - управляет чанками и их отрисовкой
 class TileRenderer : protected QOpenGLFunctions_3_3_Core {
