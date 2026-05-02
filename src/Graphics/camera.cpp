@@ -216,44 +216,69 @@ void Camera::zoom(float delta)
 	update();
 }
 
-std::optional<QVector3D> Camera::raycastToGround(const QPoint& screenPos, int screenWidth, int screenHeight) {
-	float x = (2.0f * screenPos.x()) / screenWidth - 1.0f;
-	float y = -(2.0f * screenPos.y()) / screenHeight + 1.0f;
+std::optional<QVector3D> Camera::raycastToGround(const QPoint& screenPos, int screenWidth, int screenHeight, float planeY) {
+	// 1. Преобразование координат экрана в нормализованные координаты устройства (NDC) [-1, 1]
+	float x = (2.0f * screenPos.x()) / static_cast<float>(screenWidth) - 1.0f;
+	float y = -(2.0f * screenPos.y()) / static_cast<float>(screenHeight) + 1.0f;
 
+	// 2. Точки на ближней и дальней плоскостях отсечения в NDC
 	QVector4D nearPoint(x, y, -1.0f, 1.0f);
 	QVector4D farPoint(x, y, 1.0f, 1.0f);
 
-	QMatrix4x4 invViewProj = (d->projection * d->view).inverted();
-	QVector4D rayNear4 = invViewProj * nearPoint;
-	QVector4D rayFar4 = invViewProj * farPoint;
+	// 3. Получаем обратную матрицу ViewProjection
+	QMatrix4x4 viewProj = d->projection * d->view;
 
-	// Перспективное деление
-	if (std::abs(rayNear4.w()) < 1e-6f || std::abs(rayFar4.w()) < 1e-6f) {
+	// Проверка на вырожденность матрицы (на всякий случай)
+	bool invertible = false;
+	QMatrix4x4 invViewProj = viewProj.inverted(&invertible);
+	if (!invertible) {
 		return std::nullopt;
 	}
 
-	QVector3D rayNear(rayNear4.x() / rayNear4.w(),
+	// 4. Преобразуем точки из NDC обратно в мировое пространство
+	QVector4D rayNear4 = invViewProj * nearPoint;
+	QVector4D rayFar4 = invViewProj * farPoint;
+
+	// Перспективное деление (переход из однородных координат в декартовы)
+	if (qAbs(rayNear4.w()) < 1e-6f || qAbs(rayFar4.w()) < 1e-6f) {
+		return std::nullopt;
+	}
+
+	QVector3D rayOrigin(rayNear4.x() / rayNear4.w(),
 		rayNear4.y() / rayNear4.w(),
 		rayNear4.z() / rayNear4.w());
+
 	QVector3D rayFar(rayFar4.x() / rayFar4.w(),
 		rayFar4.y() / rayFar4.w(),
 		rayFar4.z() / rayFar4.w());
 
-	QVector3D rayDir = (rayFar - rayNear).normalized();
-	QVector3D origin = rayNear;
+	// Направление луча
+	QVector3D rayDir = (rayFar - rayOrigin).normalized();
 
-	// Пересечение с Y = 0
-	if (std::abs(rayDir.y()) < 1e-6f) {
+	// 5. Вычисление пересечения с плоскостью Y = planeY
+	// Уравнение плоскости: P.y = planeY
+	// Уравнение луча: P = rayOrigin + t * rayDir
+	// Ищем t такое, что: rayOrigin.y + t * rayDir.y = planeY
+	// => t = (planeY - rayOrigin.y) / rayDir.y
+
+	float denominator = rayDir.y();
+
+	// Если луч параллелен плоскости (направлен строго горизонтально), пересечения нет
+	if (qAbs(denominator) < 1e-6f) {
 		return std::nullopt;
 	}
 
-	float t = -origin.y() / rayDir.y();
-	if (t < 0) {
+	float t = (planeY - rayOrigin.y()) / denominator;
+
+	// Если точка пересечения находится "позади" камеры (t < 0), игнорируем
+	if (t < 0.0f) {
 		return std::nullopt;
 	}
 
-	QVector3D hit = origin + t * rayDir;
-	return hit;
+	// Вычисляем точку пересечения
+	QVector3D hitPoint = rayOrigin + rayDir * t;
+
+	return hitPoint;
 }
 
 void Camera::moveSpeed(float speed)

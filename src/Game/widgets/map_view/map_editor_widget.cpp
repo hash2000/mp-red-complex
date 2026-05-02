@@ -368,6 +368,7 @@ void MapEditorWidget::selectTile(int x, int y) {
 	d->currentChunk = chunk;
 	d->currentChunk->setBorderColor(Private::selectedBorderColor);
 	d->currentChunk->setZLevel(2.0f);
+	setZLevel(2.0f);
 	update();
 }
 

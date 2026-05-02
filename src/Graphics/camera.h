@@ -27,7 +27,7 @@ public:
 	const QMatrix4x4& projection() const;
 	const QMatrix4x4 view() const;
 
-	std::optional<QVector3D> raycastToGround(const QPoint& screenPos, int screenWidth, int screenHeight);
+	std::optional<QVector3D> raycastToGround(const QPoint& screenPos, int screenWidth, int screenHeight, float planeY = 0.0f);
 
 	void setFov(float value);
 	float fov() const;

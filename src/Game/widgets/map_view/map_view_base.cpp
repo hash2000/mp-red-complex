@@ -14,6 +14,7 @@ public:
   Camera camera;
   bool rightMousePressed = false;
   QPoint lastMousePos;
+	float zLevel = 0.0f;
 
   // Система тайлов
   std::unique_ptr<TileRenderer> tileRenderer;
@@ -85,7 +86,7 @@ void MapViewBase::setupViewport() {
 
 void MapViewBase::mousePressEvent(QMouseEvent* event) {
   if (event->button() == Qt::LeftButton) {
-		const auto hit = d->camera.raycastToGround(event->pos(), width(), height());
+		const auto hit = d->camera.raycastToGround(event->pos(), width(), height(), d->zLevel);
 		if (hit) {
 			int worldX = int(hit->x());
 			int worldZ = int(hit->z());
@@ -106,7 +107,7 @@ void MapViewBase::mousePressEvent(QMouseEvent* event) {
 
 void MapViewBase::mouseMoveEvent(QMouseEvent* event) {
   // Обновляем hover
-  const auto hit = d->camera.raycastToGround(event->pos(), width(), height());
+  const auto hit = d->camera.raycastToGround(event->pos(), width(), height(), d->zLevel);
   if (hit) {
 		int worldX = qRound(hit->x());
 		int worldZ = qRound(hit->z());
@@ -156,4 +157,8 @@ Camera& MapViewBase::camera() {
 
 const Camera& MapViewBase::camera() const {
   return d->camera;
+}
+
+void MapViewBase::setZLevel(float value) {
+	d->zLevel = value;
 }

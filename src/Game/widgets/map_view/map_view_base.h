@@ -48,6 +48,8 @@ protected:
 	const Camera& camera() const;
 	void setDefaultCamera();
 
+	void setZLevel(float value);
+
 private:
 	void setupViewport();
 
