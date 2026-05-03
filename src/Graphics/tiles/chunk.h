@@ -1,23 +1,20 @@
 #pragma once
 #include "Graphics/textures/tile_data.h"
-#include <QOpenGLFunctions_3_3_Core>
 #include <QPoint>
 #include <QSize>
 #include <QColor>
 #include <memory>
 
-class QOpenGLVertexArrayObject;
-class QOpenGLBuffer;
 class TextureAtlas;
 
 /// Чанк - блок тайлов NxN с собственным VAO/VBO
 /// Координаты: XZ плоскость, Y = высота
-class Chunk : protected QOpenGLFunctions_3_3_Core {
+class Chunk {
 public:
 	/// Размер чанка по умолчанию
 	static constexpr int kDefaultChunkSize = 32;
 
-	Chunk();
+	Chunk(int layers);
 	~Chunk();
 
 	/// Установить позицию чанка в мире (в чанках, не в пикселях)
@@ -40,16 +37,13 @@ public:
 
 	/// Установить размер чанка
 	void setChunkSize(const QSize& size);
+	QSize chunkSize() const;
 
 	/// Установить тайл по локальным координатам (0..chunkSize-1)
-	void setTile(int worldX, int worldZ, int tileId);
+	void setTile(int worldX, int worldZ, int tileId, int layer);
 
 	/// Получить тайл по локальным координатам
-	int getTile(int worldX, int worldZ) const;
-
-	/// Пометить как грязный (требует перестройки VBO)
-	void markDirty();
-	bool isDirty() const;
+	int getTile(int worldX, int worldZ, int layer) const;
 
 	/// Перестроить VBO из данных тайлов
 	void rebuild();
@@ -60,23 +54,12 @@ public:
 	/// Отрисовка рамки чанка (всегда доступна, управление на уровне TileRenderer)
 	void renderBorder();
 
-	/// Проверка инициализации
-	bool isInitialized() const;
-
-	/// Границы чанка в мировых координатах (для frustum culling)
 	float worldMinX() const;
 	float worldMaxX() const;
 	float worldMinZ() const;
 	float worldMaxZ() const;
 
 private:
-	/// Перестроить VBO рамки
-	void rebuildBorderVBO();
-	void rebuildVertexes();
-
-	/// Инициализация (вызвать после создания OpenGL контекста)
-	void initialize();
-
 	class Private;
 	std::unique_ptr<Private> d;
 };

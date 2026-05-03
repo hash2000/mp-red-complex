@@ -84,7 +84,7 @@ int TextureAtlas::tilesCountY() const {
 }
 
 bool TextureAtlas::isLoaded() const {
-	return d->texture != nullptr;
+	return d->texture != nullptr && d->texture->isLoaded();
 }
 
 const UploadedTexture* TextureAtlas::texture() const {

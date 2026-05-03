@@ -15,7 +15,7 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QFormLayout>
-#include <QColor>
+#include <QLineEdit>
 
 class MapEditorWidget::Private {
 public:
@@ -48,6 +48,8 @@ public:
   bool isDrawing = false;
 	bool needLoadAtlas = false;
 	std::optional<UploadedTextureProperties> tilesetSettings;
+
+	int tileRenderLayer = 0;
 
 	static constexpr QColor selectedBorderColor = QColor(0, 255, 0, 255);
 	static constexpr QColor unselectedBorderColor = QColor(255, 0, 0, 255);
@@ -198,6 +200,15 @@ void MapEditorWidget::setupToolbar() {
 
 	d->toolbar->addWidget(applyPixmap);
 
+	auto* renderLayerEdit = new QLineEdit(this);
+	renderLayerEdit->setValidator(new QIntValidator(1, TileRenderer::kMaxTileRenderLayer, this));
+	renderLayerEdit->setFixedWidth(50);
+	renderLayerEdit->setAlignment(Qt::AlignCenter);
+	renderLayerEdit->setText(QString::number(tileRenderLayer()));
+	connect(renderLayerEdit, &QLineEdit::textChanged, this, &MapEditorWidget::onRenderLevelEditChanged);
+
+	d->toolbar->addWidget(renderLayerEdit);
+
   d->toolbar->addSeparator();
 
   // Выбор карты
@@ -284,6 +295,16 @@ void MapEditorWidget::setupToolbar() {
   d->toolbar->addWidget(saveButton);
 }
 
+void MapEditorWidget::onRenderLevelEditChanged(const QString& text) {
+	bool ok = false;
+	int value = text.toInt(&ok);
+	if (!ok) {
+		return;
+	}
+
+	setTileRenderLayer(value);
+}
+
 void MapEditorWidget::setupPropertiesPanel() {
   d->propertiesGroup = new QGroupBox("Свойства");
   auto* layout = new QFormLayout(d->propertiesGroup);
@@ -302,21 +323,19 @@ void MapEditorWidget::setupPropertiesPanel() {
 }
 
 void MapEditorWidget::placeTile(int x, int y) {
-	const auto tiles = d->tilesSelectorService;
-	const auto renderer = tileRenderer();
-	if (!renderer) {
+	if (!d->currentChunk) {
 		return;
 	}
 
-	const auto chunkSizes = renderer->chunkSize();
-	const auto ids = tiles->getSelectionTiles();
+	const auto chunkSize = d->currentChunk->chunkSize();
+	const auto ids = d->tilesSelectorService->getSelectionTiles();
 
 	if (ids.isEmpty()) {
 		return;
 	}
 
-	const int tilesetWidth = chunkSizes.width();
-	const int tilesetHeight = chunkSizes.height();
+	const int tilesetWidth = chunkSize.width();
+	const int tilesetHeight = chunkSize.height();
 	const int baseId = ids.first();
 	const int startX = x;
 	const int startZ = y;
@@ -329,12 +348,7 @@ void MapEditorWidget::placeTile(int x, int y) {
 		const int worldX = startX + offsetX;
 		const int worldZ = startZ + offsetZ;
 
-		auto chunk = renderer->getOrCreateChunk(worldX, worldZ);
-		if (!chunk) {
-			return;
-		}
-
-		chunk->setTile(worldX, worldZ, tileId);
+		d->currentChunk->setTile(worldX, worldZ, tileId, d->tileRenderLayer);
 	}
 
   emit tilesPlaced(x, y, d->currentTileIds);
@@ -355,7 +369,7 @@ void MapEditorWidget::selectTile(int x, int y) {
 		return;
 	}
 
-	const auto chunk = renderer->getChunk(x, y);
+	const auto chunk = renderer->getOrCreateChunk(x, y);
 	if (!chunk || d->currentChunk == chunk) {
 		return;
 	}
@@ -406,32 +420,51 @@ void MapEditorWidget::onApplySelectedAtlas() {
 		d->needLoadAtlas = true;
 		update();
 	}
-
 }
 
 void MapEditorWidget::onBeginFrame() {
-	if (d->needLoadAtlas) {
-		d->needLoadAtlas = false;
-
-		if (!d->currentMapMetadata.has_value() || !d->tilesetSettings.has_value() || !d->currentMapName.has_value() || !d->currentChunk) {
-			return;
-		}
-
-		const auto tileName = d->tilesSelectorService->getTileSetName();
-		if (tileName.isEmpty() ) {
-			return;
-		}
-
-		auto texture = d->textureService->upload(QString("%1.png").arg(tileName),
-			d->tilesetSettings.value(), ImageType::TileSets,
-			d->currentMapName.value());
-
-		auto atlas = std::make_shared<TextureAtlas>();
-
-		atlas->load(texture,
-			d->currentMapMetadata->chunkSize.width(),
-			d->currentMapMetadata->chunkSize.height());
-
-		d->currentChunk->setTileset(atlas);
+	if (!d->needLoadAtlas) {
+		return;
 	}
+
+	d->needLoadAtlas = false;
+
+	if (!d->currentChunk) {
+		return;
+	}
+
+	if (!d->currentMapMetadata.has_value() || !d->tilesetSettings.has_value() || !d->currentMapName.has_value() || !d->currentChunk) {
+		return;
+	}
+
+	const auto tileName = d->tilesSelectorService->getTileSetName();
+	if (tileName.isEmpty() ) {
+		return;
+	}
+
+	auto texture = d->textureService->upload(QString("%1.png").arg(tileName),
+		d->tilesetSettings.value(), ImageType::TileSets,
+		d->currentMapName.value());
+
+	auto atlas = std::make_shared<TextureAtlas>();
+
+	atlas->load(texture,
+		d->currentMapMetadata->chunkSize.width(),
+		d->currentMapMetadata->chunkSize.height());
+
+	d->currentChunk->setTileset(atlas);
+}
+
+
+void MapEditorWidget::setTileRenderLayer(int layer) {
+	if (layer >= TileRenderer::kMaxTileRenderLayer || layer < 0) {
+		qWarning() << "MapViewBase::setTileRenderLayer:" << layer << ">=" << TileRenderer::kMaxTileRenderLayer << "or < 0";
+		return;
+	}
+
+	d->tileRenderLayer = layer;
+}
+
+int MapEditorWidget::tileRenderLayer() const {
+	return d->tileRenderLayer;
 }

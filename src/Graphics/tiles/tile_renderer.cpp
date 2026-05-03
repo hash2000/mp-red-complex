@@ -142,7 +142,7 @@ Chunk* TileRenderer::getOrCreateChunk(int chunkX, int chunkZ) {
 		return it.value().get();
 	}
 
-	auto chunk = QSharedPointer<Chunk>::create();
+	auto chunk = QSharedPointer<Chunk>::create(kMaxTileRenderLayer);
 	chunk->setChunkSize(d->chunkSize);
 	chunk->setChunkPosition(key.first, key.second);
 
@@ -173,9 +173,7 @@ void TileRenderer::clearChunks() {
 
 void TileRenderer::rebuildDirtyChunks() {
 	for (auto& chunk : d->chunks) {
-		if (chunk->isDirty()) {
-			chunk->rebuild();
-		}
+		chunk->rebuild();
 	}
 }
 
@@ -195,9 +193,10 @@ void TileRenderer::render(const Camera& camera, int viewportWidth, int viewportH
 void TileRenderer::renderTileSet(const Camera& camera, int viewportWidth, int viewportHeight) {
 	auto f = QOpenGLContext::currentContext()->functions();
 
+	f->glDisable(GL_DEPTH_TEST);
+	f->glDepthMask(GL_TRUE);
 	f->glEnable(GL_BLEND);
 	f->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	f->glEnable(GL_DEPTH_TEST);
 
 	// Биндим шейдер
 	d->shaderProgram->bind();
@@ -214,9 +213,6 @@ void TileRenderer::renderTileSet(const Camera& camera, int viewportWidth, int vi
 	// Рисуем все чанки (frustum culling временно отключен для отладки)
 	for (const auto& chunk : d->chunks) {
 		const auto ptr = chunk.get();
-		if (!ptr->isInitialized()) {
-			continue;
-		}
 
 		if (isChunkVisible(ptr, camera, viewportWidth, viewportHeight)) {
 			d->shaderProgram->setUniformValue("zLevel", ptr->zLevel());
@@ -224,10 +220,7 @@ void TileRenderer::renderTileSet(const Camera& camera, int viewportWidth, int vi
 		}
 	}
 
-	glDisable(GL_BLEND);
-
 	d->shaderProgram->release();
-
 }
 
 bool TileRenderer::isChunkVisible(const Chunk* chunk, const Camera& camera, int viewportWidth, int viewportHeight) const {
@@ -303,10 +296,6 @@ void TileRenderer::renderDebugPasses(const Camera& camera, int viewportWidth, in
 	QColor selectedBorderColor;
 	if (testDebugRenderPass(DebugRenderPass::ChunkBorders)) {
 		for (auto& chunk : d->chunks) {
-			if (!chunk->isInitialized()) {
-				continue;
-			}
-
 			const auto borderColor = chunk->borderColor();
 			d->debugShaderProgram->setUniformValue("uColor",
 				borderColor.redF(),

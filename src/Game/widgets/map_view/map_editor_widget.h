@@ -54,6 +54,7 @@ private slots:
   void onBeginFrame();
   void onTileClicked(std::optional<QPoint> point);
   void onTileHovered(std::optional<QPoint> point);
+	void onRenderLevelEditChanged(const QString& text);
 
 private:
   void setupUI();
@@ -63,6 +64,10 @@ private:
   void eraseTile(int x, int y);
   void updatePropertiesPanel();
   void selectTile(int x, int y);
+
+	void setTileRenderLayer(int value);
+	int tileRenderLayer() const;
+
 
   class Private;
   std::unique_ptr<Private> d;

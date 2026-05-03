@@ -10,6 +10,9 @@ class QOpenGLShaderProgram;
 /// Рендерер тайлов - управляет чанками и их отрисовкой
 class TileRenderer : protected QOpenGLFunctions_3_3_Core {
 public:
+	static constexpr int kMaxTileRenderLayer = 3;
+
+public:
 	/// Битовые флаги для отладочных проходов рендеринга
 	enum class DebugRenderPass : int {
 		None = 0,
