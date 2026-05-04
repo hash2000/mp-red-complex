@@ -48,7 +48,6 @@ signals:
 
 private slots:
   void onModeChanged(int index);
-  void onTileSelected(const QList<int>& tileIds);
   void onMapChanged(const QString& mapName);
   void onApplySelectedAtlas();
   void onBeginFrame();

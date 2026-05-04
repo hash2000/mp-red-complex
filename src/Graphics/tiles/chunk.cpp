@@ -80,6 +80,14 @@ void Chunk::setTileset(std::shared_ptr<TextureAtlas> tileset) {
 	d->tileset = tileset;
 }
 
+std::shared_ptr<TextureAtlas> Chunk::tileSet() const {
+	return d->tileset;
+}
+
+bool Chunk::hasTileset() const {
+	return d->tileset != nullptr;
+}
+
 void Chunk::setChunkSize(const QSize& size) {
 	for (int i = 0; i < d->layersCount; i++) {
 		d->tiles[i]->setChunkSize(size);

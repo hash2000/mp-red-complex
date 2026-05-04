@@ -34,6 +34,8 @@ public:
 
 	/// Установить тайлсет
 	void setTileset(std::shared_ptr<TextureAtlas> tileset);
+	std::shared_ptr<TextureAtlas> tileSet() const;
+	bool hasTileset() const;
 
 	/// Установить размер чанка
 	void setChunkSize(const QSize& size);
