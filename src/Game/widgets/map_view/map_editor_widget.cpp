@@ -357,8 +357,12 @@ void MapEditorWidget::placeTile(int x, int y) {
 }
 
 void MapEditorWidget::eraseTile(int x, int y) {
-  // TODO: Реализовать стирание тайла через MapService
-  qDebug() << "Erasing tile at" << x << y;
+	if (!d->currentChunk) {
+		return;
+	}
+
+	d->currentChunk->setTile(x, y, -1, d->tileRenderLayer);
+
   emit tileErased(x, y);
   update();
 }

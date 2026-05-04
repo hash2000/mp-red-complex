@@ -40,7 +40,7 @@ void MapViewBase::resetCamera() {
 }
 
 void MapViewBase::setDefaultCamera() {
-	d->camera.apply(QVector3D(0.0f, 0.0f, 0.0f), QVector3D(0.0f, 12.0f, 4.0f));
+	d->camera.apply(QVector3D(15.0f, 0.0f, 10.0f), QVector3D(15.0f, 45.0f, 25.0f));
 }
 
 void MapViewBase::initializeGL() {
