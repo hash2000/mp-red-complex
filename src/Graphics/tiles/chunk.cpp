@@ -2,6 +2,7 @@
 #include "Graphics/textures/texture_atlas.h"
 #include "Graphics/tiles/chunk/chunk_draw_tileset.h"
 #include "Graphics/tiles/chunk/chunk_draw_border.h"
+#include "Graphics/gl_check_errors.h"
 #include <qdebug.h>
 #include <vector>
 
@@ -19,6 +20,7 @@ public:
 	int chunkZ = 0;
 	std::unique_ptr<ChunkDrawBorder> border;
 	std::vector<std::unique_ptr<ChunkDrawTileset>> tiles;
+	std::shared_ptr<TextureAtlas> tileset;
 	bool initialized = false;
 };
 
@@ -74,6 +76,8 @@ void Chunk::setTileset(std::shared_ptr<TextureAtlas> tileset) {
 	for (int i = 0; i < d->layersCount; i++) {
 		d->tiles[i]->setTileset(tileset);
 	}
+
+	d->tileset = tileset;
 }
 
 void Chunk::setChunkSize(const QSize& size) {
@@ -114,10 +118,19 @@ void Chunk::rebuild() {
 }
 
 void Chunk::render() {
-	//for (int i = d->layersCount - 1; i >= 0; i--) {
+	if (!d->tileset || !d->tileset->isLoaded()) {
+		return;
+	}
+
+	d->tileset->bind();
+	GL_CHECK_ERRORS();
+
+
 	for (int i = 0; i < d->layersCount; i++) {
 		d->tiles[i]->render();
 	}
+
+	d->tileset->unbind();
 }
 
 void Chunk::renderBorder() {

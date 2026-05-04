@@ -157,24 +157,6 @@ void ChunkDrawTileset::onRebuildVerticesAttributes(QOpenGLVertexArrayObject& vao
 	GL_CHECK_ERRORS();
 }
 
-bool ChunkDrawTileset::onAfterRender() {
-	if (!d->tileset || !d->tileset->isLoaded()) {
-		return false;
-	}
-
-	d->tileset->bind();
-	GL_CHECK_ERRORS();
-	return true;
-}
-
-void ChunkDrawTileset::onBeforeRender() {
-	if (!d->tileset || !d->tileset->isLoaded()) {
-		return;
-	}
-
-	d->tileset->unbind();
-}
-
 GLenum ChunkDrawTileset::drawMode() {
 	return GL_TRIANGLES;
 }
