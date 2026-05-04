@@ -55,6 +55,9 @@ public:
 	/// Количество загруженных чанков
 	size_t chunkCount() const;
 
+	void showOnlyOneLayer(int layer);
+	void showAllLayers();
+
 	/// Управление отладочными проходами рендеринга
 	void setDebugRenderPasses(DebugRenderPassFlags passes);
 	DebugRenderPassFlags debugRenderPasses() const;

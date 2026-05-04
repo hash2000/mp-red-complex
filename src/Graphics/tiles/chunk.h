@@ -56,6 +56,9 @@ public:
 	/// Отрисовка рамки чанка (всегда доступна, управление на уровне TileRenderer)
 	void renderBorder();
 
+	void showOnlyOneLayer(int layer);
+	void showAllLayers();
+
 	float worldMinX() const;
 	float worldMaxX() const;
 	float worldMinZ() const;

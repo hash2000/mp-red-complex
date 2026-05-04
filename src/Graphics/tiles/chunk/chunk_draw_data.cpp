@@ -16,6 +16,7 @@ public:
 	int vertexCount = 0; // Количество вершин для отрисовки
 	bool initialized = false;
 	bool dirty = false;
+	bool visible = true;
 	int chunkX = 0;
 	int chunkZ = 0;
 
@@ -81,8 +82,16 @@ int ChunkDrawData::chunkZ() const {
 	return d->chunkZ;
 }
 
+void ChunkDrawData::setVisible(bool value) {
+	d->visible = value;
+}
+
+bool ChunkDrawData::visible() const {
+	return d->visible;
+}
+
 void ChunkDrawData::render() {
-	if (!d->initialized || d->dirty || d->vertexCount == 0) {
+	if (!d->visible || !d->initialized || d->dirty || d->vertexCount == 0) {
 		return;
 	}
 

@@ -26,6 +26,10 @@ public:
 	void markDirty();
 	bool isDirty() const;
 
+	void setVisible(bool value);
+	bool visible() const;
+
+
 protected:
 	virtual void onRebuildVertices(std::vector<float>& vertices) = 0;
 	virtual void onRebuildVerticesAttributes(QOpenGLVertexArrayObject& vao, const std::vector<float>& vertices) { }

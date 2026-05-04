@@ -12,6 +12,7 @@
 #include <QComboBox>
 #include <QLabel>
 #include <QGroupBox>
+#include <QCheckBox>
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QFormLayout>
@@ -196,6 +197,12 @@ void MapEditorWidget::setupToolbar() {
 
 	d->toolbar->addWidget(renderLayerEdit);
 
+	auto* showSelectedLayerOnly = new QCheckBox(this);
+	showSelectedLayerOnly->setToolTip("Отображать только текущий слой");
+	connect(showSelectedLayerOnly, &QCheckBox::toggled, this, &MapEditorWidget::onShowSelectedLayerOnly);
+
+	d->toolbar->addWidget(showSelectedLayerOnly);
+
   d->toolbar->addSeparator();
 
   // Выбор карты
@@ -280,6 +287,22 @@ void MapEditorWidget::setupToolbar() {
 		}
 	});
   d->toolbar->addWidget(saveButton);
+}
+
+void MapEditorWidget::onShowSelectedLayerOnly(bool checked) {
+	const auto renderer = tileRenderer();
+	if (!renderer) {
+		return;
+	}
+
+	if (checked) {
+		renderer->showOnlyOneLayer(d->tileRenderLayer);
+	}
+	else {
+		renderer->showAllLayers();
+	}
+
+	update();
 }
 
 void MapEditorWidget::onRenderLevelEditChanged(const QString& text) {
@@ -402,7 +425,6 @@ void MapEditorWidget::onBeginFrame() {
 
 	updatePropertiesPanel();
 }
-
 
 void MapEditorWidget::setTileRenderLayer(int layer) {
 	if (layer >= TileRenderer::kMaxTileRenderLayer || layer < 0) {

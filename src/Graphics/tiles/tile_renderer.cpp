@@ -177,6 +177,18 @@ void TileRenderer::rebuildDirtyChunks() {
 	}
 }
 
+void TileRenderer::showOnlyOneLayer(int layer) {
+	for (auto& chunk : d->chunks) {
+		chunk->showOnlyOneLayer(layer);
+	}
+}
+
+void TileRenderer::showAllLayers() {
+	for (auto& chunk : d->chunks) {
+		chunk->showAllLayers();
+	}
+}
+
 void TileRenderer::render(const Camera& camera, int viewportWidth, int viewportHeight) {
 	if (!d->initialized || !d->shaderProgram) {
 		return;

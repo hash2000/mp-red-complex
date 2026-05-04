@@ -76,7 +76,6 @@ void MapViewBase::paintGL() {
   if (d->tileRenderer) {
 		d->tileRenderer->render(d->camera, width(), height());
   }
-
 }
 
 void MapViewBase::setupViewport() {

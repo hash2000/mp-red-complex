@@ -145,6 +145,23 @@ void Chunk::renderBorder() {
 	d->border->render();
 }
 
+void Chunk::showOnlyOneLayer(int layer) {
+	if (layer < 0 || layer >= d->layersCount) {
+		return;
+	}
+
+	for (int i = 0; i < d->layersCount; i++) {
+		const auto isVisible = i == layer;
+		d->tiles[i]->setVisible(isVisible);
+	}
+}
+
+void Chunk::showAllLayers() {
+	for (int i = 0; i < d->layersCount; i++) {
+		d->tiles[i]->setVisible(true);
+	}
+}
+
 float Chunk::worldMinX() const {
 	return static_cast<float>(d->chunkX * d->chunkSize.width());
 }
