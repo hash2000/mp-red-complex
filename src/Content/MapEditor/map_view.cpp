@@ -79,7 +79,7 @@ void MapView::paintGL()
 void MapView::mousePressEvent(QMouseEvent* event)
 {
 	if (event->button() == Qt::LeftButton) {
-		const auto hit = _camera.raycastToGround(event->pos(), width(), height());
+		const auto hit = _camera.raycastToGround(event->pos(), width(), height(), 0.0f);
 		if (hit) {
 			int worldX = qRound(hit->x());
 			int worldZ = qRound(hit->z());

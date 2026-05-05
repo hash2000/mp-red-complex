@@ -1,22 +1,22 @@
 #include "Game/widgets/map_view/map_editor_widget.h"
 #include "Game/widgets/map_view/create_map_dialog.h"
+#include "Game/widgets/map_view/apply_map_filter_dialog.h"
 #include "ApplicationLayer/maps/map_service.h"
-#include "ApplicationLayer/textures/tiles_service.h"
+#include "ApplicationLayer/textures/tiles_selector_service.h"
+#include "ApplicationLayer/textures/textures_service.h"
 #include "Graphics/textures/texture_atlas.h"
-#include "Graphics/tiles/tileset.h"
 #include "Graphics/tiles/tile_renderer.h"
 #include "Graphics/tiles/chunk.h"
+#include "Graphics/textures/uploaded_texture.h"
 #include <QToolBar>
 #include <QComboBox>
 #include <QLabel>
-#include <QSpinBox>
 #include <QGroupBox>
+#include <QCheckBox>
 #include <QPushButton>
 #include <QVBoxLayout>
-#include <QHBoxLayout>
 #include <QFormLayout>
-#include <QDebug>
-#include <QPainter>
+#include <QLineEdit>
 
 class MapEditorWidget::Private {
 public:
@@ -24,7 +24,8 @@ public:
 
   MapEditorWidget* q;
   MapService* mapService = nullptr;
-  TilesService* tilesService = nullptr;
+  TilesSelectorService* tilesSelectorService = nullptr;
+	TexturesService* textureService = nullptr;
 
   // UI компоненты
   QToolBar* toolbar = nullptr;
@@ -41,24 +42,29 @@ public:
   // Состояние
 	std::optional<MapMetadata> currentMapMetadata;
 	std::optional<QString> currentMapName;
+	Chunk* currentChunk = nullptr;
   MapEditorMode currentMode = MapEditorMode::Draw;
-  QList<int> selectedTileIds;
   std::optional<QPoint> hoveredTile;
   bool isDrawing = false;
 	bool needLoadAtlas = false;
+	std::optional<UploadedTextureProperties> tilesetSettings;
+
+	int tileRenderLayer = 0;
+
+	static constexpr QColor selectedBorderColor = QColor(0, 255, 0, 255);
+	static constexpr QColor unselectedBorderColor = QColor(255, 0, 0, 255);
 };
 
 MapEditorWidget::MapEditorWidget(
+	TexturesService* textureService,
   MapService* mapService,
-  TilesService* tilesService,
+  TilesSelectorService* tilesSelectorService,
   QWidget* parent)
   : MapViewBase(parent)
   , d(std::make_unique<Private>(this)) {
+	d->textureService = textureService;
   d->mapService = mapService;
-  d->tilesService = tilesService;
-
-  setMapService(mapService);
-  setTilesService(tilesService);
+  d->tilesSelectorService = tilesSelectorService;
 
   setupUI();
 
@@ -69,6 +75,8 @@ MapEditorWidget::MapEditorWidget(
   }
 
 	connect(this, &MapViewBase::beginFrame, this, &MapEditorWidget::onBeginFrame);
+	connect(this, &MapViewBase::tileClicked, this, &MapEditorWidget::onTileClicked);
+	connect(this, &MapViewBase::tileHovered, this, &MapEditorWidget::onTileHovered);
 }
 
 MapEditorWidget::~MapEditorWidget() = default;
@@ -90,15 +98,9 @@ void MapEditorWidget::setMode(MapEditorMode mode) {
 }
 
 void MapEditorWidget::onModeChanged(int index) {
-  d->currentMode = static_cast<MapEditorMode>(index);
+	d->currentMode = static_cast<MapEditorMode>(d->modeComboBox->itemData(index).toInt());
   emit modeChanged(d->currentMode);
   qDebug() << "Map editor mode changed to:" << index;
-}
-
-void MapEditorWidget::onTileSelected(const QList<int>& tileIds) {
-  d->selectedTileIds = tileIds;
-  updatePropertiesPanel();
-  qDebug() << "Tile selected for drawing:" << tileIds.count();
 }
 
 void MapEditorWidget::onMapChanged(const QString& mapName) {
@@ -125,15 +127,13 @@ void MapEditorWidget::onTileClicked(std::optional<QPoint> point) {
 
   switch (d->currentMode) {
   case MapEditorMode::Draw:
-		if (d->selectedTileIds.count() >= 0) {
-			placeTile(point->x(), point->y());
-		}
+		placeTile(point->x(), point->y());
 		break;
   case MapEditorMode::Erase:
 		eraseTile(point->x(), point->y());
 		break;
   case MapEditorMode::Select:
-		// TODO: Реализовать выделение области
+		selectTile(point->x(), point->y());
 		break;
   case MapEditorMode::Properties:
 		// TODO: Редактирование свойств тайла
@@ -174,10 +174,10 @@ void MapEditorWidget::setupToolbar() {
   // Выбор режима
   d->toolbar->addWidget(new QLabel("Режим: "));
   d->modeComboBox = new QComboBox();
-  d->modeComboBox->addItem("Рисование");
-  d->modeComboBox->addItem("Стирание");
-  d->modeComboBox->addItem("Выделение");
-  d->modeComboBox->addItem("Свойства");
+  d->modeComboBox->addItem("Рисование", static_cast<int>(MapEditorMode::Draw));
+  d->modeComboBox->addItem("Стирание", static_cast<int>(MapEditorMode::Erase));
+  d->modeComboBox->addItem("Выделение", static_cast<int>(MapEditorMode::Select));
+  d->modeComboBox->addItem("Свойства", static_cast<int>(MapEditorMode::Properties));
   connect(d->modeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
 		this, &MapEditorWidget::onModeChanged);
 
@@ -187,6 +187,21 @@ void MapEditorWidget::setupToolbar() {
 	connect(applyPixmap, &QPushButton::clicked, this, &MapEditorWidget::onApplySelectedAtlas);
 
 	d->toolbar->addWidget(applyPixmap);
+
+	auto* renderLayerEdit = new QLineEdit(this);
+	renderLayerEdit->setValidator(new QIntValidator(1, TileRenderer::kMaxTileRenderLayer, this));
+	renderLayerEdit->setFixedWidth(50);
+	renderLayerEdit->setAlignment(Qt::AlignCenter);
+	renderLayerEdit->setText(QString::number(tileRenderLayer()));
+	connect(renderLayerEdit, &QLineEdit::textChanged, this, &MapEditorWidget::onRenderLevelEditChanged);
+
+	d->toolbar->addWidget(renderLayerEdit);
+
+	auto* showSelectedLayerOnly = new QCheckBox(this);
+	showSelectedLayerOnly->setToolTip("Отображать только текущий слой");
+	connect(showSelectedLayerOnly, &QCheckBox::toggled, this, &MapEditorWidget::onShowSelectedLayerOnly);
+
+	d->toolbar->addWidget(showSelectedLayerOnly);
 
   d->toolbar->addSeparator();
 
@@ -274,39 +289,46 @@ void MapEditorWidget::setupToolbar() {
   d->toolbar->addWidget(saveButton);
 }
 
-void MapEditorWidget::setupPropertiesPanel() {
-  d->propertiesGroup = new QGroupBox("Свойства");
-  auto* layout = new QFormLayout(d->propertiesGroup);
-
-  d->positionLabel = new QLabel("-");
-  layout->addRow("Позиция:", d->positionLabel);
-
-  d->tileIdLabel = new QLabel("-");
-  layout->addRow("Тайл для рисования:", d->tileIdLabel);
-
-  d->currentMapLabel = new QLabel("-");
-  layout->addRow("Текущая карта:", d->currentMapLabel);
-
-  d->currentAtlasLabel = new QLabel("-");
-  layout->addRow("Атлас:", d->currentAtlasLabel);
-}
-
-void MapEditorWidget::placeTile(int x, int y) {
-	const auto tiles = tilesService();
+void MapEditorWidget::onShowSelectedLayerOnly(bool checked) {
 	const auto renderer = tileRenderer();
 	if (!renderer) {
 		return;
 	}
 
-	const auto chunkSizes = renderer->chunkSize();
-	const auto ids = tiles->getSelectionTiles();
+	if (checked) {
+		renderer->showOnlyOneLayer(d->tileRenderLayer);
+	}
+	else {
+		renderer->showAllLayers();
+	}
+
+	update();
+}
+
+void MapEditorWidget::onRenderLevelEditChanged(const QString& text) {
+	bool ok = false;
+	int value = text.toInt(&ok);
+	if (!ok) {
+		return;
+	}
+
+	setTileRenderLayer(value);
+}
+
+void MapEditorWidget::placeTile(int x, int y) {
+	if (!d->currentChunk) {
+		return;
+	}
+
+	const auto chunkSize = d->currentChunk->chunkSize();
+	const auto ids = d->tilesSelectorService->getSelectionTiles();
 
 	if (ids.isEmpty()) {
 		return;
 	}
 
-	const int tilesetWidth = chunkSizes.width();
-	const int tilesetHeight = chunkSizes.height();
+	const int tilesetWidth = chunkSize.width();
+	const int tilesetHeight = chunkSize.height();
 	const int baseId = ids.first();
 	const int startX = x;
 	const int startZ = y;
@@ -319,61 +341,147 @@ void MapEditorWidget::placeTile(int x, int y) {
 		const int worldX = startX + offsetX;
 		const int worldZ = startZ + offsetZ;
 
-		auto chunk = renderer->getOrCreateChunk(worldX, worldZ);
-		if (!chunk) {
-			return;
-		}
-
-		chunk->setTile(worldX, worldZ, tileId);
+		d->currentChunk->setTile(worldX, worldZ, tileId, d->tileRenderLayer);
 	}
 
-  emit tilesPlaced(x, y, d->selectedTileIds);
-	updatePropertiesPanel();
+  emit tilesPlaced(x, y, ids);
   update();
 }
 
 void MapEditorWidget::eraseTile(int x, int y) {
-  // TODO: Реализовать стирание тайла через MapService
-  qDebug() << "Erasing tile at" << x << y;
+	if (!d->currentChunk) {
+		return;
+	}
+
+	d->currentChunk->setTile(x, y, -1, d->tileRenderLayer);
+
   emit tileErased(x, y);
   update();
 }
 
-void MapEditorWidget::updatePropertiesPanel() {
-  if (d->hoveredTile.has_value()) {
-		d->positionLabel->setText(QString("%1, %2").arg(d->hoveredTile->x()).arg(d->hoveredTile->y()));
-  }
-  else {
-		d->positionLabel->setText("-");
-  }
+void MapEditorWidget::selectTile(int x, int y) {
+	const auto renderer = tileRenderer();
+	if (!renderer) {
+		return;
+	}
 
-  if (d->selectedTileIds.count() >= 0) {
-		d->tileIdLabel->setText(QString::number(d->selectedTileIds.count()));
-  }
-  else {
-		d->tileIdLabel->setText("Не выбран");
-  }
+	const auto chunk = renderer->getOrCreateChunk(x, y);
+	if (!chunk || d->currentChunk == chunk) {
+		return;
+	}
 
-	const auto currentAtlas = d->tilesService ? d->tilesService->getTileSetName() : QString("Не выбран");
-	d->currentAtlasLabel->setText(currentAtlas);
+	if (d->currentChunk) {
+		d->currentChunk->setBorderColor(Private::unselectedBorderColor);
+		d->currentChunk->setZLevel(0.0f);
+	}
 
-  const auto currentMap = d->mapService ? d->mapService->getCurrentMap() : std::nullopt;
-  d->currentMapLabel->setText(currentMap.value_or("Не выбрана"));
-}
-
-void MapEditorWidget::onTileServiceConnected() {
-  auto service = tilesService();
-  connect(service, &TilesService::tilesSelectionChanged, this, &MapEditorWidget::onTileSelected);
-}
-
-void MapEditorWidget::onApplySelectedAtlas() {
-	d->needLoadAtlas = true;
+	d->currentChunk = chunk;
+	d->currentChunk->setBorderColor(Private::selectedBorderColor);
+	d->currentChunk->setZLevel(2.0f);
+	setZLevel(2.0f);
 	update();
 }
 
-void MapEditorWidget::onBeginFrame() {
-	if (d->needLoadAtlas) {
-		d->needLoadAtlas = false;
-		loadTilemap();
+void MapEditorWidget::onApplySelectedAtlas() {
+	ApplyMapAtlasDialog dlg(d->tilesetSettings, this);
+	if (dlg.exec() == QDialog::Accepted) {
+		d->tilesetSettings = dlg.settings();
+		d->needLoadAtlas = true;
+		update();
 	}
+}
+
+void MapEditorWidget::onBeginFrame() {
+	if (!d->needLoadAtlas) {
+		return;
+	}
+
+	d->needLoadAtlas = false;
+
+	if (!d->currentChunk) {
+		return;
+	}
+
+	if (!d->currentMapMetadata.has_value() || !d->tilesetSettings.has_value() || !d->currentMapName.has_value() || !d->currentChunk) {
+		return;
+	}
+
+	const auto tileName = d->tilesSelectorService->getTileSetName();
+	if (tileName.isEmpty() ) {
+		return;
+	}
+
+	auto texture = d->textureService->upload(QString("%1.png").arg(tileName),
+		d->tilesetSettings.value(), ImageType::TileSets,
+		d->currentMapName.value());
+
+	auto atlas = std::make_shared<TextureAtlas>();
+
+	atlas->load(texture,
+		d->currentMapMetadata->chunkSize.width(),
+		d->currentMapMetadata->chunkSize.height());
+
+	d->currentChunk->setTileset(atlas);
+
+	updatePropertiesPanel();
+}
+
+void MapEditorWidget::setTileRenderLayer(int layer) {
+	if (layer >= TileRenderer::kMaxTileRenderLayer || layer < 0) {
+		qWarning() << "MapViewBase::setTileRenderLayer:" << layer << ">=" << TileRenderer::kMaxTileRenderLayer << "or < 0";
+		return;
+	}
+
+	d->tileRenderLayer = layer;
+}
+
+int MapEditorWidget::tileRenderLayer() const {
+	return d->tileRenderLayer;
+}
+
+void MapEditorWidget::setupPropertiesPanel() {
+	d->propertiesGroup = new QGroupBox("Свойства");
+	auto* layout = new QFormLayout(d->propertiesGroup);
+
+	d->positionLabel = new QLabel("-");
+	layout->addRow("Позиция:", d->positionLabel);
+
+	d->tileIdLabel = new QLabel("-");
+	layout->addRow("Выбрано тайлов:", d->tileIdLabel);
+
+	d->currentMapLabel = new QLabel("-");
+	layout->addRow("Текущая карта:", d->currentMapLabel);
+
+	d->currentAtlasLabel = new QLabel("-");
+	layout->addRow("Атлас:", d->currentAtlasLabel);
+}
+
+void MapEditorWidget::updatePropertiesPanel() {
+	const auto tilesetSelected = d->currentChunk && d->currentChunk->hasTileset();
+
+	if (d->hoveredTile.has_value()) {
+		d->positionLabel->setText(QString("%1, %2")
+			.arg(d->hoveredTile->x())
+			.arg(d->hoveredTile->y()));
+	}
+	else {
+		d->positionLabel->setText("-");
+	}
+
+	const auto ids = d->tilesSelectorService->getSelectionTiles();
+	d->tileIdLabel->setText(QString::number(ids.count()));
+
+	const auto currentAtlas = d->tilesSelectorService ?
+		d->tilesSelectorService->getTileSetName() :
+		QString("Не выбран");
+
+	if (tilesetSelected) {
+		d->currentAtlasLabel->setText(currentAtlas);
+	}
+	else {
+		d->currentAtlasLabel->setText("Не выбран");
+	}
+
+	const auto currentMap = d->mapService ? d->mapService->getCurrentMap() : std::nullopt;
+	d->currentMapLabel->setText(currentMap.value_or("Не выбрана"));
 }

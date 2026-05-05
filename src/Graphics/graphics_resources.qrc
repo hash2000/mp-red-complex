@@ -1,7 +1,0 @@
-<!DOCTYPE RCC>
-<RCC version="1.0">
-    <qresource prefix="/">
-        <file>shaders/tile.vert</file>
-        <file>shaders/tile.frag</file>
-    </qresource>
-</RCC>

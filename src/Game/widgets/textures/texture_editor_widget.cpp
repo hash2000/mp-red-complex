@@ -1,11 +1,11 @@
 #include "Game/widgets/textures/texture_editor_widget.h"
 #include "Game/widgets/textures/zoomable_image_view.h"
 #include "Game/widgets/textures/texture_toolbar.h"
-#include "Game/widgets/textures/tile_set_params_panel.h"
+#include "Game/widgets/textures/tile_set_params_dialog.h"
 #include "Game/widgets/textures/tile_groups_dialog.h"
-#include "ApplicationLayer/textures/textures_service.h"
-#include "ApplicationLayer/textures/tiles_service.h"
-#include "DataLayer/textures/i_textures_data_provider.h"
+#include "ApplicationLayer/textures/images_service.h"
+#include "ApplicationLayer/textures/tiles_selector_service.h"
+#include "DataLayer/images/i_images_data_provider.h"
 #include <QSplitter>
 #include <QListWidget>
 #include <QListWidgetItem>
@@ -24,18 +24,18 @@ public:
 	Private(TextureEditorWidget* parent) : q(parent) {}
 	TextureEditorWidget* q;
 
-	TexturesService* texturesService = nullptr;
-	TilesService* tilesService = nullptr;
+	ImagesService* ImagesService = nullptr;
+	TilesSelectorService* tilesSelectorService = nullptr;
 
 	// Компоненты UI
 	QSplitter* splitter = nullptr;
 	ZoomableImageView* previewLabel = nullptr;
-	QComboBox* textureTypeCombo = nullptr;
+	QComboBox* ImageTypeCombo = nullptr;
 	TextureToolbar* textureToolbar = nullptr;
 	QListWidget* textureList = nullptr;
 
 	// Диалог настроек тайлов
-	TileSetParamsPanel* tileSetDialog = nullptr;
+	TileSetParamsDialog* tileSetDialog = nullptr;
 
 	// Диалог групп тайлов
 	TileGroupsDialog* tileGroupsDialog = nullptr;
@@ -51,30 +51,30 @@ public:
 	static constexpr int kPageSize = 50;
 	int currentPage = 0;
 	QStringList allTextures;
-	TextureType currentType = TextureType::TileSets;
+	ImageType currentType = ImageType::TileSets;
 	QString currentTexturePath;  // Текущая выбранная текстура
 };
 
 TextureEditorWidget::TextureEditorWidget(
-	TexturesService* texturesService,
-	TilesService* tilesService,
+	ImagesService* ImagesService,
+	TilesSelectorService* tilesSelectorService,
 	QWidget* parent)
 	: QWidget(parent)
 	, d(std::make_unique<Private>(this)) {
-	d->texturesService = texturesService;
-	d->tilesService = tilesService;
+	d->ImagesService = ImagesService;
+	d->tilesSelectorService = tilesSelectorService;
 
 	setObjectName("TextureEditorWidget");
 	setupLayout();
 
 	// Загружаем первый тип текстур
-	d->currentType = TextureType::Icon;
-	const int iconIndex = d->textureTypeCombo->findData(static_cast<int>(TextureType::Icon));
+	d->currentType = ImageType::Icon;
+	const int iconIndex = d->ImageTypeCombo->findData(static_cast<int>(ImageType::Icon));
 	if (iconIndex >= 0) {
-		d->textureTypeCombo->setCurrentIndex(iconIndex);
+		d->ImageTypeCombo->setCurrentIndex(iconIndex);
 	}
 	updateTextureList();
-	d->textureToolbar->setTextureType(d->currentType);
+	d->textureToolbar->setImageType(d->currentType);
 }
 
 TextureEditorWidget::~TextureEditorWidget() = default;
@@ -114,35 +114,35 @@ void TextureEditorWidget::setupLayout() {
 	typeLabel->setStyleSheet("color: #a0aec0; font-size: 11px; padding: 2px 0;");
 	rightLayout->addWidget(typeLabel);
 
-	d->textureTypeCombo = new QComboBox(rightWidget);
-	d->textureTypeCombo->setObjectName("TextureTypeCombo");
-	d->textureTypeCombo->addItem("Иконки", static_cast<int>(TextureType::Icon));
-	d->textureTypeCombo->addItem("Сущности", static_cast<int>(TextureType::Entity));
-	d->textureTypeCombo->addItem("Предметы", static_cast<int>(TextureType::Item));
-	d->textureTypeCombo->addItem("Персонажи", static_cast<int>(TextureType::Character));
-	d->textureTypeCombo->addItem("Экипировка", static_cast<int>(TextureType::Equipment));
-	d->textureTypeCombo->addItem("Пользователи", static_cast<int>(TextureType::Users));
-	d->textureTypeCombo->addItem("Тайлы", static_cast<int>(TextureType::TileSets));
+	d->ImageTypeCombo = new QComboBox(rightWidget);
+	d->ImageTypeCombo->setObjectName("ImageTypeCombo");
+	d->ImageTypeCombo->addItem("Иконки", static_cast<int>(ImageType::Icon));
+	d->ImageTypeCombo->addItem("Сущности", static_cast<int>(ImageType::Entity));
+	d->ImageTypeCombo->addItem("Предметы", static_cast<int>(ImageType::Item));
+	d->ImageTypeCombo->addItem("Персонажи", static_cast<int>(ImageType::Character));
+	d->ImageTypeCombo->addItem("Экипировка", static_cast<int>(ImageType::Equipment));
+	d->ImageTypeCombo->addItem("Пользователи", static_cast<int>(ImageType::Users));
+	d->ImageTypeCombo->addItem("Тайлы", static_cast<int>(ImageType::TileSets));
 
-	d->textureTypeCombo->setStyleSheet(R"(
-		#TextureTypeCombo {
+	d->ImageTypeCombo->setStyleSheet(R"(
+		#ImageTypeCombo {
 			background-color: #2d3748;
 			color: #e2e8f0;
 			border: 1px solid #4a5568;
 			border-radius: 4px;
 			padding: 4px;
 		}
-		#TextureTypeCombo::drop-down {
+		#ImageTypeCombo::drop-down {
 			border: none;
 		}
-		#TextureTypeCombo QAbstractItemView {
+		#ImageTypeCombo QAbstractItemView {
 			background-color: #2d3748;
 			color: #e2e8f0;
 			selection-background-color: #4a5568;
 		}
 	)");
 
-	rightLayout->addWidget(d->textureTypeCombo);
+	rightLayout->addWidget(d->ImageTypeCombo);
 
 	// Горизонтальный контейнер: панель инструментов + список текстур
 	auto* contentLayout = new QHBoxLayout();
@@ -200,8 +200,8 @@ void TextureEditorWidget::setupLayout() {
 	d->splitter->setStretchFactor(1, 1);
 
 	// Сигналы
-	connect(d->textureTypeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-	        this, &TextureEditorWidget::onTextureTypeChanged);
+	connect(d->ImageTypeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+	        this, &TextureEditorWidget::onImageTypeChanged);
 	connect(d->textureList, &QListWidget::itemClicked,
 	        this, [this](QListWidgetItem* item) {
 		onTextureItemSelected(item);
@@ -210,7 +210,7 @@ void TextureEditorWidget::setupLayout() {
 	        this, [this](int value) {
 		// Ленивая загрузка при прокрутке
 		if (value >= d->textureList->verticalScrollBar()->maximum() - 5) {
-			loadTexturesPage();
+			loadsPage();
 		}
 	});
 	connect(d->textureToolbar, &TextureToolbar::tileSetSettingsRequested,
@@ -223,16 +223,16 @@ void TextureEditorWidget::setupLayout() {
 	        this, &TextureEditorWidget::onUngroupTilesRequested);
 	connect(d->previewLabel, &ZoomableImageView::tileClicked,
 	        this, &TextureEditorWidget::onTileClicked);
-	connect(d->tilesService, &TilesService::groupsChanged,
+	connect(d->tilesSelectorService, &TilesSelectorService::groupsChanged,
 	        this, &TextureEditorWidget::onGroupsChanged);
 }
-void TextureEditorWidget::onTextureTypeChanged(int index) {
-	d->currentType = static_cast<TextureType>(d->textureTypeCombo->itemData(index).toInt());
+void TextureEditorWidget::onImageTypeChanged(int index) {
+	d->currentType = static_cast<ImageType>(d->ImageTypeCombo->itemData(index).toInt());
 	d->currentPage = 0;
 	d->allTextures.clear();
 	d->textureList->clear();
 	updateTextureList();
-	d->textureToolbar->setTextureType(d->currentType);
+	d->textureToolbar->setImageType(d->currentType);
 }
 
 void TextureEditorWidget::onTextureItemSelected(QListWidgetItem* current) {
@@ -244,13 +244,13 @@ void TextureEditorWidget::onTextureItemSelected(QListWidgetItem* current) {
 }
 
 void TextureEditorWidget::updateTextureList() {
-	d->allTextures = d->texturesService->listTextures(d->currentType);
+	d->allTextures = d->ImagesService->listImages(d->currentType);
 	d->currentPage = 0;
 	d->textureList->clear();
-	loadTexturesPage();
+	loadsPage();
 }
 
-void TextureEditorWidget::loadTexturesPage() {
+void TextureEditorWidget::loadsPage() {
 	const int startIdx = d->currentPage * Private::kPageSize;
 	if (startIdx >= d->allTextures.size()) {
 		return; // Все данные уже загружены
@@ -270,7 +270,7 @@ void TextureEditorWidget::loadTexturesPage() {
 
 void TextureEditorWidget::updatePreview(const QString& fileName) {
 	d->currentTexturePath = fileName;  // Сохраняем путь для группировки
-	const auto pixmap = d->texturesService->getTexture(fileName, d->currentType);
+	const auto pixmap = d->ImagesService->getImage(fileName, d->currentType);
 	if (!pixmap.isNull()) {
 		d->previewLabel->setPixmap(pixmap);
 	} else {
@@ -278,8 +278,8 @@ void TextureEditorWidget::updatePreview(const QString& fileName) {
 	}
 
 	// Для тайловых наборов загружаем метаданные сетки из файла
-	if (d->currentType == TextureType::TileSets) {
-		const auto metadata = d->tilesService->getTileSetMetadata(fileName);
+	if (d->currentType == ImageType::TileSets) {
+		const auto metadata = d->tilesSelectorService->getTileSetMetadata(fileName);
 		if (metadata.has_value()) {
 			d->tileGridSizeX = metadata->gridSize.x;
 			d->tileGridSizeY = metadata->gridSize.y;
@@ -293,7 +293,7 @@ void TextureEditorWidget::updatePreview(const QString& fileName) {
 }
 
 void TextureEditorWidget::onTileSetSettingsRequested() {
-	if (d->currentType != TextureType::TileSets) {
+	if (d->currentType != ImageType::TileSets) {
 		return;
 	}
 
@@ -303,31 +303,34 @@ void TextureEditorWidget::onTileSetSettingsRequested() {
 		d->tileSetDialog = nullptr;
 	}
 
-	d->tileSetDialog = new TileSetParamsPanel(d->tileGridSizeX, d->tileGridSizeY, this);
+	d->tileSetDialog = new TileSetParamsDialog(d->tileGridSizeX, d->tileGridSizeY, this);
 	d->tileSetDialog->setResult(QDialog::Rejected);
 
 	// Подключаем сигнал
-	connect(d->tileSetDialog, &TileSetParamsPanel::settingsApplied,
+	connect(d->tileSetDialog, &TileSetParamsDialog::settingsApplied,
 	        this, &TextureEditorWidget::onTileSetSettingsApplied);
 
 	d->tileSetDialog->exec();
 }
 
 void TextureEditorWidget::onTileSetSettingsApplied(int gridSizeX, int gridSizeY, bool showGrid) {
+	if (d->tileGridSizeX != gridSizeX || d->tileGridSizeY != gridSizeY) {
+		d->selectedTileIds.clear();
+		d->previewLabel->setSelectedTileIds({});
+		d->textureToolbar->setSelectedTiles({});
+	}
+
 	d->tileGridSizeX = gridSizeX;
 	d->tileGridSizeY = gridSizeY;
 	d->showTileGrid = showGrid;
-	d->selectedTileIds.clear();
 
 	// Обновляем превью
 	d->previewLabel->setGridEnabled(showGrid);
 	d->previewLabel->setGridSize(gridSizeX, gridSizeY);
-	d->previewLabel->setSelectedTileIds({});
-	d->textureToolbar->setSelectedTiles({});
 }
 
 void TextureEditorWidget::onTileGroupsRequested() {
-	if (d->currentType != TextureType::TileSets || d->currentTexturePath.isEmpty()) {
+	if (d->currentType != ImageType::TileSets || d->currentTexturePath.isEmpty()) {
 		return;
 	}
 
@@ -337,7 +340,7 @@ void TextureEditorWidget::onTileGroupsRequested() {
 		d->tileGroupsDialog = nullptr;
 	}
 
-	d->tileGroupsDialog = new TileGroupsDialog(d->tilesService, d->currentTexturePath, this);
+	d->tileGroupsDialog = new TileGroupsDialog(d->tilesSelectorService, d->currentTexturePath, this);
 	d->tileGroupsDialog->setResult(QDialog::Rejected);
 
 	// Выполняем диалог
@@ -354,9 +357,18 @@ void TextureEditorWidget::onTileGroupsRequested() {
 }
 
 void TextureEditorWidget::onTileClicked(int tileId, bool ctrlModifier) {
-	if (d->currentType == TextureType::TileSets) {
+	if (d->currentType != ImageType::TileSets) {
+		return;
+	}
+
+	if (d->selectedTileIds.contains(tileId)) {
+		if (ctrlModifier) {
+			d->selectedTileIds.removeAll(tileId);
+		}
+	}
+	else {
 		// Без Ctrl — проверяем, принадлежит ли тайл к группе
-		const auto groupOpt = d->tilesService->getGroupContainingTile(d->currentTexturePath, tileId);
+		const auto groupOpt = d->tilesSelectorService->getGroupContainingTile(d->currentTexturePath, tileId);
 		if (groupOpt.has_value()) {
 			// Тайл в группе — выделяем всю группу
 			if (ctrlModifier) {
@@ -367,7 +379,8 @@ void TextureEditorWidget::onTileClicked(int tileId, bool ctrlModifier) {
 			}
 
 			d->selectedGroupId = groupOpt->id;
-		} else {
+		}
+		else {
 			// Тайл не в группе — выделяем только его
 			if (!ctrlModifier) {
 				d->selectedTileIds.clear();
@@ -376,11 +389,11 @@ void TextureEditorWidget::onTileClicked(int tileId, bool ctrlModifier) {
 			d->selectedTileIds.append(tileId);
 			d->selectedGroupId = QUuid();
 		}
-
-		d->tilesService->setSelectionTiles(d->selectedTileIds);
-		d->previewLabel->setSelectedTileIds(d->selectedTileIds);
-		d->textureToolbar->setSelectedTiles(d->selectedTileIds);
 	}
+
+	d->tilesSelectorService->setSelectionTiles(d->selectedTileIds);
+	d->previewLabel->setSelectedTileIds(d->selectedTileIds);
+	d->textureToolbar->setSelectedTiles(d->selectedTileIds);
 
 	// Отправляем сигнал с последним выбранным тайлом
 	if (!d->selectedTileIds.isEmpty()) {
@@ -410,7 +423,7 @@ void TextureEditorWidget::onGroupTilesRequested() {
 
 	// Создаем группу с именем по умолчанию
 	const QString groupName = QString("Группа %1").arg(d->selectedTileIds.size());
-	const QUuid groupId = d->tilesService->createGroup(d->currentTexturePath, groupName, d->selectedTileIds);
+	const QUuid groupId = d->tilesSelectorService->createGroup(d->currentTexturePath, groupName, d->selectedTileIds);
 
 	if (!groupId.isNull()) {
 		// Очищаем выделение после успешного создания группы
@@ -425,7 +438,7 @@ void TextureEditorWidget::onUngroupTilesRequested() {
 		return;
 	}
 
-	d->tilesService->deleteGroup(d->selectedGroupId);
+	d->tilesSelectorService->deleteGroup(d->selectedGroupId);
 	d->selectedGroupId = QUuid();
 }
 
@@ -434,7 +447,7 @@ void TextureEditorWidget::onGroupsChanged(const QString& texturePath) {
 		return;
 	}
 
-	const auto groups = d->tilesService->getGroups(texturePath);
+	const auto groups = d->tilesSelectorService->getGroups(texturePath);
 
 	d->previewLabel->setSelectedTileIds(d->selectedTileIds);
 	d->textureToolbar->setSelectedTiles(d->selectedTileIds);

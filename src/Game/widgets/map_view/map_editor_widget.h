@@ -11,58 +11,64 @@ class QSpinBox;
 class QGroupBox;
 class QPushButton;
 class MapService;
-class TilesService;
+class TilesSelectorService;
+class TexturesService;
+
 
 // Режимы редактирования карты
 enum class MapEditorMode {
-    Draw,       // Рисование тайлами
-    Erase,      // Стирание
-    Select,     // Выделение области
-    Properties  // Редактирование свойств тайлов
+  Draw,       // Рисование тайлами
+  Erase,      // Стирание
+  Select,     // Выделение области
+  Properties  // Редактирование свойств тайлов
 };
 
 class MapEditorWidget : public MapViewBase {
-    Q_OBJECT
+  Q_OBJECT
 public:
-    explicit MapEditorWidget(
-        MapService* mapService,
-        TilesService* tilesService,
-        QWidget* parent = nullptr);
-    ~MapEditorWidget() override;
+  explicit MapEditorWidget(
+		TexturesService* textureService,
+		MapService* mapService,
+		TilesSelectorService* tilesSelectorService,
+		QWidget* parent = nullptr);
 
-    // Получить текущий режим
-    MapEditorMode currentMode() const;
+  ~MapEditorWidget() override;
 
-    // Установить режим
-    void setMode(MapEditorMode mode);
+  // Получить текущий режим
+  MapEditorMode currentMode() const;
+
+  // Установить режим
+  void setMode(MapEditorMode mode);
 
 signals:
-    void modeChanged(MapEditorMode mode);
-    void tilesPlaced(int x, int y, const QList<int>& tileIds);
-    void tileErased(int x, int y);
-    void areaSelected(QRect area);
+  void modeChanged(MapEditorMode mode);
+  void tilesPlaced(int x, int y, const QList<int>& tileIds);
+  void tileErased(int x, int y);
+  void areaSelected(QRect area);
 
 private slots:
-    void onModeChanged(int index);
-    void onTileSelected(const QList<int>& tileIds);
-    void onMapChanged(const QString& mapName);
-		void onApplySelectedAtlas();
-		void onBeginFrame();
-
-protected:
-    // Переопределяем обработку кликов
-    void onTileClicked(std::optional<QPoint> point) override;
-    void onTileHovered(std::optional<QPoint> point) override;
-		void onTileServiceConnected() override;
+  void onModeChanged(int index);
+  void onMapChanged(const QString& mapName);
+  void onApplySelectedAtlas();
+  void onBeginFrame();
+  void onTileClicked(std::optional<QPoint> point);
+  void onTileHovered(std::optional<QPoint> point);
+	void onRenderLevelEditChanged(const QString& text);
+	void onShowSelectedLayerOnly(bool checked);
 
 private:
-    void setupUI();
-    void setupToolbar();
-    void setupPropertiesPanel();
-    void placeTile(int x, int y);
-    void eraseTile(int x, int y);
-    void updatePropertiesPanel();
+  void setupUI();
+  void setupToolbar();
+  void setupPropertiesPanel();
+  void placeTile(int x, int y);
+  void eraseTile(int x, int y);
+  void updatePropertiesPanel();
+  void selectTile(int x, int y);
 
-    class Private;
-    std::unique_ptr<Private> d;
+	void setTileRenderLayer(int value);
+	int tileRenderLayer() const;
+
+
+  class Private;
+  std::unique_ptr<Private> d;
 };

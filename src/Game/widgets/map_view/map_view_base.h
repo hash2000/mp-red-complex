@@ -6,8 +6,7 @@
 
 class TileRenderer;
 class TextureAtlas;
-class Tileset;
-class TilesService;
+class TilesSelectorService;
 class MapService;
 class Camera;
 
@@ -18,15 +17,8 @@ public:
 	explicit MapViewBase(QWidget* parent = nullptr);
 	~MapViewBase() override;
 
-	// Установка сервисов
-	void setTilesService(TilesService* tilesService);
-	void setMapService(MapService* mapService);
-
 	// Управление камерой
 	void resetCamera();
-
-	// Загрузить тайловую карту
-	virtual void loadTilemap();
 
 signals:
 	void initializeContext();
@@ -46,29 +38,17 @@ protected:
 	void mouseReleaseEvent(QMouseEvent* event) override;
 	void wheelEvent(QWheelEvent* event) override;
 
-	// Виртуальные методы для переопределения в наследниках
-	virtual void onTileClicked(std::optional<QPoint> point);
-	virtual void onTileServiceConnected();
-	virtual void onTileHovered(std::optional<QPoint> point);
-	virtual void onMapServiceConnected();
-	virtual void onRightMouseDrag(QPoint delta);
-	virtual void onZoom(float zoomFactor);
-
 	// Инициализация тайловой системы
-	virtual void initializeTileSystem();
+	void initializeTileSystem();
 
-	// Доступ к внутренним компонентам
 	TileRenderer* tileRenderer() const;
-	TextureAtlas* textureAtlas() const;
-	Tileset* tileset() const;
-	TilesService* tilesService() const;
-	MapService* mapService() const;
 
 	// Камера
 	Camera& camera();
 	const Camera& camera() const;
-	const Camera& cameraDefault() const;
 	void setDefaultCamera();
+
+	void setZLevel(float value);
 
 private:
 	void setupViewport();

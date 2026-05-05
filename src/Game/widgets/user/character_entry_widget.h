@@ -6,7 +6,7 @@ class UsersService;
 class CharacterItemHandler;
 class QLabel;
 class QPushButton;
-class TexturesService;
+class ImagesService;
 
 /// Виджет одной записи персонажа в списке
 class CharacterEntryWidget : public QWidget {
@@ -14,7 +14,7 @@ class CharacterEntryWidget : public QWidget {
 public:
 	explicit CharacterEntryWidget(
 		UsersService* usersService,
-		TexturesService* texturesService,
+		ImagesService* ImagesService,
 		const QUuid& characterId,
 		QWidget* parent = nullptr);
 	~CharacterEntryWidget() override;

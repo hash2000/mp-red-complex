@@ -10,13 +10,14 @@ class ItemsService;
 class InventoryLoader;
 class IInventoryRepository;
 class IUsersDataProvider;
-class ITexturesDataProvider;
+class IImagesDataProvider;
 class ITileGroupsDataProvider;
 class UsersService;
-class TexturesService;
-class TilesService;
+class ImagesService;
+class TilesSelectorService;
 class MapService;
 class IMapDataProvider;
+class TexturesService;
 
 class Services: public QObject {
 	Q_OBJECT
@@ -29,11 +30,11 @@ public:
 	ItemsService* itemsService() const;
 	InventoriesService* inventoriesService() const;
 	InventoryLoader* inventoryLoader() const;
-	IInventoryRepository* inventoryRepository() const;
 	UsersService* usersService() const;
-	TexturesService* texturesService() const;
-	TilesService* tilesService() const;
+	ImagesService* imagesService() const;
+	TilesSelectorService* tilesSelectorService() const;
 	MapService* mapService() const;
+	TexturesService* texturesService() const;
 
 	void run();
 

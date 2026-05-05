@@ -13,19 +13,19 @@ public:
 
 	UserWindow* q;
 	UsersService* usersService = nullptr;
-	TexturesService* texturesService = nullptr;
+	ImagesService* ImagesService = nullptr;
 	UserWidget* userWidget = nullptr;
 	ApplicationController* controller = nullptr;
 };
 
-UserWindow::UserWindow(UsersService* usersService, TexturesService* texturesService, const QString& id, QWidget* parent)
+UserWindow::UserWindow(UsersService* usersService, ImagesService* ImagesService, const QString& id, QWidget* parent)
 	: d(std::make_unique<Private>(this))
 	, MdiChildWindow(id, parent) {
 	d->usersService = usersService;
-	d->texturesService = texturesService;
+	d->ImagesService = ImagesService;
 
 	// Создаём основной виджет
-	d->userWidget = new UserWidget(usersService, texturesService, this);
+	d->userWidget = new UserWidget(usersService, ImagesService, this);
 
 	// Подключаем сигналы
 	connect(d->userWidget, &UserWidget::equipmentRequested,

@@ -5,15 +5,15 @@
 #include <memory>
 #include <optional>
 
-class TilesService;
-class TexturesService;
+class TilesSelectorService;
+class ImagesService;
 
 class MapService : public QObject {
     Q_OBJECT
 public:
     explicit MapService(
-        TilesService* tilesService,
-        TexturesService* texturesService,
+        TilesSelectorService* tilesSelectorService,
+        ImagesService* ImagesService,
         IMapDataProvider* mapDataProvider,
         QObject* parent = nullptr);
     ~MapService() override;
@@ -35,9 +35,6 @@ public:
 
     // Получить список всех доступных карт
     QList<QString> getAvailableMaps() const;
-
-    // Получить QPixmap тайловой карты через TilesService
-    std::optional<QPixmap> getTilemapPixmap(const QString& mapName) const;
 
     // Установить текущую активную карту
     void setCurrentMap(const QString& mapName);

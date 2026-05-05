@@ -6,10 +6,12 @@
 
 class Camera;
 class QOpenGLShaderProgram;
-class Tileset;
 
 /// Рендерер тайлов - управляет чанками и их отрисовкой
 class TileRenderer : protected QOpenGLFunctions_3_3_Core {
+public:
+	static constexpr int kMaxTileRenderLayer = 3;
+
 public:
 	/// Битовые флаги для отладочных проходов рендеринга
 	enum class DebugRenderPass : int {
@@ -28,11 +30,10 @@ public:
 	/// Инициализация (вызвать после создания OpenGL контекста)
 	bool initialize();
 
-	/// Установить тайлсет
-	void setTileset(Tileset* tileset);
-
 	/// Получить или создать чанк по координатам
 	Chunk* getOrCreateChunk(int chunkX, int chunkZ);
+
+	Chunk* getChunk(int chunkX, int chunkZ);
 
 	/// Удалить чанк
 	void removeChunk(int chunkX, int chunkZ);
@@ -46,10 +47,6 @@ public:
 	/// Отрисовка всех видимых чанков
 	void render(const Camera& camera, int viewportWidth, int viewportHeight);
 
-	/// Уровень высоты (Y), на котором рисуются тайлы
-	float zLevel() const;
-	void setZLevel(float level);
-
 	/// Размер чанка
 	void setChunkSize(const QSize& chunkSize);
 
@@ -57,6 +54,9 @@ public:
 
 	/// Количество загруженных чанков
 	size_t chunkCount() const;
+
+	void showOnlyOneLayer(int layer);
+	void showAllLayers();
 
 	/// Управление отладочными проходами рендеринга
 	void setDebugRenderPasses(DebugRenderPassFlags passes);
@@ -67,6 +67,7 @@ private:
 	/// Проверка видимости чанка во frustum камеры
 	bool isChunkVisible(const Chunk* chunk, const Camera& camera, int viewportWidth, int viewportHeight) const;
 
+	void renderTileSet(const Camera& camera, int viewportWidth, int viewportHeight);
 	void renderDebugPasses(const Camera& camera, int viewportWidth, int viewportHeight);
 
 	class Private;

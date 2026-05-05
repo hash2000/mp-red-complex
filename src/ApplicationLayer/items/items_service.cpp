@@ -1,18 +1,14 @@
 #include "ApplicationLayer/items/items_service.h"
 #include "ApplicationLayer/items/i_item_repository.h"
-#include "ApplicationLayer/textures/textures_service.h"
-#include "DataLayer/textures/i_textures_data_provider.h"
-#include <QString>
-#include <QUuid>
+#include "ApplicationLayer/textures/images_service.h"
+#include "DataLayer/images/i_images_data_provider.h"
 #include <QDebug>
 #include <map>
 
 class ItemsService::Private {
 public:
-	Private(ItemsService* parent, std::shared_ptr<IItemRepository> repository, TexturesService* texturesService)
-		: q(parent)
-		, itemRepository(repository)
-		, texturesService(texturesService) {
+	Private(ItemsService* parent)
+		: q(parent) {
 	}
 
 	const ItemEntity* entityById(const QString& id) const {
@@ -90,18 +86,20 @@ public:
 	}
 
 	ItemsService* q;
-	std::shared_ptr<IItemRepository> itemRepository;
-	TexturesService* texturesService = nullptr;
+	IItemRepository* itemRepository;
+	ImagesService* imagesService;
 	std::map<QString, std::unique_ptr<ItemEntity>> itemEntities;
 	std::map<QUuid, std::unique_ptr<Item>> items;
 };
 
 ItemsService::ItemsService(
-	std::shared_ptr<IItemRepository> repository,
-	TexturesService* texturesService,
+	IItemRepository* itemRepository,
+	ImagesService* imagesService,
 	QObject* parent)
-	: d(std::make_unique<Private>(this, repository, texturesService))
+	: d(std::make_unique<Private>(this))
 	, QObject(parent) {
+	d->itemRepository = itemRepository;
+	d->imagesService = imagesService;
 }
 
 ItemsService::~ItemsService() = default;
@@ -114,9 +112,9 @@ void ItemsService::loadEntities() {
 	for (const auto& entityId : entityIds) {
 		auto entity = d->itemRepository->findEntityById(entityId);
 		if (entity) {
-			// Загружаем иконку сущности через TexturesService
-			if (!entity->iconPath.isEmpty() && d->texturesService) {
-				entity->icon = d->texturesService->getTexture(entity->iconPath, TextureType::Item);
+			// Загружаем иконку сущности через ImagesService
+			if (!entity->iconPath.isEmpty() && d->imagesService) {
+				entity->icon = d->imagesService->getImage(entity->iconPath, ImageType::Item);
 			}
 
 			d->itemEntities.emplace(entityId, std::move(entity));

@@ -1,95 +1,97 @@
 #include "ApplicationLayer/textures/textures_service.h"
-#include "DataLayer/textures/i_textures_data_provider.h"
-#include <QPixmap>
-#include <QPainter>
+#include "ApplicationLayer/textures/images_service.h"
+#include "Graphics/textures/uploaded_texture.h"
 #include <QHash>
+#include <QDebug>
 
-class TexturesService::Private {
-public:
-	Private(TexturesService* parent)
-		: q(parent) {
-	}
+struct TextureKey {
+	QString path;
+	ImageType type = ImageType::Icon;
+	UploadedTextureProperties properties;
 
-	TexturesService* q;
-	ITexturesDataProvider* dataProvider = nullptr;
-
-	// Тегированный кэш загруженных текстур
-	// Внешний QHash: ключ = тег, значение = внутренний QHash
-	// Внутренний QHash: ключ = путь к текстуре, значение = QPixmap
-	QHash<QString, QHash<QString, QPixmap>> texturesCache;
-
-	QPixmap generateTestPixmap() {
-		QPixmap pixmap(1024, 1024);
-		pixmap.fill(Qt::gray);
-
-		QPainter painter(&pixmap);
-		for (int y = 0; y < 32; y++) {
-			for (int x = 0; x < 32; x++) {
-				QColor color = QColor::fromHsv(((x + y) % 18) * 20, 150, 200);
-				painter.fillRect(x * 32, y * 32, 32, 32, color);
-			}
-		}
-
-		painter.end();
-		return pixmap;
+	bool operator==(const TextureKey& other) const {
+		return path == other.path &&
+			type == other.type &&
+			properties == other.properties;
 	}
 };
 
-TexturesService::TexturesService(
-	ITexturesDataProvider* dataProvider,
-	QObject* parent)
-	: QObject(parent)
-	, d(std::make_unique<Private>(this)) {
-	d->dataProvider = dataProvider;
-	d->texturesCache[kDefaultTextureTag][kTestTexturePath] = d->generateTestPixmap();
+
+inline uint qHash(const TextureKey& key, uint seed = 0) {
+	return
+		qHash(key.path, seed) ^
+		qHash(static_cast<int>(key.type), seed) ^
+		qHash(key.properties, seed);
+}
+
+class TexturesService::Private {
+public:
+	Private(TexturesService* parent) : q(parent) {
+	}
+
+	TexturesService* q;
+	ImagesService* imagesService;
+	QHash<QString, QHash<uint, std::shared_ptr<UploadedTexture>>> texturesCache;
+};
+
+
+TexturesService::TexturesService(ImagesService* imagesService)
+	: d(std::make_unique<Private>(this)) {
+	d->imagesService = imagesService;
 }
 
 TexturesService::~TexturesService() = default;
 
-QPixmap TexturesService::getTexture(const QString& path, TextureType type, const QString& tag) {
+std::shared_ptr<UploadedTexture> TexturesService::upload(
+	const QString& path,
+	const UploadedTextureProperties& properties,
+	ImageType type,
+	const QString& tag) {
+
+	TextureKey key{path, type, properties};
+	auto keyHash = qHash(key);
+
 	// Проверяем кэш по тегу
 	auto tagIt = d->texturesCache.find(tag);
 	if (tagIt != d->texturesCache.end()) {
-		auto pathIt = tagIt->find(path);
-		if (pathIt != tagIt->end()) {
-			return *pathIt;
+		auto textureIt = tagIt->find(keyHash);
+		if (textureIt != tagIt->end()) {
+			qDebug() << "TexturesService: texture found in cache, tag:" << tag << "path:" << path;
+			return *textureIt;
 		}
 	}
 
-	// Загружаем из провайдера
-	auto pixmap = d->dataProvider->loadTexture(path, type);
-	if (pixmap.has_value()) {
-		// Сохраняем в кеш с указанным тегом
-		d->texturesCache[tag].insert(path, *pixmap);
-		return *pixmap;
+	// Загружаем пиксельную карту через ImagesService
+	auto pixmap = d->imagesService->getImage(path, type, tag);
+	if (pixmap.isNull()) {
+		qWarning() << "TexturesService: failed to load image, path:" << path << "type:" << static_cast<int>(type);
+		return std::shared_ptr<UploadedTexture>();
 	}
 
-	// Возвращаем пустой pixmap, если загрузка не удалась
-	return QPixmap();
+	// Создаём текстуру и загружаем в видеопамять
+	auto texture = std::make_shared<UploadedTexture>();
+	if (!texture->loadFromPixmap(pixmap, properties)) {
+		qWarning() << "TexturesService: failed to upload texture to GPU, path:" << path;
+		return std::shared_ptr<UploadedTexture>();
+	}
+
+	// Сохраняем в кэше
+	d->texturesCache[tag][keyHash] = texture;
+	qDebug() << "TexturesService: texture uploaded and cached, tag:" << tag << "path:" << path << "textureId:" << texture->textureId();
+
+	return texture;
 }
 
-void TexturesService::clearCache() {
-	d->texturesCache.clear();
-}
-
-void TexturesService::clearCacheByTag(const QString& tag) {
-	d->texturesCache.remove(tag);
-}
-
-void TexturesService::preloadTexture(const QString& name, TextureType type, const QString& tag) {
-	// Проверяем, есть ли уже в кеше по этому тегу
+void TexturesService::clear(const QString& tag) {
 	auto tagIt = d->texturesCache.find(tag);
-	if (tagIt != d->texturesCache.end() && tagIt->contains(name)) {
-		return; // Уже в кеше
+	if (tagIt == d->texturesCache.end()) {
+		return;
 	}
 
-	// Загружаем и сохраняем в кеш с указанным тегом
-	auto pixmap = d->dataProvider->loadTexture(name, type);
-	if (pixmap.has_value()) {
-		d->texturesCache[tag].insert(name, *pixmap);
+	for (auto it = tagIt->begin(); it != tagIt->end(); it++) {
+		auto& texture = it.value();
+		texture->unload();
 	}
-}
 
-QStringList TexturesService::listTextures(TextureType type) const {
-	return d->dataProvider->listTextures(type);
+	d->texturesCache.erase(tagIt);
 }

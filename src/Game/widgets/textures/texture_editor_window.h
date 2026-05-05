@@ -3,18 +3,18 @@
 #include <QObject>
 #include <memory>
 
-class TexturesService;
-class TilesService;
+class ImagesService;
+class TilesSelectorService;
 class TextureEditorWidget;
-enum class TextureType;
+enum class ImageType;
 
 class TextureEditorWindow : public MdiChildWindow {
 	Q_OBJECT
 
 public:
 	explicit TextureEditorWindow(
-		TexturesService* texturesService,
-		TilesService* tilesService,
+		ImagesService* ImagesService,
+		TilesSelectorService* tilesSelectorService,
 		const QString& id,
 		QWidget* parent = nullptr);
 	~TextureEditorWindow() override;

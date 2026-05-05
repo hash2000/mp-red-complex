@@ -2,56 +2,58 @@
 #include "Game/widgets/map_view/map_editor_widget.h"
 #include "Game/services/time_service/time_service.h"
 #include "ApplicationLayer/maps/map_service.h"
-#include "ApplicationLayer/textures/tiles_service.h"
-#include <QVBoxLayout>
+#include "ApplicationLayer/textures/tiles_selector_service.h"
 #include <memory>
 
 class MapEditorWindow::Private {
 public:
-    Private(MapEditorWindow* parent) : q(parent) {}
-    MapEditorWindow* q;
+  Private(MapEditorWindow* parent) : q(parent) {}
+  MapEditorWindow* q;
 
-    MapService* mapService = nullptr;
-    TilesService* tilesService = nullptr;
-    TimeService* timeService = nullptr;
-    MapEditorWidget* editorWidget = nullptr;
+	TexturesService* textureService = nullptr;
+  MapService* mapService = nullptr;
+  TilesSelectorService* tilesSelectorService = nullptr;
+  TimeService* timeService = nullptr;
+  MapEditorWidget* editorWidget = nullptr;
 };
 
 MapEditorWindow::MapEditorWindow(
-    MapService* mapService,
-    TilesService* tilesService,
-    TimeService* timeService,
-    const QString& id,
-    QWidget* parent)
-    : MdiChildWindow(id, parent)
-    , d(std::make_unique<Private>(this)) {
-    d->mapService = mapService;
-    d->tilesService = tilesService;
-    d->timeService = timeService;
+  TexturesService* textureService,
+  MapService* mapService,
+  TilesSelectorService* tilesSelectorService,
+  TimeService* timeService,
+  const QString& id,
+  QWidget* parent)
+  : MdiChildWindow(id, parent)
+  , d(std::make_unique<Private>(this)) {
+	d->textureService = textureService;
+  d->mapService = mapService;
+  d->tilesSelectorService = tilesSelectorService;
+  d->timeService = timeService;
 
-    // Создаём виджет редактора
-    d->editorWidget = new MapEditorWidget(mapService, tilesService, this);
-    setWidget(d->editorWidget);
+  // Создаём виджет редактора
+  d->editorWidget = new MapEditorWidget(textureService, mapService, tilesSelectorService, this);
+  setWidget(d->editorWidget);
 
-    // Подписываемся на тики для обновления
-    if (d->timeService) {
-        connect(d->timeService, &TimeService::tick,
-                d->editorWidget, QOverload<>::of(&MapEditorWidget::update));
-    }
+  // Подписываемся на тики для обновления
+  if (d->timeService) {
+		connect(d->timeService, &TimeService::tick,
+						d->editorWidget, QOverload<>::of(&MapEditorWidget::update));
+  }
 }
 
 MapEditorWindow::~MapEditorWindow() = default;
 
 MapEditorWidget* MapEditorWindow::widget() const {
-    return d->editorWidget;
+  return d->editorWidget;
 }
 
 bool MapEditorWindow::handleCommand(const QString& commandName,
-                                     const QStringList& args,
-                                     CommandContext* context) {
-    // TODO: Обработка команд для редактора карты
-    Q_UNUSED(commandName);
-    Q_UNUSED(args);
-    Q_UNUSED(context);
-		return true;
+  const QStringList& args,
+  CommandContext* context) {
+  // TODO: Обработка команд для редактора карты
+  Q_UNUSED(commandName);
+  Q_UNUSED(args);
+  Q_UNUSED(context);
+  return true;
 }

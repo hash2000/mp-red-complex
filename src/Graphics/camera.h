@@ -2,13 +2,20 @@
 #include <QVector3D>
 #include <QMatrix4x4>
 #include <QPoint>
+#include <memory>
 
 class Camera {
 public:
 	Camera();
 	Camera(const QVector3D& center, const QVector3D& eye);
+	virtual ~Camera();
+
+	void apply(const QVector3D& center, const QVector3D& eye);
 
 	QMatrix4x4 lookAt(const QVector3D& eye, const QVector3D& center, const QVector3D& up);
+
+	void rotate(float deltaX, float deltaY);
+
 	void update();
 	void setupViewport(int w, int h);
 	void move(const QPoint& delta);
@@ -20,13 +27,12 @@ public:
 	const QMatrix4x4& projection() const;
 	const QMatrix4x4 view() const;
 
-	std::optional<QVector3D> raycastToGround(const QPoint& screenPos, int screenWidth, int screenHeight);
+	std::optional<QVector3D> raycastToGround(const QPoint& screenPos, int screenWidth, int screenHeight, float planeY = 0.0f);
+
+	void setFov(float value);
+	float fov() const;
 
 private:
-	float _moveSpeed = 0.01f;
-	QVector3D _eye = QVector3D(5.0f, 8.0f, 5.0f);
-	QVector3D _center = QVector3D(0.0f, 0.0f, 0.0f);
-	QVector3D _up = QVector3D(0.0f, 1.0f, 0.0f);
-	QMatrix4x4 _projection;
-	QMatrix4x4 _view;
+	class Private;
+	std::unique_ptr<Private> d;
 };

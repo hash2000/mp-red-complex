@@ -16,10 +16,10 @@ public:
 };
 
 
-MapWindow::MapWindow(TilesService* tilesService, WorldService* worldService, TimeService* timeService, const QString& id, QWidget* parent)
+MapWindow::MapWindow(TilesSelectorService* tilesSelectorService, WorldService* worldService, TimeService* timeService, const QString& id, QWidget* parent)
 	: MdiChildWindow(id, parent)
 	, d(std::make_unique<Private>(this)) {
-	d->widget = new MapWidget(tilesService, this);
+	d->widget = new MapWidget(tilesSelectorService, this);
 
 	setWindowTitle("World Map");
 

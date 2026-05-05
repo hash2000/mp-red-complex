@@ -17,11 +17,12 @@ class InventoryLoader : public QObject {
     Q_OBJECT
 public:
     InventoryLoader(
-        std::shared_ptr<IInventoryRepository> inventoryRepository,
-        std::shared_ptr<IEquipmentRepository> equipmentRepository,
-        std::shared_ptr<IItemRepository> itemRepository,
-        ItemsService* itemsService,
-        QObject* parent = nullptr);
+       IInventoryRepository* inventoryRepository,
+       IEquipmentRepository* equipmentRepository,
+       IItemRepository* itemRepository,
+       ItemsService* itemsService,
+       QObject* parent = nullptr);
+
     ~InventoryLoader() override;
 
     /// Загрузить инвентарь/экипировку по идентификатору и вернуть сервис для работы

@@ -1,80 +1,42 @@
 #include "Graphics/textures/texture_atlas.h"
-#include <QImage>
-#include <QOpenGLTexture>
-#include <QOpenGLFunctions>
-#include <QPixmap>
+#include "Graphics/textures/uploaded_texture.h"
 #include <qdebug.h>
 
 class TextureAtlas::Private {
 public:
-	Private(TextureAtlas* parent, int tileSizeX, int tileSizeY)
-		: q(parent)
-		, tileSizeX(tileSizeX)
-		, tileSizeY(tileSizeY) {
+	Private(TextureAtlas* parent)
+		: q(parent) {
 	}
 
 	TextureAtlas* q;
-	int tileSizeX;
-	int tileSizeY;
+	int tileSizeX = 0;
+	int tileSizeY = 0;
 	int tilesCountX = 0;
 	int tilesCountY = 0;
-	std::unique_ptr<QOpenGLTexture> texture;
+	bool useMipMaps = true;
+	bool useMipMapsSmoothing = true;
+	TextureFilter textureFilter = TextureFilter::Linear;
+	std::shared_ptr<UploadedTexture> texture;
 };
 
-TextureAtlas::TextureAtlas(int tileSizeX, int tileSizeY)
-	: d(std::make_unique<Private>(this, tileSizeX, tileSizeY)) {
+TextureAtlas::TextureAtlas()
+	: d(std::make_unique<Private>(this)) {
 }
 
 TextureAtlas::~TextureAtlas() = default;
 
-bool TextureAtlas::loadFromPixmap(const QPixmap& pixmap, int tilesCountX, int tilesCountY) {
-	if (pixmap.isNull()) {
-		qWarning() << "TextureAtlas: pixmap is null";
+
+bool TextureAtlas::load(std::shared_ptr<UploadedTexture> texture, int tilesCountX, int tilesCountY) {
+	if (!texture) {
+		qWarning() << "TextureAtlas: texture is null";
 		return false;
 	}
 
 	d->tilesCountX = tilesCountX;
 	d->tilesCountY = tilesCountY;
-	d->tileSizeX = pixmap.width() / tilesCountX;
-	d->tileSizeY = pixmap.height() / tilesCountY;
-
-	// 1. Конвертируем в QImage и переворачиваем по Y (OpenGL: (0,0) — нижний левый)
-	QImage image = pixmap.toImage().mirrored(false, true);
-
-	// 2. 🔥 ОБЯЗАТЕЛЬНО: конвертируем в формат, понятный OpenGL
-	if (image.format() != QImage::Format_RGBA8888) {
-		image = image.convertToFormat(QImage::Format_RGBA8888);
-	}
-
-	qInfo() << "TextureAtlas::loadFromPixmap - image format:" << image.format()
-		<< "size:" << image.size();
-
-	// 3. Создаём текстуру ЯВНО, с контролем формата
-	d->texture = std::make_unique<QOpenGLTexture>(image);
-
-	if (!d->texture->isCreated()) {
-		qWarning() << "TextureAtlas: failed to create OpenGL texture";
-		return false;
-	}
-
-	// 4. 🔥 Порядок важен: сначала генерация мипмапов, потом фильтры!
-	d->texture->generateMipMaps();
-
-	d->texture->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
-	d->texture->setMagnificationFilter(QOpenGLTexture::Linear);
-
-	// 5. Wrap mode: для атласа с тайлами лучше ClampToEdge, чтобы не «затекать» в соседние тайлы
-	d->texture->setWrapMode(QOpenGLTexture::ClampToEdge);
-
-	// 6. Опционально: отключаем сглаживание краёв мипмапов, если видны артефакты
-	// d->texture->setMipBaseLevel(0);
-	// d->texture->setMipMaxLevel(d->texture->mipLevels() - 1);
-
-	qInfo() << "TextureAtlas loaded:" << pixmap.size()
-		<< "tiles:" << tilesCountX << "x" << tilesCountY
-		<< "tileSize:" << d->tileSizeX << "x" << d->tileSizeY
-		<< "glId:" << d->texture->textureId()
-		<< "mipLevels:" << d->texture->mipLevels();
+	d->tileSizeX = texture->width() / tilesCountX;
+	d->tileSizeY = texture->height() / tilesCountY;
+	d->texture = texture;
 
 	return true;
 }
@@ -95,23 +57,14 @@ TextureRegion TextureAtlas::getRegion(int tileX, int tileY) const {
 
 void TextureAtlas::bind() const {
 	if (d->texture) {
-		if (!d->texture->isCreated()) {
-			qWarning() << "Texture is not created";
-			return;
-		}
-
 		d->texture->bind();
 	}
 }
 
 void TextureAtlas::unbind() const {
 	if (d->texture) {
-		d->texture->release();
+		d->texture->unbind();
 	}
-}
-
-GLuint TextureAtlas::textureId() const {
-	return d->texture ? d->texture->textureId() : 0;
 }
 
 int TextureAtlas::tileSizeX() const {
@@ -131,5 +84,38 @@ int TextureAtlas::tilesCountY() const {
 }
 
 bool TextureAtlas::isLoaded() const {
-	return d->texture != nullptr;
+	return d->texture != nullptr && d->texture->isLoaded();
+}
+
+const UploadedTexture* TextureAtlas::texture() const {
+	return d->texture ? d->texture.get() : nullptr;
+}
+
+TileData TextureAtlas::getTile(int tileX, int tileY) const {
+	if (!isLoaded()) {
+		return TileData::empty();
+	}
+
+	if (tileX < 0 || tileX >= d->tilesCountX || tileY < 0 || tileY >= d->tilesCountY) {
+		return TileData::empty();
+	}
+
+	TileData data;
+	data.tileId = tileY * d->tilesCountX + tileX;
+	data.region = getRegion(tileX, tileY);
+	return data;
+}
+
+TileData TextureAtlas::getTileById(int tileId) const {
+	if (tileId < 0 || tileId >= totalTiles()) {
+		return TileData::empty();
+	}
+
+	int tileX = tileId % d->tilesCountX;
+	int tileY = tileId / d->tilesCountX;
+	return getTile(tileX, tileY);
+}
+
+int TextureAtlas::totalTiles() const {
+	return d->tilesCountX * d->tilesCountY;
 }

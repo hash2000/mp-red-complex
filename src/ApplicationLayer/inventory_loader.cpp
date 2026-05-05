@@ -28,16 +28,16 @@ public:
 		}
 
     InventoryLoader* q;
-    std::shared_ptr<IInventoryRepository> inventoryRepository;
-    std::shared_ptr<IEquipmentRepository> equipmentRepository;
-    std::shared_ptr<IItemRepository> itemRepository;
+    IInventoryRepository* inventoryRepository;
+    IEquipmentRepository* equipmentRepository;
+    IItemRepository* itemRepository;
     ItemsService* itemsService;
 };
 
 InventoryLoader::InventoryLoader(
-    std::shared_ptr<IInventoryRepository> inventoryRepository,
-    std::shared_ptr<IEquipmentRepository> equipmentRepository,
-    std::shared_ptr<IItemRepository> itemRepository,
+    IInventoryRepository* inventoryRepository,
+    IEquipmentRepository* equipmentRepository,
+    IItemRepository* itemRepository,
     ItemsService* itemsService,
     QObject* parent)
     : d(std::make_unique<Private>(this))

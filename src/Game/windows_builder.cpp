@@ -1,7 +1,6 @@
 #include "Game/windows_builder.h"
 #include "Game/app_controller.h"
 #include "Game/services.h"
-#include "Game/controllers.h"
 #include "Game/widgets/map_view/map_window.h"
 #include "Game/widgets/map_view/map_editor_window.h"
 #include "Game/widgets/equipment/equipment_window.h"
@@ -31,7 +30,7 @@ WindowsBuilder::WindowsBuilder(ApplicationController* appController)
 
 	d->factory.emplace("map", [](Services* services, const QString& id, QWidget* parent) {
 		return new MapWindow(
-			services->tilesService(),
+			services->tilesSelectorService(),
 			services->worldService(),
 			services->timeService(),
 			id,
@@ -64,7 +63,7 @@ WindowsBuilder::WindowsBuilder(ApplicationController* appController)
 	d->factory.emplace("user-profile", [](Services* services, const QString& id, QWidget* parent) {
 		return new UserWindow(
 			services->usersService(),
-			services->texturesService(),
+			services->imagesService(),
 			id,
 			parent);
 		});
@@ -73,15 +72,16 @@ WindowsBuilder::WindowsBuilder(ApplicationController* appController)
 		});
 	d->factory.emplace("texture-editor", [](Services* services, const QString& id, QWidget* parent) {
 		return new TextureEditorWindow(
-			services->texturesService(),
-			services->tilesService(),
+			services->imagesService(),
+			services->tilesSelectorService(),
 			id,
 			parent);
 		});
 	d->factory.emplace("map-editor", [](Services* services, const QString& id, QWidget* parent) {
 		return new MapEditorWindow(
+			services->texturesService(),
 			services->mapService(),
-			services->tilesService(),
+			services->tilesSelectorService(),
 			services->timeService(),
 			id,
 			parent);
