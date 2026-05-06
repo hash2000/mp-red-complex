@@ -277,15 +277,7 @@ void MapEditorWidget::setupToolbar() {
 
   // Кнопка сохранения
   auto* saveButton = new QPushButton("Сохранить");
-  connect(saveButton, &QPushButton::clicked, this, [this]() {
-		if (d->mapService) {
-			const auto currentMap = d->mapService->getCurrentMap();
-			if (currentMap.has_value()) {
-				// TODO: Сохранить изменения
-				qInfo() << "Saving map:" << currentMap.value();
-			}
-		}
-	});
+  connect(saveButton, &QPushButton::clicked, this, &MapEditorWidget::onSaveMap);
   d->toolbar->addWidget(saveButton);
 }
 
@@ -341,7 +333,7 @@ void MapEditorWidget::placeTile(int x, int y) {
 		const int worldX = startX + offsetX;
 		const int worldZ = startZ + offsetZ;
 
-		d->currentChunk->setTile(worldX, worldZ, tileId, d->tileRenderLayer);
+		//d->currentChunk->setTile(worldX, worldZ, tileId, d->tileRenderLayer);
 	}
 
   emit tilesPlaced(x, y, ids);
@@ -353,7 +345,7 @@ void MapEditorWidget::eraseTile(int x, int y) {
 		return;
 	}
 
-	d->currentChunk->setTile(x, y, -1, d->tileRenderLayer);
+	//d->currentChunk->setTile(x, y, -1, d->tileRenderLayer);
 
   emit tileErased(x, y);
   update();
@@ -421,7 +413,7 @@ void MapEditorWidget::onBeginFrame() {
 		d->currentMapMetadata->chunkSize.width(),
 		d->currentMapMetadata->chunkSize.height());
 
-	d->currentChunk->setTileset(atlas);
+	//d->currentChunk->setTileset(atlas);
 
 	updatePropertiesPanel();
 }
@@ -457,7 +449,7 @@ void MapEditorWidget::setupPropertiesPanel() {
 }
 
 void MapEditorWidget::updatePropertiesPanel() {
-	const auto tilesetSelected = d->currentChunk && d->currentChunk->hasTileset();
+	//const auto tilesetSelected = d->currentChunk && d->currentChunk->hasTileset();
 
 	if (d->hoveredTile.has_value()) {
 		d->positionLabel->setText(QString("%1, %2")
@@ -475,13 +467,31 @@ void MapEditorWidget::updatePropertiesPanel() {
 		d->tilesSelectorService->getTileSetName() :
 		QString("Не выбран");
 
-	if (tilesetSelected) {
-		d->currentAtlasLabel->setText(currentAtlas);
-	}
-	else {
-		d->currentAtlasLabel->setText("Не выбран");
-	}
+	//if (tilesetSelected) {
+	//	d->currentAtlasLabel->setText(currentAtlas);
+	//}
+	//else {
+	//	d->currentAtlasLabel->setText("Не выбран");
+	//}
 
 	const auto currentMap = d->mapService ? d->mapService->getCurrentMap() : std::nullopt;
 	d->currentMapLabel->setText(currentMap.value_or("Не выбрана"));
+}
+
+void MapEditorWidget::onSaveMap() {
+	const auto renderer = tileRenderer();
+	if (!d->mapService || !renderer) {
+		return;
+	}
+
+	const auto currentMap = d->mapService->getCurrentMap();
+	if (!currentMap.has_value() ) {
+		return;
+	}
+
+	qInfo() << "Saving map:" << currentMap.value();
+
+	const auto chunkSizes = renderer->chunkSize();
+	const auto chunkCount = renderer->chunkCount();
+
 }

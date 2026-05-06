@@ -55,6 +55,7 @@ private slots:
   void onTileHovered(std::optional<QPoint> point);
 	void onRenderLevelEditChanged(const QString& text);
 	void onShowSelectedLayerOnly(bool checked);
+	void onSaveMap();
 
 private:
   void setupUI();

@@ -19,6 +19,9 @@ protected:
 	void onRebuildVerticesAttributes(QOpenGLVertexArrayObject& vao, const std::vector<float>& vertices) override;
 	GLenum drawMode() override;
 	void onChunkSizeChanged(const QSize& size) override;
+	bool onAfterRender() override;
+	void onBeforeRender() override;
+
 
 private:
 	class Private;

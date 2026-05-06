@@ -1,8 +1,4 @@
-find_package(Qt6
-	QUIET CONFIG OPTIONAL_COMPONENTS
-		Core)
 
-qt_standard_project_setup()
 
 find_package(Qt6
 	REQUIRED COMPONENTS
@@ -10,6 +6,10 @@ find_package(Qt6
 		Gui
 		Widgets
 		OpenGLWidgets)
+
+qt_standard_project_setup()
+
+message(STATUS "Using Qt version: ${Qt6_VERSION}")
 
 find_package(ZLIB REQUIRED)
 

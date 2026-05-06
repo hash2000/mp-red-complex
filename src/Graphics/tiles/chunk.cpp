@@ -2,8 +2,6 @@
 #include "Graphics/textures/texture_atlas.h"
 #include "Graphics/tiles/chunk/chunk_draw_tileset.h"
 #include "Graphics/tiles/chunk/chunk_draw_border.h"
-#include "Graphics/gl_check_errors.h"
-#include <qdebug.h>
 #include <vector>
 
 class Chunk::Private {
@@ -14,33 +12,24 @@ public:
 
 	Chunk* q;
 	QSize chunkSize = { Chunk::kDefaultChunkSize, Chunk::kDefaultChunkSize };
-	int layersCount = 0;
 	float zLevel = 0.0f;
 	int chunkX = 0;
 	int chunkZ = 0;
 	std::unique_ptr<ChunkDrawBorder> border;
-	std::vector<std::unique_ptr<ChunkDrawTileset>> tiles;
-	std::shared_ptr<TextureAtlas> tileset;
+	std::vector<std::unique_ptr<ChunkDrawData>> drawLayers;
 	bool initialized = false;
 };
 
-Chunk::Chunk(int layers)
+Chunk::Chunk()
 : d(std::make_unique<Private>(this)) {
-	d->layersCount = layers;
-	d->tiles.resize(layers);
-
-	for (int i = 0; i < layers; i++) {
-		d->tiles[i] = std::make_unique<ChunkDrawTileset>();
-	}
-
 	d->border = std::make_unique<ChunkDrawBorder>();
 }
 
 Chunk::~Chunk() = default;
 
 void Chunk::setChunkPosition(int chunkX, int chunkZ) {
-	for (int i = 0; i < d->layersCount; i++) {
-		d->tiles[i]->setPosition(chunkX, chunkZ);
+	for (const auto &layer : d->drawLayers) {
+		layer->setPosition(chunkX, chunkZ);
 	}
 
 	d->border->setPosition(chunkX, chunkZ);
@@ -72,25 +61,9 @@ int Chunk::chunkZ() const {
 	return d->chunkZ;
 }
 
-void Chunk::setTileset(std::shared_ptr<TextureAtlas> tileset) {
-	for (int i = 0; i < d->layersCount; i++) {
-		d->tiles[i]->setTileset(tileset);
-	}
-
-	d->tileset = tileset;
-}
-
-std::shared_ptr<TextureAtlas> Chunk::tileSet() const {
-	return d->tileset;
-}
-
-bool Chunk::hasTileset() const {
-	return d->tileset != nullptr;
-}
-
 void Chunk::setChunkSize(const QSize& size) {
-	for (int i = 0; i < d->layersCount; i++) {
-		d->tiles[i]->setChunkSize(size);
+	for (const auto& layer : d->drawLayers) {
+		layer->setChunkSize(size);
 	}
 
 	d->border->setChunkSize(size);
@@ -101,44 +74,18 @@ QSize Chunk::chunkSize() const {
 	return d->chunkSize;
 }
 
-void Chunk::setTile(int worldX, int worldZ, int tileId, int layer) {
-	if (layer < 0 || layer >= d->layersCount) {
-		return;
-	}
-
-	d->tiles[layer]->setTile(worldX, worldZ, tileId);
-}
-
-int Chunk::getTile(int worldX, int worldZ, int layer) const {
-	if (layer < 0 || layer >= d->layersCount) {
-		return -1;
-	}
-
-	return d->tiles[layer]->getTile(worldX, worldZ);
-}
-
 void Chunk::rebuild() {
-	for (int i = 0; i < d->layersCount; i++) {
-		d->tiles[i]->rebuild();
+	for (const auto& layer : d->drawLayers) {
+		layer->rebuild();
 	}
 
 	d->border->rebuild();
 }
 
 void Chunk::render() {
-	if (!d->tileset || !d->tileset->isLoaded()) {
-		return;
+	for (const auto& layer : d->drawLayers) {
+		layer->render();
 	}
-
-	d->tileset->bind();
-	GL_CHECK_ERRORS();
-
-
-	for (int i = 0; i < d->layersCount; i++) {
-		d->tiles[i]->render();
-	}
-
-	d->tileset->unbind();
 }
 
 void Chunk::renderBorder() {
@@ -146,19 +93,19 @@ void Chunk::renderBorder() {
 }
 
 void Chunk::showOnlyOneLayer(int layer) {
-	if (layer < 0 || layer >= d->layersCount) {
+	if (layer < 0 || layer >= d->drawLayers.size()) {
 		return;
 	}
 
-	for (int i = 0; i < d->layersCount; i++) {
+	for (int i = 0, count = d->drawLayers.size(); i < count; i++) {
 		const auto isVisible = i == layer;
-		d->tiles[i]->setVisible(isVisible);
+		d->drawLayers[i]->setVisible(isVisible);
 	}
 }
 
 void Chunk::showAllLayers() {
-	for (int i = 0; i < d->layersCount; i++) {
-		d->tiles[i]->setVisible(true);
+	for (const auto& layer : d->drawLayers) {
+		layer->setVisible(true);
 	}
 }
 
@@ -176,4 +123,21 @@ float Chunk::worldMinZ() const {
 
 float Chunk::worldMaxZ() const {
 	return static_cast<float>((d->chunkZ + 1) * d->chunkSize.height());
+}
+
+int Chunk::layerCount() const {
+	return d->drawLayers.size();
+}
+
+int Chunk::addLayer(std::unique_ptr<ChunkDrawData>&& layer) {
+	d->drawLayers.push_back(std::move(layer));
+	return d->drawLayers.size() - 1;
+}
+
+void Chunk::removeLayer(int layer) {
+	if (layer < 0 || layer >= d->drawLayers.size()) {
+		return;
+	}
+
+	d->drawLayers.erase(d->drawLayers.begin() + layer);
 }
