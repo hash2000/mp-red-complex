@@ -96,20 +96,31 @@ YourService::YourService(IYourDataProvider* dataProvider, QObject* parent)
 }
 ```
 
-**Important: Service-Provider Ownership Pattern**
+**Important: Lazy Dependency Injection with ThreadSafeLazyPtr**
 
-1. `Services` class owns data providers via `std::unique_ptr<IYourDataProvider>`
-2. Services receive non-owning raw pointers
-3. Ensures clear ownership, no double-deletion, easy testing
+1. `Services::Private` owns all components via `LazyPtr<T>` (thread-safe lazy wrapper over `std::unique_ptr`)
+2. Components receive non-owning raw pointers to dependencies via `.get()` calls inside factory lambdas
+3. Dependencies are instantiated on first access (lazy initialization), ensuring:
+   - Minimal startup time and resource usage
+   - Clear ownership: `Services` is the single owner, no double-deletion
+   - Safe cyclic dependency resolution via deferred construction
+   - Thread-safe initialization via `std::call_once`
 
 ```cpp
-// ❌ WRONG: Service takes ownership
+// ❌ WRONG: Eager construction, unclear ownership
 d->yourService = std::make_unique<YourService>(
     std::make_unique<YourDataProviderJsonImpl>(resources));
 
-// ✅ CORRECT: Services owns provider, service gets pointer
-d->yourDataProvider = std::make_unique<YourDataProviderJsonImpl>(resources);
-d->yourService = std::make_unique<YourService>(d->yourDataProvider.get());
+// ✅ CORRECT: LazyPtr owns component, dependencies injected as raw pointers
+d->yourDataProvider = LazyPtr<IYourDataProvider>([this] { 
+    return std::make_unique<YourDataProviderJsonImpl>(resources); 
+});
+d->yourService = LazyPtr<IYourService>([this] { 
+    return std::make_unique<YourService>(d->yourDataProvider.get()); 
+});
+
+// Usage: component created on first .get() call
+auto* service = d->yourService.get(); // thread-safe, lazy
 ```
 
 ## 4. Create Widget (UI Component)

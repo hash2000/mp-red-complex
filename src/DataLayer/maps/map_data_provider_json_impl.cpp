@@ -1,13 +1,7 @@
 #include "DataLayer/maps/map_data_provider_json_impl.h"
 #include "DataStream/format/json/data_reader.h"
 #include "Resources/resources.h"
-#include <QJsonDocument>
-#include <QJsonObject>
 #include <QJsonArray>
-#include <QFileInfo>
-#include <QDir>
-#include <QFile>
-#include <qDebug>
 
 class MapDataProviderJsonImpl::Private {
 public:
