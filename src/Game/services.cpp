@@ -33,6 +33,7 @@
 #include "ApplicationLayer/maps/map_service.h"
 #include "ApplicationLayer/textures/textures_service.h"
 #include "ApplicationLayer/textures/tiles_selector_service.h"
+#include "ApplicationLayer/shaders/shaders_service.h"
 
 #include <mutex>
 
@@ -75,7 +76,6 @@ public:
 		// Data Providers
 		, inventoryDataProvider([this] { return std::make_unique<InventoryDataProviderJsonImpl>(resources); })
 		, inventoryDataWriter([this] { return std::make_unique<InventoryDataWriterJsonImpl>(resources); })
-		, shadersDataProvider([this] { return std::make_unique<ShadersDataProviderLocalImpl>(resources); })
 		, inventoriesDataProvider([this] { return std::make_unique<InventoriesDataProviderJsonImpl>(resources); })
 		, itemsDataProvider([this] { return std::make_unique<ItemsDataProviderJsonImpl>(resources); })
 		, equipmentDataProvider([this] { return std::make_unique<EquipmentDataProviderJsonImpl>(resources); })
@@ -86,6 +86,7 @@ public:
 		, mapDataProvider([this] {	return std::make_unique<MapDataProviderJsonImpl>(resources);	})
 		, usersDataProvider([this] {	return std::make_unique<UsersDataProviderJsonImpl>(resources);	})
 		, characterDataProvider([this] {	return std::make_unique<CharacterDataProviderJsonImpl>(resources);	})
+		, shadersDataProvider([this] { return std::make_unique<ShadersDataProviderLocalImpl>(resources); })
 
 		// Repositories
 		, itemRepository([this] {
@@ -160,6 +161,10 @@ public:
 				return std::make_unique<TexturesService>(
 					imagesService.get());
 			})
+		, shadersService([this] {
+				return std::make_unique<ShadersService>(
+					shadersDataProvider.get());
+			})
 	{
 	}
 
@@ -198,12 +203,11 @@ public:
 	LazyPtr<ItemsService> itemsService;
 	LazyPtr<InventoriesService> inventoriesService;
 	LazyPtr<InventoryLoader> inventoryLoader;
-
 	LazyPtr<UsersService> usersService;
 	LazyPtr<ImagesService> imagesService;
 	LazyPtr<TilesSelectorService> tilesSelectorService;
 	LazyPtr<TexturesService> texturesService;
-
+	LazyPtr<ShadersService> shadersService;
 	LazyPtr<MapService> mapService;
 
 };
@@ -272,4 +276,8 @@ MapService* Services::mapService() const {
 
 TexturesService* Services::texturesService() const {
 	return d->texturesService.get();
+}
+
+ShadersService* Services::shadersService() const {
+	return d->shadersService.get();
 }

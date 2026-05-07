@@ -18,6 +18,7 @@ class TilesSelectorService;
 class MapService;
 class IMapDataProvider;
 class TexturesService;
+class ShadersService;
 
 class Services: public QObject {
 	Q_OBJECT
@@ -35,6 +36,7 @@ public:
 	TilesSelectorService* tilesSelectorService() const;
 	MapService* mapService() const;
 	TexturesService* texturesService() const;
+	ShadersService* shadersService() const;
 
 	void run();
 
