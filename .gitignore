@@ -16,6 +16,7 @@ CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
 Makefile
+CMakeSettings.json
 
 # Dependencies
 vendor/
@@ -28,6 +29,10 @@ vendor/
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Visual studio files
+.vs/
+ipch/
 
 # Coverage reports
 coverage/

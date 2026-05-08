@@ -31,14 +31,13 @@ cmake --build build --target Launcher
 
 ### Запуск приложений
 ```bash
-# Запуск ResourcesTool
-./build/src/ResourcesTool/ResourcesTool
-
 # Запуск Game
-./build/src/Game/Game
+./build/{Configuration}/Game
 
-# Запуск Launcher
-./build/src/Launcher/Launcher
+# Пример:
+# Configuration = x64-Clang-Debug
+# Запуск:
+# ./build/x64-Clang-Debug/Game
 ```
 
 ### Запуск тестов
