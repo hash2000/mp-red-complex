@@ -1,11 +1,15 @@
 #pragma once
 #include "Graphics/tiles/chunk.h"
+#include "Graphics/tiles/render_queue.h"
 #include <QOpenGLFunctions_3_3_Core>
 #include <QSize>
 #include <memory>
 
 class Camera;
 class QOpenGLShaderProgram;
+class Material;
+class TilesetMaterial;
+class BorderMaterial;
 
 /// Рендерер тайлов - управляет чанками и их отрисовкой
 class TileRenderer : protected QOpenGLFunctions_3_3_Core {
@@ -62,6 +66,12 @@ public:
 	void setDebugRenderPasses(DebugRenderPassFlags passes);
 	DebugRenderPassFlags debugRenderPasses() const;
 	bool testDebugRenderPass(DebugRenderPass pass) const;
+
+	/// Получить основной материал для тайлсетов
+	TilesetMaterial* tilesetMaterial() const;
+
+	/// Получить материал для рамок
+	BorderMaterial* borderMaterial() const;
 
 private:
 	/// Проверка видимости чанка во frustum камеры
