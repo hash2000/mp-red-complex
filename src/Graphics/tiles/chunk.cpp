@@ -2,7 +2,15 @@
 #include "Graphics/textures/texture_atlas.h"
 #include "Graphics/tiles/chunk/chunk_draw_tileset.h"
 #include "Graphics/tiles/chunk/chunk_draw_border.h"
+#include "Graphics/tiles/render_queue.h"
+#include "Graphics/tiles/material.h"
 #include <vector>
+
+struct ChunkLayer {
+	std::unique_ptr<ChunkDrawData> drawData;
+	Material* material = nullptr;
+	bool visible = true;
+};
 
 class Chunk::Private {
 public:
@@ -16,7 +24,8 @@ public:
 	int chunkX = 0;
 	int chunkZ = 0;
 	std::unique_ptr<ChunkDrawBorder> border;
-	std::vector<std::unique_ptr<ChunkDrawData>> drawLayers;
+	Material* borderMaterial = nullptr;
+	std::vector<ChunkLayer> layers;
 	bool initialized = false;
 };
 
@@ -28,8 +37,8 @@ Chunk::Chunk()
 Chunk::~Chunk() = default;
 
 void Chunk::setChunkPosition(int chunkX, int chunkZ) {
-	for (const auto &layer : d->drawLayers) {
-		layer->setPosition(chunkX, chunkZ);
+	for (auto& layer : d->layers) {
+		layer.drawData->setPosition(chunkX, chunkZ);
 	}
 
 	d->border->setPosition(chunkX, chunkZ);
@@ -62,8 +71,8 @@ int Chunk::chunkZ() const {
 }
 
 void Chunk::setChunkSize(const QSize& size) {
-	for (const auto& layer : d->drawLayers) {
-		layer->setChunkSize(size);
+	for (auto& layer : d->layers) {
+		layer.drawData->setChunkSize(size);
 	}
 
 	d->border->setChunkSize(size);
@@ -75,37 +84,40 @@ QSize Chunk::chunkSize() const {
 }
 
 void Chunk::rebuild() {
-	for (const auto& layer : d->drawLayers) {
-		layer->rebuild();
+	for (auto& layer : d->layers) {
+		layer.drawData->rebuild();
 	}
 
 	d->border->rebuild();
 }
 
-void Chunk::render() {
-	for (const auto& layer : d->drawLayers) {
-		layer->render();
+void Chunk::render(RenderQueue& queue) {
+	for (auto& layer : d->layers) {
+		if (!layer.visible) {
+			continue;
+		}
+		queue.addCommand(layer.material, layer.drawData.get(), d->zLevel);
 	}
 }
 
-void Chunk::renderBorder() {
-	d->border->render();
+void Chunk::renderBorder(RenderQueue& queue) {
+	queue.addCommand(d->borderMaterial, d->border.get(), d->zLevel);
 }
 
 void Chunk::showOnlyOneLayer(int layer) {
-	if (layer < 0 || layer >= d->drawLayers.size()) {
+	if (layer < 0 || layer >= static_cast<int>(d->layers.size())) {
 		return;
 	}
 
-	for (int i = 0, count = d->drawLayers.size(); i < count; i++) {
+	for (int i = 0, count = d->layers.size(); i < count; i++) {
 		const auto isVisible = i == layer;
-		d->drawLayers[i]->setVisible(isVisible);
+		d->layers[i].visible = isVisible;
 	}
 }
 
 void Chunk::showAllLayers() {
-	for (const auto& layer : d->drawLayers) {
-		layer->setVisible(true);
+	for (auto& layer : d->layers) {
+		layer.visible = true;
 	}
 }
 
@@ -126,18 +138,25 @@ float Chunk::worldMaxZ() const {
 }
 
 int Chunk::layerCount() const {
-	return d->drawLayers.size();
+	return d->layers.size();
 }
 
-int Chunk::addLayer(std::unique_ptr<ChunkDrawData>&& layer) {
-	d->drawLayers.push_back(std::move(layer));
-	return d->drawLayers.size() - 1;
+int Chunk::addLayer(std::unique_ptr<ChunkDrawData>&& layer, Material* material) {
+	d->layers.push_back({std::move(layer), material, true});
+	return d->layers.size() - 1;
 }
 
 void Chunk::removeLayer(int layer) {
-	if (layer < 0 || layer >= d->drawLayers.size()) {
+	if (layer < 0 || layer >= static_cast<int>(d->layers.size())) {
 		return;
 	}
 
-	d->drawLayers.erase(d->drawLayers.begin() + layer);
+	d->layers.erase(d->layers.begin() + layer);
+}
+
+Material* Chunk::layerMaterial(int layer) const {
+	if (layer < 0 || layer >= static_cast<int>(d->layers.size())) {
+		return nullptr;
+	}
+	return d->layers[layer].material;
 }
