@@ -1,110 +1,112 @@
-# AGENTS.md - Development Guide for RedComplex
+# Контекст проекта RedComplex для SourceCraft Code Assistant
 
 RedComplex — это пет-проект на C++ с использованием фреймворка Qt, представляющий собой оконное приложение с элементами игры. Основной акцент сделан на систему инвентаря и экипировки. Проект использует современные подходы C++20, включая умные указатели, сигналы/слоты Qt, и модульную архитектуру.
 
-## Code Standards
-- эталонная локаль - русская (ru)
+Этот файл предоставляет контекст для SourceCraft Code Assistant, чтобы помочь агенту понимать структуру проекта, стандарты кода, архитектуру и рабочие процессы.
 
-## Build Commands
+## Языковые стандарты
+- Эталонная локаль - русская (ru)
+- Все комментарии и документация предпочтительно на русском языке
 
-### Requirements
+## Команды сборки
+
+### Требования
 - CMake 4.1+
-- C++20 compatible compiler (MSVC or GCC)
-- vcpkg for dependency management
+- Компилятор с поддержкой C++20 (MSVC или GCC)
+- vcpkg для управления зависимостями
 
-### Building the Project
+### Сборка проекта
 ```bash
-# Configure with CMake (using vcpkg toolchain)
+# Конфигурация с CMake (используя toolchain vcpkg)
 cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=[vcpkg-root]/scripts/buildsystems/vcpkg.cmake
 
-# Build all targets
+# Сборка всех целей
 cmake --build build --parallel
 
-# Build specific target
+# Сборка конкретной цели
 cmake --build build --target ResourcesTool
 cmake --build build --target Game
 cmake --build build --target Launcher
 ```
 
-### Running Applications
+### Запуск приложений
 ```bash
-# Run ResourcesTool
-./build/src/ResourcesTool/ResourcesTool
+# Запуск Game
+./build/{Configuration}/Game
 
-# Run Game
-./build/src/Game/Game
-
-# Run Launcher
-./build/src/Launcher/Launcher
+# Пример:
+# Configuration = x64-Clang-Debug
+# Запуск:
+# ./build/x64-Clang-Debug/Game
 ```
 
-### Running Tests
+### Запуск тестов
 ```bash
-# Build tests target
+# Сборка тестов
 cmake --build build --target RunTests
 
-# Run all tests
+# Запуск всех тестов
 cmake --build build --target run_tests
 
-# Or directly via ctest
+# Или напрямую через ctest
 cd build
 ctest --output-on-failure
 
-# Run specific test function
+# Запуск конкретной тестовой функции
 ./build/tests/RunTests -testfunction testLoadEntities
 ./build/tests/RunTests -testfunction testMoveFullStack_PreservesItemId
 ```
 
 ---
 
-## Code Style Guidelines
+## Стандарты кода
 
-### General
-- **Language**: C++20
-- **Qt Framework**: Qt6 (Core, Gui, Widgets, OpenGLWidgets)
-- **Dependencies**: EnTT (entity-component system), ZLIB
+### Общее
+- **Язык**: C++20
+- **Фреймворк Qt**: Qt6 (Core, Gui, Widgets, OpenGLWidgets)
+- **Зависимости**: EnTT (entity-component system), ZLIB
 
-### File Organization
-- Header files: `.h` extension
-- Implementation files: `.cpp` extension
-- Use `#pragma once` for header guards (not `#ifndef` guards)
-- Order includes: project headers, then Qt headers, then standard library
+### Организация файлов
+- Заголовочные файлы: расширение `.h`
+- Файлы реализации: расширение `.cpp`
+- Использовать `#pragma once` для защиты заголовков (не `#ifndef`)
+- Порядок включения: заголовки проекта, затем заголовки Qt, затем стандартная библиотека
 
-### Naming Conventions
-- **Classes**: `PascalCase` (e.g., `ApplicationController`)
-- **Interfaces**: `PascalCase` starts with `I` (e.g., `IInventoryRepository`)
-- **Implementations: `PascalCase` ends with implementation type and `Impl` (e.g., `InventoryRepositoryJsonImpl`)
-- **Functions/Methods**: `camelCase` (e.g., `executeCommand`)
-- **Constants**: `kPascalCase`
-- **Files**: Match class name (e.g., `app_controller.h` / `app_controller.cpp`)
+### Соглашения об именовании
+- **Классы**: `PascalCase` (например, `ApplicationController`)
+- **Интерфейсы**: `PascalCase` с префиксом `I` (например, `IInventoryRepository`)
+- **Реализации**: `PascalCase` с суффиксом `Impl` (например, `InventoryRepositoryJsonImpl`)
+- **Функции/Методы**: `camelCase` (например, `executeCommand`)
+- **Константы**: `kPascalCase`
+- **Файлы**: соответствуют имени класса (например, `app_controller.h` / `app_controller.cpp`)
 
-### Formatting
-- **Indentation**: 2 spaces (tabs converted to spaces)
-- **Line endings**: CRLF (Windows)
-- **Braces**: Same-line opening brace for functions/classes
-- **Trailing whitespace**: Trimmed
-- **Final newline**: Required
-- **Increment/Decrement Operators**: Use postfix form (`x++`, `x--`) instead of prefix (`++x`, `--x`)
+### Форматирование
+- **Отступы**: 2 пробела (табы преобразуются в пробелы)
+- **Окончания строк**: CRLF (Windows)
+- **Фигурные скобки**: открывающая скобка на той же строке для функций/классов
+- **Лишние пробелы в конце строк**: удаляются
+- **Финальный перевод строки**: обязателен
+- **Операторы инкремента/декремента**: использовать постфиксную форму (`x++`, `x--`) вместо префиксной (`++x`, `--x`)
 
 ```cpp
 for (int z = 0; z < 16; z++) // Да
 for (int z = 0; z < 16; ++z) // Нет
 ```
 
-### Imports and Forward Declarations
-- Use forward declarations to avoid unnecessary includes in headers
-- Group includes by category:
-  1. Corresponding header (in .cpp files)
-  2. Project headers (quoted)
-  3. Qt headers (angle brackets)
-  4. Standard library (angle brackets)
+### Импорты и предварительные объявления
+- Использовать предварительные объявления, чтобы избежать лишних включений в заголовках
+- Группировать включения по категориям:
+  1. Соответствующий заголовок (в .cpp файлах)
+  2. Заголовки проекта (в кавычках)
+  3. Заголовки Qt (в угловых скобках)
+  4. Стандартная библиотека (в угловых скобках)
 
 ```cpp
 #pragma once
 #include <QObject>
 #include <memory>
 
-class MyClass;  // Forward declaration
+class MyClass;  // Предварительное объявление
 
 class Foo : public QObject {
 Q_OBJECT
@@ -113,11 +115,11 @@ public:
 };
 ```
 
-### Memory Management
-- Use `std::unique_ptr` for exclusive ownership
-- Use `std::shared_ptr` for shared ownership
-- Use `std::make_unique<T>()` and `std::make_shared<T>()` for construction
-- Prefer pimpl idiom (`std::unique_ptr<Private>`) to hide implementation details
+### Управление памятью
+- Использовать `std::unique_ptr` для эксклюзивного владения
+- Использовать `std::shared_ptr` для разделяемого владения
+- Использовать `std::make_unique<T>()` и `std::make_shared<T>()` для создания
+- Предпочитать идиому pimpl (`std::unique_ptr<Private>`) для сокрытия деталей реализации
 
 ```cpp
 class MyClass::Private {
@@ -132,25 +134,25 @@ MyClass::MyClass()
 , d(std::make_unique<Private>(this)) {}
 ```
 
-### Types and Modern C++
-- Use `std::optional<T>` instead of null pointers for nullable return values
-- Use `std::span` for array views
-- Use range-based for loops with `const auto&`
-- Use structured bindings where appropriate
+### Типы и современный C++
+- Использовать `std::optional<T>` вместо нулевых указателей для nullable возвращаемых значений
+- Использовать `std::span` для представления массивов
+- Использовать range-based for циклы с `const auto&`
+- Использовать structured bindings где уместно
 
 ```cpp
 auto result = getStream(container, path);
 if (result.has_value()) {
-    // use *result or result.value()
+    // использовать *result или result.value()
 }
 
 for (const auto& entry : entries) { }
 ```
 
-### Error Handling
-- Use exceptions sparingly with `std::exception` derived types
-- Log errors with `qWarning()` or `qInfo()`
-- Use `Q_UNUSED()` for intentionally unused parameters
+### Обработка ошибок
+- Использовать исключения экономно с типами, производными от `std::exception`
+- Логировать ошибки с помощью `qWarning()` или `qInfo()`
+- Использовать `Q_UNUSED()` для намеренно неиспользуемых параметров
 
 ```cpp
 try {
@@ -163,59 +165,59 @@ catch (std::exception& ex) {
 }
 ```
 
-### Qt-Specific Patterns
-- Use `Q_OBJECT` macro in all QObject-derived classes
-- Use signals/slots for Qt observer pattern
-- Use `QPointer<T>` for QObject pointers that can become invalid
-- Override virtual methods with `override` specifier
-- Use `QDir`, `QFileInfo` for file operations
+### Qt-специфичные паттерны
+- Использовать макрос `Q_OBJECT` во всех классах, производных от QObject
+- Использовать сигналы/слоты для паттерна наблюдателя Qt
+- Использовать `QPointer<T>` для указателей на QObject, которые могут стать невалидными
+- Переопределять виртуальные методы с указателем `override`
+- Использовать `QDir`, `QFileInfo` для файловых операций
 
-### Logging
-- `qDebug()` - Debug information
-- `qInfo()` - General information
-- `qWarning()` - Warning messages (non-fatal errors)
-- `qCritical()` - Critical errors
-- `qFatal()` - Fatal errors (aborts)
+### Логирование
+- `qDebug()` - отладочная информация
+- `qInfo()` - общая информация
+- `qWarning()` - предупреждения (некритические ошибки)
+- `qCritical()` - критические ошибки
+- `qFatal()` - фатальные ошибки (прерывание)
 
-### Project Structure
+### Структура проекта
 ```
 src/
-├── Base/           # Base utilities and widgets
-├── BaseWidgets/    # Reusable UI components
-├── ApplicationLayer/ # Application orchestration
-├── Content/        # Content editors (Map, Shader, Particles)
-├── DataFormat/     # Data format definitions. Legacy.
-├── DataLayer/      # Data access layer
-├── DataStream/     # Stream I/O (DAT, RAW formats).
-├── Engine/         # Core engine
-├── Game/           # Main game application
-├── Launcher/       # Launcher application. Legacy.
-├── Resources/      # Resource management
-├── ResourcesTool/  # Resource viewer/editor tool. Legacy.
-└── tests/          # Unit tests (Qt Test Framework)
+├── Base/           # Базовые утилиты и виджеты
+├── BaseWidgets/    # Переиспользуемые UI компоненты
+├── ApplicationLayer/ # Оркестрация приложения
+├── Content/        # Редакторы контента (Map, Shader, Particles)
+├── DataFormat/     # Определения форматов данных. Legacy.
+├── DataLayer/      # Слой доступа к данным
+├── DataStream/     # Потоковый ввод/вывод (DAT, RAW форматы).
+├── Engine/         # Ядро движка
+├── Game/           # Основное игровое приложение
+├── Launcher/       # Приложение-лаунчер. Legacy.
+├── Resources/      # Управление ресурсами
+├── ResourcesTool/  # Инструмент просмотра/редактирования ресурсов. Legacy.
+└── tests/          # Модульные тесты (Qt Test Framework)
 ```
 
-### Common Patterns
+### Распространённые паттерны
 
-#### Signal/Slot Connections
+#### Соединения сигналов/слотов
 ```cpp
 connect(d->controller, &Controller::valueChanged,
         this, &MyClass::onValueChanged);
 
-// For custom signals
+// Для пользовательских сигналов
 signals:
     void mySignal(const QString& value);
 ```
 
-#### Property System
+#### Система свойств
 ```cpp
 Q_PROPERTY(int count READ count WRITE setCount NOTIFY countChanged)
 ```
 
-#### Unit Testing (Qt Test Framework)
-Tests are located in `tests/` directory and use Qt Test Framework.
+#### Модульное тестирование (Qt Test Framework)
+Тесты расположены в директории `tests/` и используют Qt Test Framework.
 
-**Test file structure:**
+**Структура тестового файла:**
 ```cpp
 #include <QtTest/QtTest>
 #include "ApplicationLayer/items/items_service.h"
@@ -224,18 +226,18 @@ class TestMyClass : public QObject {
     Q_OBJECT
 
 private slots:
-    void init();              // Before each test
-    void cleanup();           // After each test
-    void testMyFunction();    // Test function
+    void init();              // Перед каждым тестом
+    void cleanup();           // После каждого теста
+    void testMyFunction();    // Тестовая функция
 };
 
 void TestMyClass::testMyFunction() {
     // Arrange
     ItemsService service(dataProvider);
-    
+
     // Act
     const auto item = service.duplicate("item-id");
-    
+
     // Assert
     QVERIFY(item != nullptr);
     QCOMPARE(item->entityId, QString("item-id"));
@@ -245,139 +247,96 @@ QTEST_MAIN(TestMyClass)
 #include "test_all.moc"
 ```
 
-**Key test macros:**
-- `QVERIFY(condition)` — Check condition is true
-- `QCOMPARE(actual, expected)` — Compare values
-- `QTEST_MAIN(TestClass)` — Main entry point for tests
+**Ключевые макросы тестов:**
+- `QVERIFY(condition)` — Проверить, что условие истинно
+- `QCOMPARE(actual, expected)` — Сравнить значения
+- `QTEST_MAIN(TestClass)` — Точка входа для тестов
 
-### Architecture and Design
+### Архитектура и дизайн
 
-#### Core Application Flow
-1. **Engine Layer**: The application starts in `main.cpp` where `GameApplication` inherits from `Application`. This base class handles core initialization like the Qt application, configuration loading, and resource setup.
-2. **Main Window Creation**: `Application::run()` calls `createMainFrame()` (pure virtual). In `GameApplication`, this returns a `GameMainFrame`.
-3. **Application Layer**: `GameApplication` is created first, then it instantiates `ApplicationController` in `GameMainFrame`'s Private class. This controller orchestrates high-level application logic.
+#### Основной поток приложения
+1. **Слой Engine**: Приложение начинается в `main.cpp`, где `GameApplication` наследуется от `Application`. Этот базовый класс обрабатывает базовую инициализацию, такую как приложение Qt, загрузку конфигурации и настройку ресурсов.
+2. **Создание главного окна**: `Application::run()` вызывает `createMainFrame()` (чисто виртуальный). В `GameApplication` это возвращает `GameMainFrame`.
+3. **Слой Application**: `GameApplication` создаётся первым, затем он создаёт `ApplicationController` в приватном классе `GameMainFrame`. Этот контроллер оркестрирует высокоуровневую логику приложения.
 
-#### Key Components
+#### Ключевые компоненты
 
 **ApplicationController** (`src/Game/app_controller.*`)
-- The central coordinator. Owns and manages:
-  - `CommandProcessor`: Parses and executes text commands.
-  - `Services`: Holds core game services (time, world, inventory, items).
-  - `Controllers`: Manages UI controllers (e.g., `WindowsController`).
-- Uses the PIMPL pattern with a `Private` class for encapsulation.
+- Центральный координатор. Владеет и управляет:
+  - `CommandProcessor`: Разбирает и выполняет текстовые команды.
+  - `Services`: Содержит основные игровые сервисы (время, мир, инвентарь, предметы).
+  - `Controllers`: Управляет UI контроллерами (например, `WindowsController`).
+- Использует паттерн PIMPL с приватным классом `Private` для инкапсуляции.
 
 **Services** (`src/Game/services.*`)
-- A container for all major game systems.
-- Key services include:
-  - `TimeService`: A precise timer for game ticks and scheduled events.
-  - `InventoriesService`: The core logic for managing inventories and equipment.
-  - `ItemsService`: Manages item definitions and creation.
-- Initialized with data providers (e.g., `ItemsDataProviderJsonImpl`) for loading game data from JSON files.
+- Контейнер для всех основных игровых систем.
+- Ключевые сервисы включают:
+  - `TimeService`: Точный таймер для игровых тиков и запланированных событий.
+  - `InventoriesService`: Основная логика управления инвентарями и экипировкой.
+  - `ItemsService`: Управляет определениями предметов и их созданием.
+- Инициализируются с провайдерами данных (например, `ItemsDataProviderJsonImpl`) для загрузки игровых данных из JSON файлов.
 
-**Inventory and Equipment System**
-- **Data Layer** (`src/DataLayer`): Provides raw data access.
-  - `ItemsDataProviderJsonImpl`: Loads item definitions (`items.json`, `items_ids.json`) and icons from the assets folder.
-  - `InventoryDataProviderJsonImpl` / `EquipmentDataProviderJsonImpl`: Load inventory and equipment state from JSON files in the data folder.
-  - `InventoriesDataProviderJsonImpl`: Discovers which inventory and equipment files exist.
-- **Application Layer** (`src/ApplicationLayer`): Implements business logic.
-  - `ItemsService`: Loads all item entities and can create instances (`duplicate` method).
-  - `InventoriesService`: The central hub. It uses `ItemPlacementStore` to load `IItemPlacementService` instances for specific inventories or equipment.
-    - `InventoryStoreImpl` -> `InventoryService`: For regular inventories.
-    - `EquipmentStoreImpl` -> `EquipmentService`: For equipment slots.
-  - `ItemMimeData`: A data transfer object used for drag-and-drop operations between containers.
-  - `IItemPlacementService`: An abstract interface (`pure virtual`) defining operations like `canPlaceItem`, `moveItem`, `applyDublicateFromItem`. Both `InventoryService` and `EquipmentService` implement this.
-- This design allows the `InventoriesService` to handle moves between any two containers (inventory-to-inventory, inventory-to-equipment) by treating them all as `IItemPlacementService` instances.
+**Система инвентаря и экипировки**
+- **Слой данных** (`src/DataLayer`): Обеспечивает доступ к сырым данным.
+  - `ItemsDataProviderJsonImpl`: Загружает определения предметов (`items.json`, `items_ids.json`) и иконки из папки assets.
+  - `InventoryDataProviderJsonImpl` / `EquipmentDataProviderJsonImpl`: Загружают состояние инвентаря и экипировки из JSON файлов в папке data.
+  - `InventoriesDataProviderJsonImpl`: Обнаруживает, какие файлы инвентаря и экипировки существуют.
+- **Слой приложения** (`src/ApplicationLayer`): Реализует бизнес-логику.
+  - `ItemsService`: Загружает все сущности предметов и может создавать экземпляры (метод `duplicate`).
+  - `InventoriesService`: Центральный хаб. Использует `ItemPlacementStore` для загрузки экземпляров `IItemPlacementService` для конкретных инвентарей или экипировки.
+    - `InventoryStoreImpl` -> `InventoryService`: Для обычных инвентарей.
+    - `EquipmentStoreImpl` -> `EquipmentService`: Для слотов экипировки.
+  - `ItemMimeData`: Объект передачи данных, используемый для операций drag-and-drop между контейнерами.
+  - `IItemPlacementService`: Абстрактный интерфейс (`pure virtual`), определяющий операции типа `canPlaceItem`, `moveItem`, `applyDublicateFromItem`. И `InventoryService`, и `EquipmentService` реализуют его.
+- Эта конструкция позволяет `InventoriesService` обрабатывать перемещения между любыми двумя контейнерами (инвентарь-инвентарь, инвентарь-экипировка), рассматривая их все как экземпляры `IItemPlacementService`.
 
-**Item Stack Management (Пачки предметов)**
-- Items can be stacked if `entity->maxStack > 1`
-- When moving a **full stack** between inventories, the item ID is preserved (no duplicate created)
-- When moving a **partial stack**, a new item is created with a new ID for the moved quantity
-- `InventoryService::transferItem()` — Move/add item with preserved ID
-- `InventoriesService::moveItem()` — Handles full/partial stack logic automatically
+**Управление стеками предметов (Пачки предметов)**
+- Предметы могут складываться, если `entity->maxStack > 1`
+- При перемещении **полного стека** между инвентарями ID предмета сохраняется (дубликат не создаётся)
+- При перемещении **частичного стека** создаётся новый предмет с новым ID для перемещённого количества
+- `InventoryService::transferItem()` — Переместить/добавить предмет с сохранением ID
+- `InventoriesService::moveItem()` — Автоматически обрабатывает логику полного/частичного стека
 
-**Item Creation Widget**
-- `ItemCreateWidget` (`src/Game/widgets/items/item_create_widget.*`) — Dialog for creating new items
-- Allows selecting quantity (1 to maxStack)
-- Creates items in the last active inventory window
-- Uses `ItemsService::createItemByEntity()` to instantiate items from entity definitions
+**Виджет создания предметов**
+- `ItemCreateWidget` (`src/Game/widgets/items/item_create_widget.*`) — Диалог для создания новых предметов
+- Позволяет выбрать количество (от 1 до maxStack)
+- Создаёт предметы в последнем активном окне инвентаря
+- Использует `ItemsService::createItemByEntity()` для создания экземпляров предметов из определений сущностей
 
-**Item Save System**
-- `ItemsSaveManager` (`src/ApplicationLayer/items_save_manager.*`) — Saves all created items
-- `ItemsDataWriterJsonImpl` — JSON writer for item persistence
-- Items are saved to `data/items/{uuid}.json`
-- Connected to `Services::save` signal alongside inventory/equipment saving
-
----
-
-## Creating New MDI Windows
-
-> **/create-mdi-window** — Полная пошаговая инструкция по созданию нового MDI окна (Data Layer → Application Layer → UI Layer → Registration)
+**Система сохранения предметов**
+- `ItemsSaveManager` (`src/ApplicationLayer/items_save_manager.*`) — Сохраняет все созданные предметы
+- `ItemsDataWriterJsonImpl` — JSON writer для сохранения предметов
+- Предметы сохраняются в `data/items/{uuid}.json`
+- Подключён к сигналу `Services::save` вместе с сохранением инвентаря/экипировки
 
 ---
 
-## Widget Styling
+## Ссылки на существующие скилы
 
-> **/widget-styling** — Цветовая палитра Tailwind Slate, стили компонентов, layout guidelines
+В проекте уже определены скилы для Qwen, расположенные в `.qwen/skills/`. Они могут быть полезны и для SourceCraft Code Assistant:
 
----
+- **/create-mdi-window** — Полная пошаговая инструкция по созданию нового MDI окна (Data Layer → Application Layer → UI Layer → Registration)
+- **/widget-styling** — Цветовая палитра Tailwind Slate, стили компонентов, layout guidelines
+- **/resources-io** — Чтение и запись файлов через Resources system (assets/data контейнеры)
+- **/commit** — Stage, commit, and push changes with conventional commit message
+- **/test** — Инструкции по тестированию
 
-## Working with Resources
+## Рабочий процесс разработки
 
-> **/resources-io** — Чтение и запись файлов через Resources system (assets/data контейнеры)
-
----
-
----
-
-## Development Workflow
-
-1. **Create feature branch**: `git checkout -b feature/your-feature`
-2. **Make changes** following the code style above
-3. **Build and test** — Use Qt Test Framework for automated testing
-4. **Commit with clear messages**: `git commit -m "Description of changes"`
-5. **Push and create PR** when ready
+1. **Создание ветки функции**: `git checkout -b feature/your-feature`
+2. **Внесение изменений** в соответствии со стандартами кода выше
+3. **Сборка и тестирование** — Использовать Qt Test Framework для автоматизированного тестирования
+4. **Коммит с понятными сообщениями**: `git commit -m "Description of changes"`
+5. **Пуш и создание PR** когда готово
 
 ---
 
-## Creating New MDI Windows
+## Примечания для SourceCraft Code Assistant
 
-> **/create-mdi-window** — Полная пошаговая инструкция по созданию нового MDI окна
+- При работе с проектом учитывайте, что это C++/Qt приложение с акцентом на инвентарь и экипировку.
+- Используйте существующие скилы как参考 для выполнения типовых задач.
+- При создании новых файлов следуйте соглашениям об именовании и структуре проекта.
+- Для отладки используйте логирование Qt (`qDebug`, `qWarning` и т.д.).
+- Тесты находятся в `tests/`, используйте Qt Test Framework для добавления новых тестов.
 
-## Widget Styling
-
-> **/widget-styling** — Цветовая палитра Tailwind Slate, стили компонентов, layout guidelines
-
-## Working with Resources
-
-> **/resources-io** — Чтение и запись файлов через Resources system (assets/data контейнеры)
-
----
-
-### Textures and Images Service
-
-For loading and caching textures/icons, use the `ImagesService`:
-
-**Data Layer** (`src/DataLayer/textures/`):
-- `IImagesDataProvider` — Interface for loading textures
-- `ImagesDataProviderJsonImpl` — Implementation that loads from `assets/icons/`
-
-**Application Layer** (`src/ApplicationLayer/textures/`):
-- `ImagesService` — Service with caching (QHash for icons and textures)
-- `TileSetMetadata` — Metadata structure with `gridSize.x/y` for tile sets
-
-**Key Features:**
-- Automatic caching prevents repeated disk reads
-- Returns stub icon if file not found
-- Single point of configuration for all image loading
-
-### Item Stack Management (Пачки предметов)
-- Items can be stacked if `entity->maxStack > 1`
-- When moving a **full stack** between inventories, the item ID is preserved
-- When moving a **partial stack**, a new item is created with a new ID
-- `InventoryService::transferItem()` — Move/add item with preserved ID
-- `InventoriesService::moveItem()` — Handles full/partial stack logic
-
-### Item Save System
-- `ItemsSaveManager` — Saves all created items
-- `ItemsDataWriterJsonImpl` — JSON writer for item persistence
-- Items are saved to `data/items/{uuid}.json`
+Этот файл должен регулярно обновляться по мере изменения проекта.
