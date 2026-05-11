@@ -4,7 +4,7 @@
 #include <QWidget>
 #include <QVariantMap>
 #include <QtOpenGLWidgets/QOpenGLWidget>
-#include <QOpenGLFunctions_3_3_Core>
+#include <QOpenGLFunctions_4_5_Core>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLTexture>
@@ -18,7 +18,7 @@ QT_FORWARD_DECLARE_CLASS(QOpenGLTexture)
 QT_FORWARD_DECLARE_CLASS(QOpenGLShader)
 QT_FORWARD_DECLARE_CLASS(QOpenGLShaderProgram)
 
-class MapView : public QOpenGLWidget, protected QOpenGLFunctions_3_3_Core {
+class MapView : public QOpenGLWidget, protected QOpenGLFunctions_4_5_Core {
 public:
   explicit MapView(QWidget* parent = nullptr);
 

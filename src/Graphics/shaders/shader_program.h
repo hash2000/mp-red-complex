@@ -1,10 +1,10 @@
 #pragma once
 #include "Graphics/shaders/material_params.h"
 
-class SharedShaderProgram {
+class ShaderProgram {
 public:
-	SharedShaderProgram();
-	~SharedShaderProgram();
+	ShaderProgram();
+	~ShaderProgram();
 
 public:
 	bool initialize(const QString& vertex, const QString& fragment);

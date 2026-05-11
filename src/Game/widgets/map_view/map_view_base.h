@@ -1,6 +1,6 @@
 #pragma once
 #include <QtOpenGLWidgets/QOpenGLWidget>
-#include <QOpenGLFunctions_3_3_Core>
+#include <QOpenGLFunctions_4_5_Core>
 #include <memory>
 #include <optional>
 
@@ -12,7 +12,7 @@ class ShadersService;
 class Camera;
 
 // Базовый класс для отображения карты
-class MapViewBase : public QOpenGLWidget, protected QOpenGLFunctions_3_3_Core {
+class MapViewBase : public QOpenGLWidget, protected QOpenGLFunctions_4_5_Core {
 	Q_OBJECT
 public:
 	explicit MapViewBase(ShadersService* shadersService, QWidget* parent = nullptr);
@@ -41,6 +41,7 @@ protected:
 
 	// Инициализация тайловой системы
 	void initializeTileSystem();
+	void initializeShaders();
 
 	TileRenderer* tileRenderer() const;
 

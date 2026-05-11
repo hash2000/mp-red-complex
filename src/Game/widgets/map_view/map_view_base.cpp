@@ -5,6 +5,7 @@
 #include "Graphics/camera.h"
 #include "Graphics/tiles/tile_renderer.h"
 #include "Graphics/textures/texture_atlas.h"
+#include "Graphics/shaders/shader_program.h"
 
 #include <QWheelEvent>
 #include <memory>
@@ -22,7 +23,9 @@ public:
 
   // Система тайлов
   std::unique_ptr<TileRenderer> tileRenderer;
+
 	ShadersService* shadersService;
+	std::shared_ptr<ShaderProgram> shader;
 };
 
 MapViewBase::MapViewBase(ShadersService* shadersService, QWidget* parent)
@@ -59,6 +62,7 @@ void MapViewBase::initializeGL() {
   setupViewport();
 
   initializeTileSystem();
+	initializeShaders();
 }
 
 void MapViewBase::initializeTileSystem() {
@@ -67,6 +71,15 @@ void MapViewBase::initializeTileSystem() {
 		qWarning() << "Failed to initialize TileRenderer";
 		return;
   }
+}
+
+void MapViewBase::initializeShaders() {
+	if (!d->shadersService) {
+		return;
+	}
+
+	d->shader = d->shadersService->loadShader("chunk_base");
+	//d->shader->
 }
 
 void MapViewBase::resizeGL(int w, int h) {

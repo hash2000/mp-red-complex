@@ -8,7 +8,7 @@ public:
 
 	ShadersService* q;
 	IShadersDataProvider* shadersDataProvider = nullptr;
-	std::map<QString, std::shared_ptr<SharedShaderProgram>> cache;
+	std::map<QString, std::shared_ptr<ShaderProgram>> cache;
 };
 
 ShadersService::ShadersService(IShadersDataProvider* shadersDataProvider)
@@ -18,31 +18,31 @@ ShadersService::ShadersService(IShadersDataProvider* shadersDataProvider)
 
 ShadersService::~ShadersService() = default;
 
-std::shared_ptr<SharedShaderProgram> ShadersService::loadShader(const QString& name) {
+std::shared_ptr<ShaderProgram> ShadersService::loadShader(const QString& name) {
 
 	auto it = d->cache.find(name);
 	if (it != d->cache.end()) {
 		return it->second;
 	}
 
-	const auto vertexSource = d->shadersDataProvider->loadShader(QString("%1.vert")
+	const auto vertexSource = d->shadersDataProvider->loadShader(QString("shaders/%1.vert")
 		.arg(name));
 	if (!vertexSource.has_value()) {
 		qWarning() << "ShadersService::createShader: failed to load vertex shader with name" << name;
-		return std::shared_ptr<SharedShaderProgram>();
+		return std::shared_ptr<ShaderProgram>();
 	}
 
-	const auto fragmentSource = d->shadersDataProvider->loadShader(QString("%1.frag")
+	const auto fragmentSource = d->shadersDataProvider->loadShader(QString("shaders/%1.frag")
 		.arg(name));
 	if (!fragmentSource.has_value()) {
 		qWarning() << "ShadersService::createShader: failed to load fragment shader  with name" << name;
-		return std::shared_ptr<SharedShaderProgram>();
+		return std::shared_ptr<ShaderProgram>();
 	}
 
-	auto shader = std::make_shared<SharedShaderProgram>();
+	auto shader = std::make_shared<ShaderProgram>();
 	auto createResult = shader->initialize(vertexSource.value(), fragmentSource.value());
 	if (!createResult) {
-		return std::shared_ptr<SharedShaderProgram>();
+		return std::shared_ptr<ShaderProgram>();
 	}
 
 	d->cache.emplace(name, shader);

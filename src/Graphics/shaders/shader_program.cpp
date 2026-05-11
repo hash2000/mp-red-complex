@@ -1,7 +1,7 @@
 #include "Graphics/shaders/shader_program.h"
 #include <QOpenGLContext>
 #include <QOpenGLShaderProgram>
-#include <QOpenGLFunctions_3_3_Core>
+#include <QOpenGLFunctions_4_5_Core>
 #include <QOpenGLBuffer>
 
 namespace {
@@ -20,18 +20,19 @@ namespace {
 		QVector4D borderColor;
 		QVector4D wetParams;
 		QVector4D fireParams;
+		float _pad2[4];
 	};
-
+	static_assert(sizeof(UBOData) == 256, "ShaderProgram UBOData size mismatch");
 	constexpr int kUBOSize = sizeof(UBOData);
 }
 
 
-class SharedShaderProgram::Private {
+class ShaderProgram::Private {
 public:
-	Private(SharedShaderProgram* parent) : q(parent) {}
+	Private(ShaderProgram* parent) : q(parent) {}
 
-	SharedShaderProgram* q;
-	QOpenGLFunctions_3_3_Core draw;
+	ShaderProgram* q;
+	QOpenGLFunctions_4_5_Core draw;
 	QMatrix4x4 projection;
 	QMatrix4x4 view;
 	float currentTime = 0.0f;
@@ -41,12 +42,12 @@ public:
 
 };
 
-SharedShaderProgram::SharedShaderProgram()
+ShaderProgram::ShaderProgram()
 	: d(std::make_unique<Private>(this)) {
 
 }
 
-SharedShaderProgram::~SharedShaderProgram() {
+ShaderProgram::~ShaderProgram() {
 	d->shader.release();
 
 	if (d->ubo.isCreated()) {
@@ -54,11 +55,11 @@ SharedShaderProgram::~SharedShaderProgram() {
 	}
 }
 
-bool SharedShaderProgram::isInitialized() const {
+bool ShaderProgram::isInitialized() const {
 	return d->initialized;
 }
 
-bool SharedShaderProgram::initialize(const QString& vertex, const QString& fragment) {
+bool ShaderProgram::initialize(const QString& vertex, const QString& fragment) {
 	if (d->initialized) {
 		return true;
 	}
@@ -66,19 +67,21 @@ bool SharedShaderProgram::initialize(const QString& vertex, const QString& fragm
 	d->draw.initializeOpenGLFunctions();
 
 	if (!d->shader.addShaderFromSourceCode(QOpenGLShader::Vertex, vertex)) {
-		qWarning() << "SharedShaderProgram: failed to compile vertex shader:" << d->shader.log();
+		qWarning() << "ShaderProgram: failed to compile vertex shader:" << d->shader.log();
 		return false;
 	}
 
 	if (!d->shader.addShaderFromSourceCode(QOpenGLShader::Fragment, fragment)) {
-		qWarning() << "SharedShaderProgram: failed to compile fragment shader:" << d->shader.log();
+		qWarning() << "ShaderProgram: failed to compile fragment shader:" << d->shader.log();
 		return false;
 	}
 
 	if (!d->shader.link()) {
-		qWarning() << "SharedShaderProgram: failed to link shader program:" << d->shader.log();
+		qWarning() << "ShaderProgram: failed to link shader program:" << d->shader.log();
 		return false;
 	}
+
+	auto i = kUBOSize;
 
 	// Создаем UBO
 	d->ubo.create();
@@ -86,29 +89,29 @@ bool SharedShaderProgram::initialize(const QString& vertex, const QString& fragm
 	d->ubo.allocate(kUBOSize);
 
 	d->initialized = true;
-	qInfo() << "SharedShaderProgram initialized with single shader for all materials";
+	qInfo() << "ShaderProgram initialized with single shader for all materials";
 	return true;
 }
 
-void SharedShaderProgram::bind() {
+void ShaderProgram::bind() {
 	d->shader.bind();
 	d->draw.glBindBufferBase(GL_UNIFORM_BUFFER, 0, d->ubo.bufferId());
 }
 
-void SharedShaderProgram::release() {
+void ShaderProgram::release() {
 	d->shader.release();
 }
 
-void SharedShaderProgram::setMatrices(const QMatrix4x4& projection, const QMatrix4x4& view) {
+void ShaderProgram::setMatrices(const QMatrix4x4& projection, const QMatrix4x4& view) {
 	d->projection = projection;
 	d->view = view;
 }
 
-void SharedShaderProgram::setTime(float time) {
+void ShaderProgram::setTime(float time) {
 	d->currentTime = time;
 }
 
-void SharedShaderProgram::updateParams(const MaterialParams& params) {
+void ShaderProgram::updateParams(const MaterialParams& params) {
 	if (!d->initialized) {
 		return;
 	}
