@@ -9,7 +9,8 @@ public:
 	ShadersDataProviderLocalImpl(Resources* resources);
 	~ShadersDataProviderLocalImpl();
 
-	std::optional<QString> LoadShader(const QString& path) override;
+	std::optional<QString> loadShader(const QString& path) override;
+
 private:
 	class Private;
 	std::unique_ptr<Private> d;

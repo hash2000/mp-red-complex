@@ -3,6 +3,7 @@
 #include "Game/services/time_service/time_service.h"
 #include "ApplicationLayer/maps/map_service.h"
 #include "ApplicationLayer/textures/tiles_selector_service.h"
+#include "ApplicationLayer/shaders/shaders_service.h"
 #include <memory>
 
 class MapEditorWindow::Private {
@@ -15,9 +16,11 @@ public:
   TilesSelectorService* tilesSelectorService = nullptr;
   TimeService* timeService = nullptr;
   MapEditorWidget* editorWidget = nullptr;
+	std::unique_ptr<ShadersService> shadersService;
 };
 
 MapEditorWindow::MapEditorWindow(
+	std::unique_ptr<ShadersService> shadersService,
   TexturesService* textureService,
   MapService* mapService,
   TilesSelectorService* tilesSelectorService,
@@ -26,13 +29,20 @@ MapEditorWindow::MapEditorWindow(
   QWidget* parent)
   : MdiChildWindow(id, parent)
   , d(std::make_unique<Private>(this)) {
+	d->shadersService = std::move(shadersService);
 	d->textureService = textureService;
   d->mapService = mapService;
   d->tilesSelectorService = tilesSelectorService;
   d->timeService = timeService;
 
   // Создаём виджет редактора
-  d->editorWidget = new MapEditorWidget(textureService, mapService, tilesSelectorService, this);
+  d->editorWidget = new MapEditorWidget(
+		d->shadersService.get(),
+		textureService,
+		mapService,
+		tilesSelectorService,
+		this);
+
   setWidget(d->editorWidget);
 
   // Подписываемся на тики для обновления

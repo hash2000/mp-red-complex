@@ -1,8 +1,8 @@
 #include "Game/widgets/map_view/map_widget.h"
 #include "Game/services/time_service/time_events.h"
 
-MapWidget::MapWidget(TilesSelectorService* tilesSelectorService, QWidget* parent)
-    : MapViewBase(parent) {
+MapWidget::MapWidget(ShadersService* shadersService, TilesSelectorService* tilesSelectorService, QWidget* parent)
+    : MapViewBase(shadersService, parent) {
 }
 
 MapWidget::~MapWidget() = default;

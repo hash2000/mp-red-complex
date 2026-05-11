@@ -1,7 +1,11 @@
 #include "Game/widgets/map_view/map_view_base.h"
+
+#include "ApplicationLayer/shaders/shaders_service.h"
+
 #include "Graphics/camera.h"
 #include "Graphics/tiles/tile_renderer.h"
 #include "Graphics/textures/texture_atlas.h"
+
 #include <QWheelEvent>
 #include <memory>
 
@@ -18,9 +22,10 @@ public:
 
   // Система тайлов
   std::unique_ptr<TileRenderer> tileRenderer;
+	ShadersService* shadersService;
 };
 
-MapViewBase::MapViewBase(QWidget* parent)
+MapViewBase::MapViewBase(ShadersService* shadersService, QWidget* parent)
   : d(std::make_unique<Private>(this))
   , QOpenGLWidget(parent) {
   setFocusPolicy(Qt::StrongFocus);
@@ -28,6 +33,7 @@ MapViewBase::MapViewBase(QWidget* parent)
   setAttribute(Qt::WA_NoSystemBackground, true);
 
   d->tileRenderer = std::make_unique<TileRenderer>();
+	d->shadersService = shadersService;
 	setDefaultCamera();
 }
 

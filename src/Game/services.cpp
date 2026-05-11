@@ -161,10 +161,6 @@ public:
 				return std::make_unique<TexturesService>(
 					imagesService.get());
 			})
-		, shadersService([this] {
-				return std::make_unique<ShadersService>(
-					shadersDataProvider.get());
-			})
 	{
 	}
 
@@ -207,7 +203,6 @@ public:
 	LazyPtr<ImagesService> imagesService;
 	LazyPtr<TilesSelectorService> tilesSelectorService;
 	LazyPtr<TexturesService> texturesService;
-	LazyPtr<ShadersService> shadersService;
 	LazyPtr<MapService> mapService;
 
 };
@@ -278,6 +273,7 @@ TexturesService* Services::texturesService() const {
 	return d->texturesService.get();
 }
 
-ShadersService* Services::shadersService() const {
-	return d->shadersService.get();
+std::unique_ptr<ShadersService> Services::shadersService() const {
+	return std::move(std::make_unique<ShadersService>(
+		d->shadersDataProvider.get()));
 }

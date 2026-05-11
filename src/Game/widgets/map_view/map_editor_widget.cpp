@@ -1,13 +1,16 @@
 #include "Game/widgets/map_view/map_editor_widget.h"
 #include "Game/widgets/map_view/create_map_dialog.h"
 #include "Game/widgets/map_view/apply_map_filter_dialog.h"
+
 #include "ApplicationLayer/maps/map_service.h"
 #include "ApplicationLayer/textures/tiles_selector_service.h"
 #include "ApplicationLayer/textures/textures_service.h"
+
 #include "Graphics/textures/texture_atlas.h"
 #include "Graphics/tiles/tile_renderer.h"
 #include "Graphics/tiles/chunk.h"
 #include "Graphics/textures/uploaded_texture.h"
+
 #include <QToolBar>
 #include <QComboBox>
 #include <QLabel>
@@ -56,11 +59,12 @@ public:
 };
 
 MapEditorWidget::MapEditorWidget(
+	ShadersService* shadersService,
 	TexturesService* textureService,
   MapService* mapService,
   TilesSelectorService* tilesSelectorService,
   QWidget* parent)
-  : MapViewBase(parent)
+  : MapViewBase(shadersService, parent)
   , d(std::make_unique<Private>(this)) {
 	d->textureService = textureService;
   d->mapService = mapService;

@@ -8,13 +8,14 @@ class TileRenderer;
 class TextureAtlas;
 class TilesSelectorService;
 class MapService;
+class ShadersService;
 class Camera;
 
 // Базовый класс для отображения карты
 class MapViewBase : public QOpenGLWidget, protected QOpenGLFunctions_3_3_Core {
 	Q_OBJECT
 public:
-	explicit MapViewBase(QWidget* parent = nullptr);
+	explicit MapViewBase(ShadersService* shadersService, QWidget* parent = nullptr);
 	~MapViewBase() override;
 
 	// Управление камерой

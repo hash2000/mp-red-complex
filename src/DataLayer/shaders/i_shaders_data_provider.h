@@ -4,5 +4,5 @@
 
 class IShadersDataProvider {
 public:
-	virtual std::optional<QString> LoadShader(const QString& path) = 0;
+	virtual std::optional<QString> loadShader(const QString& path) = 0;
 };

@@ -2,8 +2,7 @@
 #include "Game/widgets/map_view/map_widget.h"
 #include "Game/services/world_service/world_service.h"
 #include "Game/services/time_service/time_service.h"
-#include <QVBoxLayout>
-#include <QDebug>
+#include "ApplicationLayer/shaders/shaders_service.h"
 
 class MapWindow::Private {
 public:
@@ -13,13 +12,15 @@ public:
 
 	MapWindow* q;
 	MapWidget* widget;
+	std::unique_ptr<ShadersService> shadersService;
 };
 
 
-MapWindow::MapWindow(TilesSelectorService* tilesSelectorService, WorldService* worldService, TimeService* timeService, const QString& id, QWidget* parent)
+MapWindow::MapWindow(std::unique_ptr<ShadersService> shadersService, TilesSelectorService* tilesSelectorService, WorldService* worldService, TimeService* timeService, const QString& id, QWidget* parent)
 	: MdiChildWindow(id, parent)
 	, d(std::make_unique<Private>(this)) {
-	d->widget = new MapWidget(tilesSelectorService, this);
+	d->shadersService = std::move(shadersService);
+	d->widget = new MapWidget(d->shadersService.get(), tilesSelectorService, this);
 
 	setWindowTitle("World Map");
 

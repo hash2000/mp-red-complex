@@ -9,7 +9,7 @@ public:
 	}
 
 	ChunkDrawData* q;
-	QOpenGLFunctions_3_3_Core draw;	
+	QOpenGLFunctions_3_3_Core draw;
 	QOpenGLBuffer vbo;
 	QOpenGLVertexArrayObject vao;
 	QSize chunkSize;

@@ -36,7 +36,9 @@ public:
 	TilesSelectorService* tilesSelectorService() const;
 	MapService* mapService() const;
 	TexturesService* texturesService() const;
-	ShadersService* shadersService() const;
+
+	// для каждого контекста opengl должен быть свой
+	std::unique_ptr<ShadersService> shadersService() const;
 
 	void run();
 

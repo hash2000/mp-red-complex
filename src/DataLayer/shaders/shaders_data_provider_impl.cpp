@@ -16,7 +16,7 @@ ShadersDataProviderLocalImpl::ShadersDataProviderLocalImpl(Resources* resources)
 
 ShadersDataProviderLocalImpl::~ShadersDataProviderLocalImpl() = default;
 
-std::optional<QString> ShadersDataProviderLocalImpl::LoadShader(const QString& path) {
+std::optional<QString> ShadersDataProviderLocalImpl::loadShader(const QString& path) {
 	QString shader;
 	Format::Text::DataReader reader(d->resources, "shaders", path);
 	if (!reader.read(shader)) {
