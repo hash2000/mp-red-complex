@@ -6,8 +6,6 @@
 #include <memory>
 
 class ChunkDrawData;
-class Material;
-class RenderQueue;
 
 /// Чанк - блок тайлов NxN с собственным VAO/VBO
 /// Координаты: XZ плоскость, Y = высота
@@ -41,11 +39,11 @@ public:
 	/// Перестроить VBO из данных тайлов
 	void rebuild();
 
-	/// Отрисовка чанка через очередь команд
-	void render(RenderQueue& queue);
+	/// Отрисовка чанка
+	void render();
 
 	/// Отрисовка рамки чанка (всегда доступна, управление на уровне TileRenderer)
-	void renderBorder(RenderQueue& queue);
+	void renderBorder();
 
 	void showOnlyOneLayer(int layer);
 	void showAllLayers();
@@ -56,11 +54,8 @@ public:
 	float worldMaxZ() const;
 
 	int layerCount() const;
-	int addLayer(std::unique_ptr<ChunkDrawData>&& layer, Material* material = nullptr);
+	int addLayer(std::unique_ptr<ChunkDrawData>&& layer);
 	void removeLayer(int layer);
-
-	/// Получить материал для слоя
-	Material* layerMaterial(int layer) const;
 
 private:
 	class Private;

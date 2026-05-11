@@ -1,14 +1,60 @@
-```
-# Build artifacts
+*.vcxproj*
+*.sln
+*.suo
+*.sdf
+*.opensdf
+*.opendb
+*.VC.db
+*.aps
+*.xcodeproj
+ipch/
+.vs/
+.cache/
+/out/
+Debug/
+Release/
+/build/
+
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
 *.o
 *.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Linker files
+*.ilk
+
+# Debugger Files
+*.pdb
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
 *.a
 *.lib
-*.so
-*.dll
+
+# Executables
 *.exe
 *.out
+*.app
 
+<<<<<<< HEAD
 # CMake build directories
 build/
 cmake-build-*/
@@ -44,3 +90,9 @@ htmlcov/
 .env.local
 *.env.*
 ```
+=======
+# debug information files
+*.dwo
+
+CMakeSettings.json
+>>>>>>> parent of 7a14167 (### Graphics Materials and Renderer)
