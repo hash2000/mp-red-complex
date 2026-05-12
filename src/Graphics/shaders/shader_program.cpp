@@ -20,19 +20,18 @@ namespace {
 		QVector4D borderColor;
 		QVector4D wetParams;
 		QVector4D fireParams;
-		float _pad2[4];
+		float _pad3[4];
 	};
-	static_assert(sizeof(UBOData) == 256, "ShaderProgram UBOData size mismatch");
 	constexpr int kUBOSize = sizeof(UBOData);
+	static_assert(kUBOSize == 256, "ShaderProgram UBOData size mismatch");
 }
 
 
-class ShaderProgram::Private {
+class ShaderProgram::Private : public QOpenGLFunctions_4_5_Core {
 public:
 	Private(ShaderProgram* parent) : q(parent) {}
 
 	ShaderProgram* q;
-	QOpenGLFunctions_4_5_Core draw;
 	QMatrix4x4 projection;
 	QMatrix4x4 view;
 	float currentTime = 0.0f;
@@ -64,7 +63,7 @@ bool ShaderProgram::initialize(const QString& vertex, const QString& fragment) {
 		return true;
 	}
 
-	d->draw.initializeOpenGLFunctions();
+	d->initializeOpenGLFunctions();
 
 	if (!d->shader.addShaderFromSourceCode(QOpenGLShader::Vertex, vertex)) {
 		qWarning() << "ShaderProgram: failed to compile vertex shader:" << d->shader.log();
@@ -95,7 +94,7 @@ bool ShaderProgram::initialize(const QString& vertex, const QString& fragment) {
 
 void ShaderProgram::bind() {
 	d->shader.bind();
-	d->draw.glBindBufferBase(GL_UNIFORM_BUFFER, 0, d->ubo.bufferId());
+	d->glBindBufferBase(GL_UNIFORM_BUFFER, 0, d->ubo.bufferId());
 }
 
 void ShaderProgram::release() {

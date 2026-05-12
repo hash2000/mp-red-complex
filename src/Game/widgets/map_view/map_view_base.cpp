@@ -7,10 +7,11 @@
 #include "Graphics/textures/texture_atlas.h"
 #include "Graphics/shaders/shader_program.h"
 
+#include <QOpenGLFunctions_4_5_Core>
 #include <QWheelEvent>
 #include <memory>
 
-class MapViewBase::Private {
+class MapViewBase::Private : public QOpenGLFunctions_4_5_Core {
 public:
   Private(MapViewBase* parent) : q(parent) {}
 
@@ -53,12 +54,12 @@ void MapViewBase::setDefaultCamera() {
 }
 
 void MapViewBase::initializeGL() {
-  initializeOpenGLFunctions();
+  d->initializeOpenGLFunctions();
 
   emit initializeContext();
 
-  glEnable(GL_DEPTH_TEST);
-  glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
+	d->glEnable(GL_DEPTH_TEST);
+	d->glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
   setupViewport();
 
   initializeTileSystem();
@@ -87,8 +88,8 @@ void MapViewBase::resizeGL(int w, int h) {
 }
 
 void MapViewBase::paintGL() {
-  glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  d->glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
+  d->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	emit beginFrame();
 
@@ -98,7 +99,7 @@ void MapViewBase::paintGL() {
 }
 
 void MapViewBase::setupViewport() {
-  glViewport(0, 0, width(), height());
+  d->glViewport(0, 0, width(), height());
   d->camera.setupViewport(width(), height());
 }
 
