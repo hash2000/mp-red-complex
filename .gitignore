@@ -1,41 +1,98 @@
-```
-# Compiled and build artifacts
+*.vcxproj*
+*.sln
+*.suo
+*.sdf
+*.opensdf
+*.opendb
+*.VC.db
+*.aps
+*.xcodeproj
+ipch/
+.vs/
+.cache/
+/out/
+Debug/
+Release/
+/build/
+
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
 *.o
 *.obj
-*.exe
-*.dll
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Linker files
+*.ilk
+
+# Debugger Files
+*.pdb
+
+# Compiled Dynamic libraries
 *.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
 *.a
+*.lib
+
+# Executables
+*.exe
 *.out
+*.app
+
+<<<<<<< HEAD
+# CMake build directories
+build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+CMakeSettings.json
 
 # Dependencies
-node_modules/
-venv/
-.venv/
-__pycache__/
-.mypy_cache/
-.pytest_cache/
-target/
-.gradle/
-
-# Editors
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# System
-.DS_Store
-Thumbs.db
-.env
-.env.local
-*.env.*
+vendor/
 
 # Logs and temp files
 *.log
 *.tmp
+*.swp
 
-# Build and distribution
-dist/
-build/
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Visual studio files
+.vs/
+ipch/
+
+# Coverage reports
+coverage/
+htmlcov/
+.coverage
+
+# Environment files
+.env
+.env.local
+*.env.*
 ```
+=======
+# debug information files
+*.dwo
+
+CMakeSettings.json
+>>>>>>> parent of 7a14167 (### Graphics Materials and Renderer)
