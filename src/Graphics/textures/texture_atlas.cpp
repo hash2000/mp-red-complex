@@ -1,5 +1,6 @@
 #include "Graphics/textures/texture_atlas.h"
 #include "Graphics/textures/uploaded_texture.h"
+#include <QOpenGLFunctions_4_5_Core>
 #include <qdebug.h>
 
 class TextureAtlas::Private {

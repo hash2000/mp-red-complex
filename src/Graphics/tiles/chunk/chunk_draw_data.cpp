@@ -1,9 +1,9 @@
 #include "Graphics/tiles/chunk/chunk_draw_data.h"
 #include "Graphics/gl_check_errors.h"
-#include <QOpenGLFunctions_3_3_Core>
+#include <QOpenGLFunctions_4_5_Core>
 #include <QOpenGLBuffer>
 
-class ChunkDrawData::Private : public QOpenGLFunctions_3_3_Core {
+class ChunkDrawData::Private : public QOpenGLFunctions_4_5_Core {
 public:
 	Private(ChunkDrawData* parent) : q(parent) {
 	}

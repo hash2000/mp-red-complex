@@ -10,7 +10,7 @@ public:
 	ShadersService(IShadersDataProvider* shadersDataProvider);
 	~ShadersService();
 
-	std::shared_ptr<ShaderProgram> loadShader(const QString& name);
+	std::shared_ptr<ShaderProgram> loadShader(const QString& name, uint32_t features);
 
 	void clear();
 

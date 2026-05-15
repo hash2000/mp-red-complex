@@ -18,6 +18,7 @@ namespace {
 	};
 	constexpr int kUBOSize = sizeof(UBOData);
 	static_assert(kUBOSize == 128, "FrameUniformBuffer UBOData size mismatch");
+	static_assert(alignof(UBOData) == 16, "FrameUniformBuffer UBOData must be 16-byte aligned");
 }
 
 class FrameUniformBuffer::Private {
@@ -31,6 +32,7 @@ public:
 
 FrameUniformBuffer::FrameUniformBuffer()
 	: d(std::make_unique<Private>(this)) {
+	std::memset(&d->ubo, 0, kUBOSize);
 }
 
 FrameUniformBuffer::~FrameUniformBuffer() = default;

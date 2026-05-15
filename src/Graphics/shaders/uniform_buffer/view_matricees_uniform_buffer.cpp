@@ -8,6 +8,7 @@ namespace {
 	};
 	constexpr int kUBOSize = sizeof(UBOData);
 	static_assert(kUBOSize == 144, "ViewMatricesUniformBuffer UBOData size mismatch");
+	static_assert(alignof(UBOData) == 16, "ViewMatricesUniformBuffer UBOData must be 16-byte aligned");
 }
 
 class ViewMatricesUniformBuffer::Private {

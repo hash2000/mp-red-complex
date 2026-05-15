@@ -79,7 +79,7 @@ void MapViewBase::initializeShaders() {
 		return;
 	}
 
-	d->shader = d->shadersService->loadShader("chunk_base");
+	//d->shader = d->shadersService->loadShader("chunk_base");
 	//d->shader->
 }
 

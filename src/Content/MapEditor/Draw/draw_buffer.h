@@ -1,12 +1,12 @@
 #pragma once
-#include <QOpenGLFunctions_3_3_Core>
+#include <QOpenGLFunctions_4_5_Core>
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLBuffer>
 #include <vector>
 
 class DrawProgram;
 
-class DrawBuffer: protected QOpenGLFunctions_3_3_Core {
+class DrawBuffer: protected QOpenGLFunctions_4_5_Core {
 public:
 	struct Attribute {
 		int location = 0;
