@@ -1,60 +1,14 @@
-*.vcxproj*
-*.sln
-*.suo
-*.sdf
-*.opensdf
-*.opendb
-*.VC.db
-*.aps
-*.xcodeproj
-ipch/
-.vs/
-.cache/
-/out/
-Debug/
-Release/
-/build/
-
-# Prerequisites
-*.d
-
-# Compiled Object files
-*.slo
-*.lo
+```
+# Compiled and build artifacts
 *.o
 *.obj
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Linker files
-*.ilk
-
-# Debugger Files
-*.pdb
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
 *.exe
+*.dll
+*.so
+*.a
 *.out
 *.app
 
-<<<<<<< HEAD
 # CMake build directories
 build/
 cmake-build-*/
@@ -91,8 +45,35 @@ htmlcov/
 *.env.*
 ```
 =======
-# debug information files
-*.dwo
 
-CMakeSettings.json
->>>>>>> parent of 7a14167 (### Graphics Materials and Renderer)
+# Dependencies
+node_modules/
+venv/
+.venv/
+__pycache__/
+.mypy_cache/
+.pytest_cache/
+target/
+.gradle/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# System
+.DS_Store
+Thumbs.db
+.env
+.env.local
+*.env.*
+
+# Logs and temp files
+*.log
+*.tmp
+
+# Build and distribution
+dist/
+build/
+```
