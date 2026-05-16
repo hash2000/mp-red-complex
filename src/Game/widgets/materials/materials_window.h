@@ -22,12 +22,10 @@ public:
 
 	bool handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) override;
 
-protected:
-	void closeEvent(QCloseEvent* closeEvent) override;
-
 private:
 	void setupUi();
 
+private:
 	class Private;
 	std::unique_ptr<Private> d;
 };

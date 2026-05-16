@@ -42,6 +42,8 @@ bool CreateWindowCommand::execute(CommandContext* context, const QStringList& ar
 	}
 
 	if (!widget->handleCommand("create", args, context)) {
+		context->printError(QString("Method create returned false. %1")
+			.arg(target));
 		delete widget;
 		return false;
 	}

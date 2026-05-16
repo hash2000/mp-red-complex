@@ -5,6 +5,8 @@
 class Camera;
 
 class BaseOpenGLWidget : public QOpenGLWidget {
+	Q_OBJECT
+
 public:
 	explicit BaseOpenGLWidget(QWidget* parent = nullptr);
 	~BaseOpenGLWidget() override;
