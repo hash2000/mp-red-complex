@@ -1,5 +1,6 @@
 #pragma once
 #include "Graphics/widgets/base_opengl_widget.h"
+#include <qtmetamacros.h>
 
 class MaterialWidget : public BaseOpenGLWidget {
 	Q_OBJECT
@@ -14,4 +15,8 @@ signals:
 protected:
 	void initializeGL() override;
 	void paintGL() override;
+
+private:
+	class Private;
+	std::unique_ptr<Private> d;
 };

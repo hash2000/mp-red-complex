@@ -1,5 +1,5 @@
 #pragma once
-#include "Graphics/shaders/material_params.h"
+#include <QMatrix4x4>
 
 class UniformBuffer;
 

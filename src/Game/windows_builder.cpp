@@ -10,6 +10,7 @@
 #include "Game/widgets/user/user_window.h"
 #include "Game/widgets/warmup/warmup_window.h"
 #include "Game/widgets/textures/texture_editor_window.h"
+#include "Game/widgets/materials/materials_window.h"
 
 #include "ApplicationLayer/shaders/shaders_service.h"
 
@@ -88,6 +89,11 @@ WindowsBuilder::WindowsBuilder(ApplicationController* appController)
 			services->mapService(),
 			services->tilesSelectorService(),
 			services->timeService(),
+			id,
+			parent);
+		});
+	d->factory.emplace("material-editor", [](Services* services, const QString& id, QWidget* parent) {
+		return new MaterialsWindow(
 			id,
 			parent);
 		});
