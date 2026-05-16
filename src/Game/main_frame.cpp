@@ -75,10 +75,7 @@ public:
 		horizontalSplitter->addWidget(verticalSplitter);
 
 		// Панель действий
-		actionPanel = new ActionPanelWidget(
-			controller->controllers()->actionPanelController(),
-			controller->services()->imagesService(),
-			q);
+		actionPanel = new ActionPanelWidget(controller->controllers()->actionPanelController(),	q);
 		horizontalSplitter->addWidget(actionPanel);
 
 		horizontalSplitter->setStretchFactor(0, 1);
@@ -131,8 +128,6 @@ GameMainFrame::GameMainFrame(Resources* resources)
 	addAction(toggleAction);
 
 	d->controller->executeCommandByName("window-create", QStringList{ "warmup", "opengl-warmup" });
-
-//	d->controller->executeCommand("window-create map map");
 }
 
 void GameMainFrame::onToggleCommandConsole(bool visible) {

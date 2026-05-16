@@ -5,8 +5,7 @@
 #include <vector>
 
 class ActionPanelController;
-class ImagesService;
-class QToolButton;
+class QPushButton;
 class QVBoxLayout;
 
 class ActionPanelWidget : public QWidget {
@@ -14,7 +13,6 @@ class ActionPanelWidget : public QWidget {
 public:
 	explicit ActionPanelWidget(
 		ActionPanelController* controller,
-		ImagesService* ImagesService,
 		QWidget* parent = nullptr);
 	~ActionPanelWidget() override;
 
@@ -38,7 +36,7 @@ private slots:
 
 private:
 	void setupLayout();
-	QToolButton* createToolButton(const ActionButtonConfig& config);
+	QPushButton* createToolButton(const ActionButtonConfig& config);
 	void refreshButtons();
 	void updateToggleButtonIcon();
 

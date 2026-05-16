@@ -4,10 +4,7 @@
 #include "Game/styles/items_styles.h"
 #include <QToolButton>
 #include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QIcon>
-#include <QGraphicsEffect>
-#include <QStackedLayout>
+#include <QPushButton>
 
 class ActionPanelWidget::Private {
 public:
@@ -15,25 +12,22 @@ public:
 
 	ActionPanelWidget* q;
 	ActionPanelController* controller = nullptr;
-	ImagesService* ImagesService = nullptr;
 	QHBoxLayout* mainLayout = nullptr;
 	QWidget* buttonsContainer = nullptr;
 	QVBoxLayout* buttonsLayout = nullptr;
 	QWidget* toggleContainer = nullptr;      // Контейнер кнопки переключения
 	QVBoxLayout* toggleLayout = nullptr;
 	QToolButton* toggleButton = nullptr;     // Кнопка сворачивания/разворачивания
-	QHash<QString, QToolButton*> buttonMap;  // ID -> QToolButton
+	QHash<QString, QPushButton*> buttonMap;  // ID -> QPushButton
 	bool isVisible = false;  // По умолчанию панель скрыта (стрелка вправо)
 };
 
 ActionPanelWidget::ActionPanelWidget(
 	ActionPanelController* controller,
-	ImagesService* ImagesService,
 	QWidget* parent)
 	: QWidget(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->controller = controller;
-	d->ImagesService = ImagesService;
 
 	// Подключение сигналов контроллера
 	connect(d->controller, &ActionPanelController::buttonAdded,
@@ -131,28 +125,42 @@ void ActionPanelWidget::setupLayout() {
 	setPanelVisible(true);
 }
 
-QToolButton* ActionPanelWidget::createToolButton(const ActionButtonConfig& config) {
-	auto* button = new QToolButton(this);
+QPushButton* ActionPanelWidget::createToolButton(const ActionButtonConfig& config) {
+	auto* button = new QPushButton(config.iconName, this);
 
-	// Загружаем иконку через сервис текстур (с кэшированием)
-	QPixmap pixmap = d->ImagesService->getImage(config.iconName);
-	button->setIcon(QIcon(pixmap));
-
-	button->setIconSize(QSize(ItemsStyles::ICON_SIZE, ItemsStyles::ICON_SIZE));
+	button->setFixedSize(QSize(ItemsStyles::ICON_SIZE, ItemsStyles::ICON_SIZE));
 	button->setToolTip(config.toolTip);
 	button->setFixedSize(ItemsStyles::ICON_SIZE, ItemsStyles::ICON_SIZE);
-	button->setAutoRaise(true);
 	button->setProperty("actionId", config.id);
 	button->setProperty("actionCommand", config.command);
+	button->setStyleSheet(R"(
+		QPushButton {
+			background-color: #2d3748;
+			color: #e2e8f0;
+			border: 1px solid #4a5568;
+			border-radius: 4px;
+			font-size: 16px;
+		}
+		QPushButton:hover:enabled {
+			background-color: #4a5568;
+			border: 1px solid #718096;
+		}
+		QPushButton:pressed:enabled {
+			background-color: #1a202c;
+		}
+		QPushButton:disabled {
+			color: #718096;
+		}
+	)");
 
 	// Подключение к слоту
-	connect(button, &QToolButton::clicked, this, &ActionPanelWidget::onToolButtonClicked);
+	connect(button, &QPushButton::clicked, this, &ActionPanelWidget::onToolButtonClicked);
 
 	return button;
 }
 
 void ActionPanelWidget::onToolButtonClicked() {
-	auto* button = qobject_cast<QToolButton*>(sender());
+	auto* button = qobject_cast<QPushButton*>(sender());
 	if (!button) return;
 
 	QString command = button->property("actionCommand").toString();
