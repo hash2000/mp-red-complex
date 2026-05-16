@@ -1,15 +1,14 @@
 #include "Graphics/tiles/chunk/chunk_draw_data.h"
 #include "Graphics/gl_check_errors.h"
-#include <QOpenGLFunctions_3_3_Core>
+#include <QOpenGLFunctions_4_5_Core>
 #include <QOpenGLBuffer>
 
-class ChunkDrawData::Private {
+class ChunkDrawData::Private : public QOpenGLFunctions_4_5_Core {
 public:
 	Private(ChunkDrawData* parent) : q(parent) {
 	}
 
 	ChunkDrawData* q;
-	QOpenGLFunctions_3_3_Core draw;	
 	QOpenGLBuffer vbo;
 	QOpenGLVertexArrayObject vao;
 	QSize chunkSize;
@@ -28,7 +27,7 @@ public:
 		initialized = true;
 		dirty = true;
 
-		draw.initializeOpenGLFunctions();
+		initializeOpenGLFunctions();
 	}
 
 };
@@ -99,10 +98,9 @@ void ChunkDrawData::render() {
 		return;
 	}
 
-	auto f = QOpenGLContext::currentContext()->functions();
 	d->vbo.bind();
 	d->vao.bind();
-	f->glDrawArrays(drawMode(), 0, d->vertexCount);
+	d->glDrawArrays(drawMode(), 0, d->vertexCount);
 	GL_CHECK_ERRORS();
 
 	d->vao.release();

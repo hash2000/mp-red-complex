@@ -7,12 +7,14 @@ class MapService;
 class TilesSelectorService;
 class TimeService;
 class TexturesService;
+class ShadersService;
 
 class MapEditorWindow : public MdiChildWindow {
   Q_OBJECT
 
 public:
   explicit MapEditorWindow(
+		std::unique_ptr<ShadersService> shadersService,
 		TexturesService* textureService,
 		MapService* mapService,
 		TilesSelectorService* tilesSelectorService,

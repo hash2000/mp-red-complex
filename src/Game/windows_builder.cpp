@@ -10,6 +10,9 @@
 #include "Game/widgets/user/user_window.h"
 #include "Game/widgets/warmup/warmup_window.h"
 #include "Game/widgets/textures/texture_editor_window.h"
+
+#include "ApplicationLayer/shaders/shaders_service.h"
+
 #include <map>
 #include <functional>
 
@@ -30,6 +33,7 @@ WindowsBuilder::WindowsBuilder(ApplicationController* appController)
 
 	d->factory.emplace("map", [](Services* services, const QString& id, QWidget* parent) {
 		return new MapWindow(
+			services->shadersService(),
 			services->tilesSelectorService(),
 			services->worldService(),
 			services->timeService(),
@@ -79,6 +83,7 @@ WindowsBuilder::WindowsBuilder(ApplicationController* appController)
 		});
 	d->factory.emplace("map-editor", [](Services* services, const QString& id, QWidget* parent) {
 		return new MapEditorWindow(
+			services->shadersService(),
 			services->texturesService(),
 			services->mapService(),
 			services->tilesSelectorService(),

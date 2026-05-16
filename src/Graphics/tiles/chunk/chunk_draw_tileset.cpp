@@ -48,6 +48,10 @@ ChunkDrawTileset::ChunkDrawTileset()
 ChunkDrawTileset::~ChunkDrawTileset() = default;
 
 void ChunkDrawTileset::setTileset(std::shared_ptr<TextureAtlas> tileset) {
+	if (d->tileset && d->tileset->isLoaded()) {
+		return;
+	}
+
 	d->tileset = tileset;
 	markDirty();
 }
@@ -161,3 +165,18 @@ GLenum ChunkDrawTileset::drawMode() {
 	return GL_TRIANGLES;
 }
 
+bool ChunkDrawTileset::onAfterRender() {
+	if (d->tileset && d->tileset->isLoaded()) {
+		return false;
+	}
+
+	d->tileset->bind();
+}
+
+void ChunkDrawTileset::onBeforeRender() {
+	if (d->tileset && d->tileset->isLoaded()) {
+		return;
+	}
+
+	d->tileset->unbind();
+}

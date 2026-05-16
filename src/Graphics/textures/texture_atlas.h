@@ -2,7 +2,6 @@
 #include "Graphics/textures/texture_region.h"
 #include "Graphics/textures/texture_filter.h"
 #include "Graphics/textures/tile_data.h"
-#include <QOpenGLFunctions_3_3_Core>
 #include <memory>
 
 class QOpenGLTexture;

@@ -1,6 +1,6 @@
 #pragma once
 #include "Graphics/tiles/chunk.h"
-#include <QOpenGLFunctions_3_3_Core>
+#include <QOpenGLFunctions_4_5_Core>
 #include <QSize>
 #include <memory>
 
@@ -8,7 +8,7 @@ class Camera;
 class QOpenGLShaderProgram;
 
 /// Рендерер тайлов - управляет чанками и их отрисовкой
-class TileRenderer : protected QOpenGLFunctions_3_3_Core {
+class TileRenderer : protected QOpenGLFunctions_4_5_Core {
 public:
 	static constexpr int kMaxTileRenderLayer = 3;
 

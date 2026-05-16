@@ -2,6 +2,7 @@
 #include "Graphics/camera.h"
 #include <QOpenGLShaderProgram>
 #include <QOpenGLFunctions>
+// #include <QtGui/6.10.2/QtGui/rhi/qrhi.h>
 #include <qdebug.h>
 #include <memory>
 
@@ -142,7 +143,7 @@ Chunk* TileRenderer::getOrCreateChunk(int chunkX, int chunkZ) {
 		return it.value().get();
 	}
 
-	auto chunk = QSharedPointer<Chunk>::create(kMaxTileRenderLayer);
+	auto chunk = QSharedPointer<Chunk>::create();
 	chunk->setChunkSize(d->chunkSize);
 	chunk->setChunkPosition(key.first, key.second);
 

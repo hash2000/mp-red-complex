@@ -5,7 +5,7 @@
 #include <QColor>
 #include <memory>
 
-class TextureAtlas;
+class ChunkDrawData;
 
 /// Чанк - блок тайлов NxN с собственным VAO/VBO
 /// Координаты: XZ плоскость, Y = высота
@@ -14,7 +14,7 @@ public:
 	/// Размер чанка по умолчанию
 	static constexpr int kDefaultChunkSize = 32;
 
-	Chunk(int layers);
+	Chunk();
 	~Chunk();
 
 	/// Установить позицию чанка в мире (в чанках, не в пикселях)
@@ -32,20 +32,9 @@ public:
 
 	float zLevel() const;
 
-	/// Установить тайлсет
-	void setTileset(std::shared_ptr<TextureAtlas> tileset);
-	std::shared_ptr<TextureAtlas> tileSet() const;
-	bool hasTileset() const;
-
 	/// Установить размер чанка
 	void setChunkSize(const QSize& size);
 	QSize chunkSize() const;
-
-	/// Установить тайл по локальным координатам (0..chunkSize-1)
-	void setTile(int worldX, int worldZ, int tileId, int layer);
-
-	/// Получить тайл по локальным координатам
-	int getTile(int worldX, int worldZ, int layer) const;
 
 	/// Перестроить VBO из данных тайлов
 	void rebuild();
@@ -63,6 +52,10 @@ public:
 	float worldMaxX() const;
 	float worldMinZ() const;
 	float worldMaxZ() const;
+
+	int layerCount() const;
+	int addLayer(std::unique_ptr<ChunkDrawData>&& layer);
+	void removeLayer(int layer);
 
 private:
 	class Private;

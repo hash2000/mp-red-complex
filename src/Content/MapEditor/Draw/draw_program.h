@@ -1,11 +1,11 @@
 #pragma once
 #include "Content/MapEditor/Draw/draw_buffer.h"
-#include <QOpenGLFunctions_3_3_Core>
+#include <QOpenGLFunctions_4_5_Core>
 #include <QOpenGLShaderProgram>
 #include <vector>
 #include <memory>
 
-class DrawProgram: protected QOpenGLFunctions_3_3_Core {
+class DrawProgram: protected QOpenGLFunctions_4_5_Core {
 public:
 	void create(const QString& vertCode, const QString& fragCode);
 	void bind();

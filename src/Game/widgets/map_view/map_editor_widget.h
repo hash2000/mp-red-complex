@@ -1,7 +1,5 @@
 #pragma once
 #include "Game/widgets/map_view/map_view_base.h"
-#include <QWidget>
-#include <QList>
 #include <memory>
 
 class QToolBar;
@@ -13,7 +11,7 @@ class QPushButton;
 class MapService;
 class TilesSelectorService;
 class TexturesService;
-
+class ShadersService;
 
 // Режимы редактирования карты
 enum class MapEditorMode {
@@ -27,6 +25,7 @@ class MapEditorWidget : public MapViewBase {
   Q_OBJECT
 public:
   explicit MapEditorWidget(
+		ShadersService* shadersService,
 		TexturesService* textureService,
 		MapService* mapService,
 		TilesSelectorService* tilesSelectorService,
@@ -55,6 +54,7 @@ private slots:
   void onTileHovered(std::optional<QPoint> point);
 	void onRenderLevelEditChanged(const QString& text);
 	void onShowSelectedLayerOnly(bool checked);
+	void onSaveMap();
 
 private:
   void setupUI();

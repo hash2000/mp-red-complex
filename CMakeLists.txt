@@ -11,7 +11,7 @@ include_directories(
 	${RedComplex_SOURCE_DIR}/tests
 )
 
-message(STATUS ${RedComplex_SOURCE_DIR})
+message(STATUS "RedComplex_SOURCE_DIR: ${RedComplex_SOURCE_DIR}")
 
 add_subdirectory(src)
 add_subdirectory(tests)
