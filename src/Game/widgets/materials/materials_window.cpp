@@ -1,7 +1,7 @@
 #include "Game/widgets/materials/materials_window.h"
 #include "Game/widgets/materials/material_widget.h"
 #include <QVBoxLayout>
-#include <QHBoxLayout>
+#include <QHeaderView>
 #include <QSplitter>
 #include <QTabWidget>
 #include <QTreeView>
@@ -131,9 +131,5 @@ bool MaterialsWindow::handleCommand(const QString& commandName, const QStringLis
 	Q_UNUSED(commandName);
 	Q_UNUSED(args);
 	Q_UNUSED(context);
-	return false;
-}
-
-void MaterialsWindow::closeEvent(QCloseEvent* closeEvent) {
-	MdiChildWindow::closeEvent(closeEvent);
+	return true;
 }
