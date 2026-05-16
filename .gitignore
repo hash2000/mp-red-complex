@@ -7,44 +7,6 @@
 *.so
 *.a
 *.out
-*.app
-
-# CMake build directories
-build/
-cmake-build-*/
-CMakeFiles/
-CMakeCache.txt
-cmake_install.cmake
-Makefile
-CMakeSettings.json
-
-# Dependencies
-vendor/
-
-# Logs and temp files
-*.log
-*.tmp
-*.swp
-
-# OS generated files
-.DS_Store
-Thumbs.db
-
-# Visual studio files
-.vs/
-ipch/
-
-# Coverage reports
-coverage/
-htmlcov/
-.coverage
-
-# Environment files
-.env
-.env.local
-*.env.*
-```
-=======
 
 # Dependencies
 node_modules/
