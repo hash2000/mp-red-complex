@@ -1,6 +1,5 @@
 #pragma once
 #include "DataLayer/materials/material.h"
-#include <QString>
 #include <list>
 
 class IMaterialsDataProvider {

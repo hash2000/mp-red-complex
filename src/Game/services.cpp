@@ -22,6 +22,7 @@
 #include "DataLayer/users/i_users_data_provider.h"
 #include "DataLayer/characters/i_character_data_provider.h"
 #include "DataLayer/shaders/shaders_data_provider_impl.h"
+#include "DataLayer/materials/material_data_provider_json_impl.h"
 
 #include "ApplicationLayer/items/items_service.h"
 #include "ApplicationLayer/inventories_service.h"
@@ -34,6 +35,7 @@
 #include "ApplicationLayer/textures/textures_service.h"
 #include "ApplicationLayer/textures/tiles_selector_service.h"
 #include "ApplicationLayer/shaders/shaders_service.h"
+#include "ApplicationLayer/materials/materials_service.h"
 
 #include <mutex>
 
@@ -87,6 +89,7 @@ public:
 		, usersDataProvider([this] {	return std::make_unique<UsersDataProviderJsonImpl>(resources);	})
 		, characterDataProvider([this] {	return std::make_unique<CharacterDataProviderJsonImpl>(resources);	})
 		, shadersDataProvider([this] { return std::make_unique<ShadersDataProviderLocalImpl>(resources); })
+		, materialsDataProvider([this] { return std::make_unique<MaterialsDataProviderJsonImpl>(resources); })
 
 		// Repositories
 		, itemRepository([this] {
@@ -161,6 +164,10 @@ public:
 				return std::make_unique<TexturesService>(
 					imagesService.get());
 			})
+		, materialsService([this] {
+		return std::make_unique<MaterialsService>(
+			materialsDataProvider.get());
+			})
 	{
 	}
 
@@ -185,6 +192,7 @@ public:
 	LazyPtr<ITileGroupsDataProvider> tileGroupsDataProvider;
 	LazyPtr<IMapDataProvider> mapDataProvider;
 	LazyPtr<IShadersDataProvider> shadersDataProvider;
+	LazyPtr<IMaterialsDataProvider> materialsDataProvider;
 
 	// Repositories (новый слой абстракции)
 	LazyPtr<IItemRepository> itemRepository;
@@ -204,6 +212,7 @@ public:
 	LazyPtr<TilesSelectorService> tilesSelectorService;
 	LazyPtr<TexturesService> texturesService;
 	LazyPtr<MapService> mapService;
+	LazyPtr<MaterialsService> materialsService;
 
 };
 

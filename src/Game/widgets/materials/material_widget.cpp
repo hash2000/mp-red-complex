@@ -11,8 +11,8 @@ public:
 MaterialWidget::MaterialWidget(QWidget* parent)
 	: BaseOpenGLWidget(parent)
 	, d(std::make_unique<Private>(this)) {
-	connect(this, BaseOpenGLWidget::beginFrame, this, MaterialWidget::onBerginFrame);
-	connect(this, BaseOpenGLWidget::initializeContext, this, MaterialWidget::onInitializeContext);
+	connect(this, &BaseOpenGLWidget::beginFrame, this, &MaterialWidget::onBerginFrame);
+	connect(this, &BaseOpenGLWidget::initializeContext, this, &MaterialWidget::onInitializeContext);
 }
 
 MaterialWidget::~MaterialWidget() = default;

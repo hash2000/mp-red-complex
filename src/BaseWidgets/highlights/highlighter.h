@@ -21,4 +21,4 @@ protected:
 private:
 	class Private;
 	std::unique_ptr<Private> d;
-}
+};
