@@ -40,7 +40,6 @@ void BaseOpenGLWidget::initializeGL() {
 	d->glEnable(GL_DEPTH_TEST);
 	d->glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
 	setupViewport();
-
 }
 
 void BaseOpenGLWidget::resizeGL(int w, int h) {
