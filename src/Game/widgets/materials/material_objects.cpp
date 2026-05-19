@@ -1,4 +1,6 @@
 #include "Game/widgets/materials/material_objects.h"
+#include "BaseWidgets/properties/properties_list_widget.h"
+
 #include <QSplitter>
 #include <QTreeView>
 #include <QStandardItemModel>
@@ -15,8 +17,8 @@ public:
 	// Вкладка "Объекты"
 	QTreeView* objectTreeView = nullptr;
 	QStandardItemModel* objectTreeModel = nullptr;
-	QWidget* propertiesWidget = nullptr;
-
+	PropertiesListWidget* propertiesWidget = nullptr;
+	QModelIndex selection;
 };
 
 MaterialObjects::MaterialObjects(QWidget* parent)
@@ -88,10 +90,10 @@ void MaterialObjects::setupUI() {
 	addBtn->setMenu(addMenu);
 
 	// Обработка выбора из меню
-	connect(addMenu->actions()[0], &QAction::triggered, this, [this]() { emit addRequested(MaterialObjectsAddType::VertexShader); });
-	connect(addMenu->actions()[1], &QAction::triggered, this, [this]() { emit addRequested(MaterialObjectsAddType::FragmentShader); });
-	connect(addMenu->actions()[3], &QAction::triggered, this, [this]() { emit addRequested(MaterialObjectsAddType::Directory); });
-	connect(addMenu->actions()[4], &QAction::triggered, this, [this]() { emit addRequested(MaterialObjectsAddType::Texture); });
+	connect(addMenu->actions()[0], &QAction::triggered, this, [this]() { emit onAddSubButtonTriggered(MaterialObjectTypes::VertexShader); });
+	connect(addMenu->actions()[1], &QAction::triggered, this, [this]() { emit onAddSubButtonTriggered(MaterialObjectTypes::FragmentShader); });
+	connect(addMenu->actions()[3], &QAction::triggered, this, [this]() { emit onAddSubButtonTriggered(MaterialObjectTypes::Directory); });
+	connect(addMenu->actions()[4], &QAction::triggered, this, [this]() { emit onAddSubButtonTriggered(MaterialObjectTypes::Texture); });
 
 	toolbarLayout->addWidget(addBtn);
 
@@ -170,7 +172,7 @@ void MaterialObjects::setupUI() {
 
 	d->objectsSplitter->addWidget(d->objectTreeView);
 
-	d->propertiesWidget = new QWidget();
+	d->propertiesWidget = new PropertiesListWidget();
 	d->propertiesWidget->setMinimumHeight(150);
 	d->propertiesWidget->setStyleSheet("background: #252526;"); // Тёмный фон свойств
 	d->objectsSplitter->addWidget(d->propertiesWidget);
@@ -183,14 +185,88 @@ void MaterialObjects::setupUI() {
 
 	objectsLayout->addWidget(d->objectsSplitter);
 
-	connect(d->objectTreeView, &QTreeView::customContextMenuRequested, this, &MaterialObjects::onCustomContextMenuRequested);
-	connect(d->objectTreeView, &QTreeView::doubleClicked, this, &MaterialObjects::onItemDoubleClicked);
+	connect(d->objectTreeView, &QTreeView::activated, this, &MaterialObjects::onItemDoubleClicked);
+	connect(d->objectTreeView->selectionModel(), &QItemSelectionModel::currentChanged, this, &MaterialObjects::onItemSelected);
 }
 
-void MaterialObjects::onCustomContextMenuRequested(const QPoint& pos) {
+void MaterialObjects::onAddSubButtonTriggered(MaterialObjectTypes type) {
+	auto item = d->objectTreeModel->itemFromIndex(d->selection);
+	if (!item) {
+		item = d->objectTreeModel->invisibleRootItem();
+	}
 
+	MaterialObjectNode::appendNode(item, "new_item", type);
+}
+
+void MaterialObjects::onItemSelected(const QModelIndex& current, const QModelIndex& previous) {
+	d->selection = current;
+	updateProperties();
 }
 
 void MaterialObjects::onItemDoubleClicked(const QModelIndex& index) {
+
+}
+
+void MaterialObjects::updateProperties() {
+	auto item = d->objectTreeModel->itemFromIndex(d->selection);
+	if (!item) {
+		d->propertiesWidget->clearProperties();
+		return;
+	}
+
+	MaterialObjectNode node(item);
+	const auto type = node.type();
+
+	if (type == MaterialObjectTypes::Directory) {
+		d->propertiesWidget->clearProperties();
+		return;
+	}
+
+	QList<PropertyData> props;
+
+	props.append({
+			"id_guid", "GUID", PropertyType::Text,
+			QVariant(node.guid()), QVariant(), true, QStringList(),
+			"", "Идентификатор (нельзя изменить)"
+		});
+
+	switch (type) {
+		case MaterialObjectTypes::VertexShader:
+		case MaterialObjectTypes::FragmentShader: {
+			props.append({
+					"path", "Путь к файлу", PropertyType::PathFile,
+					node.path(), QVariant(), false, QStringList(),
+					"Images (*.png *.jpg *.tga)", ""
+				});
+		}
+	}
+
+
+
+
+	//// 1. Комбобокс
+	//props.append({
+	//		"shader_type", "Тип шейдера", PropertyType::Combo,
+	//		"Vertex", QVariant(), false, {"Vertex", "Fragment"},
+	//		"", "Выберите тип компиляции"
+	//	});
+
+	//// 4. Булево значение
+	//props.append({
+	//		"is_enabled", "Включено", PropertyType::Boolean,
+	//		node->isEnabled(), QVariant(), false
+	//	});
+
+	//// 5. Число
+	//props.append({
+	//		"opacity", "Прозрачность", PropertyType::Number,
+	//		node->opacity(), QVariant(), false, QStringList(),
+	//		"", 0.0, 1.0, 0.05
+	//	});
+
+	d->propertiesWidget->setProperties(props);
+}
+
+void MaterialObjects::onPropertyChanged(const QString& propertyId, const QVariant& newValue) {
 
 }

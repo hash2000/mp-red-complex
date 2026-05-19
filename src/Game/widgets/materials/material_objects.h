@@ -1,13 +1,8 @@
 #pragma once
+#include "Game/widgets/materials/material_objects/material_object_node.h"
 #include <QWidget>
 #include <memory>
 
-enum class MaterialObjectsAddType {
-	VertexShader,
-	FragmentShader,
-	Directory,
-	Texture
-};
 
 class MaterialObjects : public QWidget {
 	Q_OBJECT
@@ -16,17 +11,19 @@ public:
 	~MaterialObjects() override;
 
 signals:
-	void addRequested(MaterialObjectsAddType type);
 	void refreshRequested();
 	void loadRequested();
 	void saveRequested();
 
 private slots:
-	void onCustomContextMenuRequested(const QPoint& pos);
+	void onItemSelected(const QModelIndex& current, const QModelIndex& previous);
 	void onItemDoubleClicked(const QModelIndex& index);
+	void onAddSubButtonTriggered(MaterialObjectTypes type);
+	void onPropertyChanged(const QString& propertyId, const QVariant& newValue);
 
 private:
 	void setupUI();
+	void updateProperties();
 
 public:
 	class Private;
