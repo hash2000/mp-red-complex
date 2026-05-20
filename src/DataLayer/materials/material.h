@@ -1,9 +1,12 @@
 #pragma once
 #include <QVector4D>
+#include <QString>
 #include <list>
 
 class Material {
 public:
+	QString name;
+
 	QVector4D baseColor{ 1.0f, 1.0f, 1.0f, 1.0f };
 	float metallic = 0.0f; 
 	float roughness = 0.5f;

@@ -22,6 +22,14 @@ QUuid MaterialObjectNode::guid() const {
 	return _item->data(MaterialObjectsRoles::Guid).toUuid();
 }
 
+void MaterialObjectNode::setPath(const QString& value) {
+	if (!_item) {
+		return;
+	}
+
+	_item->setData(value, MaterialObjectsRoles::Path);
+}
+
 QString MaterialObjectNode::path() const {
 	if (!_item) {
 		return QString();

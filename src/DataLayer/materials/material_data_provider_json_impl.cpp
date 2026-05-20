@@ -19,7 +19,7 @@ MaterialsDataProviderJsonImpl::MaterialsDataProviderJsonImpl(Resources* resource
 
 MaterialsDataProviderJsonImpl::~MaterialsDataProviderJsonImpl() = default;
 
-bool MaterialsDataProviderJsonImpl::loadIds(const QString& name, std::list<QString>& ids) {
+bool MaterialsDataProviderJsonImpl::loadIds(const QString& name, std::list<QString>& ids) const {
 	const auto path = QString("materials/lists/%1.json")
 		.arg(name);
 
@@ -39,7 +39,34 @@ bool MaterialsDataProviderJsonImpl::loadIds(const QString& name, std::list<QStri
 	return true;
 } 
 
-bool MaterialsDataProviderJsonImpl::loadMaterial(const QString& name, Material& mat) {
+bool MaterialsDataProviderJsonImpl::loadMaterial(const QString& name, Material& mat) const {
+	const auto path = QString("materials/%1.json")
+		.arg(name);
+
+	QJsonObject json;
+	Format::Json::DataReader reader(d->resources, "assets", path);
+	if (!reader.read(json)) {
+		return false;
+	}
+
+	if (json.contains("albedo") && json["albedo"].isObject()) {
+		QJsonObject albedo = json["albedo"].toObject();
+		mat.baseColor = QVector4D(
+			albedo["x"].toDouble(),
+			albedo["y"].toDouble(),
+			albedo["z"].toDouble(),
+			albedo["w"].toDouble());
+	}
+
+
+
+	mat.name = name;
+
+	return true;
+}
+
+bool MaterialsDataProviderJsonImpl::saveMaterial(Material& mat) const {
+
 
 	return true;
 }

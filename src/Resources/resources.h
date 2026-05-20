@@ -7,6 +7,8 @@
 #include <memory>
 #include <optional>
 
+class DataWriteStream;
+
 class Resources : public Configurable {
 public:
 	Resources();
@@ -23,6 +25,9 @@ public:
 
 	auto getStream(const QString &container, const QString &path) const
 		-> std::optional<std::shared_ptr<DataStream>>;
+
+	auto getWriteStream(const QString& container, const QString& path) const
+		-> std::optional<std::shared_ptr<DataWriteStream>>;
 
 public:
 	VariablesContext Variables;

@@ -9,8 +9,9 @@ class MaterialsDataProviderJsonImpl : public IMaterialsDataProvider
 public:
 	MaterialsDataProviderJsonImpl(Resources* resources);
 	~MaterialsDataProviderJsonImpl();
-	bool loadIds(const QString& name, std::list<QString>& ids) override;
-	bool loadMaterial(const QString& name, Material& mat) override;
+	bool loadIds(const QString& name, std::list<QString>& ids) const override;
+	bool loadMaterial(const QString& name, Material& mat) const override;
+	bool saveMaterial(Material& mat) const override;
 
 private:
 	class Private;

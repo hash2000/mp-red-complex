@@ -187,6 +187,8 @@ void MaterialObjects::setupUI() {
 
 	connect(d->objectTreeView, &QTreeView::activated, this, &MaterialObjects::onItemDoubleClicked);
 	connect(d->objectTreeView->selectionModel(), &QItemSelectionModel::currentChanged, this, &MaterialObjects::onItemSelected);
+	connect(d->propertiesWidget, &PropertiesListWidget::propertyChanged, this, &MaterialObjects::onPropertyChanged);
+	connect(d->propertiesWidget, &PropertiesListWidget::propertyButtonClick, this, &MaterialObjects::onPropertyButtonClick);
 }
 
 void MaterialObjects::onAddSubButtonTriggered(MaterialObjectTypes type) {
@@ -225,7 +227,7 @@ void MaterialObjects::updateProperties() {
 	QList<PropertyData> props;
 
 	props.append({
-			"id_guid", "GUID", PropertyType::Text,
+			"guid", "GUID", PropertyType::Text,
 			QVariant(node.guid()), QVariant(), true, QStringList(),
 			"", "Идентификатор (нельзя изменить)"
 		});
@@ -236,37 +238,43 @@ void MaterialObjects::updateProperties() {
 			props.append({
 					"path", "Путь к файлу", PropertyType::PathFile,
 					node.path(), QVariant(), false, QStringList(),
-					"Images (*.png *.jpg *.tga)", ""
+					type == MaterialObjectTypes::VertexShader ?
+						"Vertex Shader (*.vert)" :
+						"Fragment Shader (*.frag)"
+				, ""
+				});
+			props.append({
+					"edit", "Редактировать", PropertyType::Button,
+					QVariant(), QVariant(), false, QStringList(),
+					QString(), 
+					"🖼️ Редактировать шейдер"
 				});
 		}
 	}
-
-
-
-
-	//// 1. Комбобокс
-	//props.append({
-	//		"shader_type", "Тип шейдера", PropertyType::Combo,
-	//		"Vertex", QVariant(), false, {"Vertex", "Fragment"},
-	//		"", "Выберите тип компиляции"
-	//	});
-
-	//// 4. Булево значение
-	//props.append({
-	//		"is_enabled", "Включено", PropertyType::Boolean,
-	//		node->isEnabled(), QVariant(), false
-	//	});
-
-	//// 5. Число
-	//props.append({
-	//		"opacity", "Прозрачность", PropertyType::Number,
-	//		node->opacity(), QVariant(), false, QStringList(),
-	//		"", 0.0, 1.0, 0.05
-	//	});
 
 	d->propertiesWidget->setProperties(props);
 }
 
 void MaterialObjects::onPropertyChanged(const QString& propertyId, const QVariant& newValue) {
+	auto item = d->objectTreeModel->itemFromIndex(d->selection);
+	if (!item) {
+		return;
+	}
+
+	MaterialObjectNode node(item);
+
+	if (propertyId == "path") {
+		node.setPath(newValue.toString());
+	}
+}
+
+void MaterialObjects::onPropertyButtonClick(const QString& propertyId) {
+	auto item = d->objectTreeModel->itemFromIndex(d->selection);
+	if (!item) {
+		return;
+	}
+
+	MaterialObjectNode node(item);
+
 
 }

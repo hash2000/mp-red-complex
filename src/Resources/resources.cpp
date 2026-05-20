@@ -1,7 +1,7 @@
 #include "Resources/resources.h"
 #include "DataStream/data_stream/dat/dat_file.h"
-#include "DataStream/data_stream/dat/dat_file_exception.h"
 #include "DataStream/data_stream/raw/raw_directory.h"
+#include "DataStream/data_write_stream/data_write_stream_file.h"
 #include "Base/scoped_timer.h"
 
 Resources::Resources() {
@@ -96,4 +96,16 @@ auto Resources::getStream(const QString &container, const QString &path) const
 	}
 
 	return std::nullopt;
+}
+
+auto Resources::getWriteStream(const QString& container, const QString& path) const
+	-> std::optional<std::shared_ptr<DataWriteStream>> {
+	const auto dataPath = QString("")
+		.arg(_resources_path.absolutePath())
+		.arg(container)
+		.arg(path);
+	auto stream = std::make_shared<DataWriteStreamFile>(dataPath);
+
+
+	return stream;
 }

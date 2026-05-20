@@ -17,8 +17,11 @@ public:
 	~MaterialObjectNode();
 
 	QUuid guid() const;
-	QString path() const;
 	MaterialObjectTypes type() const;
+
+	void setPath(const QString& value);
+	QString path() const;
+
 
 public:
 	static QStandardItem* appendNode(QStandardItem* parent, const QString& name, MaterialObjectTypes type);

@@ -22,11 +22,12 @@ namespace Format::Json {
 		QJsonParseError parseError;
 		auto document = QJsonDocument::fromJson(buffer, &parseError);
 		if (parseError.error != QJsonParseError::NoError) {
-			throw std::runtime_error(QString("Load json [%1], position [%2]. %3")
+			qWarning() << QString("Load json [%1], position [%2]. %3")
 				.arg(_block->name())
 				.arg(_block->position())
 				.arg(parseError.errorString())
-				.toStdString());
+				.toStdString();
+			return false;
 		}
 
 		result = document.object();

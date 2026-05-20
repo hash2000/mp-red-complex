@@ -148,8 +148,6 @@ QWidget* PropertiesListWidget::Private::createEditor(const PropertyData& prop) {
 			auto* lineEdit = new QLineEdit();
 			lineEdit->setText(prop.value.toString());
 			lineEdit->setReadOnly(prop.readOnly);
-			// В Qt QLineEdit при setReadOnly(true) текст автоматически остаётся выделяемым.
-			// setTextInteractionFlags() у него нет, и он не нужен.
 			lineEdit->setStyleSheet(style);
 
 			if (!prop.readOnly) {
@@ -167,7 +165,6 @@ QWidget* PropertiesListWidget::Private::createEditor(const PropertyData& prop) {
 			textEdit->setPlainText(prop.value.toString());
 			textEdit->setFixedHeight(60);
 			textEdit->setReadOnly(prop.readOnly);
-			// У QTextEdit setTextInteractionFlags() ЕСТЬ, он контролирует курсор/выделение
 			textEdit->setTextInteractionFlags(prop.readOnly
 				? Qt::TextSelectableByMouse
 				: Qt::TextEditorInteraction);
@@ -191,7 +188,7 @@ QWidget* PropertiesListWidget::Private::createEditor(const PropertyData& prop) {
 
 			auto* pathEdit = new QLineEdit();
 			pathEdit->setText(prop.value.toString());
-			pathEdit->setReadOnly(true); // Поле пути всегда read-only, редактируется только через диалог
+			pathEdit->setReadOnly(true);
 			pathEdit->setStyleSheet(style);
 
 			auto* btn = new QToolButton();
@@ -270,7 +267,6 @@ QWidget* PropertiesListWidget::Private::createEditor(const PropertyData& prop) {
 				spin->setRange(prop.minVal, prop.maxVal);
 				spin->setSingleStep(prop.step);
 				spin->setReadOnly(prop.readOnly); // setReadOnly() у QAbstractSpinBox есть
-				// setTextInteractionFlags() у spin-box НЕТ, не нужен
 				spin->setStyleSheet(style);
 
 				if (!prop.readOnly) {
@@ -297,6 +293,23 @@ QWidget* PropertiesListWidget::Private::createEditor(const PropertyData& prop) {
 				}
 				editor = spin;
 			}
+			break;
+		}
+		case PropertyType::Button: {
+			auto* button = new QToolButton();
+			button->setToolTip(prop.tooltip);
+			button->setText("...");
+			button->setToolButtonStyle(Qt::ToolButtonTextOnly);
+			button->setEnabled(!prop.readOnly);
+
+			if (!prop.readOnly) {
+				QObject::connect(button, &QToolButton::click, q,
+					[this, id = prop.id]() {
+						emit q->propertyButtonClick(id);
+					});
+			}
+
+			editor = button;
 			break;
 		}
 	}

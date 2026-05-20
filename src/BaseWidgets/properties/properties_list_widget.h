@@ -40,6 +40,15 @@
 ///			node.path(), QVariant(), false, QStringList(),
 ///			"Images (*.png *.jpg *.tga)", ""
 ///		});
+///
+/// === Кнопка
+///	props.append({
+///			"edit", "Редактировать", PropertyType::Button,
+///			QVariant(), QVariant(), false, QStringList(),
+///			QString(),
+///			"🖼️ Редактировать шейдер"
+///		});
+/// 
 /// </example>
 
 enum class PropertyType {
@@ -49,7 +58,8 @@ enum class PropertyType {
 	PathFile,   // Выбор файла
 	PathDir,    // Выбор директории
 	Boolean,    // Чекбокс true/false
-	Number      // Целое или вещественное число
+	Number,     // Целое или вещественное число
+	Button,     // Кнопка
 };
 
 struct PropertyData {
@@ -87,6 +97,9 @@ signals:
 	/// @param propertyId Идентификатор свойства
 	/// @param newValue   Новое значение (QString, bool, int, double)
 	void propertyChanged(const QString& propertyId, const QVariant& newValue);
+
+	/// Нажатие на кнопку
+	void propertyButtonClick(const QString& propertyId);
 
 private:
 	class Private;

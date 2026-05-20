@@ -20,6 +20,7 @@ private slots:
 	void onItemDoubleClicked(const QModelIndex& index);
 	void onAddSubButtonTriggered(MaterialObjectTypes type);
 	void onPropertyChanged(const QString& propertyId, const QVariant& newValue);
+	void onPropertyButtonClick(const QString& propertyId);
 
 private:
 	void setupUI();
