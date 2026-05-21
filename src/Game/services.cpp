@@ -165,8 +165,8 @@ public:
 					imagesService.get());
 			})
 		, materialsService([this] {
-		return std::make_unique<MaterialsService>(
-			materialsDataProvider.get());
+				return std::make_unique<MaterialsService>(
+					materialsDataProvider.get());
 			})
 	{
 	}
@@ -280,6 +280,10 @@ MapService* Services::mapService() const {
 
 TexturesService* Services::texturesService() const {
 	return d->texturesService.get();
+}
+
+MaterialsService* Services::materialsService() const {
+	return d->materialsService.get();
 }
 
 std::unique_ptr<ShadersService> Services::shadersService() const {

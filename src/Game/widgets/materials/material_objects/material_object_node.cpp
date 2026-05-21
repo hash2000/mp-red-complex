@@ -59,7 +59,7 @@ QStandardItem* MaterialObjectNode::appendNode(QStandardItem* parent, const QStri
 		return nullptr;
 	}
 
-	auto subItem = new QStandardItem("new_item");
+	auto subItem = new QStandardItem(name);
 	parent->appendRow(subItem);
 
 	subItem->setData(static_cast<int>(type), MaterialObjectsRoles::Type);

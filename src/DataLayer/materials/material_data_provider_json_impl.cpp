@@ -1,5 +1,6 @@
 #include "DataLayer/materials/material_data_provider_json_impl.h"
 #include "DataStream/format/json/data_reader.h"
+#include "DataStream/format/json/data_writer.h"
 #include "Resources/resources.h"
 #include <QJsonObject>
 #include <QJsonArray>
@@ -58,15 +59,30 @@ bool MaterialsDataProviderJsonImpl::loadMaterial(const QString& name, Material& 
 			albedo["w"].toDouble());
 	}
 
-
-
 	mat.name = name;
 
 	return true;
 }
 
 bool MaterialsDataProviderJsonImpl::saveMaterial(Material& mat) const {
+	const auto path = QString("materials/%1.json")
+		.arg(mat.name);
 
+	QJsonObject albedo;
+	albedo["x"] = mat.baseColor.x();
+	albedo["y"] = mat.baseColor.y();
+	albedo["z"] = mat.baseColor.z();
+	albedo["w"] = mat.baseColor.w();
+
+	QJsonObject json;
+	json["albedo"] = albedo;
+
+
+
+	Format::Json::DataWriter reader(d->resources, "assets", path);
+	if (!reader.write(json)) {
+		return false;
+	}
 
 	return true;
 }

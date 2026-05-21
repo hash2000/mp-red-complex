@@ -3,6 +3,7 @@
 #include <memory>
 
 class MaterialWidget;
+class MaterialsService;
 class QTabWidget;
 class QSplitter;
 class QTreeView;
@@ -13,7 +14,7 @@ class MaterialsWindow : public MdiChildWindow {
 	Q_OBJECT
 
 public:
-	explicit MaterialsWindow(const QString& id, QWidget* parent = nullptr);
+	explicit MaterialsWindow(MaterialsService* materialsService, const QString& id, QWidget* parent = nullptr);
 	~MaterialsWindow() override;
 
 	QString windowType() const override { return "materials"; }

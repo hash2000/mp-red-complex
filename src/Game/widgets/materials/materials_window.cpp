@@ -10,6 +10,7 @@ public:
 	Private(MaterialsWindow* parent) : q(parent) {}
 	MaterialsWindow* q;
 
+	MaterialsService* materialsService = nullptr;
 	MaterialWidget* materialWidget = nullptr;
 	QTabWidget* tabWidget = nullptr;
 	QSplitter* mainSplitter = nullptr;
@@ -21,9 +22,10 @@ public:
 	MaterialVariables* variablesTree = nullptr;
 };
 
-MaterialsWindow::MaterialsWindow(const QString& id, QWidget* parent)
+MaterialsWindow::MaterialsWindow(MaterialsService* materialsService, const QString& id, QWidget* parent)
 	: MdiChildWindow(id, parent)
 	, d(std::make_unique<Private>(this)) {
+	d->materialsService = materialsService;
 	setupUi();
 }
 
@@ -40,7 +42,7 @@ void MaterialsWindow::setupUi() {
 	// Создаем правую панель с параметрами (tab widget)
 	d->tabWidget = new QTabWidget(this);
 
-	d->objectTree = new MaterialObjects();
+	d->objectTree = new MaterialObjects(d->materialsService);
 	d->tabWidget->addTab(d->objectTree, "Объекты");
 
 	d->variablesTree = new MaterialVariables(this);

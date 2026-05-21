@@ -3,11 +3,12 @@
 #include <QWidget>
 #include <memory>
 
+class MaterialsService;
 
 class MaterialObjects : public QWidget {
 	Q_OBJECT
 public:
-	MaterialObjects(QWidget* parent = nullptr);
+	MaterialObjects(MaterialsService* materialsService, QWidget* parent = nullptr);
 	~MaterialObjects() override;
 
 signals:

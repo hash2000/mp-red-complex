@@ -1,4 +1,6 @@
 #include "Game/widgets/materials/material_objects.h"
+#include "ApplicationLayer/materials/materials_service.h"
+#include "ApplicationLayer/materials/material_mime_data.h"
 #include "BaseWidgets/properties/properties_list_widget.h"
 
 #include <QSplitter>
@@ -12,18 +14,23 @@ class MaterialObjects::Private {
 public:
 	Private(MaterialObjects* parent) : q(parent) {}
 	MaterialObjects* q;
+
+	MaterialsService* materialsService = nullptr;
+
 	QSplitter* objectsSplitter = nullptr;
 
 	// Вкладка "Объекты"
 	QTreeView* objectTreeView = nullptr;
 	QStandardItemModel* objectTreeModel = nullptr;
 	PropertiesListWidget* propertiesWidget = nullptr;
+	QStandardItem* rootMaterialNode = nullptr;
 	QModelIndex selection;
 };
 
-MaterialObjects::MaterialObjects(QWidget* parent)
+MaterialObjects::MaterialObjects(MaterialsService* materialsService, QWidget* parent)
 : QWidget(parent)
 , d(std::make_unique<Private>(this)) {
+	d->materialsService = materialsService;
 	setupUI();
 }
 
@@ -145,7 +152,13 @@ void MaterialObjects::setupUI() {
 	d->objectTreeView->setModel(d->objectTreeModel);
 	d->objectTreeView->setHeaderHidden(false);
 	d->objectTreeView->setExpandsOnDoubleClick(true);
-	d->objectTreeModel->setHorizontalHeaderLabels({ "Name", "Type" });
+	d->objectTreeView->setRootIsDecorated(false);
+	d->objectTreeModel->setHorizontalHeaderLabels({ "Name" });
+
+	d->rootMaterialNode = new QStandardItem("Материалы");
+	d->objectTreeModel->appendRow(d->rootMaterialNode);
+	d->objectTreeView->expand(d->objectTreeModel->indexFromItem(d->rootMaterialNode));
+	d->objectTreeView->scrollTo(d->objectTreeModel->indexFromItem(d->rootMaterialNode));
 
 	// Стиль дерева под VS (опционально)
 	d->objectTreeView->setStyleSheet(R"(
@@ -156,7 +169,7 @@ void MaterialObjects::setupUI() {
             border: none;
         }
         QTreeView::item {
-            padding: 2px 4px;
+            padding: 2px 2px;
         }
         QTreeView::item:selected {
             background: #094771;
@@ -165,7 +178,7 @@ void MaterialObjects::setupUI() {
         QHeaderView::section {
             background: #2D2D30;
             color: #CCCCCC;
-            padding: 4px;
+            padding: 2px;
             border: none;
         }
     )");
@@ -192,12 +205,19 @@ void MaterialObjects::setupUI() {
 }
 
 void MaterialObjects::onAddSubButtonTriggered(MaterialObjectTypes type) {
-	auto item = d->objectTreeModel->itemFromIndex(d->selection);
-	if (!item) {
-		item = d->objectTreeModel->invisibleRootItem();
+	auto index = d->selection;
+	if (!index.isValid()) {
+		index = d->objectTreeModel->indexFromItem(d->rootMaterialNode);
 	}
 
-	MaterialObjectNode::appendNode(item, "new_item", type);
+	auto item = d->objectTreeModel->itemFromIndex(index);
+	if (!item) {
+		return;
+	}
+
+	auto subItem = MaterialObjectNode::appendNode(item, "new_item", type);
+	d->objectTreeView->expand(d->objectTreeModel->indexFromItem(subItem));
+	d->objectTreeView->scrollTo(d->objectTreeModel->indexFromItem(subItem));
 }
 
 void MaterialObjects::onItemSelected(const QModelIndex& current, const QModelIndex& previous) {
@@ -210,7 +230,12 @@ void MaterialObjects::onItemDoubleClicked(const QModelIndex& index) {
 }
 
 void MaterialObjects::updateProperties() {
-	auto item = d->objectTreeModel->itemFromIndex(d->selection);
+	auto index = d->selection;
+	if (!index.isValid()) {
+		index = d->objectTreeModel->indexFromItem(d->rootMaterialNode);
+	}
+
+	auto item = d->objectTreeModel->itemFromIndex(index);
 	if (!item) {
 		d->propertiesWidget->clearProperties();
 		return;
@@ -219,7 +244,8 @@ void MaterialObjects::updateProperties() {
 	MaterialObjectNode node(item);
 	const auto type = node.type();
 
-	if (type == MaterialObjectTypes::Directory) {
+	if (type == MaterialObjectTypes::Undefined ||
+		type == MaterialObjectTypes::Directory) {
 		d->propertiesWidget->clearProperties();
 		return;
 	}
@@ -234,7 +260,8 @@ void MaterialObjects::updateProperties() {
 
 	switch (type) {
 		case MaterialObjectTypes::VertexShader:
-		case MaterialObjectTypes::FragmentShader: {
+		case MaterialObjectTypes::FragmentShader:
+		case MaterialObjectTypes::Texture: {
 			props.append({
 					"path", "Путь к файлу", PropertyType::PathFile,
 					node.path(), QVariant(), false, QStringList(),
@@ -243,14 +270,21 @@ void MaterialObjects::updateProperties() {
 						"Fragment Shader (*.frag)"
 				, ""
 				});
+		}
+	}
+
+	switch (type) {
+		case MaterialObjectTypes::VertexShader:
+		case MaterialObjectTypes::FragmentShader: {
 			props.append({
 					"edit", "Редактировать", PropertyType::Button,
 					QVariant(), QVariant(), false, QStringList(),
-					QString(), 
+					QString(),
 					"🖼️ Редактировать шейдер"
 				});
 		}
 	}
+
 
 	d->propertiesWidget->setProperties(props);
 }

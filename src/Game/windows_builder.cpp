@@ -94,6 +94,7 @@ WindowsBuilder::WindowsBuilder(ApplicationController* appController)
 		});
 	d->factory.emplace("material-editor", [](Services* services, const QString& id, QWidget* parent) {
 		return new MaterialsWindow(
+			services->materialsService(),
 			id,
 			parent);
 		});
