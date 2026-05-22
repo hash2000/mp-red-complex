@@ -1,4 +1,5 @@
 #include "Game/widgets/materials/material_objects.h"
+#include "Game/widgets/materials/material_objects/material_object_menu_actions.h"
 #include "ApplicationLayer/materials/materials_service.h"
 #include "ApplicationLayer/materials/material_mime_data.h"
 #include "BaseWidgets/properties/properties_list_widget.h"
@@ -153,10 +154,15 @@ void MaterialObjects::setupUI() {
 	d->objectTreeView->setHeaderHidden(false);
 	d->objectTreeView->setExpandsOnDoubleClick(true);
 	d->objectTreeView->setRootIsDecorated(false);
+	d->objectTreeView->setContextMenuPolicy(Qt::CustomContextMenu);
 	d->objectTreeModel->setHorizontalHeaderLabels({ "Name" });
 
-	d->rootMaterialNode = new QStandardItem("Материалы");
-	d->objectTreeModel->appendRow(d->rootMaterialNode);
+	MaterialObjectNode node(d->objectTreeModel->invisibleRootItem());
+	d->rootMaterialNode = MaterialObjectNode::appendNode(
+		d->objectTreeModel->invisibleRootItem(),
+		"Материалы",
+		MaterialObjectTypes::MaterialRoot);
+
 	d->objectTreeView->expand(d->objectTreeModel->indexFromItem(d->rootMaterialNode));
 	d->objectTreeView->scrollTo(d->objectTreeModel->indexFromItem(d->rootMaterialNode));
 
@@ -202,6 +208,7 @@ void MaterialObjects::setupUI() {
 	connect(d->objectTreeView->selectionModel(), &QItemSelectionModel::currentChanged, this, &MaterialObjects::onItemSelected);
 	connect(d->propertiesWidget, &PropertiesListWidget::propertyChanged, this, &MaterialObjects::onPropertyChanged);
 	connect(d->propertiesWidget, &PropertiesListWidget::propertyButtonClick, this, &MaterialObjects::onPropertyButtonClick);
+	connect(d->objectTreeView, &QTreeView::customContextMenuRequested, this, &MaterialObjects::onCustomContextMenuRequested);
 }
 
 void MaterialObjects::onAddSubButtonTriggered(MaterialObjectTypes type) {
@@ -227,6 +234,27 @@ void MaterialObjects::onItemSelected(const QModelIndex& current, const QModelInd
 
 void MaterialObjects::onItemDoubleClicked(const QModelIndex& index) {
 
+}
+
+void MaterialObjects::onCustomContextMenuRequested(const QPoint& pos) {
+	const auto index = d->objectTreeView->indexAt(pos);
+	if (!index.isValid()) {
+		return;
+	}
+
+	auto item = d->objectTreeModel->itemFromIndex(index);
+	if (!item) {
+		return;
+	}
+
+	MaterialObjectNode node(item);
+	MaterialObjectMenuActionsBuilder builder(node.type(), d->objectTreeView);
+	const auto menu = builder.BuildAddMenu();
+	if (menu && !menu->actions().isEmpty()) {
+
+
+		menu->exec(d->objectTreeView->viewport()->mapToGlobal(pos));
+	}
 }
 
 void MaterialObjects::updateProperties() {

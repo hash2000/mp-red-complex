@@ -15,6 +15,7 @@ public:
 	void setTileSize(const QVector2D& value);
 	void setBorderColor(const QVector4D& value);
 
+	bool initialize() override;
 	void flush() override;
 
 private:

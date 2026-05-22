@@ -48,7 +48,12 @@
 ///			QString(),
 ///			"🖼️ Редактировать шейдер"
 ///		});
-/// 
+///
+/// === Выбор цвета
+/// props.append({
+///			"main_color", "Основной цвет", PropertyType::Color,
+///			QColor("#3A7BD5"), QVariant(), false
+///		});
 /// </example>
 
 enum class PropertyType {
@@ -60,6 +65,7 @@ enum class PropertyType {
 	Boolean,    // Чекбокс true/false
 	Number,     // Целое или вещественное число
 	Button,     // Кнопка
+	Color,      // Выбор цвета
 };
 
 struct PropertyData {

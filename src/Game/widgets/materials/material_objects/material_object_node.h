@@ -1,6 +1,7 @@
 #pragma once
 #include <QStandardItem>
 #include <QIcon>
+#include <QColor>
 #include <QUuid>
 
 enum class MaterialObjectTypes {
@@ -8,7 +9,10 @@ enum class MaterialObjectTypes {
 	VertexShader,
 	FragmentShader,
 	Directory,
-	Texture
+	Texture,
+	MaterialRoot,
+	Material,
+	BaseColor,
 };
 
 class MaterialObjectNode {
@@ -22,6 +26,8 @@ public:
 	void setPath(const QString& value);
 	QString path() const;
 
+	void setColor(const QColor& value);
+	QColor color() const;
 
 public:
 	static QStandardItem* appendNode(QStandardItem* parent, const QString& name, MaterialObjectTypes type);

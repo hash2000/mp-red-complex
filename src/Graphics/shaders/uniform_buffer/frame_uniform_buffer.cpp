@@ -69,3 +69,7 @@ void FrameUniformBuffer::flush() {
 	d->dirty = false;
 	write(0, &d->ubo, kUBOSize);
 }
+
+bool FrameUniformBuffer::initialize() {
+	return create(kUBOSize);
+}

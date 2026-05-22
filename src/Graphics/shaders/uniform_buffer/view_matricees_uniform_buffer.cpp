@@ -44,3 +44,7 @@ void ViewMatricesUniformBuffer::flush() {
 	d->dirty = false;
 	write(0, &d->ubo, kUBOSize);
 }
+
+bool ViewMatricesUniformBuffer::initialize() {
+	return create(kUBOSize);
+}

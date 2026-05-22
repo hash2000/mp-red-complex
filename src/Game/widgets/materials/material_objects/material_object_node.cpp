@@ -3,8 +3,9 @@
 
 namespace MaterialObjectsRoles {
 	constexpr int Type = Qt::UserRole;
-	constexpr int Path = Qt::UserRole + 1;
-	constexpr int Guid = Qt::UserRole + 2;
+	constexpr int Guid = Qt::UserRole + 1;
+	constexpr int Path = Qt::UserRole + 2;
+	constexpr int Color = Qt::UserRole + 3;
 };
 
 
@@ -46,6 +47,28 @@ MaterialObjectTypes MaterialObjectNode::type() const {
 	return static_cast<MaterialObjectTypes>(_item->data(MaterialObjectsRoles::Type).toInt());
 }
 
+void MaterialObjectNode::setColor(const QColor& value) {
+	if (!_item) {
+		return;
+	}
+
+	_item->setData(value, MaterialObjectsRoles::Color);
+}
+
+QColor MaterialObjectNode::color() const {
+	if (!_item) {
+		return QColor::Invalid;
+	}
+
+	const auto value = _item->data(MaterialObjectsRoles::Color);
+	if (!value.canConvert<QColor>()) {
+		return QColor::Invalid;
+	}
+
+	return value.value<QColor>();
+}
+
+
 QStandardItem* MaterialObjectNode::appendNode(QStandardItem* parent, const QString& name, MaterialObjectTypes type) {
 	if (!parent) {
 		return nullptr;
@@ -77,6 +100,8 @@ QIcon MaterialObjectNode::getIcon(MaterialObjectTypes type) {
 	case MaterialObjectTypes::VertexShader: return QIcon::fromTheme(QIcon::ThemeIcon::DocumentPrintPreview);
 	case MaterialObjectTypes::FragmentShader: return QIcon::fromTheme(QIcon::ThemeIcon::CameraVideo);
 	case MaterialObjectTypes::Texture: return QIcon::fromTheme(QIcon::ThemeIcon::DriveOptical);
+	case MaterialObjectTypes::Material: return QIcon::fromTheme(QIcon::ThemeIcon::ToolsCheckSpelling);
+	case MaterialObjectTypes::MaterialRoot: return QIcon::fromTheme(QIcon::ThemeIcon::DialogInformation);
 	}
 
 	return QIcon::fromTheme(QIcon::ThemeIcon::WindowClose);

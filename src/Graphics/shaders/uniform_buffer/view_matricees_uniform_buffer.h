@@ -11,6 +11,7 @@ public:
 	void setProjection(const QMatrix4x4& m);
 	void setView(const QMatrix4x4& m);
 
+	bool initialize() override;
 	void flush() override;
 
 private:

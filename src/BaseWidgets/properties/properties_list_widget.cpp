@@ -12,6 +12,9 @@
 #include <QComboBox>
 #include <QLineEdit>
 #include <QTextEdit>
+#include <QPushButton>
+#include <QColor>
+#include <QColorDialog>
 
 class PropertiesListWidget::Private {
 public:
@@ -310,6 +313,54 @@ QWidget* PropertiesListWidget::Private::createEditor(const PropertyData& prop) {
 			}
 
 			editor = button;
+			break;
+		}
+		case PropertyType::Color: {
+			auto* colorBtn = new QPushButton();
+			QColor initialColor = prop.value.value<QColor>();
+			if (!initialColor.isValid()) {
+				initialColor = Qt::black;
+			}
+
+			colorBtn->setText(initialColor.name());
+			colorBtn->setFixedHeight(26);
+			colorBtn->setCursor(Qt::PointingHandCursor);
+
+			// Лямбда для динамического обновления стиля под текущий цвет
+			auto updateColorStyle = [colorBtn](const QColor& c) {
+				bool isLight = c.lightness() > 128;
+				QString textColor = isLight ? "#000000" : "#FFFFFF";
+				QString style = QString(
+					"QPushButton { background-color: %1; color: %2; border: 1px solid #3E3E42; padding: 2px 6px; text-align: left; }"
+					"QPushButton:hover { border-color: #007ACC; }"
+					"QPushButton:disabled { border-color: transparent; opacity: 0.75; }"
+				).arg(c.name()).arg(textColor);
+				colorBtn->setStyleSheet(style);
+			};
+			updateColorStyle(initialColor);
+			colorBtn->setProperty("currentColor", initialColor);
+
+			if (!prop.readOnly) {
+				QObject::connect(colorBtn, &QPushButton::clicked, q,
+					[this, colorBtn, prop, updateColorStyle]() {
+					QColor current = colorBtn->property("currentColor").value<QColor>();
+					QColorDialog dlg(current, q);
+					dlg.setOption(QColorDialog::ShowAlphaChannel, true); // Опционально: поддержка прозрачности
+					if (dlg.exec() == QDialog::Accepted) {
+						QColor newColor = dlg.selectedColor();
+						colorBtn->setProperty("currentColor", newColor);
+						colorBtn->setText(newColor.name());
+						updateColorStyle(newColor);
+
+						emit q->propertyChanged(prop.id, newColor);
+					}
+				});
+			}
+			else {
+				colorBtn->setEnabled(false);
+			}
+
+			editor = colorBtn;
 			break;
 		}
 	}

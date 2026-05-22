@@ -22,6 +22,7 @@ private slots:
 	void onAddSubButtonTriggered(MaterialObjectTypes type);
 	void onPropertyChanged(const QString& propertyId, const QVariant& newValue);
 	void onPropertyButtonClick(const QString& propertyId);
+	void onCustomContextMenuRequested(const QPoint& pos);
 
 private:
 	void setupUI();
