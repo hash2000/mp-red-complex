@@ -1,5 +1,7 @@
 #include "Game/widgets/materials/material_objects.h"
 #include "Game/widgets/materials/material_objects/material_object_menu_actions.h"
+#include "Game/i_app_commands.h"
+#include "Game/widgets/materials/material_objects/material_object_node.h"
 #include "ApplicationLayer/materials/materials_service.h"
 #include "ApplicationLayer/materials/material_mime_data.h"
 #include "BaseWidgets/properties/properties_list_widget.h"
@@ -28,7 +30,9 @@ public:
 	QModelIndex selection;
 };
 
-MaterialObjects::MaterialObjects(MaterialsService* materialsService, QWidget* parent)
+MaterialObjects::MaterialObjects(
+	MaterialsService* materialsService,
+	QWidget* parent)
 : QWidget(parent)
 , d(std::make_unique<Private>(this)) {
 	d->materialsService = materialsService;
@@ -249,9 +253,14 @@ void MaterialObjects::onCustomContextMenuRequested(const QPoint& pos) {
 
 	MaterialObjectNode node(item);
 	MaterialObjectMenuActionsBuilder builder(node.type(), d->objectTreeView);
-	const auto menu = builder.BuildAddMenu();
+	const auto menu = builder.buildAddMenu();
 	if (menu && !menu->actions().isEmpty()) {
-
+		MaterialObjectMenuActionsBuilder::attachMenuAction(*menu, "action_add_directory", [this]() { emit onAddSubButtonTriggered(MaterialObjectTypes::Directory); });
+		MaterialObjectMenuActionsBuilder::attachMenuAction(*menu, "action_add_materail", [this]() { emit onAddSubButtonTriggered(MaterialObjectTypes::Material); });
+		MaterialObjectMenuActionsBuilder::attachMenuAction(*menu, "action_add_texture", [this]() { emit onAddSubButtonTriggered(MaterialObjectTypes::Texture); });
+		MaterialObjectMenuActionsBuilder::attachMenuAction(*menu, "action_add_frag_shader", [this]() { emit onAddSubButtonTriggered(MaterialObjectTypes::FragmentShader); });
+		MaterialObjectMenuActionsBuilder::attachMenuAction(*menu, "action_add_vert_shader", [this]() { emit onAddSubButtonTriggered(MaterialObjectTypes::VertexShader); });
+		MaterialObjectMenuActionsBuilder::attachMenuAction(*menu, "action_add_albedo", [this]() { emit onAddSubButtonTriggered(MaterialObjectTypes::BaseColor); });
 
 		menu->exec(d->objectTreeView->viewport()->mapToGlobal(pos));
 	}
@@ -293,10 +302,7 @@ void MaterialObjects::updateProperties() {
 			props.append({
 					"path", "Путь к файлу", PropertyType::PathFile,
 					node.path(), QVariant(), false, QStringList(),
-					type == MaterialObjectTypes::VertexShader ?
-						"Vertex Shader (*.vert)" :
-						"Fragment Shader (*.frag)"
-				, ""
+					"All files (*.*)", ""
 				});
 		}
 	}
@@ -313,6 +319,12 @@ void MaterialObjects::updateProperties() {
 		}
 	}
 
+	if (type == MaterialObjectTypes::BaseColor) {
+		props.append({
+				"color", "Базовый цвет", PropertyType::Color,
+				QColor("#3A7BD5"), QVariant(), false
+			});
+	}
 
 	d->propertiesWidget->setProperties(props);
 }
@@ -338,5 +350,8 @@ void MaterialObjects::onPropertyButtonClick(const QString& propertyId) {
 
 	MaterialObjectNode node(item);
 
-
+	if (propertyId == "edit") {
+		emit editMaterialFile(node.type(), node.path());
+		return;
+	}
 }

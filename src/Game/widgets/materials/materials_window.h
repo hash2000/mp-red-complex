@@ -9,12 +9,16 @@ class QSplitter;
 class QTreeView;
 class QTableView;
 class QWidget;
+enum class MaterialObjectTypes;
 
 class MaterialsWindow : public MdiChildWindow {
 	Q_OBJECT
 
 public:
-	explicit MaterialsWindow(MaterialsService* materialsService, const QString& id, QWidget* parent = nullptr);
+	explicit MaterialsWindow(
+		MaterialsService* materialsService,
+		const QString& id,
+		QWidget* parent = nullptr);
 	~MaterialsWindow() override;
 
 	QString windowType() const override { return "materials"; }
@@ -22,6 +26,9 @@ public:
 	QSize windowDefaultSizes() const override { return QSize(1024, 768); }
 
 	bool handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) override;
+
+private slots:
+	void onEditMaterialFile(MaterialObjectTypes type, const QString& path);
 
 private:
 	void setupUi();

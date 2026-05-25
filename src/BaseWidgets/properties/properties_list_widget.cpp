@@ -304,9 +304,10 @@ QWidget* PropertiesListWidget::Private::createEditor(const PropertyData& prop) {
 			button->setText("...");
 			button->setToolButtonStyle(Qt::ToolButtonTextOnly);
 			button->setEnabled(!prop.readOnly);
+			button->setStyleSheet(style);
 
 			if (!prop.readOnly) {
-				QObject::connect(button, &QToolButton::click, q,
+				QObject::connect(button, &QToolButton::clicked, q,
 					[this, id = prop.id]() {
 						emit q->propertyButtonClick(id);
 					});

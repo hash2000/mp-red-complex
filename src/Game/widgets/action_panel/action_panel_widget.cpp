@@ -30,16 +30,11 @@ ActionPanelWidget::ActionPanelWidget(
 	d->controller = controller;
 
 	// Подключение сигналов контроллера
-	connect(d->controller, &ActionPanelController::buttonAdded,
-		this, &ActionPanelWidget::onButtonAdded);
-	connect(d->controller, &ActionPanelController::buttonRemoved,
-		this, &ActionPanelWidget::onButtonRemoved);
-	connect(d->controller, &ActionPanelController::allButtonsCleared,
-		this, &ActionPanelWidget::onAllButtonsCleared);
-	connect(d->controller, &ActionPanelController::buttonsSorted,
-		this, &ActionPanelWidget::onButtonsSorted);
-	connect(d->controller, &ActionPanelController::panelVisibilityChanged,
-		this, &ActionPanelWidget::onPanelVisibilityChanged);
+	connect(d->controller, &ActionPanelController::buttonAdded, this, &ActionPanelWidget::onButtonAdded);
+	connect(d->controller, &ActionPanelController::buttonRemoved, this, &ActionPanelWidget::onButtonRemoved);
+	connect(d->controller, &ActionPanelController::allButtonsCleared, this, &ActionPanelWidget::onAllButtonsCleared);
+	connect(d->controller, &ActionPanelController::buttonsSorted, this, &ActionPanelWidget::onButtonsSorted);
+	connect(d->controller, &ActionPanelController::panelVisibilityChanged, this, &ActionPanelWidget::onPanelVisibilityChanged);
 
 	setupLayout();
 }

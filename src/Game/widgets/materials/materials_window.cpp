@@ -2,6 +2,8 @@
 #include "Game/widgets/materials/material_widget.h"
 #include "Game/widgets/materials/material_objects.h"
 #include "Game/widgets/materials/material_variables.h"
+#include "Game/app_controller.h"
+#include "Game/commands/command_context.h"
 #include <QHeaderView>
 #include <QSplitter>
 
@@ -10,6 +12,8 @@ public:
 	Private(MaterialsWindow* parent) : q(parent) {}
 	MaterialsWindow* q;
 
+
+	IApplicationCommands* applicationCommands = nullptr;
 	MaterialsService* materialsService = nullptr;
 	MaterialWidget* materialWidget = nullptr;
 	QTabWidget* tabWidget = nullptr;
@@ -22,7 +26,10 @@ public:
 	MaterialVariables* variablesTree = nullptr;
 };
 
-MaterialsWindow::MaterialsWindow(MaterialsService* materialsService, const QString& id, QWidget* parent)
+MaterialsWindow::MaterialsWindow(
+	MaterialsService* materialsService,
+	const QString& id,
+	QWidget* parent)
 	: MdiChildWindow(id, parent)
 	, d(std::make_unique<Private>(this)) {
 	d->materialsService = materialsService;
@@ -55,12 +62,26 @@ void MaterialsWindow::setupUi() {
 	d->mainSplitter->setSizes({width() - 300, 300});
 
 	setWidget(d->mainSplitter);
+
+	connect(d->objectTree, &MaterialObjects::editMaterialFile, this, &MaterialsWindow::onEditMaterialFile);
 }
 
 bool MaterialsWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) {
 	// Обработка команд (пока пусто, может быть расширено)
-	Q_UNUSED(commandName);
-	Q_UNUSED(args);
-	Q_UNUSED(context);
-	return true;
+	if (commandName == "create") {
+		d->applicationCommands = context->applicationController();
+		return true;
+	}
+
+	return false;
 }
+
+void MaterialsWindow::onEditMaterialFile(MaterialObjectTypes type, const QString& path) {
+	if (!d->applicationCommands) {
+		return;
+	}
+
+//	d->applicationCommands->executeCommandByName("window-create code-editor");
+}
+
+

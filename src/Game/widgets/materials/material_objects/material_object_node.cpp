@@ -74,14 +74,6 @@ QStandardItem* MaterialObjectNode::appendNode(QStandardItem* parent, const QStri
 		return nullptr;
 	}
 
-	const auto isRoot = parent->parent() == nullptr;
-	const auto parentType = isRoot ? MaterialObjectTypes::Directory :
-		static_cast<MaterialObjectTypes>(parent->data(MaterialObjectsRoles::Type).toInt());
-
-	if (parentType != MaterialObjectTypes::Directory) {
-		return nullptr;
-	}
-
 	auto subItem = new QStandardItem(name);
 	parent->appendRow(subItem);
 
@@ -102,6 +94,7 @@ QIcon MaterialObjectNode::getIcon(MaterialObjectTypes type) {
 	case MaterialObjectTypes::Texture: return QIcon::fromTheme(QIcon::ThemeIcon::DriveOptical);
 	case MaterialObjectTypes::Material: return QIcon::fromTheme(QIcon::ThemeIcon::ToolsCheckSpelling);
 	case MaterialObjectTypes::MaterialRoot: return QIcon::fromTheme(QIcon::ThemeIcon::DialogInformation);
+	case MaterialObjectTypes::BaseColor: return QIcon::fromTheme(QIcon::ThemeIcon::Battery);
 	}
 
 	return QIcon::fromTheme(QIcon::ThemeIcon::WindowClose);

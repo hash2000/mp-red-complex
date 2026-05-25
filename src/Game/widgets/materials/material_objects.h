@@ -1,20 +1,23 @@
 #pragma once
-#include "Game/widgets/materials/material_objects/material_object_node.h"
 #include <QWidget>
 #include <memory>
 
 class MaterialsService;
+enum class MaterialObjectTypes;
 
 class MaterialObjects : public QWidget {
 	Q_OBJECT
 public:
-	MaterialObjects(MaterialsService* materialsService, QWidget* parent = nullptr);
+	MaterialObjects(
+		MaterialsService* materialsService,
+		QWidget* parent = nullptr);
 	~MaterialObjects() override;
 
 signals:
 	void refreshRequested();
 	void loadRequested();
 	void saveRequested();
+	void editMaterialFile(MaterialObjectTypes type, const QString& path);
 
 private slots:
 	void onItemSelected(const QModelIndex& current, const QModelIndex& previous);

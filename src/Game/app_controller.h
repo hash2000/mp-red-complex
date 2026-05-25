@@ -1,4 +1,5 @@
 #pragma once
+#include "Game/i_app_commands.h"
 #include <QObject>
 #include <QPointer>
 #include <QHash>
@@ -13,7 +14,7 @@ class Services;
 class Controllers;
 class Resources;
 
-class ApplicationController : public QObject {
+class ApplicationController : public QObject, public IApplicationCommands {
 Q_OBJECT
 public:
 	ApplicationController(Resources* resources, QObject* parent = nullptr);
@@ -30,14 +31,14 @@ public:
 	 * @param requester Объект, инициировавший выполнение (для контекста)
 	 * @return true если команда найдена и выполнена без исключений
 	 */
-	bool executeCommand(const QString& commandText, QObject* requester = nullptr);
+	bool executeCommand(const QString& commandText, QObject* requester = nullptr) override;
 
 	/**
 	 * Прямой вызов команды по имени с аргументами
 	 */
 	bool executeCommandByName(const QString& commandName,
 		const QStringList& args,
-		QObject* requester = nullptr);
+		QObject* requester = nullptr) override;
 
 signals:
 	/**
