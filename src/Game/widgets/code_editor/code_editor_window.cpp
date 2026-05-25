@@ -3,12 +3,16 @@
 #include "Game/app_controller.h"
 #include "Game/services.h"
 #include "Game/commands/command_context.h"
+#include <QRegularExpression>
 
 class CodeEditorWindow::Private {
 public:
 	Private(CodeEditorWindow* parent) : q(parent) {}
 	CodeEditorWindow* q;
 
+	CommandContext* context = nullptr;
+	CodeEditorWidget* widget = nullptr;
+	QString path;
 };
 
 CodeEditorWindow::CodeEditorWindow(const QString& id, QWidget* parent)
@@ -25,10 +29,26 @@ bool CodeEditorWindow::handleCommand(const QString& commandName,
 		auto controller = context->applicationController();
 		auto services = controller->services();
 
-		//setWidget(d->yourWidget);
+		d->context = context;
+		d->path = args.filter(QRegularExpression("^path:")).value(0).mid(5);
+		d->widget = new CodeEditorWidget(this);
+		setWidget(d->widget);
+
+		if (!d->path.isEmpty()) {
+			onChangeTargetPath();
+		}
 
 		return true;
 	}
 
 	return false;
+}
+
+void CodeEditorWindow::onChangeTargetPath() {
+	if (d->path.isEmpty()) {
+		d->context->printError(QString("Usage: [required window-create parameters] %1").arg(help()));
+		return;
+	}
+
+	d->widget->setPath(d->path);
 }

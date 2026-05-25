@@ -1,11 +1,13 @@
 #pragma once
-#include <QWidget>
+#include <QTextEdit>
 
-class CodeEditorWidget : public QWidget {
+class CodeEditorWidget : public QTextEdit {
 	Q_OBJECT
 public:
 	explicit CodeEditorWidget(QWidget* parent = nullptr);
 	~CodeEditorWidget() override;
+
+	void setPath(const QString& path);
 
 private:
 	class Private;

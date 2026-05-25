@@ -15,6 +15,8 @@ public:
 
 	void clearRules();
 
+	void LockRefreshView(bool lock = true);
+
 protected:
 	void highlightBlock(const QString& text) override;
 

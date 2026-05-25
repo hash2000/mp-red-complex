@@ -19,9 +19,9 @@ bool CreateWindowCommand::execute(CommandContext* context, const QStringList& ar
 		return false;
 	}
 
-	QString target = args.filter(QRegularExpression("^target:")).value(0).mid(7);
-	QString id = args.filter(QRegularExpression("^id:")).value(0).mid(3);
-	QString alternateTitle = args.filter(QRegularExpression("^title:")).value(0).mid(6);
+	auto id = args.filter(QRegularExpression("^id:")).value(0).mid(3);
+	const auto target = args.filter(QRegularExpression("^target:")).value(0).mid(7);
+	const auto alternateTitle = args.filter(QRegularExpression("^title:")).value(0).mid(6);
 
 	if (target.isEmpty()) {
 		context->printError(QString("Usage: %1").arg(help()));

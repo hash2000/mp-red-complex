@@ -11,4 +11,5 @@ void ActionPanelLoginBuilder::build() {
 	_panel->addButton(ActionButtonConfig("TextureEditor", "🎨", "Редактор текстур", "window-create target:texture-editor id:texture-editor", 2));
 	_panel->addButton(ActionButtonConfig("MapEditor", "🗺️", "Редактор карты", "window-create target:map-editor id:map-editor", 2));
 	_panel->addButton(ActionButtonConfig("MaterialEditor", "🔥", "Редактор материалов", "window-create target:material-editor id:material-editor", 2));
+	_panel->addButton(ActionButtonConfig("CodeEditor", "🖹", "Редактор кода", "window-create target:code-editor id:code-editor", 2));
 }

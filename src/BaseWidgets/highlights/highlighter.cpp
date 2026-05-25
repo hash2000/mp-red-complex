@@ -16,6 +16,9 @@ public:
 	Highlighter* q;
 
 	std::map<QString, HighlightingRule> rules;
+	bool refreshLocked = false;
+
+	void refreshView();
 };
 
 Highlighter::Highlighter(QTextDocument* parent)
@@ -25,14 +28,21 @@ Highlighter::Highlighter(QTextDocument* parent)
 
 Highlighter::~Highlighter() = default;
 
+void Highlighter::Private::refreshView() {
+	if (refreshLocked) {
+		return;
+	}
+
+	q->rehighlight();
+}
+
 void Highlighter::addRule(const QString& name, const QString& pattern, const QTextCharFormat& format) {
 	HighlightingRule rule;
 	rule.pattern = QRegularExpression(pattern);
 	rule.format = format;
 
 	d->rules.emplace(name, rule);
-
-	rehighlight();
+	d->refreshView();
 }
 
 void Highlighter::deleteRule(const QString& name) {
@@ -42,13 +52,12 @@ void Highlighter::deleteRule(const QString& name) {
 	}
 
 	d->rules.erase(it);
-
-	rehighlight();
+	d->refreshView();
 }
 
 void Highlighter::clearRules() {
 	d->rules.clear();
-	rehighlight();
+	d->refreshView();
 }
 
 void Highlighter::highlightBlock(const QString& text) {
@@ -60,5 +69,12 @@ void Highlighter::highlightBlock(const QString& text) {
 			QRegularExpressionMatch match = it.next();
 			setFormat(match.capturedStart(), match.capturedLength(), rule.format);
 		}
+	}
+}
+
+void Highlighter::LockRefreshView(bool lock) {
+	d->refreshLocked = lock;
+	if (!d->refreshLocked) {
+		d->refreshView();
 	}
 }

@@ -83,7 +83,11 @@ void MaterialsWindow::onEditMaterialFile(MaterialObjectTypes type, const QString
 		return;
 	}
 
-//	d->applicationCommands->executeCommandByName("window-create target:code-editor");
+	const auto cmdPath = QString("path:%1")
+		.arg(path);
+
+	d->applicationCommands->executeCommandByName("window-create",
+		QStringList{ "target:code-editor", cmdPath });
 }
 
 
