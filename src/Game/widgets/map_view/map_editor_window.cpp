@@ -1,6 +1,9 @@
 #include "Game/widgets/map_view/map_editor_window.h"
 #include "Game/widgets/map_view/map_editor_widget.h"
 #include "Game/services/time_service/time_service.h"
+#include "Game/app_controller.h"
+#include "Game/services.h"
+#include "Game/commands/command_context.h"
 #include "ApplicationLayer/maps/map_service.h"
 #include "ApplicationLayer/textures/tiles_selector_service.h"
 #include "ApplicationLayer/shaders/shaders_service.h"
@@ -19,51 +22,42 @@ public:
 	std::unique_ptr<ShadersService> shadersService;
 };
 
-MapEditorWindow::MapEditorWindow(
-	std::unique_ptr<ShadersService> shadersService,
-  TexturesService* textureService,
-  MapService* mapService,
-  TilesSelectorService* tilesSelectorService,
-  TimeService* timeService,
-  const QString& id,
-  QWidget* parent)
+MapEditorWindow::MapEditorWindow(const QString& id, QWidget* parent)
   : MdiChildWindow(id, parent)
   , d(std::make_unique<Private>(this)) {
-	d->shadersService = std::move(shadersService);
-	d->textureService = textureService;
-  d->mapService = mapService;
-  d->tilesSelectorService = tilesSelectorService;
-  d->timeService = timeService;
-
-  // Создаём виджет редактора
-  d->editorWidget = new MapEditorWidget(
-		d->shadersService.get(),
-		textureService,
-		mapService,
-		tilesSelectorService,
-		this);
-
-  setWidget(d->editorWidget);
-
-  // Подписываемся на тики для обновления
-  if (d->timeService) {
-		connect(d->timeService, &TimeService::tick,
-						d->editorWidget, QOverload<>::of(&MapEditorWidget::update));
-  }
 }
 
 MapEditorWindow::~MapEditorWindow() = default;
 
-MapEditorWidget* MapEditorWindow::widget() const {
-  return d->editorWidget;
-}
 
 bool MapEditorWindow::handleCommand(const QString& commandName,
   const QStringList& args,
   CommandContext* context) {
-  // TODO: Обработка команд для редактора карты
-  Q_UNUSED(commandName);
-  Q_UNUSED(args);
-  Q_UNUSED(context);
-  return true;
+	if (commandName == "create") {
+		auto controller = context->applicationController();
+		auto services = controller->services();
+		d->shadersService = std::move(services->shadersService());
+		d->textureService = services->texturesService();
+		d->mapService = services->mapService();
+		d->tilesSelectorService = services->tilesSelectorService();
+		d->timeService = services->timeService();
+
+		d->editorWidget = new MapEditorWidget(
+			d->shadersService.get(),
+			d->textureService,
+			d->mapService,
+			d->tilesSelectorService,
+			this);
+
+		setWidget(d->editorWidget);
+
+		// Подписываемся на тики для обновления
+		if (d->timeService) {
+			connect(d->timeService, &TimeService::tick,	d->editorWidget, QOverload<>::of(&MapEditorWidget::update));
+		}
+
+		return true;
+	}
+
+	return false;
 }

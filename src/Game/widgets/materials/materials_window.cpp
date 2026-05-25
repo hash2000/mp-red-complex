@@ -3,6 +3,7 @@
 #include "Game/widgets/materials/material_objects.h"
 #include "Game/widgets/materials/material_variables.h"
 #include "Game/app_controller.h"
+#include "Game/services.h"
 #include "Game/commands/command_context.h"
 #include <QHeaderView>
 #include <QSplitter>
@@ -26,14 +27,9 @@ public:
 	MaterialVariables* variablesTree = nullptr;
 };
 
-MaterialsWindow::MaterialsWindow(
-	MaterialsService* materialsService,
-	const QString& id,
-	QWidget* parent)
+MaterialsWindow::MaterialsWindow(const QString& id, QWidget* parent)
 	: MdiChildWindow(id, parent)
 	, d(std::make_unique<Private>(this)) {
-	d->materialsService = materialsService;
-	setupUi();
 }
 
 MaterialsWindow::~MaterialsWindow() = default;
@@ -69,7 +65,13 @@ void MaterialsWindow::setupUi() {
 bool MaterialsWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) {
 	// Обработка команд (пока пусто, может быть расширено)
 	if (commandName == "create") {
-		d->applicationCommands = context->applicationController();
+		auto controller = context->applicationController();
+		auto services = controller->services();
+
+		d->materialsService = services->materialsService();
+		d->applicationCommands = controller;
+		setupUi();
+
 		return true;
 	}
 

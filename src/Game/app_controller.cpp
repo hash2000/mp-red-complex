@@ -22,11 +22,9 @@
 
 class ApplicationController::Private {
 public:
-	Private(ApplicationController* parent)
-	: q(parent) {
-	}
-
+	Private(ApplicationController* parent) : q(parent) { }
 	ApplicationController* q;
+
 	std::unique_ptr<CommandProcessor> commandProcessor;
 	std::unique_ptr<CommandContext> commandContext;
 	std::unique_ptr<Services> services;

@@ -17,11 +17,9 @@
 
 class CommandProcessor::Private {
 public:
-	Private(CommandProcessor* parent)
-		: q(parent) {
-	}
-
+	Private(CommandProcessor* parent) : q(parent) { }
 	CommandProcessor* q;
+
 	Resources* resources;
 	std::map<QString, std::unique_ptr<ICommand>> commands;
 };

@@ -163,13 +163,10 @@ private:
 #include <QObject>
 #include <memory>
 
-class YourService;
-class YourWidget;
-
 class YourWindow : public MdiChildWindow {
     Q_OBJECT
 public:
-    explicit YourWindow(YourService* service, const QString& id, QWidget* parent = nullptr);
+    explicit YourWindow(const QString& id, QWidget* parent = nullptr);
     ~YourWindow() override;
 
     QString windowType() const override { return "your-window-type"; }
@@ -184,6 +181,46 @@ private:
     class Private;
     std::unique_ptr<Private> d;
 };
+```
+
+```cpp
+// src/Game/widgets/your_module/your_window.h
+
+class YourWindow::Private {
+public:
+  Private(YourWindow* parent) : q(parent) {}
+  YourWindow* q;
+
+	YourService* yourService = nullptr;
+	YourWidget* yourWidget = nullptr;
+};
+
+YourWindow::YourWindow QString& id, QWidget* parent)
+  : MdiChildWindow(id, parent)
+  , d(std::make_unique<Private>(this)) {
+}
+
+bool YourWindow::handleCommand(const QString& commandName,
+  const QStringList& args,
+  CommandContext* context) {
+	if (commandName == "create") {
+		auto controller = context->applicationController();
+		auto services = controller->services();
+		d->yourService = services->yourService();
+		d->yourWidget = new YourWidget(
+			d->yourService
+			this);
+
+		setWidget(d->yourWidget);
+
+		// add connections if needed
+		// connect(d->yourWidget, &YourWidget::signal, this, &YourWindow::slot);
+
+		return true;
+	}
+
+	return false;
+}
 ```
 
 ## 6. Register Service in `services.cpp`
@@ -221,10 +258,8 @@ YourService* Services::yourService() const {
 #include "Game/widgets/your_module/your_window.h"
 
 // In constructor:
-d->factory.emplace("your-window-type", [](Services* services, const QString& id) {
-    return new YourWindow(
-        services->yourService(),
-        id);
+d->factory.emplace("your-window-type", [](const QString& id, QWidget* parent) {
+    return new YourWindow(id, parent);
 });
 ```
 

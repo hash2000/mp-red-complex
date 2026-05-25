@@ -2,23 +2,13 @@
 #include "Game/mdi_child_window.h"
 #include <memory>
 
-class MaterialWidget;
-class MaterialsService;
-class QTabWidget;
-class QSplitter;
-class QTreeView;
-class QTableView;
-class QWidget;
 enum class MaterialObjectTypes;
 
 class MaterialsWindow : public MdiChildWindow {
 	Q_OBJECT
 
 public:
-	explicit MaterialsWindow(
-		MaterialsService* materialsService,
-		const QString& id,
-		QWidget* parent = nullptr);
+	explicit MaterialsWindow(const QString& id, QWidget* parent = nullptr);
 	~MaterialsWindow() override;
 
 	QString windowType() const override { return "materials"; }

@@ -21,27 +21,15 @@ public:
 	}
 
 	EntitiesWindow* q;
-	ItemsService* service;
+	ItemsService* itemsService;
 	EntitiesWidget* widget;
 	ApplicationController* controller = nullptr;
 	InventoriesService* inventoriesService = nullptr;
 };
 
-EntitiesWindow::EntitiesWindow(ItemsService* service, const QString& id, QWidget* parent)
+EntitiesWindow::EntitiesWindow(const QString& id, QWidget* parent)
 : d(std::make_unique<Private>(this))
 , MdiChildWindow(id, parent) {
-	d->service = service;
-	
-	// Виджет будет инициализирован с inventoriesService в handleCommand
-	d->widget = new EntitiesWidget(service, nullptr, this);
-
-	connect(d->widget, &EntitiesWidget::itemCreateRequested,
-		this, &EntitiesWindow::onItemCreateRequested);
-	
-	connect(d->widget, &EntitiesWidget::inventorySelectionRequested,
-		this, &EntitiesWindow::onInventorySelectionRequested);
-
-	setWidget(d->widget);
 }
 
 EntitiesWindow::~EntitiesWindow() = default;
@@ -49,17 +37,21 @@ EntitiesWindow::~EntitiesWindow() = default;
 
 bool EntitiesWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) {
 	if (commandName == "create") {
-		for (const auto& item : d->service->entities()) {
+		d->controller = context->applicationController();
+		auto services = d->controller->services();
+		d->inventoriesService = services->inventoriesService();
+		d->itemsService = services->itemsService();
+		d->widget = new EntitiesWidget(d->itemsService, nullptr, this);
+		d->widget->setInventoriesService(d->inventoriesService);
+
+		for (const auto& item : d->itemsService->entities()) {
 			d->widget->addItemEntity(item);
 		}
 
-		d->controller = context->applicationController();
-		d->inventoriesService = d->controller->services()->inventoriesService();
+		setWidget(d->widget);
 
-		// Инициализируем виджет сервисом инвентарей
-		d->widget->setInventoriesService(d->inventoriesService);
-		
-		// Сразу загружаем список доступных инвентарей
+		connect(d->widget, &EntitiesWidget::itemCreateRequested, this, &EntitiesWindow::onItemCreateRequested);
+		connect(d->widget, &EntitiesWidget::inventorySelectionRequested, this, &EntitiesWindow::onInventorySelectionRequested);
 		onInventorySelectionRequested();
 
 		return true;
@@ -74,7 +66,7 @@ void EntitiesWindow::onItemCreateRequested(const QString& itemId, const QString&
 	}
 
 	// Получаем сущность предмета по ID
-	const auto entity = d->service->entityById(itemId);
+	const auto entity = d->itemsService->entityById(itemId);
 	if (!entity) {
 		qWarning() << "EntitiesWindow::onItemCreateRequested: entity not found:" << itemId;
 		return;
@@ -86,13 +78,8 @@ void EntitiesWindow::onItemCreateRequested(const QString& itemId, const QString&
 		return;
 	}
 
-	// Получаем сервисы
-	const auto services = d->controller->services();
-	const auto itemsService = d->service;
-	const auto inventoriesService = services->inventoriesService();
-
 	// Создаём и показываем диалог создания предмета
-	auto createDialog = new ItemCreateWidget(*entity, itemsService, inventoryId, this);
+	auto createDialog = new ItemCreateWidget(*entity, d->itemsService, inventoryId, this);
 
 	connect(createDialog, &ItemCreateWidget::itemCreated, this, [this](
 		const QString& entityId, int count, const QString& invId) {
