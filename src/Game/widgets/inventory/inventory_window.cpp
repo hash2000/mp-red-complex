@@ -49,10 +49,12 @@ bool InventoryWindow::handleCommand(const QString& commandName, const QStringLis
 		d->inventoryName = d->widget->grid()->inventoryName();
 
 		connect(d->widget->grid(), &InventoryGrid::containerOpened, this, [controller](const ItemMimeData& item) {
-			const auto itemIdStr = item.id
-				.toString(QUuid::StringFormat::WithoutBraces)
-				.toLower();
-			controller->executeCommandByName("window-create", QStringList{ "inventory", itemIdStr });
+			const auto itemIdStr = QString("id:%1")
+				.arg(item.id
+					.toString(QUuid::StringFormat::WithoutBraces)
+					.toLower());
+
+			controller->executeCommandByName("window-create", QStringList{ "target:inventory", itemIdStr });
 			});
 
 		return true;

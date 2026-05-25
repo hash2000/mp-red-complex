@@ -6,6 +6,7 @@
 #include "Game/controllers.h"
 #include "Game/windows_builder.h"
 #include <QMdiSubWindow>
+#include <QRegularExpression>
 #include <QUuid>
 
 bool CreateWindowCommand::execute(CommandContext* context, const QStringList& args) {
@@ -18,17 +19,16 @@ bool CreateWindowCommand::execute(CommandContext* context, const QStringList& ar
 		return false;
 	}
 
-	const auto target = args.at(0);
-	QString id;
-	QString alternateTitle;
+	QString target = args.filter(QRegularExpression("^target:")).value(0).mid(7);
+	QString id = args.filter(QRegularExpression("^id:")).value(0).mid(3);
+	QString alternateTitle = args.filter(QRegularExpression("^title:")).value(0).mid(6);
 
-	if (args.count() >= 2) {
-		id = args.at(1);
-		if (args.count() >= 3) {
-			alternateTitle = args.at(2);
-		}
+	if (target.isEmpty()) {
+		context->printError(QString("Usage: %1").arg(help()));
+		return false;
 	}
-	else {
+
+	if (id.isEmpty()){
 		id = QUuid::createUuid()
 			.toString(QUuid::StringFormat::WithoutBraces);
 	}
@@ -41,7 +41,9 @@ bool CreateWindowCommand::execute(CommandContext* context, const QStringList& ar
 		return false;
 	}
 
-	if (!widget->handleCommand("create", args, context)) {
+	QStringList filteredArgs = args.filter(QRegularExpression("^(?!target:|id:|title:)"));
+
+	if (!widget->handleCommand("create", filteredArgs, context)) {
 		context->printError(QString("Method create returned false. %1")
 			.arg(target));
 		delete widget;

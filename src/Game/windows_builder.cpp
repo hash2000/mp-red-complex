@@ -11,6 +11,7 @@
 #include "Game/widgets/warmup/warmup_window.h"
 #include "Game/widgets/textures/texture_editor_window.h"
 #include "Game/widgets/materials/materials_window.h"
+#include "Game/widgets/code_editor/code_editor_window.h"
 
 #include "ApplicationLayer/shaders/shaders_service.h"
 
@@ -61,6 +62,9 @@ WindowsBuilder::WindowsBuilder(ApplicationController* appController)
 		});
 	d->factory.emplace("material-editor", [](const QString& id, QWidget* parent) {
 		return new MaterialsWindow(id, parent);
+		});
+	d->factory.emplace("code-editor", [](const QString& id, QWidget* parent) {
+		return new CodeEditorWindow(id, parent);
 		});
 }
 

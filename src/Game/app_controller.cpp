@@ -8,7 +8,7 @@
 #include "Game/commands/cmd/windows_close_cmd.h"
 #include "Game/commands/cmd/window_create_cmd.h"
 #include "Game/commands/cmd/states_store_cmd.h"
-#include "Game/commands/cmd/items_create.h"
+#include "Game/commands/cmd/items_create_cmd.h"
 #include "Game/commands/cmd/user_logout_cmd.h"
 #include "Game/services.h"
 #include "Game/controllers.h"

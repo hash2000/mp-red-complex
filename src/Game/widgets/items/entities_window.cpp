@@ -81,9 +81,12 @@ void EntitiesWindow::onItemCreateRequested(const QString& itemId, const QString&
 	// Создаём и показываем диалог создания предмета
 	auto createDialog = new ItemCreateWidget(*entity, d->itemsService, inventoryId, this);
 
-	connect(createDialog, &ItemCreateWidget::itemCreated, this, [this](
-		const QString& entityId, int count, const QString& invId) {
-			d->controller->executeCommandByName("items-create", QStringList{ entityId, QString::number(count), invId});
+	connect(createDialog, &ItemCreateWidget::itemCreated, this, [this](const QString& entityId, int count, const QString& invId) {
+		const auto cmdEntityId = QString("entity:%1").arg(entityId);
+		const auto cmdCount = QString("count:%1").arg(QString::number(count));
+		const auto cmdInventory = QString("inventory:%1").arg(invId);
+
+		d->controller->executeCommandByName("items-create", QStringList{ cmdEntityId, cmdCount, cmdInventory });
 	});
 
 	createDialog->show();

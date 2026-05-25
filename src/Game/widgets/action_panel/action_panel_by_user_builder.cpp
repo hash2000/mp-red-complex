@@ -7,13 +7,13 @@ public:
 	Private(ActionPanelByUserBuilder* parent) : q(parent) { }
 
 	void addProfileButton() {
-		QString cmd = QString("window-create user-profile %1")
+		QString cmd = QString("window-create target:user-profile id:%1")
 			.arg(usersService->currentUserId());
 		panel->addButton(ActionButtonConfig("Profile", "👤", "Профиль", cmd, 1));
 	}
 
 	void addChestButton() {
-		QString cmd = QString("window-create inventory %1")
+		QString cmd = QString("window-create target:inventory id:%1")
 			.arg(usersService->getChestId().toString(QUuid::StringFormat::WithoutBraces));
 
 		panel->addButton(ActionButtonConfig("Chest", "💼", "Сундук", cmd, 2));
@@ -21,16 +21,17 @@ public:
 
 	void addEntitiesButton() {
 		panel->addButton(ActionButtonConfig("Entities", "📚", "Библиотека предметов",
-			"window-create item-entities item-entities", 2));
+			"window-create target:item-entities id:item-entities", 2));
 	}
 
 	void addMapButton() {
 		panel->addButton(ActionButtonConfig("Map", "🗺️", "Карта мира",
-			"window-create map 30f2aed5-5c42-4e6b-8179-f270a80159fe", 2));
+			"window-create target:map id:map", 2));
 	}
 
 	void addDefaultEditors() {
-		panel->addButton(ActionButtonConfig("TextureEditor", "🎨", "Редактор текстур", "window-create texture-editor texture-editor", 2));
+		panel->addButton(ActionButtonConfig("TextureEditor", "🎨", "Редактор текстур",
+			"window-create target:texture-editor id:texture-editor", 2));
 	}
 
 	ActionPanelByUserBuilder* q;

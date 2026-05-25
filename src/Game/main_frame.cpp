@@ -127,7 +127,7 @@ GameMainFrame::GameMainFrame(Resources* resources)
 
 	addAction(toggleAction);
 
-	d->controller->executeCommandByName("window-create", QStringList{ "warmup", "opengl-warmup" });
+	d->controller->executeCommandByName("window-create", QStringList{ "target:warmup", "id:opengl-warmup" });
 }
 
 void GameMainFrame::onToggleCommandConsole(bool visible) {

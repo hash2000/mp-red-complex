@@ -42,10 +42,12 @@ bool EquipmentWindow::handleCommand(const QString& commandName, const QStringLis
 		}
 
 		connect(d->widget, &EquipmentWidget::containerOpened, this, [controller](const ItemMimeData& item) {
-			const auto itemIdStr = item.id
+			const auto itemIdStr = QString("id:%1")
+				.arg(item.id
 				.toString(QUuid::StringFormat::WithoutBraces)
-				.toLower();
-			controller->executeCommandByName("window-create", QStringList{ "inventory", itemIdStr, item.name });
+				.toLower());
+
+			controller->executeCommandByName("window-create", QStringList{ "target:inventory", itemIdStr, item.name });
 			});
 
 		return true;

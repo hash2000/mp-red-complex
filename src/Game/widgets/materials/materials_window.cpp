@@ -83,7 +83,7 @@ void MaterialsWindow::onEditMaterialFile(MaterialObjectTypes type, const QString
 		return;
 	}
 
-//	d->applicationCommands->executeCommandByName("window-create code-editor");
+//	d->applicationCommands->executeCommandByName("window-create target:code-editor");
 }
 
 

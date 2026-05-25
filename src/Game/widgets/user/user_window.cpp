@@ -15,6 +15,8 @@ public:
 	ImagesService* imagesService = nullptr;
 	UserWidget* userWidget = nullptr;
 	ApplicationController* controller = nullptr;
+
+	void executeCharCommand(const QString& target, const CharacterItemHandler* chr);
 };
 
 UserWindow::UserWindow(const QString& id, QWidget* parent)
@@ -23,6 +25,22 @@ UserWindow::UserWindow(const QString& id, QWidget* parent)
 }
 
 UserWindow::~UserWindow() = default;
+
+void UserWindow::Private::executeCharCommand(const QString& target, const CharacterItemHandler* chr) {
+	const auto itemIdStr = QString("id:%1")
+		.arg(chr->equipmentId
+			.toString(QUuid::StringFormat::WithoutBraces)
+			.toLower());
+
+	const auto title = QString("title:%1")
+		.arg(chr->name);
+
+	const auto fullTarget = QString("target:%1")
+		.arg(target);
+
+	controller->executeCommandByName("window-create", QStringList{
+		fullTarget, itemIdStr, title });
+}
 
 bool UserWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) {
 	if (commandName == "create") {
@@ -50,8 +68,7 @@ void UserWindow::onEquipmentRequested(const QUuid& characterId) {
 		return;
 	}
 
-	d->controller->executeCommandByName("window-create", QStringList{
-		"equipment", chr->equipmentId.toString(QUuid::StringFormat::WithoutBraces), chr->name });
+	d->executeCharCommand("equipment", chr);
 }
 
 void UserWindow::onSpecificationsRequested(const QUuid& characterId) {
@@ -60,8 +77,7 @@ void UserWindow::onSpecificationsRequested(const QUuid& characterId) {
 		return;
 	}
 
-	d->controller->executeCommandByName("window-create", QStringList{
-		"character-specifications", chr->id.toString(QUuid::StringFormat::WithoutBraces), chr->name });
+	d->executeCharCommand("character-specifications", chr);
 }
 
 void UserWindow::onUserLoggedOut() {
