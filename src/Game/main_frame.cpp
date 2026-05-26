@@ -6,6 +6,7 @@
 #include "Game/controllers/windows_controller.h"
 #include "Game/controllers/action_panel_controller.h"
 #include "Game/controllers/action_button_config.h"
+#include "Game/commands/command_context.h"
 #include "Game/widgets/action_panel/action_panel_login_builder.h"
 #include "Game/widgets/action_panel/action_panel_by_user_builder.h"
 #include "Game/widgets/action_panel/action_panel_widget.h"
@@ -43,8 +44,9 @@ public:
 	}
 
 	void setupConsole() {
-		controller = new ApplicationController(resources);
-		commandConsole = new CommandConsole(controller, q);
+		controller = std::make_unique<ApplicationController>(resources);
+		context = std::make_unique<CommandContext>(controller.get(), q);
+		commandConsole = new CommandConsole(controller.get(), context.get(), q);
 		commandConsole->setWindowFlags(Qt::Dialog | Qt::WindowStaysOnTopHint);
 		q->onToggleCommandConsole(false);
 
@@ -98,14 +100,15 @@ public:
 	GameMainFrame* q;
 	Resources* resources;
 	MdiArea* mdiArea;
-	ApplicationController* controller;
+	std::unique_ptr<ApplicationController> controller;
+	std::unique_ptr<CommandContext> context;
 	CommandConsole* commandConsole;
 	QToolButton* consoleToggleButton;
 	ActionPanelWidget* actionPanel = nullptr;
 };
 
 GameMainFrame::GameMainFrame(Resources* resources)
-: d(new Private(this)) {
+: d(std::make_unique<Private>(this)) {
 	d->resources = resources;
 	d->setupConsole();
 	d->setupView();
@@ -129,6 +132,8 @@ GameMainFrame::GameMainFrame(Resources* resources)
 
 	d->controller->executeCommandByName("window-create", QStringList{ "target:warmup", "id:opengl-warmup" });
 }
+
+GameMainFrame::~GameMainFrame() = default;
 
 void GameMainFrame::onToggleCommandConsole(bool visible) {
 	if (visible) {

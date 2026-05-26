@@ -1,6 +1,8 @@
 #include "Game/widgets/code_editor/code_editor_widget.h"
 #include "BaseWidgets/highlights/highlighter.h"
-#include <QTextCharFormat>
+#include "DataStream/file_reader.h"
+
+#include <QThread>
 
 class CodeEditorWidget::Private {
 public:
@@ -8,6 +10,7 @@ public:
 	CodeEditorWidget* q;
 
 	Highlighter* highlighter = nullptr;
+	QString path;
 
 	void setupUI();
 };
@@ -24,7 +27,7 @@ void CodeEditorWidget::Private::setupUI() {
 	highlighter = new Highlighter(q->document());
 
 	QTextCharFormat numberFormat;
-	numberFormat.setForeground(Qt::red);
+	numberFormat.setForeground(Qt::green);
 	highlighter->addRule("numbers" ,"\\b[0-9]+\\b", numberFormat);
 
 	QTextCharFormat stringFormat;
@@ -33,5 +36,39 @@ void CodeEditorWidget::Private::setupUI() {
 }
 
 void CodeEditorWidget::setPath(const QString& path) {
+	d->path = path;
+	reloadFile();	
+}
 
+void CodeEditorWidget::reloadFile() {
+	QThread* thread = new QThread(this);
+	FileReader* reader = new FileReader();
+	reader->moveToThread(thread);
+
+	connect(thread, &QThread::started, reader, [reader, path = d->path]() {
+		reader->readFileAsync(path);
+	});
+	connect(reader, &FileReader::finished, thread, &QThread::quit);
+	connect(thread, &QThread::finished, reader, &QObject::deleteLater);
+	connect(reader, &FileReader::lineRead, this, &CodeEditorWidget::onAappendPlainText);
+
+	clear();
+	thread->start();
+}
+
+void CodeEditorWidget::onAappendPlainText(const QString& line) {
+	QTextCursor cursor = textCursor();
+	cursor.movePosition(QTextCursor::End);
+	cursor.beginEditBlock();
+	cursor.insertText(line + "\n");
+	cursor.endEditBlock();
+}
+
+void CodeEditorWidget::setText(const QString& text) {
+	clear();
+	QTextCursor cursor = textCursor();
+	cursor.movePosition(QTextCursor::End);
+	cursor.beginEditBlock();
+	cursor.insertText(text);
+	cursor.endEditBlock();
 }

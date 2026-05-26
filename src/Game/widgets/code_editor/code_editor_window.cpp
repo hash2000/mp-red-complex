@@ -4,6 +4,7 @@
 #include "Game/services.h"
 #include "Game/commands/command_context.h"
 #include <QRegularExpression>
+#include <QVBoxLayout>
 
 class CodeEditorWindow::Private {
 public:
@@ -28,11 +29,18 @@ bool CodeEditorWindow::handleCommand(const QString& commandName,
 	if (commandName == "create") {
 		auto controller = context->applicationController();
 		auto services = controller->services();
+		auto mainLayout = new QVBoxLayout(this);
+		mainLayout->setContentsMargins(4, 8, 4, 8);
+		mainLayout->setSpacing(6);
 
 		d->context = context;
 		d->path = args.filter(QRegularExpression("^path:")).value(0).mid(5);
 		d->widget = new CodeEditorWidget(this);
-		setWidget(d->widget);
+
+
+		mainLayout->addWidget(d->widget);
+		mainLayout->addStretch();
+		//setWidget(d->widget);
 
 		if (!d->path.isEmpty()) {
 			onChangeTargetPath();

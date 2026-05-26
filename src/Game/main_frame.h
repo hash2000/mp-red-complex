@@ -7,7 +7,7 @@ class UserData;
 class GameMainFrame : public MainFrame {
 public:
 	GameMainFrame(Resources* resources);
-	virtual ~GameMainFrame() = default;
+	virtual ~GameMainFrame();
 
 private slots:
 	void onToggleCommandConsole(bool visible);

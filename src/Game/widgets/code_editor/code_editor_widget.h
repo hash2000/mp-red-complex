@@ -8,6 +8,12 @@ public:
 	~CodeEditorWidget() override;
 
 	void setPath(const QString& path);
+	void reloadFile();
+
+	void setText(const QString& text);
+
+private slots:
+	void onAappendPlainText(const QString& line);
 
 private:
 	class Private;

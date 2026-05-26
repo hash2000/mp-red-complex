@@ -295,14 +295,17 @@ void MaterialObjects::updateProperties() {
 			"", "Идентификатор (нельзя изменить)"
 		});
 
+	QString fileFilter;
 	switch (type) {
 		case MaterialObjectTypes::VertexShader:
+			fileFilter = "Vertex Shader (*.vert)";
 		case MaterialObjectTypes::FragmentShader:
-		case MaterialObjectTypes::Texture: {
+			fileFilter = "Fragment Shader (*.frag)";
+		{
 			props.append({
 					"path", "Путь к файлу", PropertyType::PathFile,
 					node.path(), QVariant(), false, QStringList(),
-					"All files (*.*)", ""
+					fileFilter, ""
 				});
 		}
 	}

@@ -10,10 +10,7 @@
 
 class CommandContext::Private {
 public:
-	Private(CommandContext* parent, ApplicationController* controller)
-	: q(parent)
-	, controller(controller){
-	}
+	Private(CommandContext* parent) : q(parent) { }
 
 	CommandContext* q;
 
@@ -22,8 +19,9 @@ public:
 };
 
 CommandContext::CommandContext(ApplicationController* controller, QObject* parent)
-: d(new Private(this, controller))
-, QObject(parent){
+: d(std::make_unique<Private>(this))
+, QObject(parent) {
+	d->controller = controller;
 }
 
 CommandContext::~CommandContext() = default;
