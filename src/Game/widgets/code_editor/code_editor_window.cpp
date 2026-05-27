@@ -3,9 +3,11 @@
 #include "Game/app_controller.h"
 #include "Game/services.h"
 #include "Game/commands/command_context.h"
+
 #include <QRegularExpression>
 #include <QVBoxLayout>
 #include <QToolButton>
+#include <QFileDialog>
 
 class CodeEditorWindow::Private {
 public:
@@ -95,9 +97,44 @@ void CodeEditorWindow::onChangeTargetPath() {
 }
 
 void CodeEditorWindow::onOpenDocumentClick() {
-
+	const auto res = QFileDialog::getOpenFileName(this,
+		"Выберите файл", "", "All files (*.*)");
+	if (!res.isEmpty()) {
+		d->path = res;
+		onChangeTargetPath();
+	}
 }
 
 void CodeEditorWindow::onSaveDocumentClick() {
+	if (d->path.isEmpty()) {
+		const auto res = QFileDialog::getSaveFileName(this,
+			"Выберите файл", "", "All files (*.*)");
+		if (res.isEmpty()) {
+			return;
+		}
+		
+		d->path = res;
+	}
 
+	QFile file(d->path);
+	if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+		return;
+	}
+
+	QString content = d->editor->toPlainText();
+
+// TODO:
+// сделать корректную обработку endline на уровне загрузки
+// сделать настройку
+//#ifdef Q_OS_WIN
+//	content.replace('\n', "\r\n");
+//#endif
+// Записываем UTF-8 BOM если нужно
+// file.write("\xEF\xBB\xBF"); // раскомментировать если нужен BOM
+
+	QTextStream stream(&file);
+	stream.setEncoding(QStringConverter::Utf8);
+	stream << content;
+
+	file.close();
 }
