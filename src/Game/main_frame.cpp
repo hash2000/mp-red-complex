@@ -30,71 +30,7 @@ class GameMainFrame::Private {
 public:
 	Private(GameMainFrame* parent)
 	: q(parent) {
-		mdiArea = new MdiArea(parent);
-		mdiArea->setTabsMovable(true);
-		mdiArea->setActivationOrder(QMdiArea::ActivationHistoryOrder);
-		mdiArea->setDocumentMode(true);
-		mdiArea->setOption(QMdiArea::DontMaximizeSubWindowOnActivation);
-		mdiArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-		mdiArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-		mdiArea->setTabPosition(QTabWidget::North);
-		mdiArea->setTabsClosable(true);
-		mdiArea->setAcceptDrops(true);
-		mdiArea->setViewMode(QMdiArea::SubWindowView);
-	}
-
-	void setupConsole() {
-		controller = std::make_unique<ApplicationController>(resources);
-		context = std::make_unique<CommandContext>(controller.get(), q);
-		commandConsole = new CommandConsole(controller.get(), context.get(), q);
-		commandConsole->setWindowFlags(Qt::Dialog | Qt::WindowStaysOnTopHint);
-		q->onToggleCommandConsole(false);
-
-		controller->controllers()->windowsController()->setMdiArea(mdiArea);
-
-		// Кнопка переключения в статусбаре
-		consoleToggleButton = new QToolButton(q->statusBar());
-		consoleToggleButton->setIcon(QIcon::fromTheme("utilities-terminal", QIcon(":/icons/terminal.png")));
-		consoleToggleButton->setToolTip("Command Console (Ctrl+`)");
-		consoleToggleButton->setCheckable(true);
-		consoleToggleButton->setAutoRaise(true);
-		consoleToggleButton->setChecked(false);
-
-		q->statusBar()->addPermanentWidget(consoleToggleButton);
-	}
-
-	void setupView() {
-		// Горизонтальный сплиттер для основной области и панели действий
-		auto* horizontalSplitter = new QSplitter(Qt::Horizontal);
-
-		// Вертикальный сплиттер для MDI и консоли
-		auto* verticalSplitter = new QSplitter(Qt::Vertical);
-		verticalSplitter->addWidget(mdiArea);
-		verticalSplitter->addWidget(commandConsole);
-		verticalSplitter->setStretchFactor(0, 1);
-		verticalSplitter->setStretchFactor(1, 0);
-
-		horizontalSplitter->addWidget(verticalSplitter);
-
-		// Панель действий
-		actionPanel = new ActionPanelWidget(controller->controllers()->actionPanelController(),	q);
-		horizontalSplitter->addWidget(actionPanel);
-
-		horizontalSplitter->setStretchFactor(0, 1);
-		horizontalSplitter->setStretchFactor(1, 0);
-
-		// Фиксируем размер сплиттера (запрещаем изменение)
-		horizontalSplitter->setHandleWidth(0);
-
-		q->setCentralWidget(horizontalSplitter);
-
-		// Добавляем кнопку Login
-		setupActionPanel();
-	}
-
-	void setupActionPanel() {
-		ActionPanelLoginBuilder builder(controller->controllers()->actionPanelController());
-		builder.build();
+		setupMdiArea(parent);
 	}
 
 	GameMainFrame* q;
@@ -105,6 +41,11 @@ public:
 	CommandConsole* commandConsole;
 	QToolButton* consoleToggleButton;
 	ActionPanelWidget* actionPanel = nullptr;
+
+	void setupMdiArea(GameMainFrame* parent);
+	void setupConsole();
+	void setupView();
+	void setupActionPanel();
 };
 
 GameMainFrame::GameMainFrame(Resources* resources)
@@ -134,6 +75,76 @@ GameMainFrame::GameMainFrame(Resources* resources)
 }
 
 GameMainFrame::~GameMainFrame() = default;
+
+void GameMainFrame::Private::setupMdiArea(GameMainFrame* parent) {
+	mdiArea = new MdiArea(parent);
+	mdiArea->setTabsMovable(true);
+	mdiArea->setActivationOrder(QMdiArea::ActivationHistoryOrder);
+	mdiArea->setDocumentMode(true);
+	mdiArea->setOption(QMdiArea::DontMaximizeSubWindowOnActivation);
+	mdiArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+	mdiArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+	mdiArea->setTabPosition(QTabWidget::North);
+	mdiArea->setTabsClosable(true);
+	mdiArea->setAcceptDrops(true);
+	mdiArea->setViewMode(QMdiArea::SubWindowView);
+}
+
+void GameMainFrame::Private::setupConsole() {
+	controller = std::make_unique<ApplicationController>(resources);
+	context = std::make_unique<CommandContext>(controller.get(), q);
+	commandConsole = new CommandConsole(controller.get(), context.get(), q);
+	commandConsole->setWindowFlags(Qt::Dialog | Qt::WindowStaysOnTopHint);
+	q->onToggleCommandConsole(false);
+
+	controller->controllers()->windowsController()->setMdiArea(mdiArea);
+
+	// Кнопка переключения в статусбаре
+	consoleToggleButton = new QToolButton(q->statusBar());
+	consoleToggleButton->setIcon(QIcon::fromTheme("utilities-terminal", QIcon(":/icons/terminal.png")));
+	consoleToggleButton->setToolTip("Command Console (Ctrl+`)");
+	consoleToggleButton->setCheckable(true);
+	consoleToggleButton->setAutoRaise(true);
+	consoleToggleButton->setChecked(false);
+
+	q->statusBar()->addPermanentWidget(consoleToggleButton);
+}
+
+void GameMainFrame::Private::setupView() {
+	// Горизонтальный сплиттер для основной области и панели действий
+	auto* horizontalSplitter = new QSplitter(Qt::Horizontal);
+
+	// Вертикальный сплиттер для MDI и консоли
+	auto* verticalSplitter = new QSplitter(Qt::Vertical);
+	verticalSplitter->addWidget(mdiArea);
+	verticalSplitter->addWidget(commandConsole);
+	verticalSplitter->setStretchFactor(0, 1);
+	verticalSplitter->setStretchFactor(1, 0);
+
+	horizontalSplitter->addWidget(verticalSplitter);
+
+	// Панель действий
+	actionPanel = new ActionPanelWidget(controller->controllers()->actionPanelController(), q);
+	horizontalSplitter->addWidget(actionPanel);
+
+	horizontalSplitter->setStretchFactor(0, 1);
+	horizontalSplitter->setStretchFactor(1, 0);
+
+	// Фиксируем размер сплиттера (запрещаем изменение)
+	horizontalSplitter->setHandleWidth(0);
+
+	q->setCentralWidget(horizontalSplitter);
+
+	// Добавляем кнопку Login
+	setupActionPanel();
+}
+
+void GameMainFrame::Private::setupActionPanel() {
+	ActionPanelLoginBuilder builder(controller->controllers()->actionPanelController());
+	builder.build();
+}
+
+
 
 void GameMainFrame::onToggleCommandConsole(bool visible) {
 	if (visible) {
