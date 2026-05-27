@@ -1,6 +1,7 @@
 #include "Game/services.h"
 #include "Game/services/time_service/time_service.h"
 #include "Game/services/world_service/world_service.h"
+#include "Resources/resources.h"
 #include "DataLayer/inventory/inventory_data_provider_json_impl.h"
 #include "DataLayer/inventory/inventory_data_writer_json_impl.h"
 #include "DataLayer/items/items_data_provider_json_impl.h"
@@ -36,6 +37,8 @@
 #include "ApplicationLayer/textures/tiles_selector_service.h"
 #include "ApplicationLayer/shaders/shaders_service.h"
 #include "ApplicationLayer/materials/materials_service.h"
+
+#include "CodeEditorWidget/highlights/highlighter_plugin_manager.h"
 
 #include <mutex>
 
@@ -74,6 +77,12 @@ public:
 public:
 	Private(Services* parent)
 		: q(parent)
+
+		, highlightingPluginManager([this] {
+				auto manager = std::make_unique<HighlightingPluginManager>();
+				manager->loadPlugins(resources->Variables.get("Plugins.Path", "").toString());
+				return manager;
+		})
 
 		// Data Providers
 		, inventoryDataProvider([this] { return std::make_unique<InventoryDataProviderJsonImpl>(resources); })
@@ -214,6 +223,7 @@ public:
 	LazyPtr<MapService> mapService;
 	LazyPtr<MaterialsService> materialsService;
 
+	LazyPtr<HighlightingPluginManager> highlightingPluginManager;
 };
 
 Services::Services(Resources* resources)
@@ -289,4 +299,8 @@ MaterialsService* Services::materialsService() const {
 std::unique_ptr<ShadersService> Services::shadersService() const {
 	return std::move(std::make_unique<ShadersService>(
 		d->shadersDataProvider.get()));
+}
+
+HighlightingPluginManager* Services::highlightingPluginManager() const {
+	return d->highlightingPluginManager.get();
 }

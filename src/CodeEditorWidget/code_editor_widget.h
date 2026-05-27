@@ -1,10 +1,12 @@
 #pragma once
 #include <QTextEdit>
 
+class HighlightingPluginManager;
+
 class CodeEditorWidget : public QTextEdit {
 	Q_OBJECT
 public:
-	explicit CodeEditorWidget(QWidget* parent = nullptr);
+	explicit CodeEditorWidget(HighlightingPluginManager* pluginManager, QWidget* parent = nullptr);
 	~CodeEditorWidget() override;
 
 	void setPath(const QString& path);

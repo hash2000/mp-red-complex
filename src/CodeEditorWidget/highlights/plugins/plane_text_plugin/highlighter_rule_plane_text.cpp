@@ -1,7 +1,7 @@
-#include "BaseWidgets/highlights/rules/highlighter_rule_default.h"
-#include "BaseWidgets/highlights/highlighter.h"
+#include "CodeEditorWidget/highlights/plugins/plane_text_plugin/highlighter_rule_plane_text.h"
+#include "CodeEditorWidget/highlights/highlighter.h"
 
-namespace highlighter::rule::def {
+namespace highlighter::rule::plane_text {
 
 void apply(Highlighter& highlighter) {
 	QTextCharFormat numberFormat;

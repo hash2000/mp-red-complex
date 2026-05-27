@@ -1,4 +1,4 @@
-#include "BaseWidgets/highlights/highlighter.h"
+#include "CodeEditorWidget/highlights/highlighter.h"
 #include <QRegularExpression>
 #include <map>
 
@@ -30,9 +30,6 @@ public:
 	std::vector<HighlightingMatch> previusFormatCache;
 
 	void refreshView();
-
-	void lazyHighlightBlock(const QString& text);
-	void bigDataHighlightBlock(const QString& text);
 };
 
 Highlighter::Highlighter(QTextDocument* parent)

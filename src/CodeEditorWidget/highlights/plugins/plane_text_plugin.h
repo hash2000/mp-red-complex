@@ -1,0 +1,11 @@
+#pragma once
+#include "CodeEditorWidget/highlights/plugins/i_highlighter_plugin.h"
+
+class PlaneTextPlugin : public IHighlightingPlugin {
+public:
+	LanguageInfo languageInfo() const override;
+
+	void install(Highlighter& highlighter) override;
+	void uninstall(Highlighter& highlighter) override;
+	QStringList extractVariables(const QString& code) const override;
+};

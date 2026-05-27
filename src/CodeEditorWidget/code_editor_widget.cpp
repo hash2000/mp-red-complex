@@ -1,7 +1,7 @@
-#include "Game/widgets/code_editor/code_editor_widget.h"
-#include "BaseWidgets/highlights/highlighter.h"
-#include "BaseWidgets/highlights/rules/highlighter_rule_default.h"
-#include "BaseWidgets/highlights/rules/highlighter_rule_glsl.h"
+#include "CodeEditorWidget/code_editor_widget.h"
+#include "CodeEditorWidget/highlights/highlighter.h"
+#include "CodeEditorWidget/highlights/plugins/i_highlighter_plugin.h"
+#include "CodeEditorWidget/highlights/highlighter_plugin_manager.h"
 #include "DataStream/file_reader.h"
 
 #include <QThread>
@@ -13,6 +13,8 @@ public:
 	CodeEditorWidget* q;
 
 	Highlighter* highlighter = nullptr;
+	IHighlightingPlugin* lastPlugin = nullptr;
+	HighlightingPluginManager* pluginManager;
 	QString path;
 	QString previusSuffix;
 
@@ -20,9 +22,10 @@ public:
 	void setupHighlighterRules();
 };
 
-CodeEditorWidget::CodeEditorWidget(QWidget* parent)
+CodeEditorWidget::CodeEditorWidget(HighlightingPluginManager* pluginManager, QWidget* parent)
 	: QTextEdit(parent)
 	, d(std::make_unique<Private>(this)) {
+	d->pluginManager = pluginManager;
 	d->setupUI();
 }
 
@@ -34,26 +37,22 @@ void CodeEditorWidget::Private::setupUI() {
 }
 
 void CodeEditorWidget::Private::setupHighlighterRules() {
-	QFileInfo file(path);
-	const auto suffix = file.suffix();
-
-	if (suffix.isEmpty()) {
-		highlighter::rule::def::apply(*highlighter);
+	if (!pluginManager) {
 		return;
 	}
 
-	if (previusSuffix == "vert" || previusSuffix == "frag") {
-		if (suffix == "vert" || suffix == "frag") {
-			return;
-		}
-		highlighter->clearRules();
+	if (lastPlugin) {
+		lastPlugin->uninstall(*highlighter);
 	}
 
-	previusSuffix = suffix;
-
-	if (suffix == "vert" || suffix == "frag") {
-		highlighter::rule::glsl::apply(*highlighter);
+	const auto pluginPath = path.isEmpty() ? "plugin.txt" : path;
+	const auto plugin = pluginManager->pluginForFile(pluginPath);
+	if (!plugin) {
+		return;
 	}
+
+	plugin->install(*highlighter);
+	lastPlugin = plugin;
 }
 
 void CodeEditorWidget::setPath(const QString& path) {

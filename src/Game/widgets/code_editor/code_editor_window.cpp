@@ -1,5 +1,5 @@
 #include "Game/widgets/code_editor/code_editor_window.h"
-#include "Game/widgets/code_editor/code_editor_widget.h"
+#include "CodeEditorWidget/code_editor_widget.h"
 #include "Game/app_controller.h"
 #include "Game/services.h"
 #include "Game/commands/command_context.h"
@@ -18,7 +18,7 @@ public:
 	QVBoxLayout* buttonsLayout = nullptr;
 	QString path;
 
-	void setupUI();
+	void setupUI(Services* services);
 	void setupButtons();
 	QToolButton* addButton(const QString& title, const QString& tooltip);
 };
@@ -44,7 +44,7 @@ void CodeEditorWindow::Private::setupButtons() {
 	connect(addButton("💾", "Сохранить"), &QToolButton::clicked, q, &CodeEditorWindow::onSaveDocumentClick);
 }
 
-void CodeEditorWindow::Private::setupUI() {
+void CodeEditorWindow::Private::setupUI(Services* services) {
 	buttonsContainer = new QWidget(q);
 	auto mainLayout = new QHBoxLayout(buttonsContainer);
 	mainLayout->setContentsMargins(2, 2, 2, 2);
@@ -55,7 +55,7 @@ void CodeEditorWindow::Private::setupUI() {
 	setupButtons();
 	buttonsLayout->addStretch();
 
-	editor = new CodeEditorWidget(buttonsContainer);
+	editor = new CodeEditorWidget(services->highlightingPluginManager(), buttonsContainer);
 	mainLayout->addWidget(editor, 1);
 	mainLayout->addLayout(buttonsLayout);
 
@@ -72,7 +72,7 @@ bool CodeEditorWindow::handleCommand(const QString& commandName,
 		d->context = context;
 		d->path = args.filter(QRegularExpression("^path:")).value(0).mid(5);
 
-		d->setupUI();
+		d->setupUI(services);
 		//setWidget(d->widget);
 
 		if (!d->path.isEmpty()) {

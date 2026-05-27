@@ -1,5 +1,5 @@
-#include "BaseWidgets/highlights/rules/highlighter_rule_glsl.h"
-#include "BaseWidgets/highlights/highlighter.h"
+#include "CodeEditorWidget/highlights/plugins/glsl_plugin/highlighter_rule_glsl.h"
+#include "CodeEditorWidget/highlights/highlighter.h"
 
 namespace highlighter::rule::glsl {
 

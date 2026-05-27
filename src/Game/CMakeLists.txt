@@ -22,6 +22,7 @@ target_link_libraries(Game
 
 		Base
 		BaseWidgets
+		CodeEditorWidget
 		Graphics
 		Resources
 		DataLayer
