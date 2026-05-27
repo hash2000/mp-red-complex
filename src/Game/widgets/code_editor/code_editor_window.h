@@ -20,6 +20,8 @@ public:
 
 private slots:
 	void onChangeTargetPath();
+	void onOpenDocumentClick();
+	void onSaveDocumentClick();
 
 private:
 	class Private;

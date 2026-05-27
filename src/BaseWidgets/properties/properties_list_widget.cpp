@@ -71,7 +71,9 @@ void PropertiesListWidget::Private::initUI() {
 }
 
 void PropertiesListWidget::Private::clearUI() {
-	if (!formLayout) return;
+	if (!formLayout) {
+		return;
+	}
 
 	// Удаляем все виджеты-редакторы
 	for (int i = 0; i < formLayout->rowCount(); i++) {

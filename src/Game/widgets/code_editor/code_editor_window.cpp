@@ -5,6 +5,7 @@
 #include "Game/commands/command_context.h"
 #include <QRegularExpression>
 #include <QVBoxLayout>
+#include <QToolButton>
 
 class CodeEditorWindow::Private {
 public:
@@ -12,8 +13,14 @@ public:
 	CodeEditorWindow* q;
 
 	CommandContext* context = nullptr;
-	CodeEditorWidget* widget = nullptr;
+	CodeEditorWidget* editor = nullptr;
+	QWidget* buttonsContainer = nullptr;
+	QVBoxLayout* buttonsLayout = nullptr;
 	QString path;
+
+	void setupUI();
+	void setupButtons();
+	QToolButton* addButton(const QString& title, const QString& tooltip);
 };
 
 CodeEditorWindow::CodeEditorWindow(const QString& id, QWidget* parent)
@@ -23,23 +30,49 @@ CodeEditorWindow::CodeEditorWindow(const QString& id, QWidget* parent)
 
 CodeEditorWindow::~CodeEditorWindow() = default;
 
+QToolButton* CodeEditorWindow::Private::addButton(const QString& title, const QString& tooltip) {
+	auto btn = new QToolButton(buttonsContainer);
+	buttonsLayout->addWidget(btn);
+	btn->setText(title);
+	btn->setToolButtonStyle(Qt::ToolButtonTextOnly);
+	btn->setToolTip(tooltip);
+	return btn;
+}
+
+void CodeEditorWindow::Private::setupButtons() {
+	connect(addButton("📥", "Загрузить"), &QToolButton::clicked, q, &CodeEditorWindow::onOpenDocumentClick);
+	connect(addButton("💾", "Сохранить"), &QToolButton::clicked, q, &CodeEditorWindow::onSaveDocumentClick);
+}
+
+void CodeEditorWindow::Private::setupUI() {
+	buttonsContainer = new QWidget(q);
+	auto mainLayout = new QHBoxLayout(buttonsContainer);
+	mainLayout->setContentsMargins(2, 2, 2, 2);
+	mainLayout->setSpacing(2);
+
+	buttonsLayout = new QVBoxLayout();
+	buttonsLayout->setSpacing(2);
+	setupButtons();
+	buttonsLayout->addStretch();
+
+	editor = new CodeEditorWidget(buttonsContainer);
+	mainLayout->addWidget(editor, 1);
+	mainLayout->addLayout(buttonsLayout);
+
+	q->setWidget(buttonsContainer);
+}
+
 bool CodeEditorWindow::handleCommand(const QString& commandName,
 	const QStringList& args,
 	CommandContext* context) {
 	if (commandName == "create") {
 		auto controller = context->applicationController();
 		auto services = controller->services();
-		auto mainLayout = new QVBoxLayout(this);
-		mainLayout->setContentsMargins(4, 8, 4, 8);
-		mainLayout->setSpacing(6);
 
 		d->context = context;
 		d->path = args.filter(QRegularExpression("^path:")).value(0).mid(5);
-		d->widget = new CodeEditorWidget(this);
 
-
-		mainLayout->addWidget(d->widget);
-		mainLayout->addStretch();
+		d->setupUI();
 		//setWidget(d->widget);
 
 		if (!d->path.isEmpty()) {
@@ -58,5 +91,13 @@ void CodeEditorWindow::onChangeTargetPath() {
 		return;
 	}
 
-	d->widget->setPath(d->path);
+	d->editor->setPath(d->path);
+}
+
+void CodeEditorWindow::onOpenDocumentClick() {
+
+}
+
+void CodeEditorWindow::onSaveDocumentClick() {
+
 }

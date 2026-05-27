@@ -9,13 +9,15 @@ public:
 	explicit Highlighter(QTextDocument* parent = nullptr);
 	~Highlighter() override;
 
-	void addRule(const QString& name, const QString& pattern, const QTextCharFormat& format);
+	void addRule(const QString& name, const QString& pattern, const QTextCharFormat& format, int priority = 0);
+	void updateRulePattern(const QString& name, const QString& pattern);
+	QString getRulePattern(const QString& name) const;
 
 	void deleteRule(const QString& name);
 
 	void clearRules();
 
-	void LockRefreshView(bool lock = true);
+	void lockRefreshView(bool lock = true);
 
 protected:
 	void highlightBlock(const QString& text) override;

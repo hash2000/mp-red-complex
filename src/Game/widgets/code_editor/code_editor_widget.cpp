@@ -1,8 +1,11 @@
 #include "Game/widgets/code_editor/code_editor_widget.h"
 #include "BaseWidgets/highlights/highlighter.h"
+#include "BaseWidgets/highlights/rules/highlighter_rule_default.h"
+#include "BaseWidgets/highlights/rules/highlighter_rule_glsl.h"
 #include "DataStream/file_reader.h"
 
 #include <QThread>
+#include <QFileInfo>
 
 class CodeEditorWidget::Private {
 public:
@@ -11,8 +14,10 @@ public:
 
 	Highlighter* highlighter = nullptr;
 	QString path;
+	QString previusSuffix;
 
 	void setupUI();
+	void setupHighlighterRules();
 };
 
 CodeEditorWidget::CodeEditorWidget(QWidget* parent)
@@ -25,18 +30,35 @@ CodeEditorWidget::~CodeEditorWidget() = default;
 
 void CodeEditorWidget::Private::setupUI() {
 	highlighter = new Highlighter(q->document());
+	setupHighlighterRules();
+}
 
-	QTextCharFormat numberFormat;
-	numberFormat.setForeground(Qt::green);
-	highlighter->addRule("numbers" ,"\\b[0-9]+\\b", numberFormat);
+void CodeEditorWidget::Private::setupHighlighterRules() {
+	QFileInfo file(path);
+	const auto suffix = file.suffix();
 
-	QTextCharFormat stringFormat;
-	stringFormat.setForeground(Qt::green);
-	highlighter->addRule("strings", "\"[^\"]*\"", stringFormat);
+	if (suffix.isEmpty()) {
+		highlighter::rule::def::apply(*highlighter);
+		return;
+	}
+
+	if (previusSuffix == "vert" || previusSuffix == "frag") {
+		if (suffix == "vert" || suffix == "frag") {
+			return;
+		}
+		highlighter->clearRules();
+	}
+
+	previusSuffix = suffix;
+
+	if (suffix == "vert" || suffix == "frag") {
+		highlighter::rule::glsl::apply(*highlighter);
+	}
 }
 
 void CodeEditorWidget::setPath(const QString& path) {
 	d->path = path;
+	d->setupHighlighterRules();
 	reloadFile();	
 }
 
