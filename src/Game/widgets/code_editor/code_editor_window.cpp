@@ -68,8 +68,8 @@ bool CodeEditorWindow::handleCommand(const QString& commandName,
 	const QStringList& args,
 	CommandContext* context) {
 	if (commandName == "create") {
+		auto services = context->services();
 		auto controller = context->applicationController();
-		auto services = controller->services();
 
 		d->context = context;
 		d->path = args.filter(QRegularExpression("^path:")).value(0).mid(5);

@@ -36,9 +36,8 @@ bool InventoryWindow::handleCommand(const QString& commandName, const QStringLis
 			return false;
 		}
 
+		auto services = context->services();
 		auto controller = context->applicationController();
-		auto services = controller->services();
-
 		d->widget = new InventoryGridView(services->inventoriesService(), this);
 		setWidget(d->widget);
 

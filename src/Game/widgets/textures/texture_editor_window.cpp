@@ -22,8 +22,7 @@ TextureEditorWindow::~TextureEditorWindow() = default;
 
 bool TextureEditorWindow::handleCommand(const QString& commandName, const QStringList& /*args*/, CommandContext* context) {
 	if (commandName == "create") {
-		auto controller = context->applicationController();
-		auto services = controller->services();
+		auto services = context->services();
 		auto editorWidget = new TextureEditorWidget(
 			services->imagesService(),
 			services->tilesSelectorService(), this);

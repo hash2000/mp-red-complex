@@ -29,8 +29,7 @@ LoginWindow::~LoginWindow() = default;
 
 bool LoginWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) {
 	if (commandName == "create") {
-		d->controller = context->applicationController();
-		auto services = d->controller->services();
+		auto services = context->services();
 		d->usersService = services->usersService();
 		d->loginWidget = new LoginWidget(d->usersService, this);
 

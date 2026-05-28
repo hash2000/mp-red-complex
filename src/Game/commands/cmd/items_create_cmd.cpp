@@ -5,12 +5,11 @@
 #include "Game/app_controller.h"
 #include "Game/controllers.h"
 #include "Game/services.h"
-#include "Game/windows_builder.h"
 #include "ApplicationLayer/inventory/inventory_service.h"
 #include "ApplicationLayer/inventories_service.h"
 #include "ApplicationLayer/items/items_service.h"
 #include "ApplicationLayer/items/item_mime_data.h"
-#include "DataLayer/inventory/inventory_item.h"
+
 #include <QMdiSubWindow>
 #include <QRegularExpression>
 #include <QUuid>
@@ -31,9 +30,8 @@ ItemsCreateCommand::ItemsCreateCommand()
 ItemsCreateCommand::~ItemsCreateCommand() = default;
 
 bool ItemsCreateCommand::execute(CommandContext* context, const QStringList& args) {
-	auto app = context->applicationController();
-	auto controller = app->controllers()->windowsController();
-	auto services = app->services();
+	auto controller = context->controllers()->windowsController();
+	auto services = context->services();
 	auto inventoriesService = services->inventoriesService();
 	auto itemsService = services->itemsService();
 

@@ -1,11 +1,9 @@
 #include "Game/commands/cmd/states_store_cmd.h"
 #include "Game/commands/command_context.h"
-#include "Game/app_controller.h"
-#include "Game/controllers/windows_controller.h"
 #include "Game/services.h"
 
 bool StatesStoreCommand::execute(CommandContext* context, const QStringList& args) {
-	auto services = context->applicationController()->services();
+	auto services = context->services();
 	const auto command = args.first().toLower();
 
 	if (command == "save") {

@@ -30,8 +30,8 @@ bool EquipmentWindow::handleCommand(const QString& commandName, const QStringLis
 			return false;
 		}
 
+		auto services = context->services();
 		auto controller = context->applicationController();
-		auto services = controller->services();
 
 		d->widget = new EquipmentWidget(services->inventoriesService(), this);
 		setWindowTitle("Equipment");

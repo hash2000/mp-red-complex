@@ -24,6 +24,7 @@ public:
 	ItemsService* itemsService;
 	EntitiesWidget* widget;
 	ApplicationController* controller = nullptr;
+	WindowsController* windowsController = nullptr;
 	InventoriesService* inventoriesService = nullptr;
 };
 
@@ -37,8 +38,9 @@ EntitiesWindow::~EntitiesWindow() = default;
 
 bool EntitiesWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) {
 	if (commandName == "create") {
+		auto services = context->services();
 		d->controller = context->applicationController();
-		auto services = d->controller->services();
+		d->windowsController = context->controllers()->windowsController();
 		d->inventoriesService = services->inventoriesService();
 		d->itemsService = services->itemsService();
 		d->widget = new EntitiesWidget(d->itemsService, nullptr, this);
@@ -97,13 +99,11 @@ void EntitiesWindow::onInventorySelectionRequested() {
 		return;
 	}
 
-	const auto windowsController = d->controller->controllers()->windowsController();
-
 	// Собираем список всех открытых инвентарей
 	QStringList openInventoryIds;
 	QString lastActiveInventoryId;
 
-	const auto windows = windowsController->windowEntries();
+	const auto windows = d->windowsController->windowEntries();
 	for (auto it = windows.rbegin(); it != windows.rend(); ++it) {
 		const auto window = it->first.data();
 		if (window && window->windowType() == "inventory") {

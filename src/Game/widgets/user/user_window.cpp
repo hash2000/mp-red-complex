@@ -2,6 +2,7 @@
 #include "Game/widgets/user/user_widget.h"
 #include "Game/app_controller.h"
 #include "Game/services.h"
+#include "Game/app_controller.h"
 #include "Game/commands/command_context.h"
 #include "ApplicationLayer/users/users_service.h"
 #include "ApplicationLayer/character/character_item_handler.h"
@@ -14,7 +15,7 @@ public:
 	UsersService* usersService = nullptr;
 	ImagesService* imagesService = nullptr;
 	UserWidget* userWidget = nullptr;
-	ApplicationController* controller = nullptr;
+	ApplicationController* applicationController = nullptr;
 
 	void executeCharCommand(const QString& target, const CharacterItemHandler* chr);
 };
@@ -38,14 +39,14 @@ void UserWindow::Private::executeCharCommand(const QString& target, const Charac
 	const auto fullTarget = QString("target:%1")
 		.arg(target);
 
-	controller->executeCommandByName("window-create", QStringList{
+	applicationController->executeCommandByName("window-create", QStringList{
 		fullTarget, itemIdStr, title });
 }
 
 bool UserWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) {
 	if (commandName == "create") {
-		d->controller = context->applicationController();
-		auto services = d->controller->services();
+		auto services = context->services();
+		d->applicationController = context->applicationController();
 		d->usersService = services->usersService();
 		d->imagesService = services->imagesService();
 		d->userWidget = new UserWidget(d->usersService, d->imagesService, this);

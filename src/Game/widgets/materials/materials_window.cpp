@@ -5,6 +5,8 @@
 #include "Game/app_controller.h"
 #include "Game/services.h"
 #include "Game/commands/command_context.h"
+#include "Game/controllers.h"
+
 #include <QHeaderView>
 #include <QSplitter>
 
@@ -65,13 +67,10 @@ void MaterialsWindow::setupUi() {
 bool MaterialsWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) {
 	// Обработка команд (пока пусто, может быть расширено)
 	if (commandName == "create") {
-		auto controller = context->applicationController();
-		auto services = controller->services();
-
+		auto services = context->services();
 		d->materialsService = services->materialsService();
-		d->applicationCommands = controller;
+		d->applicationCommands = context->applicationController();
 		setupUi();
-
 		return true;
 	}
 

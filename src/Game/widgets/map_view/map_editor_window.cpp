@@ -34,8 +34,7 @@ bool MapEditorWindow::handleCommand(const QString& commandName,
   const QStringList& args,
   CommandContext* context) {
 	if (commandName == "create") {
-		auto controller = context->applicationController();
-		auto services = controller->services();
+		auto services = context->services();
 		d->shadersService = std::move(services->shadersService());
 		d->textureService = services->texturesService();
 		d->mapService = services->mapService();

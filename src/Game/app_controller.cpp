@@ -10,8 +10,9 @@
 #include "Game/commands/cmd/states_store_cmd.h"
 #include "Game/commands/cmd/items_create_cmd.h"
 #include "Game/commands/cmd/user_logout_cmd.h"
-#include "Game/services.h"
 #include "Game/controllers.h"
+#include "Game/services.h"
+
 #include <QMdiArea>
 #include <QMdiSubWindow>
 #include <QTimer>
@@ -27,19 +28,18 @@ public:
 
 	std::unique_ptr<CommandProcessor> commandProcessor;
 	std::unique_ptr<CommandContext> commandContext;
-	std::unique_ptr<Services> services;
-	std::unique_ptr<Controllers> controllers;
+	Resources* resources;
 };
 
 ApplicationController::ApplicationController(Resources* resources, QObject* parent)
 : QObject(parent)
 ,	d(std::make_unique<Private>(this)) {
 
+	d->resources = resources;
+
 	// Создание процессора команд
 	d->commandProcessor = std::make_unique<CommandProcessor>(resources);
-	d->commandContext = std::make_unique<CommandContext>(this);
-	d->services = std::make_unique<Services>(resources);
-	d->controllers = std::make_unique<Controllers>(this, d->services.get());
+	d->commandContext = std::make_unique<CommandContext>(this, nullptr /*is global context*/);
 
 	// Регистрация встроенных системных команд
 	d->commandProcessor->registerCommand(std::make_unique<ListWindowsCommand>());
@@ -50,7 +50,7 @@ ApplicationController::ApplicationController(Resources* resources, QObject* pare
 	d->commandProcessor->registerCommand(std::make_unique<ItemsCreateCommand>());
 	d->commandProcessor->registerCommand(std::make_unique<UserLogoutCommand>());
 
-	d->services->run();
+	d->commandContext->services()->run();
 
 	qInfo() << "ApplicationController initialized with"
 		<< d->commandProcessor->availableCommands().size()
@@ -70,12 +70,8 @@ CommandContext* ApplicationController::commandContext() const {
 	return d->commandContext.get();
 }
 
-Services* ApplicationController::services() const {
-	return d->services.get();
-}
-
-Controllers* ApplicationController::controllers() const {
-	return d->controllers.get();
+Resources* ApplicationController::resources() const {
+	return d->resources;
 }
 
 bool ApplicationController::executeCommand(const QString& commandText, QObject* requester) {

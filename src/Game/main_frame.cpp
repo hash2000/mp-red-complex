@@ -4,8 +4,6 @@
 #include "Game/services.h"
 #include "Game/controllers.h"
 #include "Game/controllers/windows_controller.h"
-#include "Game/controllers/action_panel_controller.h"
-#include "Game/controllers/action_button_config.h"
 #include "Game/commands/command_context.h"
 #include "Game/widgets/action_panel/action_panel_login_builder.h"
 #include "Game/widgets/action_panel/action_panel_by_user_builder.h"
@@ -34,11 +32,11 @@ public:
 	}
 
 	GameMainFrame* q;
+	std::unique_ptr<ApplicationController> controller;
+	CommandContext* commandContext;
+	CommandConsole* commandConsole;
 	Resources* resources;
 	MdiArea* mdiArea;
-	std::unique_ptr<ApplicationController> controller;
-	std::unique_ptr<CommandContext> context;
-	CommandConsole* commandConsole;
 	QToolButton* consoleToggleButton;
 	ActionPanelWidget* actionPanel = nullptr;
 
@@ -65,7 +63,7 @@ GameMainFrame::GameMainFrame(Resources* resources)
 		onToggleCommandConsole(newState);
 		});
 
-	auto userService = d->controller->services()->usersService();
+	auto userService = d->commandContext->services()->usersService();
 	connect(userService, &UsersService::loggedOut, this, &GameMainFrame::onUserLogout);
 	connect(userService, &UsersService::loginSuccess, this, &GameMainFrame::onUserLogin);
 
@@ -92,12 +90,12 @@ void GameMainFrame::Private::setupMdiArea(GameMainFrame* parent) {
 
 void GameMainFrame::Private::setupConsole() {
 	controller = std::make_unique<ApplicationController>(resources);
-	context = std::make_unique<CommandContext>(controller.get(), q);
-	commandConsole = new CommandConsole(controller.get(), context.get(), q);
+	commandContext = controller->commandContext();
+	commandConsole = new CommandConsole(controller.get(), commandContext, q);
 	commandConsole->setWindowFlags(Qt::Dialog | Qt::WindowStaysOnTopHint);
 	q->onToggleCommandConsole(false);
 
-	controller->controllers()->windowsController()->setMdiArea(mdiArea);
+	commandContext->controllers()->windowsController()->setMdiArea(mdiArea);
 
 	// Кнопка переключения в статусбаре
 	consoleToggleButton = new QToolButton(q->statusBar());
@@ -124,7 +122,7 @@ void GameMainFrame::Private::setupView() {
 	horizontalSplitter->addWidget(verticalSplitter);
 
 	// Панель действий
-	actionPanel = new ActionPanelWidget(controller->controllers()->actionPanelController(), q);
+	actionPanel = new ActionPanelWidget(commandContext->controllers()->actionPanelController(), q);
 	horizontalSplitter->addWidget(actionPanel);
 
 	horizontalSplitter->setStretchFactor(0, 1);
@@ -140,7 +138,7 @@ void GameMainFrame::Private::setupView() {
 }
 
 void GameMainFrame::Private::setupActionPanel() {
-	ActionPanelLoginBuilder builder(controller->controllers()->actionPanelController());
+	ActionPanelLoginBuilder builder(commandContext->controllers()->actionPanelController());
 	builder.build();
 }
 
@@ -162,7 +160,7 @@ void GameMainFrame::onUserLogout() {
 void GameMainFrame::onUserLogin(const UserData& user) {
 	qDebug() << "User login" << user.displayName;
 	ActionPanelByUserBuilder builder(
-		d->controller->controllers()->actionPanelController(),
-		d->controller->services()->usersService());
+		d->commandContext->controllers()->actionPanelController(),
+		d->commandContext->services()->usersService());
 	builder.build();
 }

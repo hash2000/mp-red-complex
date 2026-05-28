@@ -10,8 +10,6 @@
 class CommandProcessor;
 class CommandContext;
 class EventBus;
-class Services;
-class Controllers;
 class Resources;
 
 class ApplicationController : public QObject, public IApplicationCommands {
@@ -22,8 +20,7 @@ public:
 
 	CommandProcessor* commandProcessor() const;
 	CommandContext* commandContext() const;
-	Services* services() const;
-	Controllers* controllers() const;
+	Resources* resources() const;
 
 	/**
 	 * Выполнение команды по текстовой строке
