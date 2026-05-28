@@ -19,7 +19,7 @@ public:
 	virtual void install(Highlighter& highlighter) = 0;
 	virtual void uninstall(Highlighter& highlighter) = 0;
 
-	// Для анализа переменных (ваш кейс)
+	// Для анализа переменных
 	virtual QStringList extractVariables(const QString& code) const {
 		return { };
 	}
