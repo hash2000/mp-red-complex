@@ -1,5 +1,6 @@
 #include "CodeEditorWidget/highlights/plugins/markdown_plugin.h"
 #include "CodeEditorWidget/highlights/highlighter.h"
+#include <QRegularExpression>
 
 MarkdownPlugin::LanguageInfo MarkdownPlugin::languageInfo() const {
 	return {
@@ -10,7 +11,7 @@ MarkdownPlugin::LanguageInfo MarkdownPlugin::languageInfo() const {
 	};
 }
 
-void MarkdownPlugin::install(Highlighter& highlighter) {
+void MarkdownPlugin::install(Highlighter& highlighter) const {
 	// ==========================================
 	// 1. Заголовки (Headers)
 	// ==========================================
@@ -221,7 +222,7 @@ void MarkdownPlugin::install(Highlighter& highlighter) {
 	highlighter.addRule("md_table_row", "^\\|[^\\n]+\\|$", tableFormat, 41);
 }
 
-void MarkdownPlugin::uninstall(Highlighter& highlighter) {
+void MarkdownPlugin::uninstall(Highlighter& highlighter) const {
 	highlighter.deleteRule("md_h1");
 	highlighter.deleteRule("md_h2");
 	highlighter.deleteRule("md_h3");
@@ -259,4 +260,32 @@ void MarkdownPlugin::uninstall(Highlighter& highlighter) {
 QStringList MarkdownPlugin::extractVariables(const QString& code) const {
 	// GLSL-специфичный парсинг переменных
 	return { };
+}
+
+QList<MarkdownPlugin::EmbeddedRegion> MarkdownPlugin::findEmbeddedRegions(const QString& text) const {
+	QList<EmbeddedRegion> regions;
+
+	// Ищем блоки кода с указанием языка: ```glsl ... ```
+	QRegularExpression codeBlockRegex("```(\\w+)?\\n([\\s\\S]*?)```");
+	auto matches = codeBlockRegex.globalMatch(text);
+
+	while (matches.hasNext()) {
+		auto match = matches.next();
+		QString language = match.captured(1);
+		QString code = match.captured(2);
+		EmbeddedRegion region;
+		region.length = match.capturedLength(2);
+		region.start = match.capturedStart(2);
+
+		if (language.isEmpty()) {
+			region.languageId = "bash";
+		}
+		else {
+			region.languageId = language.toLower();
+		}
+
+		regions.append(region);
+	}
+
+	return regions;
 }

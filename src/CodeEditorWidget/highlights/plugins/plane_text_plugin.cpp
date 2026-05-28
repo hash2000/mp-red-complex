@@ -10,7 +10,7 @@ PlaneTextPlugin::LanguageInfo PlaneTextPlugin::languageInfo() const {
 	};
 }
 
-void PlaneTextPlugin::install(Highlighter& highlighter) {
+void PlaneTextPlugin::install(Highlighter& highlighter) const {
 	QTextCharFormat numberFormat;
 	numberFormat.setForeground(QColor("#B5CEA8"));
 	highlighter.addRule("numbers", "\\b[0-9]+\\b", numberFormat, 100);
@@ -21,7 +21,7 @@ void PlaneTextPlugin::install(Highlighter& highlighter) {
 	highlighter.addRule("strings", "\"[^\"]*\"", stringFormat, 100);
 }
 
-void PlaneTextPlugin::uninstall(Highlighter& highlighter) {
+void PlaneTextPlugin::uninstall(Highlighter& highlighter) const {
 	highlighter.deleteRule("numbers");
 	highlighter.deleteRule("strings");
 }
@@ -29,4 +29,14 @@ void PlaneTextPlugin::uninstall(Highlighter& highlighter) {
 QStringList PlaneTextPlugin::extractVariables(const QString& code) const {
 	// GLSL-специфичный парсинг переменных
 	return { };
+}
+
+bool PlaneTextPlugin::canHandleEmbeddedRegion(const QString& languageId) const {
+	return languageId == "text" || languageId == "txt";
+}
+
+void PlaneTextPlugin::setupEmbeddedHighlighting(Highlighter& highlighter,
+	const QString& languageId,
+	const QMap<QString, QString>& metadata) const {
+	install(highlighter);
 }

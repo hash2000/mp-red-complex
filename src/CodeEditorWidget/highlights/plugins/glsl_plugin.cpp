@@ -10,7 +10,7 @@ GLSLPlugin::LanguageInfo GLSLPlugin::languageInfo() const {
 	};
 }
 
-void GLSLPlugin::install(Highlighter& highlighter) {
+void GLSLPlugin::install(Highlighter& highlighter) const {
 	// ==========================================
 	// 1. Ключевые слова GLSL (управляющие конструкции)
 	// ==========================================
@@ -177,7 +177,7 @@ void GLSLPlugin::install(Highlighter& highlighter) {
 		operatorFormat, 30);
 }
 
-void GLSLPlugin::uninstall(Highlighter& highlighter) {
+void GLSLPlugin::uninstall(Highlighter& highlighter) const {
 	highlighter.deleteRule("glsl_keywords");
 	highlighter.deleteRule("glsl_qualifiers");
 	highlighter.deleteRule("glsl_types");
@@ -194,4 +194,15 @@ void GLSLPlugin::uninstall(Highlighter& highlighter) {
 QStringList GLSLPlugin::extractVariables(const QString& code) const {
 	// GLSL-специфичный парсинг переменных
 	return { };
+}
+
+bool GLSLPlugin::canHandleEmbeddedRegion(const QString& languageId) const {
+	return languageId == "glsl" || languageId == "vert" ||
+		languageId == "frag" || languageId == "geom";
+}
+
+void GLSLPlugin::setupEmbeddedHighlighting(Highlighter& highlighter,
+	const QString& languageId,
+	const QMap<QString, QString>& metadata) const {
+	install(highlighter);
 }

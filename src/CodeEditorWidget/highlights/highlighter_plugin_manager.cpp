@@ -2,6 +2,7 @@
 #include "CodeEditorWidget/highlights/plugins/glsl_plugin.h"
 #include "CodeEditorWidget/highlights/plugins/plane_text_plugin.h"
 #include "CodeEditorWidget/highlights/plugins/markdown_plugin.h"
+#include "CodeEditorWidget/highlights/plugins/bash_plugin.h"
 
 #include <QFileInfo>
 #include <map>
@@ -26,6 +27,7 @@ void HighlightingPluginManager::loadPlugins(const QString& pluginsDir) {
 	registerPlugin(std::make_unique<GLSLPlugin>());
 	registerPlugin(std::make_unique<PlaneTextPlugin>());
 	registerPlugin(std::make_unique<MarkdownPlugin>());
+	registerPlugin(std::make_unique<BashPlugin>());
 }
 
 void HighlightingPluginManager::registerPlugin(std::unique_ptr<IHighlightingPlugin> plugin) {
