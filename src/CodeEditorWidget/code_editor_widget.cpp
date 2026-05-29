@@ -88,17 +88,25 @@ void CodeEditorWidget::reloadFile() {
 	});
 	connect(reader, &FileReader::finished, thread, &QThread::quit);
 	connect(thread, &QThread::finished, reader, &QObject::deleteLater);
-	connect(reader, &FileReader::lineRead, this, &CodeEditorWidget::onAappendPlainText);
+	connect(reader, &FileReader::blockRead, this, &CodeEditorWidget::onBlockRead);
 
 	clear();
 	thread->start();
 }
 
-void CodeEditorWidget::onAappendPlainText(const QString& line) {
+void CodeEditorWidget::onBlockRead(const QStringList& lines) {
+	if (lines.isEmpty()) {
+		return;
+	}
+
 	QTextCursor cursor = textCursor();
 	cursor.movePosition(QTextCursor::End);
 	cursor.beginEditBlock();
-	cursor.insertText(line + "\n");
+
+	for (const QString& line : lines) {
+		cursor.insertText(line + "\n");
+	}
+
 	cursor.endEditBlock();
 }
 

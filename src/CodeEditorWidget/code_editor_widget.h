@@ -15,7 +15,7 @@ public:
 	void setText(const QString& text);
 
 private slots:
-	void onAappendPlainText(const QString& line);
+	void onBlockRead(const QStringList& lines);
 
 private:
 	class Private;
