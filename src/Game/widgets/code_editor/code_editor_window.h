@@ -13,7 +13,7 @@ public:
 	QString windowType() const override { return "code-editor"; }
 	QString windowTitle() const override { return "Editor"; }
 	QSize windowDefaultSizes() const override { return QSize(800, 600); }
-	QString help() const { return "code-editor path:<path>"; }
+	QString help() const;
 
 	bool handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) override;
 

@@ -23,6 +23,12 @@ public:
 	void setupUI(Services* services);
 	void setupButtons();
 	QToolButton* addButton(const QString& title, const QString& tooltip);
+
+	// Команды
+	bool handleCreate(const QStringList& args, CommandContext* context);
+	bool handleStyle(const QStringList& args, CommandContext* context);
+	bool handleStyleWordWrap(const QString& value);
+	bool handleStyleFont(const QString& value);
 };
 
 CodeEditorWindow::CodeEditorWindow(const QString& id, QWidget* parent)
@@ -31,6 +37,13 @@ CodeEditorWindow::CodeEditorWindow(const QString& id, QWidget* parent)
 }
 
 CodeEditorWindow::~CodeEditorWindow() = default;
+
+QString CodeEditorWindow::help() const {
+	return R"(code-editor
+		create path:<path>
+		style word-wrap:[true|false] font:[fontname]
+)";
+}
 
 QToolButton* CodeEditorWindow::Private::addButton(const QString& title, const QString& tooltip) {
 	auto btn = new QToolButton(buttonsContainer);
@@ -60,34 +73,80 @@ void CodeEditorWindow::Private::setupUI(Services* services) {
 	editor = new CodeEditorWidget(services->highlightingPluginManager(), buttonsContainer);
 	editor->setHorizontalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAsNeeded);
 	editor->setLineWrapMode(QTextEdit::LineWrapMode::NoWrap);
-	//editor->setLineWrapMode(QTextEdit::LineWrapMode::WidgetWidth); // перенос по словам
 	mainLayout->addWidget(editor, 1);
 	mainLayout->addLayout(buttonsLayout);
 
 	q->setWidget(buttonsContainer);
 }
 
-bool CodeEditorWindow::handleCommand(const QString& commandName,
-	const QStringList& args,
-	CommandContext* context) {
+bool CodeEditorWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) {
 	if (commandName == "create") {
-		auto services = context->services();
-		auto controller = context->applicationController();
+		return d->handleCreate(args, context);
+	}
+	else if (commandName == "style") {
+		return d->handleStyle(args, context);
+	}
+	return false;
+}
 
-		d->context = context;
-		d->path = args.filter(QRegularExpression("^path:")).value(0).mid(5);
-
-		d->setupUI(services);
-
-
-		if (!d->path.isEmpty()) {
-			onChangeTargetPath();
-		}
-
-		return true;
+bool CodeEditorWindow::Private::handleStyleWordWrap(const QString& value) {
+	if (value == "true") {
+		this->editor->setLineWrapMode(QTextEdit::LineWrapMode::WidgetWidth);
+	}
+	else if (value == "false") {
+		this->editor->setLineWrapMode(QTextEdit::LineWrapMode::NoWrap);
+	}
+	else {
+		context->printWarning("word-wrap the parameter can only have the values true|false");
+		return false;
 	}
 
-	return false;
+	return true;
+}
+
+bool CodeEditorWindow::Private::handleStyleFont(const QString& value) {
+
+
+	return true;
+}
+
+bool CodeEditorWindow::Private::handleStyle(const QStringList& args, CommandContext* context) {
+	if (!this->editor) {
+		return false;
+	}
+
+	const auto params = args.filter(QRegularExpression("^(word-wrap:|font:)"));
+	for (const auto& it : params) {
+		const auto pv = it.split(":");
+		if (pv.count() != 2) {
+			context->printWarning(QString("Command format error").arg(it));
+			continue;
+		}
+
+		const auto variable = pv[0];
+		const auto value = pv[1];
+
+		if (variable == "word-wrap") {
+			return handleStyleWordWrap(value);
+		}
+		else if (variable == "font") {
+			return handleStyleFont(value);
+		}
+	}
+
+	return true;
+}
+
+bool CodeEditorWindow::Private::handleCreate(const QStringList& args, CommandContext* context) {
+	auto services = context->services();
+	this->context = context;
+	this->path = args.filter(QRegularExpression("^path:")).value(0).mid(5);
+	this->setupUI(services);
+	if (!this->path.isEmpty()) {
+		q->onChangeTargetPath();
+	}
+
+	return true;
 }
 
 void CodeEditorWindow::onChangeTargetPath() {

@@ -156,6 +156,7 @@ void CommandConsole::setupOutputStyling() {
         .success { color: #66cc66; }
         .system { color: #79b8ff; font-style: italic; }
         .info { color: #d4d4d4; }
+				.warning { color: #FFE66D; }
     )");
 }
 

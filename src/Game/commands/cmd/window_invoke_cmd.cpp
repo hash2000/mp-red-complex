@@ -8,6 +8,15 @@
 #include <QRegularExpression>
 #include <QStringList>
 
+QString WindowInvokeCommand::help() const {
+	return R"(
+		window-invoke target:window[or active window] cmd:command [parameters that depend on the command being called]
+		Example:
+		window-invoke cmd:style word-wrap:true font:Sans
+)";
+}
+
+
 bool WindowInvokeCommand::execute(CommandContext* context, const QStringList& args) {
 	auto controller = context->controllers()->windowsController();
 	auto services = context->services();

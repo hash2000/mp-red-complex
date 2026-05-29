@@ -29,8 +29,10 @@ public:
 
 	// Вывод в консоль (безопасный из любого потока)
 	void print(const QString& message, const QString& styleClass = "info");
+	void printSystem(const QString& message);
 	void printError(const QString& message);
 	void printSuccess(const QString& message);
+	void printWarning(const QString& message);
 
 	// Установка пользовательских данных для команд
 	void setData(const QString& key, const QVariant& value);

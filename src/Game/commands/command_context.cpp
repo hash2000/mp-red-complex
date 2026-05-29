@@ -62,12 +62,20 @@ void CommandContext::print(const QString& message, const QString& styleClass) {
 		}, Qt::QueuedConnection);
 }
 
+void CommandContext::printSystem(const QString& message) {
+	print(message, "system");
+}
+
 void CommandContext::printError(const QString& message) {
 	print(message, "error");
 }
 
 void CommandContext::printSuccess(const QString& message) {
 	print(message, "success");
+}
+
+void CommandContext::printWarning(const QString& message) {
+	print(message, "warning");
 }
 
 void CommandContext::setData(const QString& key, const QVariant& value) {

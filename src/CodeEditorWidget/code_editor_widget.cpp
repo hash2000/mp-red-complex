@@ -20,6 +20,7 @@ public:
 
 	void setupUI();
 	void setupHighlighterRules();
+	void setupStyling();
 };
 
 CodeEditorWidget::CodeEditorWidget(HighlightingPluginManager* pluginManager, QWidget* parent)
@@ -27,6 +28,7 @@ CodeEditorWidget::CodeEditorWidget(HighlightingPluginManager* pluginManager, QWi
 	, d(std::make_unique<Private>(this)) {
 	d->pluginManager = pluginManager;
 	d->setupUI();
+	d->setupStyling();
 }
 
 CodeEditorWidget::~CodeEditorWidget() = default;
@@ -53,6 +55,21 @@ void CodeEditorWidget::Private::setupHighlighterRules() {
 
 	plugin->install(*highlighter);
 	lastPlugin = plugin;
+}
+
+void CodeEditorWidget::Private::setupStyling() {
+	//q->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+	q->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+
+	QString styleSheet = R"(
+        QTextEdit {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            border: 1px solid #3e3e42;
+            border-radius: 3px;
+        }
+    )";
+	q->setStyleSheet(styleSheet);
 }
 
 void CodeEditorWidget::setPath(const QString& path) {
