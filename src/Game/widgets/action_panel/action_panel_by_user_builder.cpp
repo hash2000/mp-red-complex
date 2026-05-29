@@ -30,8 +30,10 @@ public:
 	}
 
 	void addDefaultEditors() {
-		panel->addButton(ActionButtonConfig("TextureEditor", "🎨", "Редактор текстур",
-			"window-create target:texture-editor id:texture-editor", 2));
+		panel->addButton(ActionButtonConfig("TextureEditor", "🎨", "Редактор текстур", "window-create target:texture-editor", 2));
+		panel->addButton(ActionButtonConfig("MapEditor", "🗺️", "Редактор карты", "window-create target:map-editor", 2));
+		panel->addButton(ActionButtonConfig("MaterialEditor", "🔥", "Редактор материалов", "window-create target:material-editor", 2));
+		panel->addButton(ActionButtonConfig("CodeEditor", "🖹", "Редактор кода", "window-create target:code-editor", 2));
 	}
 
 	ActionPanelByUserBuilder* q;

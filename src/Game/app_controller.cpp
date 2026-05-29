@@ -10,6 +10,7 @@
 #include "Game/commands/cmd/states_store_cmd.h"
 #include "Game/commands/cmd/items_create_cmd.h"
 #include "Game/commands/cmd/user_logout_cmd.h"
+#include "Game/commands/cmd/window_invoke_cmd.h"
 #include "Game/controllers.h"
 #include "Game/services.h"
 
@@ -49,6 +50,7 @@ ApplicationController::ApplicationController(Resources* resources, QObject* pare
 	d->commandProcessor->registerCommand(std::make_unique<StatesStoreCommand>());
 	d->commandProcessor->registerCommand(std::make_unique<ItemsCreateCommand>());
 	d->commandProcessor->registerCommand(std::make_unique<UserLogoutCommand>());
+	d->commandProcessor->registerCommand(std::make_unique<WindowInvokeCommand>());
 
 	d->commandContext->services()->run();
 

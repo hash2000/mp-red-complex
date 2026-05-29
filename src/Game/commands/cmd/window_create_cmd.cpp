@@ -24,7 +24,7 @@ bool CreateWindowCommand::execute(CommandContext* context, const QStringList& ar
 	const auto alternateTitle = args.filter(QRegularExpression("^title:")).value(0).mid(6);
 
 	if (target.isEmpty()) {
-		context->printError(QString("Usage: %1").arg(help()));
+		context->printError(QString("Need parameter 'target'. Usage: %1").arg(help()));
 		return false;
 	}
 
@@ -41,9 +41,7 @@ bool CreateWindowCommand::execute(CommandContext* context, const QStringList& ar
 		return false;
 	}
 
-	QStringList filteredArgs = args.filter(QRegularExpression("^(?!target:|id:|title:)"));
-
-	if (!widget->handleCommand("create", filteredArgs, context)) {
+	if (!widget->handleCommand("create", args, context)) {
 		context->printError(QString("Method create returned false. %1")
 			.arg(target));
 		delete widget;
@@ -68,13 +66,18 @@ bool CreateWindowCommand::execute(CommandContext* context, const QStringList& ar
 	subWndow->show();
 
 	if (!controller->registerWindow(widget)) {
+		context->printError(QString("Method create returned false. target '%1' title '%2' and id '%3'")
+			.arg(target)
+			.arg(title)
+			.arg(id));
 		delete widget;
 		return false;
 	}
 
-	context->printSuccess(QString("Window %1 created with title '%2'")
+	context->printSuccess(QString("Can't register window '%1' with title '%2' and id '%3'")
 		.arg(target)
-		.arg(title));
+		.arg(title)
+		.arg(id));
 
 	return true;
 }

@@ -58,6 +58,9 @@ void CodeEditorWindow::Private::setupUI(Services* services) {
 	buttonsLayout->addStretch();
 
 	editor = new CodeEditorWidget(services->highlightingPluginManager(), buttonsContainer);
+	editor->setHorizontalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAsNeeded);
+	editor->setLineWrapMode(QTextEdit::LineWrapMode::NoWrap);
+	//editor->setLineWrapMode(QTextEdit::LineWrapMode::WidgetWidth); // перенос по словам
 	mainLayout->addWidget(editor, 1);
 	mainLayout->addLayout(buttonsLayout);
 
@@ -75,7 +78,7 @@ bool CodeEditorWindow::handleCommand(const QString& commandName,
 		d->path = args.filter(QRegularExpression("^path:")).value(0).mid(5);
 
 		d->setupUI(services);
-		//setWidget(d->widget);
+
 
 		if (!d->path.isEmpty()) {
 			onChangeTargetPath();
@@ -94,6 +97,7 @@ void CodeEditorWindow::onChangeTargetPath() {
 	}
 
 	d->editor->setPath(d->path);
+	setWindowTitle(d->path);
 }
 
 void CodeEditorWindow::onOpenDocumentClick() {
