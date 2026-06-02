@@ -10,33 +10,23 @@ PlaneTextPlugin::LanguageInfo PlaneTextPlugin::languageInfo() const {
 	};
 }
 
-void PlaneTextPlugin::install(Highlighter& highlighter) const {
+void PlaneTextPlugin::install(Highlighter& highlighter, HighlighterRuleType type) const {
 	QTextCharFormat numberFormat;
 	numberFormat.setForeground(QColor("#B5CEA8"));
-	highlighter.addRule("numbers", "\\b[0-9]+\\b", numberFormat, 100);
+	highlighter.addRule("txt_numbers", "\\b[0-9]+\\b", numberFormat, 100, type);
 
 	QTextCharFormat stringFormat;
 	stringFormat.setForeground(QColor("#CE9178"));  // оранжевый
 	stringFormat.setFontWeight(QFont::Normal);
-	highlighter.addRule("strings", "\"[^\"]*\"", stringFormat, 100);
+	highlighter.addRule("txt_strings", "\"[^\"]*\"", stringFormat, 100, type);
 }
 
 void PlaneTextPlugin::uninstall(Highlighter& highlighter) const {
-	highlighter.deleteRule("numbers");
-	highlighter.deleteRule("strings");
+	highlighter.deleteRule("txt_numbers");
+	highlighter.deleteRule("txt_strings");
 }
 
 QStringList PlaneTextPlugin::extractVariables(const QString& code) const {
 	// GLSL-специфичный парсинг переменных
 	return { };
-}
-
-bool PlaneTextPlugin::canHandleEmbeddedRegion(const QString& languageId) const {
-	return languageId == "text" || languageId == "txt";
-}
-
-void PlaneTextPlugin::setupEmbeddedHighlighting(Highlighter& highlighter,
-	const QString& languageId,
-	const QMap<QString, QString>& metadata) const {
-	install(highlighter);
 }

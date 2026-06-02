@@ -10,7 +10,7 @@ GLSLPlugin::LanguageInfo GLSLPlugin::languageInfo() const {
 	};
 }
 
-void GLSLPlugin::install(Highlighter& highlighter) const {
+void GLSLPlugin::install(Highlighter& highlighter, HighlighterRuleType type) const {
 	// ==========================================
 	// 1. Ключевые слова GLSL (управляющие конструкции)
 	// ==========================================
@@ -20,7 +20,7 @@ void GLSLPlugin::install(Highlighter& highlighter) const {
 
 	highlighter.addRule("glsl_keywords",
 		"\\b(if|else|for|while|do|switch|case|default|break|continue|return|discard)\\b",
-		keywordFormat, 10);  // высокий приоритет
+		keywordFormat, 10, type);  // высокий приоритет
 
 	// ==========================================
 	// 2. Квалификаторы переменных
@@ -33,7 +33,7 @@ void GLSLPlugin::install(Highlighter& highlighter) const {
 		"\\b(uniform|in|out|inout|attribute|varying|const|flat|smooth|noperspective|"
 		"centroid|sample|patch|invariant|precise|highp|mediump|lowp|readonly|writeonly|"
 		"coherent|volatile|restrict|layout|shared|packed|std140|std430)\\b",
-		qualifierFormat, 11);
+		qualifierFormat, 11, type);
 
 	// ==========================================
 	// 3. Типы данных
@@ -61,7 +61,7 @@ void GLSLPlugin::install(Highlighter& highlighter) const {
 		"iimage2DArray|iimageBuffer|iimage2DRect|uimage1D|uimage2D|uimage3D|"
 		"uimageCube|uimage1DArray|uimage2DArray|uimageBuffer|uimage2DRect|"
 		"atomic_uint|struct)\\b",
-		typeFormat, 12);
+		typeFormat, 12, type);
 
 	// ==========================================
 	// 4. Встроенные функции
@@ -96,7 +96,7 @@ void GLSLPlugin::install(Highlighter& highlighter) const {
 		"memoryBarrier|memoryBarrierAtomicCounter|memoryBarrierBuffer|"
 		"memoryBarrierShared|memoryBarrierImage|groupMemoryBarrier|barrier|"
 		"EmitVertex|EndPrimitive)\\b",
-		functionFormat, 20);
+		functionFormat, 20, type);
 
 	// ==========================================
 	// 5. Встроенные константы
@@ -115,7 +115,7 @@ void GLSLPlugin::install(Highlighter& highlighter) const {
 		"gl_NumWorkGroups|gl_MaxVertexAttribs|gl_MaxCombinedTextureImageUnits|"
 		"gl_MaxDrawBuffers|gl_MaxClipDistances|gl_MaxTextureImageUnits|"
 		"true|false|PI|TAU|E)\\b",
-		constantFormat, 15);
+		constantFormat, 15, type);
 
 	// ==========================================
 	// 6. Комментарии
@@ -126,11 +126,11 @@ void GLSLPlugin::install(Highlighter& highlighter) const {
 
 	highlighter.addRule("glsl_single_line_comments",
 		"//[^\n]*",
-		commentFormat, 5);
+		commentFormat, 5, type);
 
 	highlighter.addRule("glsl_multi_line_comments",
 		"/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/",
-		commentFormat, 5);
+		commentFormat, 5, type);
 
 	// ==========================================
 	// 7. Строки
@@ -141,7 +141,7 @@ void GLSLPlugin::install(Highlighter& highlighter) const {
 
 	highlighter.addRule("glsl_strings",
 		"\"[^\"]*\"",
-		stringFormat, 6);
+		stringFormat, 6, type);
 
 	// ==========================================
 	// 8. Числа
@@ -153,7 +153,7 @@ void GLSLPlugin::install(Highlighter& highlighter) const {
 		"\\b[0-9]+\\.?[0-9]*(?:[eE][+-]?[0-9]+)?[fF]?\\b|"
 		"\\b0[xX][0-9a-fA-F]+\\b|"
 		"\\b0[0-7]*\\b",
-		numberFormat, 7);
+		numberFormat, 7, type);
 
 	// ==========================================
 	// 9. Препроцессор
@@ -164,7 +164,7 @@ void GLSLPlugin::install(Highlighter& highlighter) const {
 
 	highlighter.addRule("glsl_preprocessor",
 		"^\\s*#\\s*(version|extension|define|undef|if|ifdef|ifndef|else|elif|endif|error|pragma|include|line)\\b",
-		preprocessorFormat, 3);
+		preprocessorFormat, 3, type);
 
 	// ==========================================
 	// 10. Специальные символы и операторы (опционально)
@@ -174,7 +174,7 @@ void GLSLPlugin::install(Highlighter& highlighter) const {
 
 	highlighter.addRule("glsl_operators",
 		"[\\+\\-\\*\\/%=<>!&|^~?:]+|\\b(and|or|xor|not|mod)\\b",
-		operatorFormat, 30);
+		operatorFormat, 30, type);
 }
 
 void GLSLPlugin::uninstall(Highlighter& highlighter) const {
@@ -194,15 +194,4 @@ void GLSLPlugin::uninstall(Highlighter& highlighter) const {
 QStringList GLSLPlugin::extractVariables(const QString& code) const {
 	// GLSL-специфичный парсинг переменных
 	return { };
-}
-
-bool GLSLPlugin::canHandleEmbeddedRegion(const QString& languageId) const {
-	return languageId == "glsl" || languageId == "vert" ||
-		languageId == "frag" || languageId == "geom";
-}
-
-void GLSLPlugin::setupEmbeddedHighlighting(Highlighter& highlighter,
-	const QString& languageId,
-	const QMap<QString, QString>& metadata) const {
-	install(highlighter);
 }

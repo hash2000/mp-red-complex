@@ -16,6 +16,8 @@ public:
 
 private slots:
 	void onBlockRead(const QStringList& lines);
+	void onRequestEmbeddedLanguage(const QString& languageId);
+	void onRequestEmbeddedBlockEnd();
 
 private:
 	class Private;

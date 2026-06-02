@@ -80,12 +80,9 @@ void CodeEditorWindow::Private::setupUI(Services* services) {
 }
 
 bool CodeEditorWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) {
-	if (commandName == "create") {
-		return d->handleCreate(args, context);
-	}
-	else if (commandName == "style") {
-		return d->handleStyle(args, context);
-	}
+	if (commandName == "create") return d->handleCreate(args, context);
+	else if (commandName == "style") return d->handleStyle(args, context);
+
 	return false;
 }
 
@@ -126,12 +123,8 @@ bool CodeEditorWindow::Private::handleStyle(const QStringList& args, CommandCont
 		const auto variable = pv[0];
 		const auto value = pv[1];
 
-		if (variable == "word-wrap") {
-			return handleStyleWordWrap(value);
-		}
-		else if (variable == "font") {
-			return handleStyleFont(value);
-		}
+		if (variable == "word-wrap") return handleStyleWordWrap(value);
+		else if (variable == "font") return handleStyleFont(value);
 	}
 
 	return true;

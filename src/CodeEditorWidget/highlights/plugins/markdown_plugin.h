@@ -5,8 +5,6 @@ class MarkdownPlugin : public IHighlightingPlugin {
 public:
 	LanguageInfo languageInfo() const override;
 
-	void install(Highlighter& highlighter) const override;
+	void install(Highlighter& highlighter, HighlighterRuleType type) const override;
 	void uninstall(Highlighter& highlighter) const override;
-	QStringList extractVariables(const QString& code) const override;
-	QList<EmbeddedRegion> findEmbeddedRegions(const QString& text) const override;
 };

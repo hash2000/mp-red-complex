@@ -38,11 +38,16 @@ void HighlightingPluginManager::registerPlugin(std::unique_ptr<IHighlightingPlug
 	d->plugins.push_back(std::move(plugin));
 }
 
-IHighlightingPlugin* HighlightingPluginManager::pluginForFile(const QString& filename) const {
-	QFileInfo info(filename);
-	QString ext = "." + info.suffix().toLower();
+IHighlightingPlugin* HighlightingPluginManager::pluginForLanguage(const QString& name) const {
+	const auto ext = name.startsWith(".") ? name : "." + name;
 	auto it = d->extToPlugin.find(ext);
 	return (it != d->extToPlugin.end()) ? it->second : nullptr;
+}
+
+IHighlightingPlugin* HighlightingPluginManager::pluginForFile(const QString& filename) const {
+	QFileInfo info(filename);
+	QString ext = info.suffix().toLower();
+	return pluginForLanguage(ext);
 }
 
 QList<IHighlightingPlugin*> HighlightingPluginManager::allPlugins() const {

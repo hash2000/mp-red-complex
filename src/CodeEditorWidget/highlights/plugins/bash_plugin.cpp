@@ -8,7 +8,7 @@ BashPlugin::LanguageInfo BashPlugin::languageInfo() const {
 		QIcon(":/icons/bash.png") };
 }
 
-void BashPlugin::install(Highlighter& highlighter) const {
+void BashPlugin::install(Highlighter& highlighter, HighlighterRuleType type) const {
 	// ==========================================
 	// 1. Комментарии
 	// ==========================================
@@ -16,7 +16,7 @@ void BashPlugin::install(Highlighter& highlighter) const {
 	commentFormat.setForeground(QColor("#6A9955"));  // зеленый
 	commentFormat.setFontItalic(true);
 
-	highlighter.addRule("bash_comment", "#[^\n]*", commentFormat, 5);
+	highlighter.addRule("bash_comment", "#[^\n]*", commentFormat, 5, type);
 
 	// ==========================================
 	// 2. Строки (двойные кавычки)
@@ -24,7 +24,7 @@ void BashPlugin::install(Highlighter& highlighter) const {
 	QTextCharFormat doubleQuoteFormat;
 	doubleQuoteFormat.setForeground(QColor("#CE9178"));  // оранжевый
 
-	highlighter.addRule("bash_double_quotes", R"("[^"]*")", doubleQuoteFormat, 6);
+	highlighter.addRule("bash_double_quotes", R"("[^"]*")", doubleQuoteFormat, 6, type);
 
 	// ==========================================
 	// 3. Строки (одинарные кавычки)
@@ -32,7 +32,7 @@ void BashPlugin::install(Highlighter& highlighter) const {
 	QTextCharFormat singleQuoteFormat;
 	singleQuoteFormat.setForeground(QColor("#CE9178"));  // оранжевый
 
-	highlighter.addRule("bash_single_quotes", R"('[^']*')", singleQuoteFormat, 6);
+	highlighter.addRule("bash_single_quotes", R"('[^']*')", singleQuoteFormat, 6, type);
 
 	// ==========================================
 	// 4. Ключевые слова
@@ -43,7 +43,7 @@ void BashPlugin::install(Highlighter& highlighter) const {
 
 	highlighter.addRule("bash_keywords",
 		R"(\b(if|then|else|elif|fi|case|esac|for|while|until|do|done|in|select|function|time|coproc)\b)",
-		keywordFormat, 10);
+		keywordFormat, 10, type);
 
 	// ==========================================
 	// 5. Встроенные команды bash
@@ -58,7 +58,7 @@ void BashPlugin::install(Highlighter& highlighter) const {
 		R"(fg|getopts|hash|help|history|jobs|kill|let|local|logout|mapfile|popd|)"
 		R"(printf|pushd|pwd|read|readarray|readonly|return|set|shift|shopt|source|)"
 		R"(suspend|test|times|trap|true|type|typeset|ulimit|umask|unalias|unset|wait)\b)",
-		builtinFormat, 11);
+		builtinFormat, 11, type);
 
 	// ==========================================
 	// 6. Переменные
@@ -69,12 +69,12 @@ void BashPlugin::install(Highlighter& highlighter) const {
 	// Обычные переменные $var ${var}
 	highlighter.addRule("bash_variables",
 		R"(\$\{?\w+\}?)",
-		variableFormat, 12);
+		variableFormat, 12, type);
 
 	// Специальные переменные $0-$9, $#, $?, $$, $!, $@, $*
 	highlighter.addRule("bash_special_vars",
 		R"(\$[0-9#?!@*\-$])",
-		variableFormat, 12);
+		variableFormat, 12, type);
 
 	// ==========================================
 	// 7. Числа
@@ -85,7 +85,7 @@ void BashPlugin::install(Highlighter& highlighter) const {
 	highlighter.addRule("bash_numbers",
 		R"(\b[0-9]+\.?[0-9]*(?:[eE][+-]?[0-9]+)?\b|)"
 		R"(\b0[xX][0-9a-fA-F]+\b)",
-		numberFormat, 7);
+		numberFormat, 7, type);
 
 	// ==========================================
 	// 8. Операторы и перенаправления
@@ -95,7 +95,7 @@ void BashPlugin::install(Highlighter& highlighter) const {
 
 	highlighter.addRule("bash_operators",
 		R"([<>|&!]+|&&|\|\||>>|<<|>|>>|<|<<<|&>|>&|2>|2>>|2>&1|1>&2)",
-		operatorFormat, 30);
+		operatorFormat, 30, type);
 
 	// ==========================================
 	// 9. Тестовые операторы
@@ -105,7 +105,7 @@ void BashPlugin::install(Highlighter& highlighter) const {
 
 	highlighter.addRule("bash_test_operators",
 		R"(\b(-eq|-ne|-lt|-le|-gt|-ge|-z|-n|-f|-d|-e|-x|-r|-w|-s|-h|-L|-O|-G|-nt|-ot|-ef)\b)",
-		testFormat, 13);
+		testFormat, 13, type);
 
 	// ==========================================
 	// 10. Here-documents
@@ -115,7 +115,7 @@ void BashPlugin::install(Highlighter& highlighter) const {
 
 	highlighter.addRule("bash_heredoc_start",
 		R"(<<[-]?\s*['"]?(\w+)['"]?)",
-		heredocFormat, 15);
+		heredocFormat, 15, type);
 
 	// ==========================================
 	// 11. Арифметические выражения
@@ -125,7 +125,7 @@ void BashPlugin::install(Highlighter& highlighter) const {
 
 	highlighter.addRule("bash_arithmetic",
 		R"(\$?\(\(.*\)\))",
-		arithFormat, 14);
+		arithFormat, 14, type);
 
 	// ==========================================
 	// 12. Подстановки команд $(command) и `command`
@@ -135,11 +135,11 @@ void BashPlugin::install(Highlighter& highlighter) const {
 
 	highlighter.addRule("bash_command_sub",
 		R"(\$\([^)]+\))",
-		subFormat, 14);
+		subFormat, 14, type);
 
 	highlighter.addRule("bash_backtick_sub",
 		R"(`[^`]+`)",
-		subFormat, 14);
+		subFormat, 14, type);
 
 	// ==========================================
 	// 13. Функции
@@ -151,7 +151,7 @@ void BashPlugin::install(Highlighter& highlighter) const {
 	// function name() { }
 	highlighter.addRule("bash_function_def",
 		R"(^\s*(function\s+)?(\w+)\s*\(\s*\)\s*\{?)",
-		functionFormat, 8);
+		functionFormat, 8, type);
 
 	// ==========================================
 	// 14. Shebang
@@ -162,7 +162,7 @@ void BashPlugin::install(Highlighter& highlighter) const {
 
 	highlighter.addRule("bash_shebang",
 		R"(^#!/.*$)",
-		shebangFormat, 3);
+		shebangFormat, 3, type);
 
 	// ==========================================
 	// 15. Escape-последовательности в строках
@@ -172,7 +172,7 @@ void BashPlugin::install(Highlighter& highlighter) const {
 
 	highlighter.addRule("bash_escape",
 		R"(\\[\\nrtabfv\"'$])",
-		escapeFormat, 4);
+		escapeFormat, 4, type);
 
 	// ==========================================
 	// 16. Массивы
@@ -182,7 +182,7 @@ void BashPlugin::install(Highlighter& highlighter) const {
 
 	highlighter.addRule("bash_array",
 		R"(\w+\s*=\s*\([^)]*\))",
-		arrayFormat, 16);
+		arrayFormat, 16, type);
 }
 
 void BashPlugin::uninstall(Highlighter& highlighter) const {
@@ -207,17 +207,5 @@ void BashPlugin::uninstall(Highlighter& highlighter) const {
 }
 
 QStringList BashPlugin::extractVariables(const QString& code) const {
-	// GLSL-специфичный парсинг переменных
 	return { };
-}
-
-bool BashPlugin::canHandleEmbeddedRegion(const QString& languageId) const {
-	return languageId == "bash" || languageId == "cmd" ||
-		languageId == "sh";
-}
-
-void BashPlugin::setupEmbeddedHighlighting(Highlighter& highlighter,
-	const QString& languageId,
-	const QMap<QString, QString>& metadata) const {
-	install(highlighter);
 }

@@ -19,7 +19,7 @@ public:
 	QString previusSuffix;
 
 	void setupUI();
-	void setupHighlighterRules();
+	void setupHighlighterRules(const QString& language);
 	void setupStyling();
 };
 
@@ -29,36 +29,41 @@ CodeEditorWidget::CodeEditorWidget(HighlightingPluginManager* pluginManager, QWi
 	d->pluginManager = pluginManager;
 	d->setupUI();
 	d->setupStyling();
+
+	connect(d->highlighter, &Highlighter::requestEmbeddedLanguage, this, &CodeEditorWidget::onRequestEmbeddedLanguage);
+	connect(d->highlighter, &Highlighter::requestEmbeddedBlockEnd, this, &CodeEditorWidget::onRequestEmbeddedBlockEnd);
 }
 
 CodeEditorWidget::~CodeEditorWidget() = default;
 
 void CodeEditorWidget::Private::setupUI() {
 	highlighter = new Highlighter(q->document());
-	setupHighlighterRules();
+	setupHighlighterRules("txt");
 }
 
-void CodeEditorWidget::Private::setupHighlighterRules() {
+void CodeEditorWidget::Private::setupHighlighterRules(const QString& language) {
 	if (!pluginManager) {
 		return;
 	}
+
+	highlighter->lockRefreshView();
 
 	if (lastPlugin) {
 		lastPlugin->uninstall(*highlighter);
 	}
 
-	const auto pluginPath = path.isEmpty() ? "plugin.txt" : path;
-	const auto plugin = pluginManager->pluginForFile(pluginPath);
+	const auto plugin = pluginManager->pluginForLanguage(language);
 	if (!plugin) {
+		highlighter->lockRefreshView(false);
 		return;
 	}
 
-	plugin->install(*highlighter);
+	plugin->install(*highlighter, HighlighterRuleType::Global);
 	lastPlugin = plugin;
+	highlighter->lockRefreshView(false);
 }
 
 void CodeEditorWidget::Private::setupStyling() {
-	//q->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 	q->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
 
 	QString styleSheet = R"(
@@ -74,7 +79,8 @@ void CodeEditorWidget::Private::setupStyling() {
 
 void CodeEditorWidget::setPath(const QString& path) {
 	d->path = path;
-	d->setupHighlighterRules();
+	QFileInfo info(d->path);
+	d->setupHighlighterRules(info.suffix().toLower());
 	reloadFile();	
 }
 
@@ -117,4 +123,18 @@ void CodeEditorWidget::setText(const QString& text) {
 	cursor.beginEditBlock();
 	cursor.insertText(text);
 	cursor.endEditBlock();
+}
+
+void CodeEditorWidget::onRequestEmbeddedLanguage(const QString& languageId) {
+	d->highlighter->clearEmbeddedRules();
+	const auto plugin = d->pluginManager->pluginForLanguage(languageId);
+	if (!plugin) {
+		return;
+	}
+
+	plugin->install(*d->highlighter, HighlighterRuleType::Embedded);
+}
+
+void CodeEditorWidget::onRequestEmbeddedBlockEnd() {
+	d->highlighter->clearEmbeddedRules();
 }

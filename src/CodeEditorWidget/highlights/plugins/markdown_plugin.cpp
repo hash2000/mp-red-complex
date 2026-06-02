@@ -11,7 +11,7 @@ MarkdownPlugin::LanguageInfo MarkdownPlugin::languageInfo() const {
 	};
 }
 
-void MarkdownPlugin::install(Highlighter& highlighter) const {
+void MarkdownPlugin::install(Highlighter& highlighter, HighlighterRuleType type) const {
 	// ==========================================
 	// 1. Заголовки (Headers)
 	// ==========================================
@@ -44,12 +44,12 @@ void MarkdownPlugin::install(Highlighter& highlighter) const {
 	h6Format.setFontWeight(QFont::Bold);
 
 	// Заголовки с # (ATX-style)
-	highlighter.addRule("md_h1", "^# [^\n]+$", h1Format, 10);
-	highlighter.addRule("md_h2", "^## [^\n]+$", h2Format, 10);
-	highlighter.addRule("md_h3", "^### [^\n]+$", h3Format, 10);
-	highlighter.addRule("md_h4", "^#### [^\n]+$", h4Format, 10);
-	highlighter.addRule("md_h5", "^##### [^\n]+$", h5Format, 10);
-	highlighter.addRule("md_h6", "^###### [^\n]+$", h6Format, 10);
+	highlighter.addRule("md_h1", "^# [^\n]+$", h1Format, 10, type);
+	highlighter.addRule("md_h2", "^## [^\n]+$", h2Format, 10, type);
+	highlighter.addRule("md_h3", "^### [^\n]+$", h3Format, 10, type);
+	highlighter.addRule("md_h4", "^#### [^\n]+$", h4Format, 10, type);
+	highlighter.addRule("md_h5", "^##### [^\n]+$", h5Format, 10, type);
+	highlighter.addRule("md_h6", "^###### [^\n]+$", h6Format, 10, type);
 
 	// Альтернативные заголовки (Setext-style)
 	QTextCharFormat altH1Format;
@@ -57,8 +57,8 @@ void MarkdownPlugin::install(Highlighter& highlighter) const {
 	altH1Format.setFontWeight(QFont::Bold);
 	altH1Format.setFontUnderline(true);
 
-	highlighter.addRule("md_alt_h1_underline", "^=+$", altH1Format, 11);
-	highlighter.addRule("md_alt_h2_underline", "^-+$", altH1Format, 11);
+	highlighter.addRule("md_alt_h1_underline", "^=+$", altH1Format, 11, type);
+	highlighter.addRule("md_alt_h2_underline", "^-+$", altH1Format, 11, type);
 
 	// ==========================================
 	// 2. Жирный текст (Bold)
@@ -66,8 +66,8 @@ void MarkdownPlugin::install(Highlighter& highlighter) const {
 	QTextCharFormat boldFormat;
 	boldFormat.setFontWeight(QFont::Bold);
 
-	highlighter.addRule("md_bold_double_asterisk", "\\*\\*[^\\*]+\\*\\*", boldFormat, 20);
-	highlighter.addRule("md_bold_double_underscore", "__[^_]+__", boldFormat, 20);
+	highlighter.addRule("md_bold_double_asterisk", "\\*\\*[^\\*]+\\*\\*", boldFormat, 20, type);
+	highlighter.addRule("md_bold_double_underscore", "__[^_]+__", boldFormat, 20, type);
 
 	// ==========================================
 	// 3. Курсив (Italic)
@@ -75,8 +75,8 @@ void MarkdownPlugin::install(Highlighter& highlighter) const {
 	QTextCharFormat italicFormat;
 	italicFormat.setFontItalic(true);
 
-	highlighter.addRule("md_italic_asterisk", "(?<!\\*)\\*(?!\\*)[^\\*]+\\*(?!\\*)", italicFormat, 21);
-	highlighter.addRule("md_italic_underscore", "(?<!_)_(?!_)[^_]+_(?!_)", italicFormat, 21);
+	highlighter.addRule("md_italic_asterisk", "(?<!\\*)\\*(?!\\*)[^\\*]+\\*(?!\\*)", italicFormat, 21, type);
+	highlighter.addRule("md_italic_underscore", "(?<!_)_(?!_)[^_]+_(?!_)", italicFormat, 21, type);
 
 	// ==========================================
 	// 4. Жирный курсив (Bold + Italic)
@@ -85,9 +85,9 @@ void MarkdownPlugin::install(Highlighter& highlighter) const {
 	boldItalicFormat.setFontWeight(QFont::Bold);
 	boldItalicFormat.setFontItalic(true);
 
-	highlighter.addRule("md_bold_italic_triple", "\\*\\*\\*[^\\*]+\\*\\*\\*", boldItalicFormat, 19);
-	highlighter.addRule("md_bold_italic_mixed1", "___[^_]+___", boldItalicFormat, 19);
-	highlighter.addRule("md_bold_italic_mixed2", "\\*\\*_[^_]+_\\*\\*", boldItalicFormat, 19);
+	highlighter.addRule("md_bold_italic_triple", "\\*\\*\\*[^\\*]+\\*\\*\\*", boldItalicFormat, 19, type);
+	highlighter.addRule("md_bold_italic_mixed1", "___[^_]+___", boldItalicFormat, 19, type);
+	highlighter.addRule("md_bold_italic_mixed2", "\\*\\*_[^_]+_\\*\\*", boldItalicFormat, 19, type);
 
 	// ==========================================
 	// 5. Зачеркнутый текст (Strikethrough)
@@ -96,7 +96,7 @@ void MarkdownPlugin::install(Highlighter& highlighter) const {
 	strikeFormat.setFontStrikeOut(true);
 	strikeFormat.setForeground(QColor("#808080"));  // серый
 
-	highlighter.addRule("md_strikethrough", "~~[^~]+~~", strikeFormat, 22);
+	highlighter.addRule("md_strikethrough", "~~[^~]+~~", strikeFormat, 22, type);
 
 	// ==========================================
 	// 6. Ссылки (Links)
@@ -106,7 +106,7 @@ void MarkdownPlugin::install(Highlighter& highlighter) const {
 	linkFormat.setUnderlineStyle(QTextCharFormat::SingleUnderline);
 
 	// Полные ссылки [text](url)
-	highlighter.addRule("md_inline_link", "\\[([^\\]]+)\\]\\(([^\\)]+)\\)", linkFormat, 25);
+	highlighter.addRule("md_inline_link", "\\[([^\\]]+)\\]\\(([^\\)]+)\\)", linkFormat, 25, type);
 
 	// Простые URL
 	QTextCharFormat urlFormat;
@@ -115,10 +115,10 @@ void MarkdownPlugin::install(Highlighter& highlighter) const {
 
 	highlighter.addRule("md_url",
 		"https?://[^\\s\\)]+|ftp://[^\\s\\)]+|www\\.[^\\s\\)]+",
-		urlFormat, 26);
+		urlFormat, 26, type);
 
 	// Ссылки-сноски [text][id]
-	highlighter.addRule("md_reference_link", "\\[([^\\]]+)\\]\\[([^\\]]*)\\]", linkFormat, 25);
+	highlighter.addRule("md_reference_link", "\\[([^\\]]+)\\]\\[([^\\]]*)\\]", linkFormat, 25, type);
 
 	// ==========================================
 	// 7. Изображения (Images)
@@ -127,99 +127,102 @@ void MarkdownPlugin::install(Highlighter& highlighter) const {
 	imageFormat.setForeground(QColor("#CE9178"));  // оранжевый
 	imageFormat.setFontItalic(true);
 
-	highlighter.addRule("md_image", "!\\[([^\\]]*)\\]\\(([^\\)]+)\\)", imageFormat, 27);
+	highlighter.addRule("md_image", "!\\[([^\\]]*)\\]\\(([^\\)]+)\\)", imageFormat, 27, type);
 
 	// ==========================================
-	// 8. Код (Code)
-	// ==========================================
-	QTextCharFormat inlineCodeFormat;
-	inlineCodeFormat.setForeground(QColor("#CE9178"));  // оранжевый
-	inlineCodeFormat.setFontFamily("Courier New");
-	inlineCodeFormat.setBackground(QColor("#1E1E1E"));  // темный фон
-
-	highlighter.addRule("md_inline_code", "`[^`]+`", inlineCodeFormat, 15);
-
-	// Блоки кода (3 обратные кавычки)
-	QTextCharFormat codeBlockFormat;
-	codeBlockFormat.setForeground(QColor("#CE9178"));
-	codeBlockFormat.setFontFamily("Courier New");
-	codeBlockFormat.setBackground(QColor("#1E1E1E"));
-
-	// Многострочный блок кода лучше обрабатывать отдельно в highlightBlock
-	// но для простого случая можно подсветить границы
-	highlighter.addRule("md_code_block_marker", "```[\\w]*", codeBlockFormat, 14);
-
-	// ==========================================
-	// 9. Цитаты (Blockquotes)
+	// 8. Цитаты (Blockquotes)
 	// ==========================================
 	QTextCharFormat blockquoteFormat;
 	blockquoteFormat.setForeground(QColor("#6A9955"));  // зеленый
 	blockquoteFormat.setFontItalic(true);
 	blockquoteFormat.setBackground(QColor("#2D2D2D"));  // темно-серый фон
 
-	highlighter.addRule("md_blockquote", "^> .*$", blockquoteFormat, 30);
+	highlighter.addRule("md_blockquote", "^> .*$", blockquoteFormat, 30, type);
 
 	// ==========================================
-	// 10. Списки (Lists)
+	// 9. Списки (Lists)
 	// ==========================================
 	QTextCharFormat unorderedListFormat;
 	unorderedListFormat.setForeground(QColor("#FFE66D"));  // желтый
 	unorderedListFormat.setFontWeight(QFont::Bold);
 
 	// Маркированные списки
-	highlighter.addRule("md_unordered_list", "^[\\s]*[-*+] .*$", unorderedListFormat, 35);
+	highlighter.addRule("md_unordered_list", "^[\\s]*[-*+] .*$", unorderedListFormat, 35, type);
 
 	QTextCharFormat orderedListFormat;
 	orderedListFormat.setForeground(QColor("#FFE66D"));
 	orderedListFormat.setFontWeight(QFont::Bold);
 
 	// Нумерованные списки
-	highlighter.addRule("md_ordered_list", "^[\\s]*\\d+\\. .*$", orderedListFormat, 35);
+	highlighter.addRule("md_ordered_list", "^[\\s]*\\d+\\. .*$", orderedListFormat, 35, type);
 
 	// ==========================================
-	// 11. Горизонтальные линии (Horizontal Rules)
+	// 10. Горизонтальные линии (Horizontal Rules)
 	// ==========================================
 	QTextCharFormat hrFormat;
 	hrFormat.setForeground(QColor("#808080"));
 
-	highlighter.addRule("md_horizontal_rule", "^[-*_]{3,}$", hrFormat, 40);
+	highlighter.addRule("md_horizontal_rule", "^[-*_]{3,}$", hrFormat, 40, type);
 
 	// ==========================================
-	// 12. Специальные символы (Emphasis markers)
+	// 11. Специальные символы (Emphasis markers)
 	// ==========================================
 	QTextCharFormat markerFormat;
 	markerFormat.setForeground(QColor("#808080"));  // серый
 
-	highlighter.addRule("md_list_marker", "^[\\s]*[-*+] ", markerFormat, 36);
-	highlighter.addRule("md_ordered_list_marker", "^[\\s]*\\d+\\. ", markerFormat, 36);
-	highlighter.addRule("md_blockquote_marker", "^> ", markerFormat, 31);
+	highlighter.addRule("md_list_marker", "^[\\s]*[-*+] ", markerFormat, 36, type);
+	highlighter.addRule("md_ordered_list_marker", "^[\\s]*\\d+\\. ", markerFormat, 36, type);
+	highlighter.addRule("md_blockquote_marker", "^> ", markerFormat, 31, type);
 
 	// ==========================================
-	// 13. Escape-последовательности
+	// 12. Escape-последовательности
 	// ==========================================
 	QTextCharFormat escapeFormat;
 	escapeFormat.setForeground(QColor("#D7BA7D"));  // золотой
 	escapeFormat.setFontWeight(QFont::Bold);
 
-	highlighter.addRule("md_escape", "\\\\[\\*_\\[\\]()#\\+\\-\\.!|~`<>]", escapeFormat, 5);
+	highlighter.addRule("md_escape", "\\\\[\\*_\\[\\]()#\\+\\-\\.!|~`<>]", escapeFormat, 5, type);
 
 	// ==========================================
-	// 14. HTML теги (опционально, если поддерживается в вашем MD)
+	// 13. HTML теги (опционально, если поддерживается в вашем MD)
 	// ==========================================
 	QTextCharFormat htmlTagFormat;
 	htmlTagFormat.setForeground(QColor("#808080"));
 	htmlTagFormat.setFontFamily("Courier New");
 
-	highlighter.addRule("md_html_tag", "</?\\w+[^>]*>", htmlTagFormat, 45);
+	highlighter.addRule("md_html_tag", "</?\\w+[^>]*>", htmlTagFormat, 45, type);
 
 	// ==========================================
-	// 15. Таблицы (Table separators)
+	// 14. Таблицы (Table separators)
 	// ==========================================
 	QTextCharFormat tableFormat;
 	tableFormat.setForeground(QColor("#569CD6"));
 
-	highlighter.addRule("md_table_separator", "^\\|[\\s\\-:]+\\|", tableFormat, 40);
-	highlighter.addRule("md_table_row", "^\\|[^\\n]+\\|$", tableFormat, 41);
+	highlighter.addRule("md_table_separator", "^\\|[\\s\\-:]+\\|", tableFormat, 40, type);
+	highlighter.addRule("md_table_row", "^\\|[^\\n]+\\|$", tableFormat, 41, type);
+
+	QTextCharFormat codeBlockFormat;
+	codeBlockFormat.setForeground(QColor("#CE9178"));
+	codeBlockFormat.setBackground(QColor("#1E1E1E"));
+
+	highlighter.addEmbeddedCodeRule(
+		"md_embedded_code_block",
+		R"(^```(\w+)[\r\n]*$)", // Начало: ```язык + перевод строки
+		R"(^```$)", // Конец: ``` на отдельной строке
+		"$1", // Идентификатор языка - захватывается из начала
+		codeBlockFormat,
+		14
+	);
+
+	// Блок кода без языка: ``` ... ```
+	highlighter.addEmbeddedCodeRule(
+		"md_embedded_code_block_plain",
+		R"(```)", // Начало: ``` + перевод строки
+		R"(^```$)", // Конец: ``` на отдельной строке
+		"", // Без указания языка
+		codeBlockFormat,
+		14
+	);
 }
 
 void MarkdownPlugin::uninstall(Highlighter& highlighter) const {
@@ -255,37 +258,6 @@ void MarkdownPlugin::uninstall(Highlighter& highlighter) const {
 	highlighter.deleteRule("md_html_tag");
 	highlighter.deleteRule("md_table_separator");
 	highlighter.deleteRule("md_table_row");
-}
-
-QStringList MarkdownPlugin::extractVariables(const QString& code) const {
-	// GLSL-специфичный парсинг переменных
-	return { };
-}
-
-QList<MarkdownPlugin::EmbeddedRegion> MarkdownPlugin::findEmbeddedRegions(const QString& text) const {
-	QList<EmbeddedRegion> regions;
-
-	// Ищем блоки кода с указанием языка: ```glsl ... ```
-	QRegularExpression codeBlockRegex("```(\\w+)?\\n([\\s\\S]*?)```");
-	auto matches = codeBlockRegex.globalMatch(text);
-
-	while (matches.hasNext()) {
-		auto match = matches.next();
-		QString language = match.captured(1);
-		QString code = match.captured(2);
-		EmbeddedRegion region;
-		region.length = match.capturedLength(2);
-		region.start = match.capturedStart(2);
-
-		if (language.isEmpty()) {
-			region.languageId = "bash";
-		}
-		else {
-			region.languageId = language.toLower();
-		}
-
-		regions.append(region);
-	}
-
-	return regions;
+	highlighter.deleteEmbeddedCodeRule("md_embedded_code_block");
+	highlighter.deleteEmbeddedCodeRule("md_embedded_code_block_plain");
 }

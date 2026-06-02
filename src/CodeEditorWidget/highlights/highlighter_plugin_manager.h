@@ -12,6 +12,7 @@ public:
 	void loadPlugins(const QString& pluginsDir);
 	void registerPlugin(std::unique_ptr<IHighlightingPlugin> plugin);
 	IHighlightingPlugin* pluginForFile(const QString& filename) const;
+	IHighlightingPlugin* pluginForLanguage(const QString& name) const;
 	QList<IHighlightingPlugin*> allPlugins() const;
 
 private:
