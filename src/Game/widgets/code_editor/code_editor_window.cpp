@@ -18,17 +18,19 @@ public:
 	CodeEditorWidget* editor = nullptr;
 	QWidget* buttonsContainer = nullptr;
 	QVBoxLayout* buttonsLayout = nullptr;
-	QString path;
+	QString documentPath;
 
 	void setupUI(Services* services);
 	void setupButtons();
 	QToolButton* addButton(const QString& title, const QString& tooltip);
+	void changeTargetPath(const QString& path);
 
 	// Команды
 	bool handleCreate(const QStringList& args, CommandContext* context);
 	bool handleStyle(const QStringList& args, CommandContext* context);
 	bool handleStyleWordWrap(const QString& value);
 	bool handleStyleFont(const QString& value);
+	
 };
 
 CodeEditorWindow::CodeEditorWindow(const QString& id, QWidget* parent)
@@ -43,6 +45,14 @@ QString CodeEditorWindow::help() const {
 		create path:<path>
 		style word-wrap:[true|false] font:[fontname]
 )";
+}
+
+QString CodeEditorWindow::windowTitle() const {
+	if (!d->documentPath.isEmpty()) {
+		return d->documentPath;
+	}
+
+	return "Editor";
 }
 
 QToolButton* CodeEditorWindow::Private::addButton(const QString& title, const QString& tooltip) {
@@ -133,46 +143,45 @@ bool CodeEditorWindow::Private::handleStyle(const QStringList& args, CommandCont
 bool CodeEditorWindow::Private::handleCreate(const QStringList& args, CommandContext* context) {
 	auto services = context->services();
 	this->context = context;
-	this->path = args.filter(QRegularExpression("^path:")).value(0).mid(5);
+	const auto path = args.filter(QRegularExpression("^path:")).value(0).mid(5);
 	this->setupUI(services);
-	if (!this->path.isEmpty()) {
-		q->onChangeTargetPath();
-	}
+	changeTargetPath(path);
 
 	return true;
 }
 
-void CodeEditorWindow::onChangeTargetPath() {
-	if (d->path.isEmpty()) {
-		d->context->printError(QString("Usage: [required window-create parameters] %1").arg(help()));
+void CodeEditorWindow::Private::changeTargetPath(const QString& path) {
+	if (path.isEmpty()) {
+		context->printError(QString("Usage: [required window-create parameters] %1").arg(q->help()));
 		return;
 	}
 
-	d->editor->setPath(d->path);
-	setWindowTitle(d->path);
+	documentPath = path;
+
+	editor->setPath(documentPath);
+	q->setWindowTitle(documentPath);
 }
 
 void CodeEditorWindow::onOpenDocumentClick() {
 	const auto res = QFileDialog::getOpenFileName(this,
 		"Выберите файл", "", "All files (*.*)");
 	if (!res.isEmpty()) {
-		d->path = res;
-		onChangeTargetPath();
+		d->changeTargetPath(res);
 	}
 }
 
 void CodeEditorWindow::onSaveDocumentClick() {
-	if (d->path.isEmpty()) {
+	if (d->documentPath.isEmpty()) {
 		const auto res = QFileDialog::getSaveFileName(this,
 			"Выберите файл", "", "All files (*.*)");
 		if (res.isEmpty()) {
 			return;
 		}
 		
-		d->path = res;
+		d->changeTargetPath(res);
 	}
 
-	QFile file(d->path);
+	QFile file(d->documentPath);
 	if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
 		return;
 	}
