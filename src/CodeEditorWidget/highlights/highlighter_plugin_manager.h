@@ -2,7 +2,7 @@
 #include <QString>
 #include <memory>
 
-class IHighlightingPlugin;
+class HighlightingPlugin;
 
 class HighlightingPluginManager {
 public:
@@ -10,10 +10,10 @@ public:
 	~HighlightingPluginManager();
 
 	void loadPlugins(const QString& pluginsDir);
-	void registerPlugin(std::unique_ptr<IHighlightingPlugin> plugin);
-	IHighlightingPlugin* pluginForFile(const QString& filename) const;
-	IHighlightingPlugin* pluginForLanguage(const QString& name) const;
-	QList<IHighlightingPlugin*> allPlugins() const;
+	void registerPlugin(std::unique_ptr<HighlightingPlugin> plugin);
+	HighlightingPlugin* pluginForFile(const QString& filename) const;
+	HighlightingPlugin* pluginForLanguage(const QString& name) const;
+	QList<HighlightingPlugin*> allPlugins() const;
 
 private:
 	class Private;

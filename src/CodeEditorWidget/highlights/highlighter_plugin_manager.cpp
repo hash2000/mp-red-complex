@@ -13,8 +13,8 @@ public:
 	Private(HighlightingPluginManager* parent) : q(parent) {}
 	HighlightingPluginManager* q;
 
-	std::vector<std::unique_ptr<IHighlightingPlugin>> plugins;
-	std::map<QString, IHighlightingPlugin*> extToPlugin;
+	std::vector<std::unique_ptr<HighlightingPlugin>> plugins;
+	std::map<QString, HighlightingPlugin*> extToPlugin;
 };
 
 HighlightingPluginManager::HighlightingPluginManager()
@@ -30,28 +30,30 @@ void HighlightingPluginManager::loadPlugins(const QString& pluginsDir) {
 	registerPlugin(std::make_unique<BashPlugin>());
 }
 
-void HighlightingPluginManager::registerPlugin(std::unique_ptr<IHighlightingPlugin> plugin) {
+void HighlightingPluginManager::registerPlugin(std::unique_ptr<HighlightingPlugin> plugin) {
 	const auto& info = plugin->languageInfo();
 	for (const auto& ext : info.extensions) {
 		d->extToPlugin[ext.toLower()] = plugin.get();
 	}
+
+	plugin->install();
 	d->plugins.push_back(std::move(plugin));
 }
 
-IHighlightingPlugin* HighlightingPluginManager::pluginForLanguage(const QString& name) const {
+HighlightingPlugin* HighlightingPluginManager::pluginForLanguage(const QString& name) const {
 	const auto ext = name.startsWith(".") ? name : "." + name;
 	auto it = d->extToPlugin.find(ext);
 	return (it != d->extToPlugin.end()) ? it->second : nullptr;
 }
 
-IHighlightingPlugin* HighlightingPluginManager::pluginForFile(const QString& filename) const {
+HighlightingPlugin* HighlightingPluginManager::pluginForFile(const QString& filename) const {
 	QFileInfo info(filename);
 	QString ext = info.suffix().toLower();
 	return pluginForLanguage(ext);
 }
 
-QList<IHighlightingPlugin*> HighlightingPluginManager::allPlugins() const {
-	QList<IHighlightingPlugin*> result;
+QList<HighlightingPlugin*> HighlightingPluginManager::allPlugins() const {
+	QList<HighlightingPlugin*> result;
 	for (const auto& plugin : d->plugins) {
 		result.append(plugin.get());
 	}

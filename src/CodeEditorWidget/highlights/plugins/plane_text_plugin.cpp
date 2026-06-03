@@ -1,5 +1,6 @@
 #include "CodeEditorWidget/highlights/plugins/plane_text_plugin.h"
-#include "CodeEditorWidget/highlights/highlighter.h"
+
+PlaneTextPlugin::~PlaneTextPlugin() = default;
 
 PlaneTextPlugin::LanguageInfo PlaneTextPlugin::languageInfo() const {
 	return {
@@ -10,20 +11,15 @@ PlaneTextPlugin::LanguageInfo PlaneTextPlugin::languageInfo() const {
 	};
 }
 
-void PlaneTextPlugin::install(Highlighter& highlighter, HighlighterRuleType type) const {
+void PlaneTextPlugin::install()  {
 	QTextCharFormat numberFormat;
 	numberFormat.setForeground(QColor("#B5CEA8"));
-	highlighter.addRule("txt_numbers", "\\b[0-9]+\\b", numberFormat, 100, type);
+	addRule(Rule{ QRegularExpression("\\b[0-9]+\\b"), numberFormat, 100 });
 
 	QTextCharFormat stringFormat;
 	stringFormat.setForeground(QColor("#CE9178"));  // оранжевый
 	stringFormat.setFontWeight(QFont::Normal);
-	highlighter.addRule("txt_strings", "\"[^\"]*\"", stringFormat, 100, type);
-}
-
-void PlaneTextPlugin::uninstall(Highlighter& highlighter) const {
-	highlighter.deleteRule("txt_numbers");
-	highlighter.deleteRule("txt_strings");
+	addRule(Rule{ QRegularExpression("\"[^\"]*\""), stringFormat });
 }
 
 QStringList PlaneTextPlugin::extractVariables(const QString& code) const {

@@ -1,10 +1,10 @@
 #pragma once
-#include "CodeEditorWidget/highlights/plugins/i_highlighter_plugin.h"
+#include "CodeEditorWidget/highlights/plugins/highlighter_plugin.h"
 
-class MarkdownPlugin : public IHighlightingPlugin {
+class MarkdownPlugin : public HighlightingPlugin {
 public:
-	LanguageInfo languageInfo() const override;
+	~MarkdownPlugin() override;
 
-	void install(Highlighter& highlighter, HighlighterRuleType type) const override;
-	void uninstall(Highlighter& highlighter) const override;
+	LanguageInfo languageInfo() const override;
+	void install() override;
 };

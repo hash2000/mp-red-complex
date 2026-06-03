@@ -1,5 +1,6 @@
 #include "CodeEditorWidget/highlights/plugins/glsl_plugin.h"
-#include "CodeEditorWidget/highlights/highlighter.h"
+
+GLSLPlugin::~GLSLPlugin() = default;
 
 GLSLPlugin::LanguageInfo GLSLPlugin::languageInfo() const {
 	return {
@@ -10,39 +11,39 @@ GLSLPlugin::LanguageInfo GLSLPlugin::languageInfo() const {
 	};
 }
 
-void GLSLPlugin::install(Highlighter& highlighter, HighlighterRuleType type) const {
+void GLSLPlugin::install() {
 	// ==========================================
-	// 1. Ключевые слова GLSL (управляющие конструкции)
+	// Ключевые слова GLSL (управляющие конструкции)
 	// ==========================================
 	QTextCharFormat keywordFormat;
 	keywordFormat.setForeground(QColor("#569CD6"));  // синий, как в VS Code
 	keywordFormat.setFontWeight(QFont::Bold);
 
-	highlighter.addRule("glsl_keywords",
-		"\\b(if|else|for|while|do|switch|case|default|break|continue|return|discard)\\b",
-		keywordFormat, 10, type);  // высокий приоритет
+	addRule(Rule{ QRegularExpression(
+		"\\b(if|else|for|while|do|switch|case|default|break|continue|return|discard)\\b"),
+		keywordFormat, 10 });  // высокий приоритет
 
 	// ==========================================
-	// 2. Квалификаторы переменных
+	// Квалификаторы переменных
 	// ==========================================
 	QTextCharFormat qualifierFormat;
 	qualifierFormat.setForeground(QColor("#4EC9B0"));  // бирюзовый
 	qualifierFormat.setFontWeight(QFont::Bold);
 
-	highlighter.addRule("glsl_qualifiers",
+	addRule(Rule{ QRegularExpression(
 		"\\b(uniform|in|out|inout|attribute|varying|const|flat|smooth|noperspective|"
 		"centroid|sample|patch|invariant|precise|highp|mediump|lowp|readonly|writeonly|"
-		"coherent|volatile|restrict|layout|shared|packed|std140|std430)\\b",
-		qualifierFormat, 11, type);
+		"coherent|volatile|restrict|layout|shared|packed|std140|std430)\\b"),
+		qualifierFormat, 11 });
 
 	// ==========================================
-	// 3. Типы данных
+	// Типы данных
 	// ==========================================
 	QTextCharFormat typeFormat;
 	typeFormat.setForeground(QColor("#4EC9B0"));  // бирюзовый
 	typeFormat.setFontWeight(QFont::Normal);
 
-	highlighter.addRule("glsl_types",
+	addRule(Rule{ QRegularExpression(
 		"\\b(void|bool|int|uint|float|double|vec2|vec3|vec4|dvec2|dvec3|dvec4|"
 		"bvec2|bvec3|bvec4|ivec2|ivec3|ivec4|uvec2|uvec3|uvec4|"
 		"mat2|mat3|mat4|mat2x2|mat2x3|mat2x4|mat3x2|mat3x3|mat3x4|"
@@ -60,17 +61,17 @@ void GLSLPlugin::install(Highlighter& highlighter, HighlighterRuleType type) con
 		"image2DRect|iimage1D|iimage2D|iimage3D|iimageCube|iimage1DArray|"
 		"iimage2DArray|iimageBuffer|iimage2DRect|uimage1D|uimage2D|uimage3D|"
 		"uimageCube|uimage1DArray|uimage2DArray|uimageBuffer|uimage2DRect|"
-		"atomic_uint|struct)\\b",
-		typeFormat, 12, type);
+		"atomic_uint|struct)\\b"),
+		typeFormat, 12 });
 
 	// ==========================================
-	// 4. Встроенные функции
+	// Встроенные функции
 	// ==========================================
 	QTextCharFormat functionFormat;
 	functionFormat.setForeground(QColor("#DCDCAA"));  // желтоватый
 	functionFormat.setFontWeight(QFont::Normal);
 
-	highlighter.addRule("glsl_builtin_functions",
+	addRule(Rule{ QRegularExpression(
 		"\\b(radians|degrees|sin|cos|tan|asin|acos|atan|sinh|cosh|tanh|"
 		"asinh|acosh|atanh|pow|exp|log|exp2|log2|sqrt|inversesqrt|"
 		"abs|sign|floor|trunc|round|roundEven|ceil|fract|mod|modf|"
@@ -95,17 +96,17 @@ void GLSLPlugin::install(Highlighter& highlighter, HighlighterRuleType type) con
 		"imageAtomicAnd|imageAtomicOr|imageAtomicXor|imageAtomicExchange|imageAtomicCompSwap|"
 		"memoryBarrier|memoryBarrierAtomicCounter|memoryBarrierBuffer|"
 		"memoryBarrierShared|memoryBarrierImage|groupMemoryBarrier|barrier|"
-		"EmitVertex|EndPrimitive)\\b",
-		functionFormat, 20, type);
+		"EmitVertex|EndPrimitive)\\b"),
+		functionFormat, 20 });
 
 	// ==========================================
-	// 5. Встроенные константы
+	// Встроенные константы
 	// ==========================================
 	QTextCharFormat constantFormat;
 	constantFormat.setForeground(QColor("#569CD6"));  // синий
 	constantFormat.setFontWeight(QFont::Normal);
 
-	highlighter.addRule("glsl_constants",
+	addRule(Rule{ QRegularExpression(
 		"\\b(gl_Position|gl_PointSize|gl_ClipDistance|gl_CullDistance|"
 		"gl_FragCoord|gl_FrontFacing|gl_FragDepth|gl_FragColor|gl_FragData|"
 		"gl_VertexID|gl_InstanceID|gl_DrawID|gl_BaseVertex|gl_BaseInstance|"
@@ -114,81 +115,67 @@ void GLSLPlugin::install(Highlighter& highlighter, HighlighterRuleType type) con
 		"gl_GlobalInvocationID|gl_LocalInvocationID|gl_WorkGroupSize|gl_WorkGroupID|"
 		"gl_NumWorkGroups|gl_MaxVertexAttribs|gl_MaxCombinedTextureImageUnits|"
 		"gl_MaxDrawBuffers|gl_MaxClipDistances|gl_MaxTextureImageUnits|"
-		"true|false|PI|TAU|E)\\b",
-		constantFormat, 15, type);
+		"true|false|PI|TAU|E)\\b"),
+		constantFormat, 15 });
 
 	// ==========================================
-	// 6. Комментарии
+	// Комментарии
 	// ==========================================
 	QTextCharFormat commentFormat;
 	commentFormat.setForeground(QColor("#6A9955"));  // зеленый
 	commentFormat.setFontItalic(true);
 
-	highlighter.addRule("glsl_single_line_comments",
-		"//[^\n]*",
-		commentFormat, 5, type);
+	addRule(Rule{ QRegularExpression(
+		"//[^\n]*"),
+		commentFormat, 5 });
 
-	highlighter.addRule("glsl_multi_line_comments",
-		"/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/",
-		commentFormat, 5, type);
+	addRule(Rule{ QRegularExpression(
+		"/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/"),
+		commentFormat, 5 });
 
 	// ==========================================
-	// 7. Строки
+	// Строки
 	// ==========================================
 	QTextCharFormat stringFormat;
 	stringFormat.setForeground(QColor("#CE9178"));  // оранжевый
 	stringFormat.setFontWeight(QFont::Normal);
 
-	highlighter.addRule("glsl_strings",
-		"\"[^\"]*\"",
-		stringFormat, 6, type);
+	addRule(Rule{ QRegularExpression(
+		"\"[^\"]*\""),
+		stringFormat, 6 });
 
 	// ==========================================
-	// 8. Числа
+	// Числа
 	// ==========================================
 	QTextCharFormat numberFormat;
 	numberFormat.setForeground(QColor("#B5CEA8"));  // светло-зеленый
 
-	highlighter.addRule("glsl_numbers",
+	addRule(Rule{ QRegularExpression(
 		"\\b[0-9]+\\.?[0-9]*(?:[eE][+-]?[0-9]+)?[fF]?\\b|"
 		"\\b0[xX][0-9a-fA-F]+\\b|"
-		"\\b0[0-7]*\\b",
-		numberFormat, 7, type);
+		"\\b0[0-7]*\\b"),
+		numberFormat, 7 });
 
 	// ==========================================
-	// 9. Препроцессор
+	// Препроцессор
 	// ==========================================
 	QTextCharFormat preprocessorFormat;
 	preprocessorFormat.setForeground(QColor("#9B9B9B"));  // серый
 	preprocessorFormat.setFontWeight(QFont::Bold);
 
-	highlighter.addRule("glsl_preprocessor",
-		"^\\s*#\\s*(version|extension|define|undef|if|ifdef|ifndef|else|elif|endif|error|pragma|include|line)\\b",
-		preprocessorFormat, 3, type);
+	addRule(Rule{ QRegularExpression(
+		"^\\s*#\\s*(version|extension|define|undef|if|ifdef|ifndef|else|elif|endif|error|pragma|include|line)\\b"),
+		preprocessorFormat, 3 });
 
 	// ==========================================
-	// 10. Специальные символы и операторы (опционально)
+	// Специальные символы и операторы (опционально)
 	// ==========================================
 	QTextCharFormat operatorFormat;
 	operatorFormat.setForeground(QColor("#D4D4D4"));  // светло-серый
 
-	highlighter.addRule("glsl_operators",
-		"[\\+\\-\\*\\/%=<>!&|^~?:]+|\\b(and|or|xor|not|mod)\\b",
-		operatorFormat, 30, type);
-}
-
-void GLSLPlugin::uninstall(Highlighter& highlighter) const {
-	highlighter.deleteRule("glsl_keywords");
-	highlighter.deleteRule("glsl_qualifiers");
-	highlighter.deleteRule("glsl_types");
-	highlighter.deleteRule("glsl_builtin_functions");
-	highlighter.deleteRule("glsl_constants");
-	highlighter.deleteRule("glsl_single_line_comments");
-	highlighter.deleteRule("glsl_multi_line_comments");
-	highlighter.deleteRule("glsl_strings");
-	highlighter.deleteRule("glsl_numbers");
-	highlighter.deleteRule("glsl_preprocessor");
-	highlighter.deleteRule("glsl_operators");
+	addRule(Rule{ QRegularExpression(
+		"[\\+\\-\\*\\/%=<>!&|^~?:]+|\\b(and|or|xor|not|mod)\\b"),
+		operatorFormat, 30 });
 }
 
 QStringList GLSLPlugin::extractVariables(const QString& code) const {

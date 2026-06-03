@@ -1,6 +1,6 @@
 #include "CodeEditorWidget/code_editor_widget.h"
 #include "CodeEditorWidget/highlights/highlighter.h"
-#include "CodeEditorWidget/highlights/plugins/i_highlighter_plugin.h"
+#include "CodeEditorWidget/highlights/plugins/highlighter_plugin.h"
 #include "CodeEditorWidget/highlights/highlighter_plugin_manager.h"
 #include "DataStream/file_reader.h"
 
@@ -13,13 +13,12 @@ public:
 	CodeEditorWidget* q;
 
 	Highlighter* highlighter = nullptr;
-	IHighlightingPlugin* lastPlugin = nullptr;
+	HighlightingPlugin* lastPlugin = nullptr;
 	HighlightingPluginManager* pluginManager;
 	QString path;
 	QString previusSuffix;
 
 	void setupUI();
-	void setupHighlighterRules(const QString& language);
 	void setupStyling();
 };
 
@@ -29,38 +28,13 @@ CodeEditorWidget::CodeEditorWidget(HighlightingPluginManager* pluginManager, QWi
 	d->pluginManager = pluginManager;
 	d->setupUI();
 	d->setupStyling();
-
-	connect(d->highlighter, &Highlighter::requestEmbeddedLanguage, this, &CodeEditorWidget::onRequestEmbeddedLanguage);
-	connect(d->highlighter, &Highlighter::requestEmbeddedBlockEnd, this, &CodeEditorWidget::onRequestEmbeddedBlockEnd);
 }
 
 CodeEditorWidget::~CodeEditorWidget() = default;
 
 void CodeEditorWidget::Private::setupUI() {
-	highlighter = new Highlighter(q->document());
-	setupHighlighterRules("txt");
-}
-
-void CodeEditorWidget::Private::setupHighlighterRules(const QString& language) {
-	if (!pluginManager) {
-		return;
-	}
-
-	highlighter->lockRefreshView();
-
-	if (lastPlugin) {
-		lastPlugin->uninstall(*highlighter);
-	}
-
-	const auto plugin = pluginManager->pluginForLanguage(language);
-	if (!plugin) {
-		highlighter->lockRefreshView(false);
-		return;
-	}
-
-	plugin->install(*highlighter, HighlighterRuleType::Global);
-	lastPlugin = plugin;
-	highlighter->lockRefreshView(false);
+	highlighter = new Highlighter(pluginManager, q->document());
+	highlighter->setLanguage("txt");
 }
 
 void CodeEditorWidget::Private::setupStyling() {
@@ -80,7 +54,7 @@ void CodeEditorWidget::Private::setupStyling() {
 void CodeEditorWidget::setPath(const QString& path) {
 	d->path = path;
 	QFileInfo info(d->path);
-	d->setupHighlighterRules(info.suffix().toLower());
+	d->highlighter->setLanguage(info.suffix().toLower());
 	reloadFile();	
 }
 
@@ -125,16 +99,3 @@ void CodeEditorWidget::setText(const QString& text) {
 	cursor.endEditBlock();
 }
 
-void CodeEditorWidget::onRequestEmbeddedLanguage(const QString& languageId) {
-	d->highlighter->clearEmbeddedRules();
-	const auto plugin = d->pluginManager->pluginForLanguage(languageId);
-	if (!plugin) {
-		return;
-	}
-
-	plugin->install(*d->highlighter, HighlighterRuleType::Embedded);
-}
-
-void CodeEditorWidget::onRequestEmbeddedBlockEnd() {
-	d->highlighter->clearEmbeddedRules();
-}

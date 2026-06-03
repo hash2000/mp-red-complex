@@ -1,11 +1,11 @@
 #pragma once
-#include "CodeEditorWidget/highlights/plugins/i_highlighter_plugin.h"
+#include "CodeEditorWidget/highlights/plugins/highlighter_plugin.h"
 
-class GLSLPlugin : public IHighlightingPlugin {
+class GLSLPlugin : public HighlightingPlugin {
 public:
-	LanguageInfo languageInfo() const override;
+	~GLSLPlugin() override;
 
-	void install(Highlighter& highlighter, HighlighterRuleType type) const override;
-	void uninstall(Highlighter& highlighter) const override;
+	LanguageInfo languageInfo() const override;
+	void install() override;
 	QStringList extractVariables(const QString& code) const override;
 };
