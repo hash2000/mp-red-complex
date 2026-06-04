@@ -12,6 +12,7 @@
 #include <QVBoxLayout>
 #include <QToolButton>
 #include <QMenu>
+#include <QMessageBox>
 
 class MaterialObjects::Private {
 public:
@@ -262,6 +263,7 @@ void MaterialObjects::onCustomContextMenuRequested(const QPoint& pos) {
 		MaterialObjectMenuActionsBuilder::attachMenuAction(*menu, "action_add_frag_shader", [this]() { emit onAddSubButtonTriggered(MaterialObjectTypes::FragmentShader); });
 		MaterialObjectMenuActionsBuilder::attachMenuAction(*menu, "action_add_vert_shader", [this]() { emit onAddSubButtonTriggered(MaterialObjectTypes::VertexShader); });
 		MaterialObjectMenuActionsBuilder::attachMenuAction(*menu, "action_add_albedo", [this]() { emit onAddSubButtonTriggered(MaterialObjectTypes::BaseColor); });
+		MaterialObjectMenuActionsBuilder::attachMenuAction(*menu, "action_delete", [this]() { emit onItemDeleteClicked(); });
 
 		menu->exec(d->objectTreeView->viewport()->mapToGlobal(pos));
 	}
@@ -363,4 +365,18 @@ void MaterialObjects::onPropertyButtonClick(const QString& propertyId) {
 		emit editMaterialFile(node.type(), node.path());
 		return;
 	}
+}
+
+void MaterialObjects::onItemDeleteClicked() {
+	if (!d->selection.isValid()) {
+		return;
+	}
+
+	const auto questionResult = QMessageBox::question(this, "Подтверждение", "Вы уверены, что хотите удалить этот элемент?",
+		QMessageBox::Yes | QMessageBox::No);
+	if (questionResult == QMessageBox::No) {
+		return;
+	}
+
+	d->objectTreeModel->removeRow(d->selection.row(), d->selection.parent());
 }

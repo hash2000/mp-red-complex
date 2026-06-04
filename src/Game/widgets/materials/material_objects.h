@@ -26,6 +26,7 @@ private slots:
 	void onPropertyChanged(const QString& propertyId, const QVariant& newValue);
 	void onPropertyButtonClick(const QString& propertyId);
 	void onCustomContextMenuRequested(const QPoint& pos);
+	void onItemDeleteClicked();
 
 private:
 	void setupUI();

@@ -11,15 +11,16 @@ std::unique_ptr<QMenu> MaterialObjectMenuActionsBuilder::buildAddMenu() {
 	if (_type == MaterialObjectTypes::MaterialRoot || _type == MaterialObjectTypes::Directory) {
 		menu->addAction("Material")->setObjectName("action_add_materail");
 		menu->addAction("Directory")->setObjectName("action_add_directory");
-		return menu;
 	}
-
-	if (_type == MaterialObjectTypes::Material) {
+	else if (_type == MaterialObjectTypes::Material) {
 		menu->addAction("Texture")->setObjectName("action_add_texture");
 		menu->addAction("Fragment Shader")->setObjectName("action_add_frag_shader");
 		menu->addAction("Vertex Shader")->setObjectName("action_add_vert_shader");
 		menu->addAction("Albedo")->setObjectName("action_add_albedo");
-		return menu;
+	}
+
+	if (_type != MaterialObjectTypes::MaterialRoot) {
+		menu->addAction("Delete")->setObjectName("action_delete");
 	}
 
 	return menu;
