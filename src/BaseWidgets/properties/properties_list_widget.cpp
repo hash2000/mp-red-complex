@@ -32,6 +32,7 @@ public:
 	QScrollArea* scrollArea = nullptr;
 	QWidget* scrollContent = nullptr;
 	QFormLayout* formLayout = nullptr;
+	QString basePath;
 };
 
 void PropertiesListWidget::Private::initUI() {
@@ -211,6 +212,8 @@ QWidget* PropertiesListWidget::Private::createEditor(const PropertyData& prop) {
 			else {
 				QObject::connect(btn, &QToolButton::clicked, q,
 					[this, pathEdit, prop]() {
+						
+
 						QString res;
 						if (prop.type == PropertyType::PathFile) {
 							res = QFileDialog::getOpenFileName(q, "Выберите файл",
@@ -409,4 +412,8 @@ void PropertiesListWidget::setHeaderTitle(const QString& title) {
 
 void PropertiesListWidget::clearProperties() {
 	d->clearUI();
+}
+
+void PropertiesListWidget::setBasePath(const QString& path) {
+	d->basePath = path;
 }
