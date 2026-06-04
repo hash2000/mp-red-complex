@@ -126,7 +126,7 @@ auto* service = d->yourService.get(); // thread-safe, lazy
 ## 4. Create Widget (UI Component)
 
 ```cpp
-// src/Game/widgets/your_module/your_widget.h
+// src/Launcher/widgets/your_module/your_widget.h
 #pragma once
 #include <QWidget>
 #include <memory>
@@ -152,8 +152,8 @@ private:
 ```
 
 ```cpp
-// src/Game/widgets/your_module/your_widget.cpp
-#include "Game/mdi_child_window.h"
+// src/Launcher/widgets/your_module/your_widget.cpp
+#include "Launcher/mdi_child_window.h"
 #include <QObject>
 #include <memory>
 
@@ -182,9 +182,9 @@ void YourWidget::Private::setupUI() {
 ## 5. Create MDI Window
 
 ```cpp
-// src/Game/widgets/your_module/your_window.h
+// src/Launcher/widgets/your_module/your_window.h
 #pragma once
-#include "Game/mdi_child_window.h"
+#include "Launcher/mdi_child_window.h"
 #include <QObject>
 #include <memory>
 
@@ -209,10 +209,10 @@ private:
 ```
 
 ```cpp
-// src/Game/widgets/your_module/your_window.h
-#include "Game/app_controller.h"
-#include "Game/services.h"
-#include "Game/commands/command_context.h"
+// src/Launcher/widgets/your_module/your_window.h
+#include "Launcher/app_controller.h"
+#include "Launcher/services.h"
+#include "Launcher/commands/command_context.h"
 
 class YourWindow::Private {
 public:
@@ -256,27 +256,27 @@ bool YourWindow::handleCommand(const QString& commandName,
 ## 6. Register Service in `services.cpp`
 
 ```cpp
-// src/Game/services.h - add forward declaration
+// src/Launcher/services.h - add forward declaration
 class YourService;
 class IYourDataProvider;
 
-// src/Game/services.h - add method
+// src/Launcher/services.h - add method
 YourService* yourService() const;
 
-// src/Game/services.cpp - add includes
+// src/Launcher/services.cpp - add includes
 #include "ApplicationLayer/your_module/your_service.h"
 #include "DataLayer/your_module/your_data_provider_json_impl.h"
 #include "DataLayer/your_module/i_your_data_provider.h"
 
-// src/Game/services.cpp - add to Private class
+// src/Launcher/services.cpp - add to Private class
 std::unique_ptr<YourService> yourService;
 std::unique_ptr<IYourDataProvider> yourDataProvider;
 
-// src/Game/services.cpp - create in constructor
+// src/Launcher/services.cpp - create in constructor
 d->yourDataProvider = std::make_unique<YourDataProviderJsonImpl>(resources);
 d->yourService = std::make_unique<YourService>(d->yourDataProvider.get());
 
-// src/Game/services.cpp - add accessor
+// src/Launcher/services.cpp - add accessor
 YourService* Services::yourService() const {
     return d->yourService.get();
 }
@@ -285,7 +285,7 @@ YourService* Services::yourService() const {
 ## 7. Register Window in `windows_builder.cpp`
 
 ```cpp
-#include "Game/widgets/your_module/your_window.h"
+#include "Launcher/widgets/your_module/your_window.h"
 
 // In constructor:
 d->factory.emplace("your-window-type", [](const QString& id, QWidget* parent) {

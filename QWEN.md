@@ -24,20 +24,18 @@ cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=[vcpkg-root]/scripts/buildsystems/vcp
 cmake --build build --parallel
 
 # Сборка конкретной цели
-cmake --build build --target ResourcesTool
-cmake --build build --target Game
 cmake --build build --target Launcher
 ```
 
 ### Запуск приложений
 ```bash
-# Запуск Game
-./build/{Configuration}/Game
+# Запуск Launcher
+./build/{Configuration}/Launcher
 
 # Пример:
 # Configuration = x64-Clang-Debug
 # Запуск:
-# ./build/x64-Clang-Debug/Game
+# ./build/x64-Clang-Debug/Launcher
 ```
 
 ### Запуск тестов
@@ -194,10 +192,8 @@ src/
 ├── DataLayer/      # Слой доступа к данным
 ├── DataStream/     # Потоковый ввод/вывод (DAT, RAW форматы).
 ├── Engine/         # Ядро движка
-├── Game/           # Основное игровое приложение
-├── Launcher/       # Приложение-лаунчер. Legacy.
+├── Launcher/       # Приложение-лаунчер.
 ├── Resources/      # Управление ресурсами
-├── ResourcesTool/  # Инструмент просмотра/редактирования ресурсов. Legacy.
 └── tests/          # Модульные тесты (Qt Test Framework)
 ```
 
@@ -259,20 +255,20 @@ QTEST_MAIN(TestMyClass)
 ### Архитектура и дизайн
 
 #### Основной поток приложения
-1. **Слой Engine**: Приложение начинается в `main.cpp`, где `GameApplication` наследуется от `Application`. Этот базовый класс обрабатывает базовую инициализацию, такую как приложение Qt, загрузку конфигурации и настройку ресурсов.
-2. **Создание главного окна**: `Application::run()` вызывает `createMainFrame()` (чисто виртуальный). В `GameApplication` это возвращает `GameMainFrame`.
-3. **Слой Application**: `GameApplication` создаётся первым, затем он создаёт `ApplicationController` в приватном классе `GameMainFrame`. Этот контроллер оркестрирует высокоуровневую логику приложения.
+1. **Слой Engine**: Приложение начинается в `main.cpp`, где `LauncherApplication` наследуется от `Application`. Этот базовый класс обрабатывает базовую инициализацию, такую как приложение Qt, загрузку конфигурации и настройку ресурсов.
+2. **Создание главного окна**: `Application::run()` вызывает `createMainFrame()` (чисто виртуальный). В `LauncherApplication` это возвращает `LauncherMainFrame`.
+3. **Слой Application**: `LauncherApplication` создаётся первым, затем он создаёт `ApplicationController` в приватном классе `LauncherMainFrame`. Этот контроллер оркестрирует высокоуровневую логику приложения.
 
 #### Ключевые компоненты
 
-**ApplicationController** (`src/Game/app_controller.*`)
+**ApplicationController** (`src/Launcher/app_controller.*`)
 - Центральный координатор. Владеет и управляет:
   - `CommandProcessor`: Разбирает и выполняет текстовые команды.
   - `Services`: Содержит основные игровые сервисы (время, мир, инвентарь, предметы).
   - `Controllers`: Управляет UI контроллерами (например, `WindowsController`).
 - Использует паттерн PIMPL с приватным классом `Private` для инкапсуляции.
 
-**Services** (`src/Game/services.*`)
+**Services** (`src/Launcher/services.*`)
 - Контейнер для всех основных игровых систем.
 - Ключевые сервисы включают:
   - `TimeService`: Точный таймер для игровых тиков и запланированных событий.
@@ -302,7 +298,7 @@ QTEST_MAIN(TestMyClass)
 - `InventoriesService::moveItem()` — Автоматически обрабатывает логику полного/частичного стека
 
 **Виджет создания предметов**
-- `ItemCreateWidget` (`src/Game/widgets/items/item_create_widget.*`) — Диалог для создания новых предметов
+- `ItemCreateWidget` (`src/Launcher/widgets/items/item_create_widget.*`) — Диалог для создания новых предметов
 - Позволяет выбрать количество (от 1 до maxStack)
 - Создаёт предметы в последнем активном окне инвентаря
 - Использует `ItemsService::createItemByEntity()` для создания экземпляров предметов из определений сущностей

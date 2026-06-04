@@ -1,0 +1,97 @@
+#include "Launcher/commands/cmd/items_create_cmd.h"
+#include "Launcher/commands/command_processor.h"
+#include "Launcher/commands/command_context.h"
+#include "Launcher/controllers/windows_controller.h"
+#include "Launcher/app_controller.h"
+#include "Launcher/controllers.h"
+#include "Launcher/services.h"
+#include "ApplicationLayer/inventory/inventory_service.h"
+#include "ApplicationLayer/inventories_service.h"
+#include "ApplicationLayer/items/items_service.h"
+#include "ApplicationLayer/items/item_mime_data.h"
+
+#include <QMdiSubWindow>
+#include <QRegularExpression>
+#include <QUuid>
+
+class ItemsCreateCommand::Private {
+public:
+	Private(ItemsCreateCommand* parent) : q(parent) {
+	}	
+
+	ItemsCreateCommand* q;
+};
+
+
+ItemsCreateCommand::ItemsCreateCommand()
+: d(std::make_unique<Private>(this)) {
+}
+
+ItemsCreateCommand::~ItemsCreateCommand() = default;
+
+bool ItemsCreateCommand::execute(CommandContext* context, const QStringList& args) {
+	auto controller = context->controllers()->windowsController();
+	auto services = context->services();
+	auto inventoriesService = services->inventoriesService();
+	auto itemsService = services->itemsService();
+
+	if (args.count() < 3) {
+		context->printError(QString("Usage: %1").arg(help()));
+		return false;
+	}
+
+	bool ok;
+
+	const auto entityId = args.filter(QRegularExpression("^entity:")).value(0).mid(7);
+	const auto count = args.filter(QRegularExpression("^count:")).value(0).mid(6).toInt(&ok);
+	if (!ok) {
+		context->printError(QString("Usage: %1").arg(help()));
+		return false;
+	}
+
+	const auto inventoryId = args.filter(QRegularExpression("^inventory:")).value(0).mid(10);
+
+	// Получаем сервис инвентаря
+	auto inventoryService = static_cast<InventoryService*>(
+		inventoriesService->placementService(QUuid::fromString(inventoryId), false));
+
+	if (!inventoryService) {
+		context->printError(QString("Failed to get inventory service for: %1")
+			.arg(inventoryId));
+		return false;
+	}
+
+	// Создаём ItemMimeData для нового предмета
+	const auto newItem = itemsService->createItemByEntity(entityId);
+	if (!newItem) {
+		qWarning() << "Failed to create item:" << entityId;
+		return false;
+	}
+
+	ItemMimeData mimeData(*newItem);
+	mimeData.count = count;
+
+	// Пытаемся найти свободное место в инвентаре
+	const auto freeSpace = inventoryService->findFreeSpace(mimeData, true);
+	if (!freeSpace.has_value()) {
+		qWarning() << "No free space in inventory for item:" << entityId;
+		return false;
+	}
+
+	// Размещаем предмет в инвентаре
+	mimeData.x = freeSpace->x();
+	mimeData.y = freeSpace->y();
+
+	if (inventoryService->placeItem(mimeData)) {
+		context->printSuccess(QString("Item placed in inventory: %1 at %2, %3")
+			.arg(newItem->id.toString())
+			.arg(QString::number(mimeData.x))
+			.arg(QString::number(mimeData.y)));
+	}
+	else {
+		qWarning() << "Failed to place item in inventory:" << newItem->id;
+		return false;
+	}
+
+	return true;
+}

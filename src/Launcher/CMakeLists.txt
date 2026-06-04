@@ -4,12 +4,14 @@ set(Launcher-Sources
 	${RedComplex_SOURCE_DIR}/src/Launcher
 )
 
+# Включаем MOC для Qt-классов с Q_OBJECT
 set(CMAKE_AUTOMOC ON)
 
 file(GLOB_RECURSE SRCS ${Launcher-Sources}/*.cpp)
 add_executable(Launcher
 	${SRCS}
 )
+
 
 target_link_libraries(Launcher
 	PRIVATE
@@ -20,8 +22,12 @@ target_link_libraries(Launcher
 		Qt6::OpenGLWidgets
 
 		Base
+		BaseWidgets
+		CodeEditorWidget
+		Graphics
 		Resources
-		DataFormat
+		DataLayer
+		ApplicationLayer
 		Engine
 )
 

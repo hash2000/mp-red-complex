@@ -1,39 +1,166 @@
 #include "Launcher/main_frame.h"
+#include "Launcher/commands/command_console.h"
+#include "Launcher/app_controller.h"
+#include "Launcher/services.h"
+#include "Launcher/controllers.h"
+#include "Launcher/controllers/windows_controller.h"
+#include "Launcher/commands/command_context.h"
+#include "Launcher/widgets/action_panel/action_panel_login_builder.h"
+#include "Launcher/widgets/action_panel/action_panel_by_user_builder.h"
+#include "Launcher/widgets/action_panel/action_panel_widget.h"
+#include "ApplicationLayer/users/users_service.h"
+#include "DataLayer/users/user.h"
+#include "BaseWidgets/mdi_area.h"
+#include "Resources/resources.h"
+
 #include <QSplitter>
 #include <QTabWidget>
+#include <QMdiArea>
+#include <QMdiSubWindow>
+#include <QTextEdit>
+#include <QStatusBar>
+#include <QToolButton>
+#include <QTimer>
+#include <memory>
+
+
+class LauncherMainFrame::Private {
+public:
+	Private(LauncherMainFrame* parent)
+	: q(parent) {
+		setupMdiArea(parent);
+	}
+
+	LauncherMainFrame* q;
+	std::unique_ptr<ApplicationController> controller;
+	CommandContext* commandContext;
+	CommandConsole* commandConsole;
+	Resources* resources;
+	MdiArea* mdiArea;
+	QToolButton* consoleToggleButton;
+	ActionPanelWidget* actionPanel = nullptr;
+
+	void setupMdiArea(LauncherMainFrame* parent);
+	void setupConsole();
+	void setupView();
+	void setupActionPanel();
+};
 
 LauncherMainFrame::LauncherMainFrame(Resources* resources)
-: _resources(resources) {
-	_legendWidget = new LegendWidget;
-	_actionsWidget = new ActionsWidget;
-	_progressWidget = new ProgressWidget;
+: d(std::make_unique<Private>(this)) {
+	d->resources = resources;
+	d->setupConsole();
+	d->setupView();
 
-	auto splitter = new QSplitter;
-	auto tabs = new QTabWidget;
-	_mapView = new MapView(&_taskManager, _actionsWidget);
+	connect(d->consoleToggleButton, &QToolButton::toggled, this, &LauncherMainFrame::onToggleCommandConsole);
 
-	QObject::connect(_mapView, &MapView::tileInDirectionChanged, _actionsWidget, &ActionsWidget::onTileInDirectionChanged);
-	QObject::connect(_mapView, &MapView::nextPerformDig, _mapView, &MapView::performDig);
-	QObject::connect(_actionsWidget, &ActionsWidget::centerOnPlayerRequested, _mapView, &MapView::centerOnPlayerAnimated);
+	// Горячая клавиша
+	auto toggleAction = new QAction(this);
+	toggleAction->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_QuoteLeft));
+	connect(toggleAction, &QAction::triggered, this, [this]() {
+		bool newState = !d->commandConsole->isVisible();
+		d->consoleToggleButton->setChecked(newState);
+		onToggleCommandConsole(newState);
+		});
 
-	QObject::connect(_actionsWidget, &ActionsWidget::digRequested, _mapView, &MapView::performDig);
+	auto userService = d->commandContext->services()->usersService();
+	connect(userService, &UsersService::loggedOut, this, &LauncherMainFrame::onUserLogout);
+	connect(userService, &UsersService::loginSuccess, this, &LauncherMainFrame::onUserLogin);
 
-	QObject::connect(&_taskManager, &TaskManager::taskAdded, _progressWidget, &ProgressWidget::onTaskAdded);
-	QObject::connect(&_taskManager, &TaskManager::taskUpdated, _progressWidget, &ProgressWidget::onTaskUpdated);
-	QObject::connect(&_taskManager, &TaskManager::taskCompleted, _progressWidget, &ProgressWidget::onTaskCompleted);
+	addAction(toggleAction);
 
-	tabs->addTab(_actionsWidget, "Actions");
-	tabs->addTab(_progressWidget, "Progress");
-	tabs->addTab(_legendWidget, "Legend");
+	d->controller->executeCommandByName("window-create", QStringList{ "target:warmup", "id:opengl-warmup" });
+}
 
-	splitter->addWidget(_mapView);
-	splitter->addWidget(tabs);
-	splitter->addWidget(tabs);
-	splitter->setSizes({ 800, 200 });
+LauncherMainFrame::~LauncherMainFrame() = default;
 
-	setCentralWidget(splitter);
+void LauncherMainFrame::Private::setupMdiArea(LauncherMainFrame* parent) {
+	mdiArea = new MdiArea(parent);
+	mdiArea->setTabsMovable(true);
+	mdiArea->setActivationOrder(QMdiArea::ActivationHistoryOrder);
+	mdiArea->setDocumentMode(true);
+	mdiArea->setOption(QMdiArea::DontMaximizeSubWindowOnActivation);
+	mdiArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+	mdiArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+	mdiArea->setTabPosition(QTabWidget::North);
+	mdiArea->setTabsClosable(true);
+	mdiArea->setAcceptDrops(true);
+	mdiArea->setViewMode(QMdiArea::SubWindowView);
+}
 
-	_gameTimer.setInterval(30); // ~33 FPS
-	connect(&_gameTimer, &QTimer::timeout, &_taskManager, &TaskManager::update);
-	_gameTimer.start();
+void LauncherMainFrame::Private::setupConsole() {
+	controller = std::make_unique<ApplicationController>(resources);
+	commandContext = controller->commandContext();
+	commandConsole = new CommandConsole(controller.get(), commandContext, q);
+	commandConsole->setWindowFlags(Qt::Dialog | Qt::WindowStaysOnTopHint);
+	q->onToggleCommandConsole(false);
+
+	commandContext->controllers()->windowsController()->setMdiArea(mdiArea);
+
+	// Кнопка переключения в статусбаре
+	consoleToggleButton = new QToolButton(q->statusBar());
+	consoleToggleButton->setIcon(QIcon::fromTheme("utilities-terminal", QIcon(":/icons/terminal.png")));
+	consoleToggleButton->setToolTip("Command Console (Ctrl+`)");
+	consoleToggleButton->setCheckable(true);
+	consoleToggleButton->setAutoRaise(true);
+	consoleToggleButton->setChecked(false);
+
+	q->statusBar()->addPermanentWidget(consoleToggleButton);
+}
+
+void LauncherMainFrame::Private::setupView() {
+	// Горизонтальный сплиттер для основной области и панели действий
+	auto* horizontalSplitter = new QSplitter(Qt::Horizontal);
+
+	// Вертикальный сплиттер для MDI и консоли
+	auto* verticalSplitter = new QSplitter(Qt::Vertical);
+	verticalSplitter->addWidget(mdiArea);
+	verticalSplitter->addWidget(commandConsole);
+	verticalSplitter->setStretchFactor(0, 1);
+	verticalSplitter->setStretchFactor(1, 0);
+
+	horizontalSplitter->addWidget(verticalSplitter);
+
+	// Панель действий
+	actionPanel = new ActionPanelWidget(commandContext->controllers()->actionPanelController(), q);
+	horizontalSplitter->addWidget(actionPanel);
+
+	horizontalSplitter->setStretchFactor(0, 1);
+	horizontalSplitter->setStretchFactor(1, 0);
+
+	// Фиксируем размер сплиттера (запрещаем изменение)
+	horizontalSplitter->setHandleWidth(0);
+
+	q->setCentralWidget(horizontalSplitter);
+
+	// Добавляем кнопку Login
+	setupActionPanel();
+}
+
+void LauncherMainFrame::Private::setupActionPanel() {
+	ActionPanelLoginBuilder builder(commandContext->controllers()->actionPanelController());
+	builder.build();
+}
+
+
+
+void LauncherMainFrame::onToggleCommandConsole(bool visible) {
+	if (visible) {
+		d->commandConsole->showConsole();
+	}
+	else {
+		d->commandConsole->hideConsole();
+	}
+}
+
+void LauncherMainFrame::onUserLogout() {
+	d->setupActionPanel();
+}
+
+void LauncherMainFrame::onUserLogin(const UserData& user) {
+	qDebug() << "User login" << user.displayName;
+	ActionPanelByUserBuilder builder(
+		d->commandContext->controllers()->actionPanelController(),
+		d->commandContext->services()->usersService());
+	builder.build();
 }
