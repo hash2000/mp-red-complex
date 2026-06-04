@@ -1,30 +1,18 @@
 #pragma once
 #include "Game/mdi_child_window.h"
 
-class MapWidget;
-class WorldService;
-class TimeService;
-class TilesSelectorService;
-class ShadersService;
+
 
 class MapWindow : public MdiChildWindow {
 	Q_OBJECT
 
 public:
-	explicit MapWindow(
-		std::unique_ptr<ShadersService> shadersService,
-		TilesSelectorService* tilesSelectorService,
-		WorldService* worldService,
-		TimeService* timeService,
-		const QString& id,
-		QWidget* parent = nullptr);
+	explicit MapWindow(const QString& id,	QWidget* parent = nullptr);
 	~MapWindow() override;
 
 	QString windowType() const override { return "map"; }
 
 	QString windowTitle() const override { return "World Map"; }
-
-	MapWidget* widget() const;
 
 	bool handleCommand(const QString& commandName,
 		const QStringList& args,

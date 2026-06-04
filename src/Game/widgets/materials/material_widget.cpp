@@ -11,16 +11,18 @@ public:
 MaterialWidget::MaterialWidget(QWidget* parent)
 	: BaseOpenGLWidget(parent)
 	, d(std::make_unique<Private>(this)) {
+	connect(this, &BaseOpenGLWidget::beginFrame, this, &MaterialWidget::onBerginFrame);
+	connect(this, &BaseOpenGLWidget::initializeContext, this, &MaterialWidget::onInitializeContext);
 }
 
 MaterialWidget::~MaterialWidget() = default;
 
-void MaterialWidget::initializeGL() {
-	BaseOpenGLWidget::initializeGL();
-	// Инициализация OpenGL для материалов
+void MaterialWidget::onInitializeContext() {
+	d->initializeOpenGLFunctions();
+
+
 }
 
-void MaterialWidget::paintGL() {
-	BaseOpenGLWidget::paintGL();
-	// Отрисовка материалов
+void MaterialWidget::onBerginFrame() {
+
 }

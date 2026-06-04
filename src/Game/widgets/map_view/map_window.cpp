@@ -2,40 +2,44 @@
 #include "Game/widgets/map_view/map_widget.h"
 #include "Game/services/world_service/world_service.h"
 #include "Game/services/time_service/time_service.h"
+#include "Game/app_controller.h"
+#include "Game/services.h"
+#include "Game/commands/command_context.h"
 #include "ApplicationLayer/shaders/shaders_service.h"
 
 class MapWindow::Private {
 public:
-	Private(MapWindow* parent)
-		: q(parent) {
-	}
-
+	Private(MapWindow* parent) : q(parent) { }
 	MapWindow* q;
-	MapWidget* widget;
+
 	std::unique_ptr<ShadersService> shadersService;
 };
 
 
-MapWindow::MapWindow(std::unique_ptr<ShadersService> shadersService, TilesSelectorService* tilesSelectorService, WorldService* worldService, TimeService* timeService, const QString& id, QWidget* parent)
+MapWindow::MapWindow(const QString& id, QWidget* parent)
 	: MdiChildWindow(id, parent)
 	, d(std::make_unique<Private>(this)) {
-	d->shadersService = std::move(shadersService);
-	d->widget = new MapWidget(d->shadersService.get(), tilesSelectorService, this);
-
-	setWindowTitle("World Map");
-
-	connect(timeService, &TimeService::tick, d->widget, &MapWidget::onTick);
-
-	setWidget(d->widget);
 }
 
 MapWindow::~MapWindow() = default;
 
-MapWidget* MapWindow::widget() const {
-	return d->widget;
-}
-
 bool MapWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) {
+	if (commandName == "create") {
+		auto services = context->services();
+		d->shadersService = std::move(services->shadersService());
+		auto widget = new MapWidget(
+			d->shadersService.get(),
+			services->tilesSelectorService(),
+			this);
+
+		setWindowTitle("World Map");
+
+		connect(services->timeService(), &TimeService::tick, widget, &MapWidget::onTick);
+
+		setWidget(widget);
+
+		return true;
+	}
 
 	//if (commandName == "center") {
 	//	// Пример команды: center player
@@ -61,6 +65,6 @@ bool MapWindow::handleCommand(const QString& commandName, const QStringList& arg
 	//}
 
 	// Не обработано — передать базовому классу или выше
-	return true;
+	return false;
 }
 

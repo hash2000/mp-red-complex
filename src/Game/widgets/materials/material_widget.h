@@ -9,12 +9,9 @@ public:
 	explicit MaterialWidget(QWidget* parent = nullptr);
 	~MaterialWidget() override;
 
-signals:
-	void materialSelected(int materialId);
-
-protected:
-	void initializeGL() override;
-	void paintGL() override;
+private slots:
+	void onBerginFrame();
+	void onInitializeContext();
 
 private:
 	class Private;

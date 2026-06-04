@@ -132,13 +132,11 @@ auto* service = d->yourService.get(); // thread-safe, lazy
 #include <memory>
 
 class YourService;
-class QPushButton;
-class QLineEdit;
 
 class YourWidget : public QWidget {
     Q_OBJECT
 public:
-    explicit YourWidget(YourService* service, QWidget* parent = nullptr);
+    explicit YourWidget(YourService* yourService, QWidget* parent = nullptr);
     ~YourWidget() override;
 
 signals:
@@ -148,10 +146,37 @@ private slots:
     void onButtonClicked();
 
 private:
-    void setupLayout();
     class Private;
     std::unique_ptr<Private> d;
 };
+```
+
+```cpp
+// src/Game/widgets/your_module/your_widget.cpp
+#include "Game/mdi_child_window.h"
+#include <QObject>
+#include <memory>
+
+class YourWidget::Private {
+public:
+	Private(YourWidget* parent) : q(parent) {}
+	YourWidget* q;
+
+	YourService* yourService = nullptr;
+
+	void setupUI();
+};
+
+YourWidget::YourWidget(YourService* yourService, QWidget* parent)
+	: QWidget(parent)
+	, d(std::make_unique<Private>(this)) {
+	d->yourService = yourService;
+}
+
+YourWidget::~YourWidget() = default; // or implementation
+
+void YourWidget::Private::setupUI() {
+}
 ```
 
 ## 5. Create MDI Window
@@ -163,13 +188,10 @@ private:
 #include <QObject>
 #include <memory>
 
-class YourService;
-class YourWidget;
-
 class YourWindow : public MdiChildWindow {
     Q_OBJECT
 public:
-    explicit YourWindow(YourService* service, const QString& id, QWidget* parent = nullptr);
+    explicit YourWindow(const QString& id, QWidget* parent = nullptr);
     ~YourWindow() override;
 
     QString windowType() const override { return "your-window-type"; }
@@ -184,6 +206,51 @@ private:
     class Private;
     std::unique_ptr<Private> d;
 };
+```
+
+```cpp
+// src/Game/widgets/your_module/your_window.h
+#include "Game/app_controller.h"
+#include "Game/services.h"
+#include "Game/commands/command_context.h"
+
+class YourWindow::Private {
+public:
+  Private(YourWindow* parent) : q(parent) {}
+  YourWindow* q;
+
+	YourService* yourService = nullptr;
+	YourWidget* yourWidget = nullptr;
+};
+
+YourWindow::YourWindow(const QString& id, QWidget* parent)
+  : MdiChildWindow(id, parent)
+  , d(std::make_unique<Private>(this)) {
+}
+
+YourWindow::~YourWindow() = default; // or implementation
+
+bool YourWindow::handleCommand(const QString& commandName,
+  const QStringList& args,
+  CommandContext* context) {
+	if (commandName == "create") {
+		auto controller = context->applicationController();
+		auto services = controller->services();
+		d->yourService = services->yourService();
+		d->yourWidget = new YourWidget(
+			d->yourService,
+			this);
+
+		setWidget(d->yourWidget);
+
+		// add connections if needed
+		// connect(d->yourWidget, &YourWidget::signal, this, &YourWindow::slot);
+
+		return true;
+	}
+
+	return false;
+}
 ```
 
 ## 6. Register Service in `services.cpp`
@@ -221,10 +288,8 @@ YourService* Services::yourService() const {
 #include "Game/widgets/your_module/your_window.h"
 
 // In constructor:
-d->factory.emplace("your-window-type", [](Services* services, const QString& id) {
-    return new YourWindow(
-        services->yourService(),
-        id);
+d->factory.emplace("your-window-type", [](const QString& id, QWidget* parent) {
+    return new YourWindow(id, parent);
 });
 ```
 
@@ -232,8 +297,8 @@ d->factory.emplace("your-window-type", [](Services* services, const QString& id)
 
 ```cpp
 // Via code:
-controller->executeCommandByName("window-create", QStringList{ "your-window-type", "unique-id" });
+controller->executeCommandByName("window-create", QStringList{ "target:your-window-type", "id:unique-id" });
 
 // Via console:
-window-create your-window-type unique-id
+window-create target:your-window-type id:unique-id
 ```

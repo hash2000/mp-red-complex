@@ -1,6 +1,7 @@
 #include "Game/services.h"
 #include "Game/services/time_service/time_service.h"
 #include "Game/services/world_service/world_service.h"
+#include "Resources/resources.h"
 #include "DataLayer/inventory/inventory_data_provider_json_impl.h"
 #include "DataLayer/inventory/inventory_data_writer_json_impl.h"
 #include "DataLayer/items/items_data_provider_json_impl.h"
@@ -22,6 +23,7 @@
 #include "DataLayer/users/i_users_data_provider.h"
 #include "DataLayer/characters/i_character_data_provider.h"
 #include "DataLayer/shaders/shaders_data_provider_impl.h"
+#include "DataLayer/materials/material_data_provider_json_impl.h"
 
 #include "ApplicationLayer/items/items_service.h"
 #include "ApplicationLayer/inventories_service.h"
@@ -34,6 +36,9 @@
 #include "ApplicationLayer/textures/textures_service.h"
 #include "ApplicationLayer/textures/tiles_selector_service.h"
 #include "ApplicationLayer/shaders/shaders_service.h"
+#include "ApplicationLayer/materials/materials_service.h"
+
+#include "CodeEditorWidget/highlights/highlighter_plugin_manager.h"
 
 #include <mutex>
 
@@ -73,6 +78,12 @@ public:
 	Private(Services* parent)
 		: q(parent)
 
+		, highlightingPluginManager([this] {
+				auto manager = std::make_unique<HighlightingPluginManager>();
+				manager->loadPlugins(resources->Variables.get("Plugins.Path", "").toString());
+				return manager;
+		})
+
 		// Data Providers
 		, inventoryDataProvider([this] { return std::make_unique<InventoryDataProviderJsonImpl>(resources); })
 		, inventoryDataWriter([this] { return std::make_unique<InventoryDataWriterJsonImpl>(resources); })
@@ -87,6 +98,7 @@ public:
 		, usersDataProvider([this] {	return std::make_unique<UsersDataProviderJsonImpl>(resources);	})
 		, characterDataProvider([this] {	return std::make_unique<CharacterDataProviderJsonImpl>(resources);	})
 		, shadersDataProvider([this] { return std::make_unique<ShadersDataProviderLocalImpl>(resources); })
+		, materialsDataProvider([this] { return std::make_unique<MaterialsDataProviderJsonImpl>(resources); })
 
 		// Repositories
 		, itemRepository([this] {
@@ -161,6 +173,10 @@ public:
 				return std::make_unique<TexturesService>(
 					imagesService.get());
 			})
+		, materialsService([this] {
+				return std::make_unique<MaterialsService>(
+					materialsDataProvider.get());
+			})
 	{
 	}
 
@@ -185,6 +201,7 @@ public:
 	LazyPtr<ITileGroupsDataProvider> tileGroupsDataProvider;
 	LazyPtr<IMapDataProvider> mapDataProvider;
 	LazyPtr<IShadersDataProvider> shadersDataProvider;
+	LazyPtr<IMaterialsDataProvider> materialsDataProvider;
 
 	// Repositories (новый слой абстракции)
 	LazyPtr<IItemRepository> itemRepository;
@@ -204,7 +221,9 @@ public:
 	LazyPtr<TilesSelectorService> tilesSelectorService;
 	LazyPtr<TexturesService> texturesService;
 	LazyPtr<MapService> mapService;
+	LazyPtr<MaterialsService> materialsService;
 
+	LazyPtr<HighlightingPluginManager> highlightingPluginManager;
 };
 
 Services::Services(Resources* resources)
@@ -273,7 +292,15 @@ TexturesService* Services::texturesService() const {
 	return d->texturesService.get();
 }
 
+MaterialsService* Services::materialsService() const {
+	return d->materialsService.get();
+}
+
 std::unique_ptr<ShadersService> Services::shadersService() const {
 	return std::move(std::make_unique<ShadersService>(
 		d->shadersDataProvider.get()));
+}
+
+HighlightingPluginManager* Services::highlightingPluginManager() const {
+	return d->highlightingPluginManager.get();
 }

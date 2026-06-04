@@ -1,17 +1,17 @@
-#include "Game/commands/cmd/items_create.h"
+#include "Game/commands/cmd/items_create_cmd.h"
 #include "Game/commands/command_processor.h"
 #include "Game/commands/command_context.h"
 #include "Game/controllers/windows_controller.h"
 #include "Game/app_controller.h"
 #include "Game/controllers.h"
 #include "Game/services.h"
-#include "Game/windows_builder.h"
 #include "ApplicationLayer/inventory/inventory_service.h"
 #include "ApplicationLayer/inventories_service.h"
 #include "ApplicationLayer/items/items_service.h"
 #include "ApplicationLayer/items/item_mime_data.h"
-#include "DataLayer/inventory/inventory_item.h"
+
 #include <QMdiSubWindow>
+#include <QRegularExpression>
 #include <QUuid>
 
 class ItemsCreateCommand::Private {
@@ -30,9 +30,8 @@ ItemsCreateCommand::ItemsCreateCommand()
 ItemsCreateCommand::~ItemsCreateCommand() = default;
 
 bool ItemsCreateCommand::execute(CommandContext* context, const QStringList& args) {
-	auto app = context->applicationController();
-	auto controller = app->controllers()->windowsController();
-	auto services = app->services();
+	auto controller = context->controllers()->windowsController();
+	auto services = context->services();
 	auto inventoriesService = services->inventoriesService();
 	auto itemsService = services->itemsService();
 
@@ -43,14 +42,14 @@ bool ItemsCreateCommand::execute(CommandContext* context, const QStringList& arg
 
 	bool ok;
 
-	const auto entityId = args.at(0);
-	const auto count = args.at(1).toInt(&ok);
+	const auto entityId = args.filter(QRegularExpression("^entity:")).value(0).mid(7);
+	const auto count = args.filter(QRegularExpression("^count:")).value(0).mid(6).toInt(&ok);
 	if (!ok) {
 		context->printError(QString("Usage: %1").arg(help()));
 		return false;
 	}
 
-	const auto inventoryId = args.at(2);
+	const auto inventoryId = args.filter(QRegularExpression("^inventory:")).value(0).mid(10);
 
 	// Получаем сервис инвентаря
 	auto inventoryService = static_cast<InventoryService*>(

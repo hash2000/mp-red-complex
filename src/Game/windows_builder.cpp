@@ -11,6 +11,7 @@
 #include "Game/widgets/warmup/warmup_window.h"
 #include "Game/widgets/textures/texture_editor_window.h"
 #include "Game/widgets/materials/materials_window.h"
+#include "Game/widgets/code_editor/code_editor_window.h"
 
 #include "ApplicationLayer/shaders/shaders_service.h"
 
@@ -25,77 +26,45 @@ public:
 
 	WindowsBuilder* q;
 	ApplicationController* appController;
-	std::map<QString, std::function<MdiChildWindow*(Services*, const QString&, QWidget*)>> factory;
+	std::map<QString, std::function<MdiChildWindow*(const QString&, QWidget*)>> factory;
 };
 
 WindowsBuilder::WindowsBuilder(ApplicationController* appController)
 : d(std::make_unique<Private>(this)) {
 	d->appController = appController;
 
-	d->factory.emplace("map", [](Services* services, const QString& id, QWidget* parent) {
-		return new MapWindow(
-			services->shadersService(),
-			services->tilesSelectorService(),
-			services->worldService(),
-			services->timeService(),
-			id,
-			parent);
+	d->factory.emplace("map", [](const QString& id, QWidget* parent) {
+		return new MapWindow(id, parent);
 		});
-	d->factory.emplace("equipment", [](Services* services, const QString& id, QWidget* parent) {
-		return new EquipmentWindow(
-			services->inventoriesService(),
-			id,
-			parent);
+	d->factory.emplace("equipment", [](const QString& id, QWidget* parent) {
+		return new EquipmentWindow(id, parent);
 		});
-	d->factory.emplace("inventory", [](Services* services, const QString& id, QWidget* parent) {
-		return new InventoryWindow(
-			services->inventoriesService(),
-			id,
-			parent);
+	d->factory.emplace("inventory", [](const QString& id, QWidget* parent) {
+		return new InventoryWindow(id, parent);
 		});
-	d->factory.emplace("item-entities", [](Services* services, const QString& id, QWidget* parent) {
-		return new EntitiesWindow(
-			services->itemsService(),
-			id,
-			parent);
+	d->factory.emplace("item-entities", [](const QString& id, QWidget* parent) {
+		return new EntitiesWindow(id,	parent);
 		});
-	d->factory.emplace("user-login", [](Services* services, const QString& id, QWidget* parent) {
-		return new LoginWindow(
-			services->usersService(),
-			id,
-			parent);
+	d->factory.emplace("user-login", [](const QString& id, QWidget* parent) {
+		return new LoginWindow(id, parent);
 		});
-	d->factory.emplace("user-profile", [](Services* services, const QString& id, QWidget* parent) {
-		return new UserWindow(
-			services->usersService(),
-			services->imagesService(),
-			id,
-			parent);
+	d->factory.emplace("user-profile", [](const QString& id, QWidget* parent) {
+		return new UserWindow(id,	parent);
 		});
-	d->factory.emplace("warmup", [](Services* services, const QString& id, QWidget* parent) {
+	d->factory.emplace("warmup", [](const QString& id, QWidget* parent) {
 		return new WarmupWindow(id, parent);
 		});
-	d->factory.emplace("texture-editor", [](Services* services, const QString& id, QWidget* parent) {
-		return new TextureEditorWindow(
-			services->imagesService(),
-			services->tilesSelectorService(),
-			id,
-			parent);
+	d->factory.emplace("texture-editor", [](const QString& id, QWidget* parent) {
+		return new TextureEditorWindow(id, parent);
 		});
-	d->factory.emplace("map-editor", [](Services* services, const QString& id, QWidget* parent) {
-		return new MapEditorWindow(
-			services->shadersService(),
-			services->texturesService(),
-			services->mapService(),
-			services->tilesSelectorService(),
-			services->timeService(),
-			id,
-			parent);
+	d->factory.emplace("map-editor", [](const QString& id, QWidget* parent) {
+		return new MapEditorWindow(id, parent);
 		});
-	d->factory.emplace("material-editor", [](Services* services, const QString& id, QWidget* parent) {
-		return new MaterialsWindow(
-			id,
-			parent);
+	d->factory.emplace("material-editor", [](const QString& id, QWidget* parent) {
+		return new MaterialsWindow(id, parent);
+		});
+	d->factory.emplace("code-editor", [](const QString& id, QWidget* parent) {
+		return new CodeEditorWindow(id, parent);
 		});
 }
 
@@ -107,5 +76,5 @@ MdiChildWindow* WindowsBuilder::build(const QString& name, const QString& id, QW
 		return nullptr;
 	}
 
-	return it->second(d->appController->services(), id, parent);
+	return it->second(id, parent);
 }

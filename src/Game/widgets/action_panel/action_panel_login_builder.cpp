@@ -7,8 +7,9 @@ ActionPanelLoginBuilder::ActionPanelLoginBuilder(ActionPanelController* panel)
 
 void ActionPanelLoginBuilder::build() {
 	_panel->clearAllButtons();
-	_panel->addButton(ActionButtonConfig("Login", "🔑", "Вход в систему", "window-create user-login login", 1));
-	_panel->addButton(ActionButtonConfig("TextureEditor", "🎨", "Редактор текстур", "window-create texture-editor texture-editor", 2));
-	_panel->addButton(ActionButtonConfig("MapEditor", "🗺️", "Редактор карты", "window-create map-editor map-editor", 2));
-	_panel->addButton(ActionButtonConfig("MaterialEditor", "🔥", "Редактор материалов", "window-create material-editor material-editor", 2));
+	_panel->addButton(ActionButtonConfig("Login", "🔑", "Вход в систему", "window-create target:user-login id:login", 1));
+	_panel->addButton(ActionButtonConfig("TextureEditor", "🎨", "Редактор текстур", "window-create target:texture-editor", 2));
+	_panel->addButton(ActionButtonConfig("MapEditor", "🗺️", "Редактор карты", "window-create target:map-editor", 2));
+	_panel->addButton(ActionButtonConfig("MaterialEditor", "🔥", "Редактор материалов", "window-create target:material-editor", 2));
+	_panel->addButton(ActionButtonConfig("CodeEditor", "🖹", "Редактор кода", "window-create target:code-editor", 2));
 }

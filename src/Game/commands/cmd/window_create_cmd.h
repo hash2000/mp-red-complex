@@ -8,5 +8,5 @@ public:
 
 	QString name() const override { return "window-create"; }
 	QString description() const override { return "Create new MDI window by type"; }
-	QString help() const override { return "window-create <type> <id>"; }
+	QString help() const override { return "window-create target:<type> id:<id>"; }
 };

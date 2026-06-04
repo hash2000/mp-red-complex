@@ -1,14 +1,11 @@
 #pragma once
 #include "Game/mdi_child_window.h"
 
-class EquipmentWidget;
-class InventoriesService;
-
 class EquipmentWindow : public MdiChildWindow {
 	Q_OBJECT
 
 public:
-	EquipmentWindow(InventoriesService* inventoriesService, const QString& id, QWidget* parent = nullptr);
+	EquipmentWindow(const QString& id, QWidget* parent = nullptr);
 	~EquipmentWindow() override;
 
 	QString windowType() const override { return "equipment"; }
@@ -18,8 +15,6 @@ public:
 	QSize windowDefaultSizes() const override { return QSize(380, 500); }
 
 	bool NeedFixedSize() const override { return true; }
-
-	EquipmentWidget* widget() const;
 
 	bool handleCommand(const QString& commandName,
 		const QStringList& args,

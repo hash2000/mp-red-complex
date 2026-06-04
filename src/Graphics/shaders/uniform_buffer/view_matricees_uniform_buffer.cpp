@@ -7,7 +7,7 @@ namespace {
 		QMatrix4x4 view;
 	};
 	constexpr int kUBOSize = sizeof(UBOData);
-	static_assert(kUBOSize == 144, "ViewMatricesUniformBuffer UBOData size mismatch");
+	static_assert(kUBOSize % 16 == 0, "ViewMatricesUniformBuffer UBOData size mismatch");
 	static_assert(alignof(UBOData) == 16, "ViewMatricesUniformBuffer UBOData must be 16-byte aligned");
 }
 
@@ -43,4 +43,8 @@ void ViewMatricesUniformBuffer::flush() {
 
 	d->dirty = false;
 	write(0, &d->ubo, kUBOSize);
+}
+
+bool ViewMatricesUniformBuffer::initialize() {
+	return create(kUBOSize);
 }

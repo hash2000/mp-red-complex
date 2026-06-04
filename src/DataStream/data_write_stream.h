@@ -64,6 +64,8 @@ public:
 	void dataOffset(uint32_t v) noexcept;
 
 protected:
+	void writeBlock(const void* input);
+
 	template <typename T>
 	void applyEndianness(T& value) const noexcept {
 		if constexpr (sizeof(T) <= 1) {

@@ -2,12 +2,7 @@
 #include "Game/mdi_child_window.h"
 #include <memory>
 
-class MaterialWidget;
-class QTabWidget;
-class QSplitter;
-class QTreeView;
-class QTableView;
-class QWidget;
+enum class MaterialObjectTypes;
 
 class MaterialsWindow : public MdiChildWindow {
 	Q_OBJECT
@@ -21,6 +16,9 @@ public:
 	QSize windowDefaultSizes() const override { return QSize(1024, 768); }
 
 	bool handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) override;
+
+private slots:
+	void onEditMaterialFile(MaterialObjectTypes type, const QString& path);
 
 private:
 	void setupUi();

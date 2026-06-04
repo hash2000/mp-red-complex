@@ -20,17 +20,12 @@
 
 class CommandConsole::Private {
 public:
-	Private(CommandConsole* parent, ApplicationController* controller)
-	:	q(parent)
-	, controller(controller)
-	, context(new CommandContext(controller, parent)) {	
-
-	}
+	Private(CommandConsole* parent) :	q(parent) { }
 
 	CommandConsole* q;
 
-	ApplicationController* controller;
 	CommandContext* context;
+	ApplicationController* controller;
 
 	// UI элементы
 	QTextEdit* outputArea;
@@ -47,18 +42,19 @@ public:
 };
 
 
-CommandConsole::CommandConsole(ApplicationController* controller, QWidget* parent)
-	: d(new Private(this, controller))
+CommandConsole::CommandConsole(ApplicationController* controller, CommandContext* context, QWidget* parent)
+	: d(std::make_unique<Private>(this))
 	, QWidget(parent, Qt::WindowFlags(Qt::Dialog | Qt::WindowStaysOnTopHint))
 {
+	d->controller = controller;
+	d->context = context;
 
 	setupUi();
 	setupCompleter();
 	setupOutputStyling();
 
 	// Подключение сигналов контекста
-	connect(d->context, &CommandContext::outputRequested,
-		this, &CommandConsole::onOutputRequested);
+	connect(d->context, &CommandContext::outputRequested, this, &CommandConsole::onOutputRequested);
 
 	// Приветственное сообщение
 	appendMessage("Command Console ready. Type 'help' for available commands.", "system");
@@ -135,10 +131,9 @@ void CommandConsole::setupCompleter() {
 				d->controller->commandProcessor()->availableCommands()
 			);
 		}
-		});
+	});
 
-	connect(d->completer, QOverload<const QString&>::of(&QCompleter::activated),
-		this, &CommandConsole::onCompleterActivated);
+	connect(d->completer, QOverload<const QString&>::of(&QCompleter::activated), this, &CommandConsole::onCompleterActivated);
 }
 
 void CommandConsole::setupOutputStyling() {
@@ -161,6 +156,7 @@ void CommandConsole::setupOutputStyling() {
         .success { color: #66cc66; }
         .system { color: #79b8ff; font-style: italic; }
         .info { color: #d4d4d4; }
+				.warning { color: #FFE66D; }
     )");
 }
 

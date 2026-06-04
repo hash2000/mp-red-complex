@@ -3,13 +3,11 @@
 #include "Game/mdi_child_window.h"
 #include <QObject>
 
-class ItemsService;
-
 class EntitiesWindow : public MdiChildWindow {
 	Q_OBJECT
 
 public:
-	explicit EntitiesWindow(ItemsService* service, const QString& id, QWidget* parent = nullptr);
+	explicit EntitiesWindow(const QString& id, QWidget* parent = nullptr);
 	~EntitiesWindow() override;
 
 	QString windowType() const override { return "entities"; }

@@ -1,41 +1,69 @@
 #include "Game/commands/command_context.h"
 #include "Game/app_controller.h"
 #include "Game/controllers/windows_controller.h"
-#include "Game/mdi_child_window.h"
-#include <QMdiSubWindow>
-#include <QMetaObject>
-#include <QVariantMap>
+#include "Game/services.h"
+#include "Game/controllers.h"
+#include "Resources/resources.h"
+
 #include <memory>
 #include <functional>
 
 class CommandContext::Private {
 public:
-	Private(CommandContext* parent, ApplicationController* controller)
-	: q(parent)
-	, controller(controller){
-	}
-
+	Private(CommandContext* parent) : q(parent) { }
 	CommandContext* q;
 
-	ApplicationController* controller;
-	QVariantMap userData;
+	ApplicationController* applicationController = nullptr;
+	CommandContext* globalContext = nullptr;
+	std::unique_ptr<Services> services;
+	std::unique_ptr<Controllers> controllers;
 };
 
-CommandContext::CommandContext(ApplicationController* controller, QObject* parent)
-: d(new Private(this, controller))
-, QObject(parent){
+CommandContext::CommandContext(ApplicationController* applicationController,
+	CommandContext* globalContext,
+	QObject* parent)
+: d(std::make_unique<Private>(this))
+, QObject(parent) {
+	d->globalContext = globalContext;
+	d->services = std::make_unique<Services>(applicationController->resources());
+	d->controllers = std::make_unique<Controllers>(applicationController, d->services.get());
+	d->applicationController = applicationController;
 }
 
 CommandContext::~CommandContext() = default;
 
 ApplicationController* CommandContext::applicationController() const {
-	return d->controller;
+	return d->applicationController;
+}
+
+Services* CommandContext::services() const {
+	return d->services.get();
+}
+
+Controllers* CommandContext::controllers() const {
+	return d->controllers.get();
+}
+
+std::unique_ptr<CommandContext> CommandContext::createScopedContext() {
+	return std::make_unique<CommandContext>(d->applicationController, globalContext());
+}
+
+CommandContext* CommandContext::globalContext() {
+	return d->globalContext == nullptr ? this : d->globalContext;
+}
+
+bool CommandContext::isGlobalContext() const {
+	return d->globalContext == nullptr;
 }
 
 void CommandContext::print(const QString& message, const QString& styleClass) {
 	QMetaObject::invokeMethod(this, [this, message, styleClass]() {
 		emit outputRequested(message, styleClass);
 		}, Qt::QueuedConnection);
+}
+
+void CommandContext::printSystem(const QString& message) {
+	print(message, "system");
 }
 
 void CommandContext::printError(const QString& message) {
@@ -46,10 +74,14 @@ void CommandContext::printSuccess(const QString& message) {
 	print(message, "success");
 }
 
-void CommandContext::setData(const QString& key, const QVariant& value) {
-	d->userData[key] = value;
+void CommandContext::printWarning(const QString& message) {
+	print(message, "warning");
 }
 
-QVariant CommandContext::data(const QString& key) const {
-	return d->userData.value(key);
+void CommandContext::setData(const QString& key, const QVariant& value) {
+	d->applicationController->resources()->Variables.set(key, value);
+}
+
+QVariant CommandContext::data(const QString& key, const QVariant& value) const {
+	return d->applicationController->resources()->Variables.get(key, value);
 }

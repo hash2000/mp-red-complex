@@ -6,132 +6,11 @@
 
 class ItemsDataProviderJsonImpl::Private {
 public:
-	Private(ItemsDataProviderJsonImpl* paren)
-		: q(paren) {
-	}
-
-	bool itemEntityFromJson(const QJsonObject& json, ItemEntity& entity) {
-		entity.id = json["id"].toString();
-		entity.name = json["name"].toString();
-		entity.description = json["description"].toString();
-		entity.iconPath = json["icon"].toString();
-		entity.equipmentType = ItemEquipmentType::None;
-
-		// Тип предмета
-		QString typeStr = json["type"].toString().toLower();
-		if (typeStr == "equipment") {
-			entity.type = ItemType::Equipment;
-			QString equipType = json["equipmentType"].toString().toLower();
-			if (equipType == "head") entity.equipmentType = ItemEquipmentType::Head;
-			else if (equipType == "body") entity.equipmentType = ItemEquipmentType::Body;
-			else if (equipType == "weapon") entity.equipmentType = ItemEquipmentType::Weapon;
-			else if (equipType == "shield") entity.equipmentType = ItemEquipmentType::Shield;
-			else if (equipType == "gloves") entity.equipmentType = ItemEquipmentType::Gloves;
-			else if (equipType == "boots") entity.equipmentType = ItemEquipmentType::Boots;
-			else if (equipType == "ring") entity.equipmentType = ItemEquipmentType::Ring;
-			else if (equipType == "amulet") entity.equipmentType = ItemEquipmentType::Amulet;
-		}
-		else if (typeStr == "resource") {
-			entity.type = ItemType::Resource;
-			entity.maxStack = json["maxStack"].toInt(100);
-
-			if (json.contains("resource")) {
-				QJsonArray resourceTypes = json["resource"].toArray();
-				for (const QJsonValue& rtValue : resourceTypes) {
-					const auto typeName = rtValue.toString().toLower();
-					if (typeName == "ore") {
-						entity.resourceType.push_back(ItemResourceType::Ore);
-					}
-					else if (typeName == "chemical") {
-						entity.resourceType.push_back(ItemResourceType::Chemical);
-					}
-					else {
-						qDebug() << "Load item entity: Undefined resource type:" << typeName;
-					}
-				}
-			}
-		}
-		else if (typeStr == "component") {
-			entity.type = ItemType::Component;
-		}
-		else if (typeStr == "container") {
-			entity.type = ItemType::Container;
-
-			// контейнер тоже может быть частью экипировки, но только рюкзаком или подсумком
-			QString equipType = json["equipmentType"].toString().toLower();
-			if (equipType == "backpack") entity.equipmentType = ItemEquipmentType::Backpack;
-			else if (equipType == "bag") entity.equipmentType = ItemEquipmentType::Bag;
-
-			QJsonObject cap = json["container"].toObject();
-			entity.container = ItemContainer{
-				cap["rows"].toInt(4),
-				cap["cols"].toInt(4),
-			};
-
-			if (json.contains("permissions")) {
-				QJsonObject permissions = json["permissions"].toObject();
-				if (permissions.contains("resource")) {
-					QJsonObject resource = permissions["resource"].toObject();
-					if (resource.contains("all")) {
-						QJsonArray allArray = resource["all"].toArray();
-						for (const QJsonValue& val : allArray) {
-							const auto typeName = val.toString().toLower();
-							if (typeName == "ore") {
-								entity.container->permissions.resources.all.push_back(ItemResourceType::Ore);
-							}
-							else if (typeName == "chemical") {
-								entity.container->permissions.resources.all.push_back(ItemResourceType::Chemical);
-							}
-							else {
-								qDebug() << "Load item entity: Undefined resource type in permissions.all:" << typeName;
-							}
-						}
-					}
-
-					if (resource.contains("any")) {
-						QJsonArray anyArray = resource["any"].toArray();
-						for (const QJsonValue& val : anyArray) {
-							const auto typeName = val.toString().toLower();
-							if (typeName == "ore") {
-								entity.container->permissions.resources.any.push_back(ItemResourceType::Ore);
-							}
-							else if (typeName == "chemical") {
-								entity.container->permissions.resources.any.push_back(ItemResourceType::Chemical);
-							}
-							else {
-								qDebug() << "Load item entity: Undefined resource type in permissions.any:" << typeName;
-							}
-						}
-					}
-				}
-			}
-		}
-
-		// Размер в ячейках
-		entity.width = json["width"].toInt(1);
-		entity.height = json["height"].toInt(1);
-
-		// Рецепт крафта (опционально)
-		if (json.contains("recipe")) {
-			entity.recipe = ItemRecipe();
-			QJsonArray ingredients = json["recipe"]
-				.toObject()["ingredients"]
-				.toArray();
-
-			for (const QJsonValue& ingVal : ingredients) {
-				QJsonObject ingObj = ingVal.toObject();
-				entity.recipe->ingredients.push_back({
-						ingObj["itemId"].toString(),
-						ingObj["amount"].toInt()
-					});
-			}
-		}
-		
-		return true;
-	}
-
+	Private(ItemsDataProviderJsonImpl* paren) : q(paren) { }
 	ItemsDataProviderJsonImpl* q;
 	Resources* resources;
+
+	bool itemEntityFromJson(const QJsonObject& json, ItemEntity& entity);
 };
 
 ItemsDataProviderJsonImpl::ItemsDataProviderJsonImpl(Resources* resources)
@@ -190,6 +69,128 @@ bool ItemsDataProviderJsonImpl::loadItem(const QUuid& id, Item& item) const {
 
 	item.id = id;
 	item.entityId = json["entityId"].toString();
+
+	return true;
+}
+
+
+
+bool ItemsDataProviderJsonImpl::Private::itemEntityFromJson(const QJsonObject& json, ItemEntity& entity) {
+	entity.id = json["id"].toString();
+	entity.name = json["name"].toString();
+	entity.description = json["description"].toString();
+	entity.iconPath = json["icon"].toString();
+	entity.equipmentType = ItemEquipmentType::None;
+
+	// Тип предмета
+	QString typeStr = json["type"].toString().toLower();
+	if (typeStr == "equipment") {
+		entity.type = ItemType::Equipment;
+		QString equipType = json["equipmentType"].toString().toLower();
+		if (equipType == "head") entity.equipmentType = ItemEquipmentType::Head;
+		else if (equipType == "body") entity.equipmentType = ItemEquipmentType::Body;
+		else if (equipType == "weapon") entity.equipmentType = ItemEquipmentType::Weapon;
+		else if (equipType == "shield") entity.equipmentType = ItemEquipmentType::Shield;
+		else if (equipType == "gloves") entity.equipmentType = ItemEquipmentType::Gloves;
+		else if (equipType == "boots") entity.equipmentType = ItemEquipmentType::Boots;
+		else if (equipType == "ring") entity.equipmentType = ItemEquipmentType::Ring;
+		else if (equipType == "amulet") entity.equipmentType = ItemEquipmentType::Amulet;
+	}
+	else if (typeStr == "resource") {
+		entity.type = ItemType::Resource;
+		entity.maxStack = json["maxStack"].toInt(100);
+
+		if (json.contains("resource")) {
+			QJsonArray resourceTypes = json["resource"].toArray();
+			for (const QJsonValue& rtValue : resourceTypes) {
+				const auto typeName = rtValue.toString().toLower();
+				if (typeName == "ore") {
+					entity.resourceType.push_back(ItemResourceType::Ore);
+				}
+				else if (typeName == "chemical") {
+					entity.resourceType.push_back(ItemResourceType::Chemical);
+				}
+				else {
+					qDebug() << "Load item entity: Undefined resource type:" << typeName;
+				}
+			}
+		}
+	}
+	else if (typeStr == "component") {
+		entity.type = ItemType::Component;
+	}
+	else if (typeStr == "container") {
+		entity.type = ItemType::Container;
+
+		// контейнер тоже может быть частью экипировки, но только рюкзаком или подсумком
+		QString equipType = json["equipmentType"].toString().toLower();
+		if (equipType == "backpack") entity.equipmentType = ItemEquipmentType::Backpack;
+		else if (equipType == "bag") entity.equipmentType = ItemEquipmentType::Bag;
+
+		QJsonObject cap = json["container"].toObject();
+		entity.container = ItemContainer{
+			cap["rows"].toInt(4),
+			cap["cols"].toInt(4),
+		};
+
+		if (json.contains("permissions")) {
+			QJsonObject permissions = json["permissions"].toObject();
+			if (permissions.contains("resource")) {
+				QJsonObject resource = permissions["resource"].toObject();
+				if (resource.contains("all")) {
+					QJsonArray allArray = resource["all"].toArray();
+					for (const QJsonValue& val : allArray) {
+						const auto typeName = val.toString().toLower();
+						if (typeName == "ore") {
+							entity.container->permissions.resources.all.push_back(ItemResourceType::Ore);
+						}
+						else if (typeName == "chemical") {
+							entity.container->permissions.resources.all.push_back(ItemResourceType::Chemical);
+						}
+						else {
+							qDebug() << "Load item entity: Undefined resource type in permissions.all:" << typeName;
+						}
+					}
+				}
+
+				if (resource.contains("any")) {
+					QJsonArray anyArray = resource["any"].toArray();
+					for (const QJsonValue& val : anyArray) {
+						const auto typeName = val.toString().toLower();
+						if (typeName == "ore") {
+							entity.container->permissions.resources.any.push_back(ItemResourceType::Ore);
+						}
+						else if (typeName == "chemical") {
+							entity.container->permissions.resources.any.push_back(ItemResourceType::Chemical);
+						}
+						else {
+							qDebug() << "Load item entity: Undefined resource type in permissions.any:" << typeName;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Размер в ячейках
+	entity.width = json["width"].toInt(1);
+	entity.height = json["height"].toInt(1);
+
+	// Рецепт крафта (опционально)
+	if (json.contains("recipe")) {
+		entity.recipe = ItemRecipe();
+		QJsonArray ingredients = json["recipe"]
+			.toObject()["ingredients"]
+			.toArray();
+
+		for (const QJsonValue& ingVal : ingredients) {
+			QJsonObject ingObj = ingVal.toObject();
+			entity.recipe->ingredients.push_back({
+					ingObj["itemId"].toString(),
+					ingObj["amount"].toInt()
+				});
+		}
+	}
 
 	return true;
 }

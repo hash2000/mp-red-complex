@@ -3,14 +3,11 @@
 #include <QObject>
 #include <memory>
 
-class UsersService;
-class LoginWidget;
-
 class LoginWindow : public MdiChildWindow {
 	Q_OBJECT
 
 public:
-	explicit LoginWindow(UsersService* usersService, const QString& id, QWidget* parent = nullptr);
+	explicit LoginWindow(const QString& id, QWidget* parent = nullptr);
 	~LoginWindow() override;
 
 	QString windowType() const override { return "login"; }

@@ -21,27 +21,16 @@ public:
 	}
 
 	EntitiesWindow* q;
-	ItemsService* service;
+	ItemsService* itemsService;
 	EntitiesWidget* widget;
 	ApplicationController* controller = nullptr;
+	WindowsController* windowsController = nullptr;
 	InventoriesService* inventoriesService = nullptr;
 };
 
-EntitiesWindow::EntitiesWindow(ItemsService* service, const QString& id, QWidget* parent)
+EntitiesWindow::EntitiesWindow(const QString& id, QWidget* parent)
 : d(std::make_unique<Private>(this))
 , MdiChildWindow(id, parent) {
-	d->service = service;
-	
-	// Виджет будет инициализирован с inventoriesService в handleCommand
-	d->widget = new EntitiesWidget(service, nullptr, this);
-
-	connect(d->widget, &EntitiesWidget::itemCreateRequested,
-		this, &EntitiesWindow::onItemCreateRequested);
-	
-	connect(d->widget, &EntitiesWidget::inventorySelectionRequested,
-		this, &EntitiesWindow::onInventorySelectionRequested);
-
-	setWidget(d->widget);
 }
 
 EntitiesWindow::~EntitiesWindow() = default;
@@ -49,17 +38,22 @@ EntitiesWindow::~EntitiesWindow() = default;
 
 bool EntitiesWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) {
 	if (commandName == "create") {
-		for (const auto& item : d->service->entities()) {
+		auto services = context->services();
+		d->controller = context->applicationController();
+		d->windowsController = context->controllers()->windowsController();
+		d->inventoriesService = services->inventoriesService();
+		d->itemsService = services->itemsService();
+		d->widget = new EntitiesWidget(d->itemsService, nullptr, this);
+		d->widget->setInventoriesService(d->inventoriesService);
+
+		for (const auto& item : d->itemsService->entities()) {
 			d->widget->addItemEntity(item);
 		}
 
-		d->controller = context->applicationController();
-		d->inventoriesService = d->controller->services()->inventoriesService();
+		setWidget(d->widget);
 
-		// Инициализируем виджет сервисом инвентарей
-		d->widget->setInventoriesService(d->inventoriesService);
-		
-		// Сразу загружаем список доступных инвентарей
+		connect(d->widget, &EntitiesWidget::itemCreateRequested, this, &EntitiesWindow::onItemCreateRequested);
+		connect(d->widget, &EntitiesWidget::inventorySelectionRequested, this, &EntitiesWindow::onInventorySelectionRequested);
 		onInventorySelectionRequested();
 
 		return true;
@@ -74,7 +68,7 @@ void EntitiesWindow::onItemCreateRequested(const QString& itemId, const QString&
 	}
 
 	// Получаем сущность предмета по ID
-	const auto entity = d->service->entityById(itemId);
+	const auto entity = d->itemsService->entityById(itemId);
 	if (!entity) {
 		qWarning() << "EntitiesWindow::onItemCreateRequested: entity not found:" << itemId;
 		return;
@@ -86,17 +80,15 @@ void EntitiesWindow::onItemCreateRequested(const QString& itemId, const QString&
 		return;
 	}
 
-	// Получаем сервисы
-	const auto services = d->controller->services();
-	const auto itemsService = d->service;
-	const auto inventoriesService = services->inventoriesService();
-
 	// Создаём и показываем диалог создания предмета
-	auto createDialog = new ItemCreateWidget(*entity, itemsService, inventoryId, this);
+	auto createDialog = new ItemCreateWidget(*entity, d->itemsService, inventoryId, this);
 
-	connect(createDialog, &ItemCreateWidget::itemCreated, this, [this](
-		const QString& entityId, int count, const QString& invId) {
-			d->controller->executeCommandByName("items-create", QStringList{ entityId, QString::number(count), invId});
+	connect(createDialog, &ItemCreateWidget::itemCreated, this, [this](const QString& entityId, int count, const QString& invId) {
+		const auto cmdEntityId = QString("entity:%1").arg(entityId);
+		const auto cmdCount = QString("count:%1").arg(QString::number(count));
+		const auto cmdInventory = QString("inventory:%1").arg(invId);
+
+		d->controller->executeCommandByName("items-create", QStringList{ cmdEntityId, cmdCount, cmdInventory });
 	});
 
 	createDialog->show();
@@ -107,13 +99,11 @@ void EntitiesWindow::onInventorySelectionRequested() {
 		return;
 	}
 
-	const auto windowsController = d->controller->controllers()->windowsController();
-
 	// Собираем список всех открытых инвентарей
 	QStringList openInventoryIds;
 	QString lastActiveInventoryId;
 
-	const auto windows = windowsController->windowEntries();
+	const auto windows = d->windowsController->windowEntries();
 	for (auto it = windows.rbegin(); it != windows.rend(); ++it) {
 		const auto window = it->first.data();
 		if (window && window->windowType() == "inventory") {

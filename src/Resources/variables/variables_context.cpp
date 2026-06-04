@@ -1,6 +1,6 @@
 #include "Resources/variables/variables_context.h"
 
-QVariant VariablesContext::get(const QString& name, const QString& def) {
+QVariant VariablesContext::get(const QString& name, const QVariant& def) {
 	if (!_variables.contains(name)) {
 		return QVariant(def);
 	}
@@ -8,7 +8,7 @@ QVariant VariablesContext::get(const QString& name, const QString& def) {
 	return _variables[name];
 }
 
-QVariant VariablesContext::set(const QString& name, const QString& value) {
+QVariant VariablesContext::set(const QString& name, const QVariant& value) {
 	_variables[name] = value;
 	return _variables[name];
 }

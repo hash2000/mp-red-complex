@@ -6,6 +6,7 @@ class ActionPanelController::Private {
 public:
 	Private(ActionPanelController* parent) : q(parent) {}
 	ActionPanelController* q;
+
 	ApplicationController* controller = nullptr;
 	std::vector<ActionButtonConfig> buttons;
 	bool isVisible = true;

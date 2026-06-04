@@ -35,16 +35,14 @@ void WindowsController::setMdiArea(MdiArea* mdiArea) {
 
 	// Отключение от предыдущей MDI области
 	if (d->mdiArea) {
-		disconnect(d->mdiArea, &MdiArea::subWindowActivated,
-			this, &WindowsController::onSubWindowActivated);
+		disconnect(d->mdiArea, &MdiArea::subWindowActivated, this, &WindowsController::onSubWindowActivated);
 	}
 
 	d->mdiArea = mdiArea;
 
 	// Подключение к новой MDI области
 	if (d->mdiArea) {
-		connect(d->mdiArea, &MdiArea::subWindowActivated,
-			this, &WindowsController::onSubWindowActivated);
+		connect(d->mdiArea, &MdiArea::subWindowActivated, this, &WindowsController::onSubWindowActivated);
 
 		// Регистрация уже существующих окон
 		for (QMdiSubWindow* subWindow : d->mdiArea->subWindowList()) {
@@ -57,6 +55,10 @@ void WindowsController::setMdiArea(MdiArea* mdiArea) {
 
 MdiArea* WindowsController::mdiArea() const {
 	return d->mdiArea.data();
+}
+
+bool WindowsController::checkWindowRegistration(const QString& id) {
+	return d->windowRegistry.contains(id);
 }
 
 bool WindowsController::registerWindow(MdiChildWindow* window) {
@@ -139,7 +141,7 @@ MdiChildWindow* WindowsController::activeWindow() const {
 void WindowsController::onSubWindowActivated(QMdiSubWindow* subWindow) {
 	MdiChildWindow* newWindow = nullptr;
 	if (subWindow && subWindow->widget()) {
-		newWindow = qobject_cast<MdiChildWindow*>(subWindow->widget());
+		newWindow = qobject_cast<MdiChildWindow*>(subWindow);
 	}
 
 	MdiChildWindow* oldWindow = d->activeWindow.data();

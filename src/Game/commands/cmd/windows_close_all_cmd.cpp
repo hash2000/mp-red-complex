@@ -1,13 +1,12 @@
 #include "Game/commands/cmd/windows_close_all_cmd.h"
 #include "Game/commands/command_context.h"
-#include "Game/app_controller.h"
 #include "Game/controllers.h"
 #include "Game/controllers/windows_controller.h"
 
 bool CloseAllWindowsCommand::execute(CommandContext* context, const QStringList& args) {
 	Q_UNUSED(args);
 
-	auto controller = context->applicationController()->controllers()->windowsController();
+	auto controller = context->controllers()->windowsController();
 	auto windows = controller->allWindows();
 
 	int count = windows.size();

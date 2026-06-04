@@ -19,6 +19,8 @@ class MapService;
 class IMapDataProvider;
 class TexturesService;
 class ShadersService;
+class MaterialsService;
+class HighlightingPluginManager;
 
 class Services: public QObject {
 	Q_OBJECT
@@ -36,6 +38,8 @@ public:
 	TilesSelectorService* tilesSelectorService() const;
 	MapService* mapService() const;
 	TexturesService* texturesService() const;
+	MaterialsService* materialsService() const;
+	HighlightingPluginManager* highlightingPluginManager() const;
 
 	// для каждого контекста opengl должен быть свой
 	std::unique_ptr<ShadersService> shadersService() const;

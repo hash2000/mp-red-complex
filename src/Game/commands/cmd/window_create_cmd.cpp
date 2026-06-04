@@ -1,16 +1,17 @@
 #include "Game/commands/cmd/window_create_cmd.h"
-#include "Game/commands/command_processor.h"
 #include "Game/commands/command_context.h"
 #include "Game/controllers/windows_controller.h"
 #include "Game/app_controller.h"
 #include "Game/controllers.h"
 #include "Game/windows_builder.h"
+
 #include <QMdiSubWindow>
+#include <QRegularExpression>
 #include <QUuid>
 
 bool CreateWindowCommand::execute(CommandContext* context, const QStringList& args) {
 	auto app = context->applicationController();
-	auto controller = app->controllers()->windowsController();
+	auto controller = context->controllers()->windowsController();
 	auto mdiArea = controller->mdiArea();
 
 	if (args.count() < 1) {
@@ -18,19 +19,23 @@ bool CreateWindowCommand::execute(CommandContext* context, const QStringList& ar
 		return false;
 	}
 
-	const auto target = args.at(0);
-	QString id;
-	QString alternateTitle;
+	auto id = args.filter(QRegularExpression("^id:")).value(0).mid(3);
+	const auto target = args.filter(QRegularExpression("^target:")).value(0).mid(7);
+	const auto alternateTitle = args.filter(QRegularExpression("^title:")).value(0).mid(6);
 
-	if (args.count() >= 2) {
-		id = args.at(1);
-		if (args.count() >= 3) {
-			alternateTitle = args.at(2);
-		}
+	if (target.isEmpty()) {
+		context->printError(QString("Need parameter 'target'. Usage: %1").arg(help()));
+		return false;
 	}
-	else {
+
+	if (id.isEmpty()){
 		id = QUuid::createUuid()
 			.toString(QUuid::StringFormat::WithoutBraces);
+	}
+
+	if (controller->checkWindowRegistration(id)) {
+		qWarning() << "Window allready registered" << id;
+		return false;
 	}
 
 	WindowsBuilder builder(app);
@@ -66,13 +71,18 @@ bool CreateWindowCommand::execute(CommandContext* context, const QStringList& ar
 	subWndow->show();
 
 	if (!controller->registerWindow(widget)) {
-		delete widget;
+		context->printError(QString("Method create returned false. target '%1' title '%2' and id '%3'")
+			.arg(target)
+			.arg(title)
+			.arg(id));
+		widget->deleteLater();
 		return false;
 	}
 
-	context->printSuccess(QString("Window %1 created with title '%2'")
+	context->printSuccess(QString("Can't register window '%1' with title '%2' and id '%3'")
 		.arg(target)
-		.arg(title));
+		.arg(title)
+		.arg(id));
 
 	return true;
 }

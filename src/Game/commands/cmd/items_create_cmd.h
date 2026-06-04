@@ -11,7 +11,7 @@ public:
 
 	QString name() const override { return "items-create"; }
 	QString description() const override { return "Create new item in specified inventory"; }
-	QString help() const override { return "items-create entityId count inventoryId"; }
+	QString help() const override { return "items-create entity:entityId count:count inventory:inventoryId"; }
 
 private:
 	class Private;

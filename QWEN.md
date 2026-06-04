@@ -108,10 +108,11 @@ for (int z = 0; z < 16; ++z) // Нет
 
 class MyClass;  // Предварительное объявление
 
-class Foo : public QObject {
+class MyClass : public QObject {
 Q_OBJECT
 public:
-    Foo(QObject* parent = nullptr);
+    MyClass(QObject* parent = nullptr);
+		~MyClass() override;
 };
 ```
 
@@ -131,7 +132,10 @@ public:
 
 MyClass::MyClass()
 : QObject(parent)
-, d(std::make_unique<Private>(this)) {}
+, d(std::make_unique<Private>(this)) {
+}
+
+MyClass::~MyClass() = default; // or implementation
 ```
 
 ### Типы и современный C++

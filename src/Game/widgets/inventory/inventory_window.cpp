@@ -5,6 +5,7 @@
 #include "ApplicationLayer/items/item_mime_data.h"
 #include "Game/commands/command_context.h"
 #include "Game/app_controller.h"
+#include "Game/services.h"
 #include <QVBoxLayout>
 #include <QUuid>
 #include <QMdiSubWindow>
@@ -13,23 +14,16 @@
 
 class InventoryWindow::Private {
 public:
-	Private(InventoryWindow* parent)
-		: q(parent) {
-	}
-
+	Private(InventoryWindow* parent) : q(parent) { }
 	InventoryWindow* q;
-	InventoriesService* service;
-	InventoryGridView* widget;
+
+	InventoryGridView* widget = nullptr;
 	QString inventoryName;
 };
 
-InventoryWindow::InventoryWindow(InventoriesService* service, const QString& id, QWidget* parent)
+InventoryWindow::InventoryWindow(const QString& id, QWidget* parent)
 : d(std::make_unique<Private>(this))
-, MdiChildWindow(id, parent) {
-	d->service = service;
-	d->widget = new InventoryGridView(service, this);
-	d->inventoryName = "Inventory";
-	setWidget(d->widget);
+, MdiChildWindow(id, parent) {	
 }
 
 InventoryWindow::~InventoryWindow() = default;
@@ -42,17 +36,24 @@ bool InventoryWindow::handleCommand(const QString& commandName, const QStringLis
 			return false;
 		}
 
+		auto services = context->services();
+		auto controller = context->applicationController();
+		d->widget = new InventoryGridView(services->inventoriesService(), this);
+		setWidget(d->widget);
+
 		if (!d->widget->load(target)) {
 			return false;
 		}
 
 		d->inventoryName = d->widget->grid()->inventoryName();
 
-		connect(d->widget->grid(), &InventoryGrid::containerOpened, this, [context](const ItemMimeData& item) {
-			const auto itemIdStr = item.id
-				.toString(QUuid::StringFormat::WithoutBraces)
-				.toLower();
-			context->applicationController()->executeCommandByName("window-create", QStringList{ "inventory", itemIdStr });
+		connect(d->widget->grid(), &InventoryGrid::containerOpened, this, [controller](const ItemMimeData& item) {
+			const auto itemIdStr = QString("id:%1")
+				.arg(item.id
+					.toString(QUuid::StringFormat::WithoutBraces)
+					.toLower());
+
+			controller->executeCommandByName("window-create", QStringList{ "target:inventory", itemIdStr });
 			});
 
 		return true;
