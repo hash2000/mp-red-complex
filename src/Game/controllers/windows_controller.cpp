@@ -57,6 +57,10 @@ MdiArea* WindowsController::mdiArea() const {
 	return d->mdiArea.data();
 }
 
+bool WindowsController::checkWindowRegistration(const QString& id) {
+	return d->windowRegistry.contains(id);
+}
+
 bool WindowsController::registerWindow(MdiChildWindow* window) {
 	if (!window) {
 		qWarning() << "Attempted to register null window";

@@ -69,33 +69,49 @@ QColor MaterialObjectNode::color() const {
 }
 
 
-QStandardItem* MaterialObjectNode::appendNode(QStandardItem* parent, const QString& name, MaterialObjectTypes type) {
+QStandardItem* MaterialObjectNode::appendNode(QStandardItem* parent, MaterialObjectTypes type) {
 	if (!parent) {
 		return nullptr;
 	}
 
-	auto subItem = new QStandardItem(name);
+	const auto name = getNameByType(type);
+	const auto nameWithPrefix = QString("%1 %2")
+		.arg(getPrefix(type))
+		.arg(name);
+	auto subItem = new QStandardItem(nameWithPrefix);
 	parent->appendRow(subItem);
 
 	subItem->setData(static_cast<int>(type), MaterialObjectsRoles::Type);
 	subItem->setData(QUuid::createUuid(), MaterialObjectsRoles::Guid);
 	subItem->setData(QString(), MaterialObjectsRoles::Path);
-	subItem->setIcon(getIcon(type));
 
 	return subItem;
 }
 
-
-QIcon MaterialObjectNode::getIcon(MaterialObjectTypes type) {
+QString MaterialObjectNode::getNameByType(MaterialObjectTypes type) {
 	switch (type) {
-	case MaterialObjectTypes::Directory: return QIcon::fromTheme(QIcon::ThemeIcon::FolderOpen);
-	case MaterialObjectTypes::VertexShader: return QIcon::fromTheme(QIcon::ThemeIcon::DocumentPrintPreview);
-	case MaterialObjectTypes::FragmentShader: return QIcon::fromTheme(QIcon::ThemeIcon::CameraVideo);
-	case MaterialObjectTypes::Texture: return QIcon::fromTheme(QIcon::ThemeIcon::DriveOptical);
-	case MaterialObjectTypes::Material: return QIcon::fromTheme(QIcon::ThemeIcon::ToolsCheckSpelling);
-	case MaterialObjectTypes::MaterialRoot: return QIcon::fromTheme(QIcon::ThemeIcon::DialogInformation);
-	case MaterialObjectTypes::BaseColor: return QIcon::fromTheme(QIcon::ThemeIcon::Battery);
+	case MaterialObjectTypes::Directory: return "new_directory";
+	case MaterialObjectTypes::VertexShader: return "new_vert_shader";
+	case MaterialObjectTypes::FragmentShader: return "new_frag_shader";
+	case MaterialObjectTypes::Texture: return "new_texture";
+	case MaterialObjectTypes::Material: return "new_material";
+	case MaterialObjectTypes::MaterialRoot: return "Материалы";
+	case MaterialObjectTypes::BaseColor: return "new_albedo";
 	}
 
-	return QIcon::fromTheme(QIcon::ThemeIcon::WindowClose);
+	return "new_item";
+}
+
+QString MaterialObjectNode::getPrefix(MaterialObjectTypes type) {
+	switch (type) {
+	case MaterialObjectTypes::Directory: return "📁";
+	case MaterialObjectTypes::VertexShader: return "🎨";
+	case MaterialObjectTypes::FragmentShader: return "🔷";
+	case MaterialObjectTypes::Texture: return "🖼️";
+	case MaterialObjectTypes::Material: return "🧩";
+	case MaterialObjectTypes::MaterialRoot: return "🔗";
+	case MaterialObjectTypes::BaseColor: return "🌈";
+	}
+
+	return "➕";
 }

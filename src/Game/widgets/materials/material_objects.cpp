@@ -96,16 +96,18 @@ void MaterialObjects::setupUI() {
 	auto* addMenu = new QMenu(addBtn);
 	addMenu->addAction("🎨 Вершинный шейдер");
 	addMenu->addAction("🔷 Фрагментный шейдер");
+	addMenu->addAction("🖼️ Текстура");
 	addMenu->addSeparator();
 	addMenu->addAction("📁 Директория");
-	addMenu->addAction("🖼️ Текстура");
+	addMenu->addAction("🧩 Material");
 	addBtn->setMenu(addMenu);
 
 	// Обработка выбора из меню
 	connect(addMenu->actions()[0], &QAction::triggered, this, [this]() { emit onAddSubButtonTriggered(MaterialObjectTypes::VertexShader); });
 	connect(addMenu->actions()[1], &QAction::triggered, this, [this]() { emit onAddSubButtonTriggered(MaterialObjectTypes::FragmentShader); });
-	connect(addMenu->actions()[3], &QAction::triggered, this, [this]() { emit onAddSubButtonTriggered(MaterialObjectTypes::Directory); });
-	connect(addMenu->actions()[4], &QAction::triggered, this, [this]() { emit onAddSubButtonTriggered(MaterialObjectTypes::Texture); });
+	connect(addMenu->actions()[2], &QAction::triggered, this, [this]() { emit onAddSubButtonTriggered(MaterialObjectTypes::Texture); });
+	connect(addMenu->actions()[4], &QAction::triggered, this, [this]() { emit onAddSubButtonTriggered(MaterialObjectTypes::Directory); });
+	connect(addMenu->actions()[5], &QAction::triggered, this, [this]() { emit onAddSubButtonTriggered(MaterialObjectTypes::Material); });
 
 	toolbarLayout->addWidget(addBtn);
 
@@ -164,7 +166,6 @@ void MaterialObjects::setupUI() {
 	MaterialObjectNode node(d->objectTreeModel->invisibleRootItem());
 	d->rootMaterialNode = MaterialObjectNode::appendNode(
 		d->objectTreeModel->invisibleRootItem(),
-		"Материалы",
 		MaterialObjectTypes::MaterialRoot);
 
 	d->objectTreeView->expand(d->objectTreeModel->indexFromItem(d->rootMaterialNode));
@@ -226,7 +227,7 @@ void MaterialObjects::onAddSubButtonTriggered(MaterialObjectTypes type) {
 		return;
 	}
 
-	auto subItem = MaterialObjectNode::appendNode(item, "new_item", type);
+	auto subItem = MaterialObjectNode::appendNode(item, type);
 	d->objectTreeView->expand(d->objectTreeModel->indexFromItem(subItem));
 	d->objectTreeView->scrollTo(d->objectTreeModel->indexFromItem(subItem));
 }
@@ -323,10 +324,12 @@ void MaterialObjects::updateProperties() {
 	}
 
 	if (type == MaterialObjectTypes::BaseColor) {
+		const auto defaultColor = QColor("#3A7BD5");
 		props.append({
 				"color", "Базовый цвет", PropertyType::Color,
-				QColor("#3A7BD5"), QVariant(), false
+				defaultColor, QVariant(), false
 			});
+		node.setColor(defaultColor);
 	}
 
 	d->propertiesWidget->setProperties(props);
@@ -342,6 +345,9 @@ void MaterialObjects::onPropertyChanged(const QString& propertyId, const QVarian
 
 	if (propertyId == "path") {
 		node.setPath(newValue.toString());
+	}
+	else if (propertyId == "color") {
+		node.setColor(newValue.value<QColor>());
 	}
 }
 

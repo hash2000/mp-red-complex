@@ -33,6 +33,11 @@ bool CreateWindowCommand::execute(CommandContext* context, const QStringList& ar
 			.toString(QUuid::StringFormat::WithoutBraces);
 	}
 
+	if (controller->checkWindowRegistration(id)) {
+		qWarning() << "Window allready registered" << id;
+		return false;
+	}
+
 	WindowsBuilder builder(app);
 	auto widget = builder.build(target, id, nullptr);
 	if (!widget) {
@@ -70,7 +75,7 @@ bool CreateWindowCommand::execute(CommandContext* context, const QStringList& ar
 			.arg(target)
 			.arg(title)
 			.arg(id));
-		delete widget;
+		widget->deleteLater();
 		return false;
 	}
 

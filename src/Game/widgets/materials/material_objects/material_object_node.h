@@ -30,8 +30,9 @@ public:
 	QColor color() const;
 
 public:
-	static QStandardItem* appendNode(QStandardItem* parent, const QString& name, MaterialObjectTypes type);
-	static QIcon getIcon(MaterialObjectTypes type);
+	static QStandardItem* appendNode(QStandardItem* parent, MaterialObjectTypes type);
+	static QString getPrefix(MaterialObjectTypes type);
+	static QString getNameByType(MaterialObjectTypes type);
 
 private:
 	QStandardItem* _item = nullptr;
