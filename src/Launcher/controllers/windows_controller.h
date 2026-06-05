@@ -1,6 +1,6 @@
 #pragma once
 #include "Launcher/mdi_child_window.h"
-#include "BaseWidgets/mdi_area.h"
+#include "Content/BaseWidgets/mdi_area.h"
 #include <QObject>
 #include <QMdiArea>
 #include <memory>

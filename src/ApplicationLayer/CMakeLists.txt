@@ -7,19 +7,20 @@ set(ApplicationLayer-Sources
 set(CMAKE_AUTOMOC ON)
 
 file(GLOB_RECURSE SRCS ${ApplicationLayer-Sources}/*.cpp)
-add_library(ApplicationLayer
+
+add_library(RedComplexApplicationLayer
 	${SRCS}
 )
 
-target_link_libraries(ApplicationLayer
+target_link_libraries(RedComplexApplicationLayer
 	PRIVATE
 		Qt6::Core
 		Qt6::Gui
 		Qt6::Widgets
 
-		Base
-		DataStream
-		DataLayer
-		Resources
-		Graphics
+		RedComplexBase
+		RedComplexDataStream
+		RedComplexDataLayer
+		RedComplexResources
+		RedComplexGraphics
 )

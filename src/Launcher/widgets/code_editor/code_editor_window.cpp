@@ -1,5 +1,5 @@
 #include "Launcher/widgets/code_editor/code_editor_window.h"
-#include "CodeEditorWidget/code_editor_widget.h"
+#include "Content/CodeEditorWidget/code_editor_widget.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/services.h"
 #include "Launcher/commands/command_context.h"

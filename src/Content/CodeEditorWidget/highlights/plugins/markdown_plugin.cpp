@@ -1,4 +1,4 @@
-#include "CodeEditorWidget/highlights/plugins/markdown_plugin.h"
+#include "Content/CodeEditorWidget/highlights/plugins/markdown_plugin.h"
 #include <QRegularExpression>
 
 MarkdownPlugin::~MarkdownPlugin() = default;

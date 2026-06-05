@@ -5,16 +5,17 @@ set(DataFormat-Sources
 )
 
 file(GLOB_RECURSE SRCS ${DataFormat-Sources}/*.cpp)
-add_library(DataFormat
+
+add_library(RedComplexDataFormat
 	${SRCS}
 )
 
-target_link_libraries(DataFormat
+target_link_libraries(RedComplexDataFormat
 	PRIVATE
 		Qt6::Core
 		Qt6::Gui
 		Qt6::Widgets
 
-		Base
-		DataStream
+		RedComplexBase
+		RedComplexDataStream
 )

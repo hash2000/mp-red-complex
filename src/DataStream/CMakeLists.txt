@@ -7,14 +7,14 @@ set(DataStream-Sources
 file(GLOB_RECURSE SRCS ${DataStream-Sources}/*.cpp)
 
 
-add_library(DataStream
+add_library(RedComplexDataStream
 	${SRCS}
 )
 
-target_include_directories(DataStream PRIVATE
+target_include_directories(RedComplexDataStream PRIVATE
 	${ZLIB_INCLUDE_DIRS})
 
-target_link_libraries(DataStream
+target_link_libraries(RedComplexDataStream
 	PRIVATE
 		Qt6::Core
 		Qt6::Gui
@@ -22,6 +22,6 @@ target_link_libraries(DataStream
 
 		ZLIB::ZLIB
 
-		Base
+		RedComplexBase
 )
 

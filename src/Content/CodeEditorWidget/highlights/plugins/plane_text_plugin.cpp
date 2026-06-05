@@ -1,4 +1,4 @@
-#include "CodeEditorWidget/highlights/plugins/plane_text_plugin.h"
+#include "Content/CodeEditorWidget/highlights/plugins/plane_text_plugin.h"
 
 PlaneTextPlugin::~PlaneTextPlugin() = default;
 

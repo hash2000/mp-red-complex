@@ -5,11 +5,12 @@ set(Base-Sources
 )
 
 file(GLOB_RECURSE SRCS ${Base-Sources}/*.cpp)
-add_library(Base
+
+add_library(RedComplexBase
 	${SRCS}
 )
 
-target_link_libraries(Base
+target_link_libraries(RedComplexBase
 	PRIVATE
 		Qt6::Core
 		Qt6::Gui

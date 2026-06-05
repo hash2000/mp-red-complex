@@ -38,7 +38,7 @@
 #include "ApplicationLayer/shaders/shaders_service.h"
 #include "ApplicationLayer/materials/materials_service.h"
 
-#include "CodeEditorWidget/highlights/highlighter_plugin_manager.h"
+#include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
 
 #include <mutex>
 

@@ -1,7 +1,6 @@
 add_subdirectory(Launcher)
+add_subdirectory(Content)
 add_subdirectory(Base)
-add_subdirectory(BaseWidgets)
-add_subdirectory(CodeEditorWidget)
 add_subdirectory(Graphics)
 add_subdirectory(Resources)
 add_subdirectory(DataStream)

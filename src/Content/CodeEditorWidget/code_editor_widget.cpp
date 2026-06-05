@@ -1,7 +1,7 @@
-#include "CodeEditorWidget/code_editor_widget.h"
-#include "CodeEditorWidget/highlights/highlighter.h"
-#include "CodeEditorWidget/highlights/plugins/highlighter_plugin.h"
-#include "CodeEditorWidget/highlights/highlighter_plugin_manager.h"
+#include "Content/CodeEditorWidget/code_editor_widget.h"
+#include "Content/CodeEditorWidget/highlights/highlighter.h"
+#include "Content/CodeEditorWidget/highlights/plugins/highlighter_plugin.h"
+#include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
 #include "DataStream/file_reader.h"
 
 #include <QThread>

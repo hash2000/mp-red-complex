@@ -1,8 +1,8 @@
-#include "CodeEditorWidget/highlights/highlighter_plugin_manager.h"
-#include "CodeEditorWidget/highlights/plugins/glsl_plugin.h"
-#include "CodeEditorWidget/highlights/plugins/plane_text_plugin.h"
-#include "CodeEditorWidget/highlights/plugins/markdown_plugin.h"
-#include "CodeEditorWidget/highlights/plugins/bash_plugin.h"
+#include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
+#include "Content/CodeEditorWidget/highlights/plugins/glsl_plugin.h"
+#include "Content/CodeEditorWidget/highlights/plugins/plane_text_plugin.h"
+#include "Content/CodeEditorWidget/highlights/plugins/markdown_plugin.h"
+#include "Content/CodeEditorWidget/highlights/plugins/bash_plugin.h"
 
 #include <QFileInfo>
 #include <map>

@@ -1,4 +1,4 @@
-#include "CodeEditorWidget/highlights/plugins/bash_plugin.h"
+#include "Content/CodeEditorWidget/highlights/plugins/bash_plugin.h"
 
 #include <QRegularExpression>
 

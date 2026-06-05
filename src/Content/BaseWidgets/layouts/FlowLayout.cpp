@@ -1,4 +1,4 @@
-#include "BaseWidgets/layouts/FlowLayout.h"
+#include "Content/BaseWidgets/layouts/FlowLayout.h"
 #include <QtWidgets>
 
 FlowLayout::FlowLayout(QWidget* parent, int margin, int hSpacing, int vSpacing)

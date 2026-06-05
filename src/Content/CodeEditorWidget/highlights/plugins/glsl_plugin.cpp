@@ -1,4 +1,4 @@
-#include "CodeEditorWidget/highlights/plugins/glsl_plugin.h"
+#include "Content/CodeEditorWidget/highlights/plugins/glsl_plugin.h"
 
 GLSLPlugin::~GLSLPlugin() = default;
 

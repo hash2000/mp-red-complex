@@ -5,17 +5,18 @@ set(DataLayer-Sources
 )
 
 file(GLOB_RECURSE SRCS ${DataLayer-Sources}/*.cpp)
-add_library(DataLayer
+
+add_library(RedComplexDataLayer
 	${SRCS}
 )
 
-target_link_libraries(DataLayer
+target_link_libraries(RedComplexDataLayer
 	PRIVATE
 		Qt6::Core
 		Qt6::Gui
 		Qt6::Widgets
 
-		Base
-		DataStream
-		Resources
+		RedComplexBase
+		RedComplexDataStream
+		RedComplexResources
 )

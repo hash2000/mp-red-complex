@@ -23,9 +23,10 @@ target_link_libraries(TestItemsService PRIVATE
     Qt6::Core
     Qt6::Test
     Qt6::Gui
-    Resources
-    DataLayer
-    ApplicationLayer
+
+    RedComplexResources
+    RedComplexDataLayer
+    RedComplexApplicationLayer
 )
 
 add_test(NAME TestItemsService COMMAND TestItemsService)

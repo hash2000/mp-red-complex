@@ -21,13 +21,13 @@ target_link_libraries(Launcher
 		Qt6::OpenGL
 		Qt6::OpenGLWidgets
 
-		Base
-		BaseWidgets
-		CodeEditorWidget
-		Graphics
-		Resources
-		DataLayer
-		ApplicationLayer
-		Engine
+		RedComplexBase
+		RedComplexBaseWidgets
+		RedComplexCodeEditorWidget
+		RedComplexGraphics
+		RedComplexResources
+		RedComplexDataLayer
+		RedComplexApplicationLayer
+		RedComplexEngine
 )
 

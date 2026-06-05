@@ -7,16 +7,17 @@ set(Resources-Sources
 set(CMAKE_AUTOMOC ON)
 
 file(GLOB_RECURSE SRCS ${Resources-Sources}/*.cpp)
-add_library(Resources
+
+add_library(RedComplexResources
 	${SRCS}
 )
 
-target_link_libraries(Resources
+target_link_libraries(RedComplexResources
 	PRIVATE
 		Qt6::Core
 		Qt6::Gui
 		Qt6::Widgets
 
-		Base
-		DataStream
+		RedComplexBase
+		RedComplexDataStream
 )

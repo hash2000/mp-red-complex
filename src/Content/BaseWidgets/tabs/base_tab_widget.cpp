@@ -1,4 +1,4 @@
-#include "BaseWidgets/tabs/base_tab_widget.h"
+#include "Content/BaseWidgets/tabs/base_tab_widget.h"
 #include <QDragEnterEvent>
 #include <QMimeData>
 #include <QJsonDocument>

@@ -1,5 +1,5 @@
 #pragma once
-#include "CodeEditorWidget/highlights/plugins/highlighter_plugin.h"
+#include "Content/CodeEditorWidget/highlights/plugins/highlighter_plugin.h"
 
 class BashPlugin : public HighlightingPlugin {
 public:

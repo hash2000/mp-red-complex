@@ -4,7 +4,7 @@
 #include "Launcher/widgets/materials/material_objects/material_object_node.h"
 #include "ApplicationLayer/materials/materials_service.h"
 #include "ApplicationLayer/materials/material_mime_data.h"
-#include "BaseWidgets/properties/properties_list_widget.h"
+#include "Content/BaseWidgets/properties/properties_list_widget.h"
 
 #include <QSplitter>
 #include <QTreeView>

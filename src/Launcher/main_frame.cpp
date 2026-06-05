@@ -10,7 +10,7 @@
 #include "Launcher/widgets/action_panel/action_panel_widget.h"
 #include "ApplicationLayer/users/users_service.h"
 #include "DataLayer/users/user.h"
-#include "BaseWidgets/mdi_area.h"
+#include "Content/BaseWidgets/mdi_area.h"
 #include "Resources/resources.h"
 
 #include <QSplitter>
