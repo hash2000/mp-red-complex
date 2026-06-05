@@ -126,12 +126,16 @@ public:
 	ItemContainerPermissions permissions;
 };
 
-InventoryService::InventoryService(ItemsService* itemsService)
-: d(std::make_unique<Private>(this)) {
+InventoryService::InventoryService(ItemsService* itemsService, QObject* parent)
+: IItemPlacementService(parent)
+, d(std::make_unique<Private>(this)) {
 	d->itemsService = itemsService;
 }
 
-InventoryService::~InventoryService() = default;
+InventoryService::~InventoryService() {
+	qInfo() << "test"
+		;
+}
 
 bool InventoryService::load(const Inventory& inventory) {
 	d->rows = inventory.rows;

@@ -1,5 +1,5 @@
 #include "ApplicationLayer/inventories_service.h"
-#include "ApplicationLayer/i_items_placement_service.h"
+#include "ApplicationLayer/items_placement_service.h"
 #include "ApplicationLayer/inventory/inventory_service.h"
 #include "ApplicationLayer/inventory/inventory_item_handler.h"
 #include "ApplicationLayer/equipment/equipment_service.h"
@@ -21,7 +21,7 @@ public:
 	InventoryLoader* inventoryLoader;
 
 	// Кэш загруженных сервисов
-	mutable std::map<QUuid, std::unique_ptr<IItemPlacementService>> loadedServices;
+	mutable std::map<QUuid, IItemPlacementService*> loadedServices;
 };
 
 InventoriesService::InventoriesService(
@@ -33,13 +33,19 @@ InventoriesService::InventoriesService(
 	d->inventoryLoader = inventoryLoader;
 }
 
-InventoriesService::~InventoriesService() = default;
+InventoriesService::~InventoriesService() {
+	for (auto& [uid, inv] : d->loadedServices) {
+		inv->deleteLater();
+	}
+
+	d->loadedServices.clear();
+}
 
 IItemPlacementService* InventoriesService::placementService(const QUuid& id, bool loadIfNotExists) const {
 	// Проверяем кэш
 	auto it = d->loadedServices.find(id);
 	if (it != d->loadedServices.end()) {
-		return it->second.get();
+		return it->second;
 	}
 
 	// Если не загружен и нужно загрузить
@@ -58,9 +64,8 @@ IItemPlacementService* InventoriesService::placementService(const QUuid& id, boo
 		}
 		
 		if (service) {
-			auto ptr = service.get();
-			d->loadedServices.emplace(id, std::move(service));
-			return ptr;
+			d->loadedServices.emplace(id, service);
+			return service;
 		}
 	}
 

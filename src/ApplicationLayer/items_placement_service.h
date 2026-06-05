@@ -1,5 +1,6 @@
 #pragma once
 #include <QString>
+#include <QObject>
 #include <QPoint>
 #include <QUuid>
 #include <optional>
@@ -7,8 +8,11 @@
 class ItemMimeData;
 enum class ItemResourceType;
 
-class IItemPlacementService {
+class IItemPlacementService : public QObject {
 public:
+	IItemPlacementService(QObject* parent = nullptr);
+
+	~IItemPlacementService() override;
 
 	/// <summary>
 	/// Сщтефштук Тфьу

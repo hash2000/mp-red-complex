@@ -28,7 +28,7 @@ public:
     /// Загрузить инвентарь/экипировку по идентификатору и вернуть сервис для работы
     /// @param id Идентификатор инвентаря или экипировки
     /// @return Сервис размещения предметов или nullptr если не найдено
-    std::unique_ptr<IItemPlacementService> load(const QUuid& id);
+    IItemPlacementService* load(const QUuid& id);
 
     /// Создать пустой инвентарь в памяти
     /// @param id Идентификатор инвентаря
@@ -36,12 +36,12 @@ public:
     /// @param rows Количество рядов
     /// @param cols Количество колонок
     /// @return Сервис размещения предметов
-    std::unique_ptr<IItemPlacementService> createInventory(const QUuid& id, const QString& name, const ItemContainer& contaiter);
+    IItemPlacementService* createInventory(const QUuid& id, const QString& name, const ItemContainer& contaiter);
 
     /// Создать пустую экипировку в памяти
     /// @param id Идентификатор экипировки
     /// @return Сервис размещения предметов
-    std::unique_ptr<IItemPlacementService> createEquipment(const QUuid& id);
+    IItemPlacementService* createEquipment(const QUuid& id);
 
 private:
     class Private;

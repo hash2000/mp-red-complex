@@ -18,7 +18,8 @@ public:
 };
 
 EquipmentService::EquipmentService(ItemsService* itemsService, QObject* parent)
-	: d(std::make_unique<Private>(this)) {
+	: IItemPlacementService(parent)
+	, d(std::make_unique<Private>(this)) {
 	d->itemsService = itemsService;
 }
 
@@ -144,6 +145,7 @@ bool EquipmentService::moveItem(const ItemMimeData& item, int newCol, int newRow
 	Q_UNUSED(checkItemPlace);
 	return false;
 }
+
 void EquipmentService::removeItem(const ItemMimeData& item) {
 	const auto slot = EquipmentItemHandler::convertPositionToSlot(item.x, item.y);
 	const auto it = d->items.find(slot);

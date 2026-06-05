@@ -50,37 +50,39 @@ InventoryLoader::InventoryLoader(
 
 InventoryLoader::~InventoryLoader() = default;
 
-std::unique_ptr<IItemPlacementService> InventoryLoader::load(const QUuid& id) {
+IItemPlacementService* InventoryLoader::load(const QUuid& id) {
     // Сначала пробуем загрузить как инвентарь
     auto inventory = d->inventoryRepository->findById(id);
     if (inventory) {
-        auto inventoryService = std::make_unique<InventoryService>(d->itemsService);
+        auto inventoryService = new InventoryService(d->itemsService);
         if (!inventoryService->load(*inventory)) {
             qWarning() << "InventoryLoader::load: failed to load inventory" << id;
+						delete inventoryService;
             return nullptr;
         }
 
-				d->loadPermissions(inventoryService.get(), id);
+				d->loadPermissions(inventoryService, id);
         return inventoryService;
     }
 
     // Затем пробуем загрузить как экипировку
     auto equipment = d->equipmentRepository->findById(id);
     if (equipment) {
-        auto equipmentService = std::make_unique<EquipmentService>(d->itemsService);
+        auto equipmentService = new EquipmentService(d->itemsService);
         if (!equipmentService->load(*equipment)) {
             qWarning() << "InventoryLoader::load: failed to load equipment" << id;
+						delete equipmentService;
             return nullptr;
         }
 
-				d->loadPermissions(equipmentService.get(), id);
+				d->loadPermissions(equipmentService, id);
         return equipmentService;
     }
 
     return nullptr;
 }
 
-std::unique_ptr<IItemPlacementService> InventoryLoader::createInventory(const QUuid& id, const QString& name, const ItemContainer& container) {
+IItemPlacementService* InventoryLoader::createInventory(const QUuid& id, const QString& name, const ItemContainer& container) {
     // Создаём пустой инвентарь в памяти
     Inventory inventory;
     inventory.id = id;
@@ -89,29 +91,29 @@ std::unique_ptr<IItemPlacementService> InventoryLoader::createInventory(const QU
     inventory.cols = container.cols;
     // items пуст по умолчанию
 
-    auto inventoryService = std::make_unique<InventoryService>(d->itemsService);
+    auto inventoryService = new InventoryService(d->itemsService);
     if (!inventoryService->load(inventory)) {
         qWarning() << "InventoryLoader::createInventory: failed to initialize inventory" << id;
         return nullptr;
     }
 
-		d->loadPermissions(inventoryService.get(), id);
+		d->loadPermissions(inventoryService, id);
     return inventoryService;
 }
 
-std::unique_ptr<IItemPlacementService> InventoryLoader::createEquipment(const QUuid& id) {
+IItemPlacementService* InventoryLoader::createEquipment(const QUuid& id) {
     // Создаём пустую экипировку в памяти
     Equipment equipment;
     equipment.id = id;
     equipment.name = QString("Equipment");
     // items пуст по умолчанию
 
-    auto equipmentService = std::make_unique<EquipmentService>(d->itemsService);
+    auto equipmentService = new EquipmentService(d->itemsService);
     if (!equipmentService->load(equipment)) {
         qWarning() << "InventoryLoader::createEquipment: failed to initialize equipment" << id;
         return nullptr;
     }
 
-		d->loadPermissions(equipmentService.get(), id);
+		d->loadPermissions(equipmentService, id);
     return equipmentService;
 }
