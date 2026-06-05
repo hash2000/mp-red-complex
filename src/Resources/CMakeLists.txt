@@ -18,6 +18,8 @@ target_link_libraries(RedComplexResources
 		Qt6::Gui
 		Qt6::Widgets
 
+		Qt6::Sql
+
 		RedComplexBase
 		RedComplexDataStream
 )

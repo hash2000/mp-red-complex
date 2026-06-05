@@ -5,7 +5,8 @@ find_package(Qt6
 		Core
 		Gui
 		Widgets
-		OpenGLWidgets)
+		OpenGLWidgets
+		Sql)
 
 qt_standard_project_setup()
 
@@ -14,3 +15,5 @@ message(STATUS "Using Qt version: ${Qt6_VERSION}")
 find_package(ZLIB REQUIRED)
 
 find_package(EnTT CONFIG REQUIRED)
+
+find_package(SQLite3 REQUIRED)

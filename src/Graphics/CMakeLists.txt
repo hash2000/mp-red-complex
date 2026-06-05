@@ -23,10 +23,6 @@ target_include_directories(RedComplexGraphics PRIVATE
 		${QT_VERSIONED_PATH}
 )
 
-message(STATUS "Qt6::Gui include paths 2: ${QT_GUI_INC}")
-message(STATUS "Additional include paths 1: ${QT_GUI_INC}/QtGui/${Qt6_VERSION}/QtGui")
-message(STATUS "Additional include paths 2: ${QT_VERSIONED_PATH}")
-
 target_link_libraries(RedComplexGraphics
 	PRIVATE
 		Qt6::Core
