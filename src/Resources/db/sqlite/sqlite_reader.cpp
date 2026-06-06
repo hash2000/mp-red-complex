@@ -39,6 +39,15 @@ bool SQLiteReader::exec(const QString& sql) {
 	return true;
 }
 
+bool SQLiteReader::exec() {
+	d->hasValidRecord = false;
+	if (!d->query.exec()) {
+		qWarning() << "Query execution error:" << d->query.lastError().text();
+		return false;
+	}
+	return true;
+}
+
 bool SQLiteReader::prepare(const QString& sql) {
 	d->hasValidRecord = false;
 	if (!d->query.prepare(sql)) {

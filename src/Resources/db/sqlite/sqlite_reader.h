@@ -17,6 +17,7 @@ public:
 
 	// Выполнение запроса
 	bool exec(const QString& sql);
+	bool exec();
 	bool prepare(const QString& sql);
 
 	// Биндинг параметров

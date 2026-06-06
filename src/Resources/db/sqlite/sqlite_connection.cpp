@@ -1,6 +1,5 @@
 #include "Resources/db/sqlite/sqlite_connection.h"
 #include "Resources/db/sqlite/sqlite_reader.h"
-#include "Resources/db/sqlite/migrations/db_migrations_runner.h"
 #include "Resources/resources.h"
 #include <QUuid>
 #include <QDebug>
@@ -21,7 +20,8 @@ SQLiteConnection::SQLiteConnection(Resources* resources, QObject* parent)
 	: QObject(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->resources = resources;
-	d->connectionName = QString("sqlite_%1").arg(QUuid::createUuid().toString(QUuid::WithoutBraces));
+	d->connectionName = QString("sqlite_%1")
+		.arg(QUuid::createUuid().toString(QUuid::WithoutBraces));
 }
 
 SQLiteConnection::~SQLiteConnection() {
