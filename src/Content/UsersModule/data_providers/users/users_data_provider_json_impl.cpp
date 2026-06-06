@@ -1,5 +1,5 @@
-#include "DataLayer/users/users_data_provider_json_impl.h"
-#include "DataLayer/users/user.h"
+#include "Content/UsersModule/data_providers/users/users_data_provider_json_impl.h"
+#include "Content/UsersModule/models/user/user.h"
 #include "DataStream/format/json/data_reader.h"
 #include "Resources/resources.h"
 #include <QJsonObject>

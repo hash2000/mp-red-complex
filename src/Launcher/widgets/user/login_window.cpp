@@ -1,13 +1,13 @@
 #include "Launcher/widgets/user/login_window.h"
-#include "Launcher/widgets/user/login_widget.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/commands/command_context.h"
 #include "Launcher/controllers.h"
 #include "Launcher/services.h"
 #include "Launcher/widgets/action_panel/action_panel_by_user_builder.h"
 #include "Launcher/controllers/action_panel_controller.h"
-#include "DataLayer/users/user.h"
-#include "ApplicationLayer/users/users_service.h"
+#include "Content/UsersModule/widgets/login_widget.h"
+#include "Content/UsersModule/models/user/user.h"
+#include "Content/UsersModule/services/users_service.h"
 #include <QMessageBox>
 
 class LoginWindow::Private {

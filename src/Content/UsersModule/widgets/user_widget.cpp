@@ -1,9 +1,8 @@
-#include "Launcher/widgets/user/user_widget.h"
-#include "Launcher/widgets/user/character_entry_widget.h"
-#include "ApplicationLayer/users/users_service.h"
+#include "Content/UsersModule/widgets/user_widget.h"
+#include "Content/UsersModule/widgets/character_entry_widget.h"
+#include "Content/UsersModule/services/users_service.h"
+#include "Content/UsersModule/models/user/user.h"
 #include "ApplicationLayer/textures/images_service.h"
-#include "DataLayer/users/user.h"
-#include "DataLayer/images/i_images_data_provider.h"
 #include <QLabel>
 #include <QVBoxLayout>
 #include <QHBoxLayout>

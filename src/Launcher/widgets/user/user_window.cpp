@@ -1,11 +1,11 @@
 #include "Launcher/widgets/user/user_window.h"
-#include "Launcher/widgets/user/user_widget.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/services.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/commands/command_context.h"
-#include "ApplicationLayer/users/users_service.h"
-#include "ApplicationLayer/character/character_item_handler.h"
+#include "Content/UsersModule/widgets/user_widget.h"
+#include "Content/UsersModule/services/users_service.h"
+#include "Content/UsersModule/models/character/character_item_handler.h"
 
 class UserWindow::Private {
 public:

@@ -1,7 +1,10 @@
-#include "ApplicationLayer/users/users_service.h"
-#include "ApplicationLayer/character/character_item_handler.h"
+#include "Content/UsersModule/services/users_service.h"
+#include "Content/UsersModule/models/character/character_item_handler.h"
+#include "Content/UsersModule/data_providers/users/i_users_data_provider.h"
+#include "Content/UsersModule/data_providers/characters/i_character_data_provider.h"
+#include "Content/UsersModule/models/user/user.h"
 #include "ApplicationLayer/textures/images_service.h"
-#include "DataLayer/users/user.h"
+
 #include <QCryptographicHash>
 #include <QUuid>
 

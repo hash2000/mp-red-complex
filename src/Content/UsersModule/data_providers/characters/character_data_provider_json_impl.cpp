@@ -1,5 +1,5 @@
-#include "DataLayer/characters/character_data_provider_json_impl.h"
-#include "DataLayer/characters/character.h"
+#include "Content/UsersModule/data_providers/characters/character_data_provider_json_impl.h"
+#include "Content/UsersModule/models/character/character.h"
 #include "DataStream/format/json/data_reader.h"
 #include "Resources/resources.h"
 

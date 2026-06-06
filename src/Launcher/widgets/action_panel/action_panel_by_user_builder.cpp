@@ -1,6 +1,7 @@
 #include "Launcher/widgets/action_panel/action_panel_by_user_builder.h"
 #include "Launcher/controllers/action_panel_controller.h"
-#include "ApplicationLayer/users/users_service.h"
+#include "Content/UsersModule/services/users_service.h"
+#include <QUuid>
 
 class ActionPanelByUserBuilder::Private {
 public:

@@ -23,11 +23,13 @@ target_link_libraries(Launcher
 
 		RedComplexBase
 		RedComplexBaseWidgets
-		RedComplexCodeEditorWidget
-		RedComplexGraphics
-		RedComplexResources
+		RedComplexGraphics		
 		RedComplexDataLayer
 		RedComplexApplicationLayer
 		RedComplexEngine
+
+		RedComplexCodeEditorWidget
+
+		RedComplexUsersModule
 )
 

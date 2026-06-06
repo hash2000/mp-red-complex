@@ -1,13 +1,15 @@
 #pragma once
-#include "DataLayer/users/i_users_data_provider.h"
+#include "Content/UsersModule/data_providers/users/i_users_data_provider.h"
+#include <QString>
+#include <optional>
 #include <memory>
 
 class Resources;
 
-class UsersDataProviderJsonImpl : public IUsersDataProvider {
+class UsersDataProviderDb : public IUsersDataProvider {
 public:
-	UsersDataProviderJsonImpl(Resources* resources);
-	~UsersDataProviderJsonImpl() override;
+	UsersDataProviderDb(Resources* resources);
+	~UsersDataProviderDb() override;
 
 	std::optional<UserData> loadUser(const QString& loginHash) const override;
 	bool saveUser(const UserData& loginHash) override;

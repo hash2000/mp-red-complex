@@ -12,16 +12,12 @@
 #include "DataLayer/items/item_repository_json_impl.h"
 #include "DataLayer/inventory/inventory_repository_json_impl.h"
 #include "DataLayer/equipment/equipment_repository_json_impl.h"
-#include "DataLayer/users/users_data_provider_json_impl.h"
-#include "DataLayer/characters/character_data_provider_json_impl.h"
 #include "DataLayer/images/images_data_provider_json_impl.h"
 #include "DataLayer/images/i_images_data_provider.h"
 #include "DataLayer/images/tile_groups_data_provider_json_impl.h"
 #include "DataLayer/images/i_tile_groups_data_provider.h"
 #include "DataLayer/maps/i_map_data_provider.h"
 #include "DataLayer/maps/map_data_provider_json_impl.h"
-#include "DataLayer/users/i_users_data_provider.h"
-#include "DataLayer/characters/i_character_data_provider.h"
 #include "DataLayer/shaders/shaders_data_provider_impl.h"
 #include "DataLayer/materials/material_data_provider_json_impl.h"
 
@@ -30,13 +26,19 @@
 #include "ApplicationLayer/inventory_loader.h"
 #include "ApplicationLayer/inventories_save_manager.h"
 #include "ApplicationLayer/items_save_manager.h"
-#include "ApplicationLayer/users/users_service.h"
 #include "ApplicationLayer/textures/images_service.h"
 #include "ApplicationLayer/maps/map_service.h"
 #include "ApplicationLayer/textures/textures_service.h"
 #include "ApplicationLayer/textures/tiles_selector_service.h"
 #include "ApplicationLayer/shaders/shaders_service.h"
 #include "ApplicationLayer/materials/materials_service.h"
+
+// UsersModule
+#include "Content/UsersModule/services/users_service.h"
+#include "Content/UsersModule/data_providers/users/users_data_provider_json_impl.h"
+#include "Content/UsersModule/data_providers/characters/character_data_provider_json_impl.h"
+#include "Content/UsersModule/data_providers/users/users_data_provider_db.h"
+
 
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
 
@@ -95,7 +97,7 @@ public:
 		, imagesDataProvider([this] {	return std::make_unique<ImagesDataProviderJsonImpl>(resources);	})
 		, tileGroupsDataProvider([this] {	return std::make_unique<TileGroupsDataProviderJsonImpl>(resources);	})
 		, mapDataProvider([this] {	return std::make_unique<MapDataProviderJsonImpl>(resources);	})
-		, usersDataProvider([this] {	return std::make_unique<UsersDataProviderJsonImpl>(resources);	})
+		, usersDataProvider([this] {	return std::make_unique<UsersDataProviderDb>(resources);	})
 		, characterDataProvider([this] {	return std::make_unique<CharacterDataProviderJsonImpl>(resources);	})
 		, shadersDataProvider([this] { return std::make_unique<ShadersDataProviderLocalImpl>(resources); })
 		, materialsDataProvider([this] { return std::make_unique<MaterialsDataProviderJsonImpl>(resources); })

@@ -1,5 +1,5 @@
 #pragma once
-#include "DataLayer/characters/i_character_data_provider.h"
+#include "Content/UsersModule/data_providers/characters/i_character_data_provider.h"
 #include <memory>
 
 class Resources;

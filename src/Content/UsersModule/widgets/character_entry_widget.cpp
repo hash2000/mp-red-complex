@@ -1,6 +1,6 @@
-#include "Launcher/widgets/user/character_entry_widget.h"
-#include "ApplicationLayer/users/users_service.h"
-#include "ApplicationLayer/character/character_item_handler.h"
+#include "Content/UsersModule/widgets/character_entry_widget.h"
+#include "Content/UsersModule/services/users_service.h"
+#include "Content/UsersModule/models/character/character_item_handler.h"
 #include "ApplicationLayer/textures/images_service.h"
 #include "DataLayer/images/i_images_data_provider.h"
 #include <QLabel>

@@ -1,6 +1,6 @@
-#include "Launcher/widgets/user/login_widget.h"
-#include "Launcher/widgets/user/register_widget.h"
-#include "ApplicationLayer/users/users_service.h"
+#include "Content/UsersModule/widgets/login_widget.h"
+#include "Content/UsersModule/widgets/register_widget.h"
+#include "Content/UsersModule/services/users_service.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>

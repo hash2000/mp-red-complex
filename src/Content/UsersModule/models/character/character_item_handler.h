@@ -1,5 +1,5 @@
 #pragma once
-#include "DataLayer/characters/character.h"
+#include "Content/UsersModule/models/character/character.h"
 
 class CharacterItemHandler : public Character {
 public:

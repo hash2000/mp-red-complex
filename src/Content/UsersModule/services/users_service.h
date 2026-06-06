@@ -1,6 +1,4 @@
 #pragma once
-#include "DataLayer/users/i_users_data_provider.h"
-#include "DataLayer/characters/i_character_data_provider.h"
 #include <QObject>
 #include <memory>
 #include <optional>
@@ -9,6 +7,9 @@
 
 class CharacterItemHandler;
 class ImagesService;
+class IUsersDataProvider;
+class ICharacterDataProvider;
+class UserData;
 
 /// Сервис управления пользователями
 class UsersService : public QObject {
