@@ -1,7 +1,7 @@
 #include "DataLayer/equipment/equipment_data_writer_json_impl.h"
 #include "DataLayer/equipment/equipment.h"
 #include "DataLayer/equipment/equipment_slot.h"
-#include "Resources/resources.h"
+#include "Libs/Resources/resources.h"
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>

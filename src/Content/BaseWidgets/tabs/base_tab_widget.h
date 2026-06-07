@@ -1,5 +1,5 @@
 #pragma once
-#include "Resources/resources.h"
+#include "Libs/Resources/resources.h"
 #include <QWidget>
 #include <QHBoxLayout>
 #include <memory>

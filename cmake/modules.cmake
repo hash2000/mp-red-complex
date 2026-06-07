@@ -16,4 +16,3 @@ find_package(ZLIB REQUIRED)
 
 find_package(EnTT CONFIG REQUIRED)
 
-find_package(SQLite3 REQUIRED)

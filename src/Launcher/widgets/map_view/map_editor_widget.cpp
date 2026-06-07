@@ -6,10 +6,10 @@
 #include "ApplicationLayer/textures/tiles_selector_service.h"
 #include "ApplicationLayer/textures/textures_service.h"
 
-#include "Graphics/textures/texture_atlas.h"
-#include "Graphics/tiles/tile_renderer.h"
-#include "Graphics/tiles/chunk.h"
-#include "Graphics/textures/uploaded_texture.h"
+#include "Libs/Graphics/textures/texture_atlas.h"
+#include "Libs/Graphics/tiles/tile_renderer.h"
+#include "Libs/Graphics/tiles/chunk.h"
+#include "Libs/Graphics/textures/uploaded_texture.h"
 
 #include <QToolBar>
 #include <QComboBox>

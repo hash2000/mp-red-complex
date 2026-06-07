@@ -1,7 +1,7 @@
 #include "DataLayer/equipment/equipment_data_provider_json_impl.h"
 #include "DataLayer/equipment/equipment.h"
-#include "DataStream/format/json/data_reader.h"
-#include "Resources/resources.h"
+#include "Libs/DataStream/format/json/data_reader.h"
+#include "Libs/Resources/resources.h"
 #include <QJsonArray>
 
 class EquipmentDataProviderJsonImpl::Private {

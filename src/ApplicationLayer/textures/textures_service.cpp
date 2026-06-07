@@ -1,6 +1,6 @@
 #include "ApplicationLayer/textures/textures_service.h"
 #include "ApplicationLayer/textures/images_service.h"
-#include "Graphics/textures/uploaded_texture.h"
+#include "Libs/Graphics/textures/uploaded_texture.h"
 #include <QHash>
 #include <QDebug>
 

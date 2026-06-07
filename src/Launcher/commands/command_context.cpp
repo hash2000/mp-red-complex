@@ -3,7 +3,7 @@
 #include "Launcher/controllers/windows_controller.h"
 #include "Launcher/services.h"
 #include "Launcher/controllers.h"
-#include "Resources/resources.h"
+#include "Libs/Resources/resources.h"
 
 #include <memory>
 #include <functional>

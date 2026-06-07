@@ -1,6 +1,6 @@
 #include "DataLayer/items/items_data_writer_json_impl.h"
 #include "DataLayer/items/item.h"
-#include "Resources/resources.h"
+#include "Libs/Resources/resources.h"
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QFile>

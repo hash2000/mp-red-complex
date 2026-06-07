@@ -1,5 +1,5 @@
 #pragma once
-#include "Graphics/widgets/base_opengl_widget.h"
+#include "Libs/Graphics/widgets/base_opengl_widget.h"
 #include <qtmetamacros.h>
 
 class MaterialWidget : public BaseOpenGLWidget {

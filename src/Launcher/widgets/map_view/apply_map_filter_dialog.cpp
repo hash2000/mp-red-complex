@@ -1,5 +1,5 @@
 #include "Launcher/widgets/map_view/apply_map_filter_dialog.h"
-#include "Graphics/textures/uploaded_texture.h"
+#include "Libs/Graphics/textures/uploaded_texture.h"
 #include <QComboBox>
 #include <QCheckBox>
 #include <QFormLayout>

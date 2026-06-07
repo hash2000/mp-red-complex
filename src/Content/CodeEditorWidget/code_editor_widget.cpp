@@ -2,7 +2,7 @@
 #include "Content/CodeEditorWidget/highlights/highlighter.h"
 #include "Content/CodeEditorWidget/highlights/plugins/highlighter_plugin.h"
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
-#include "DataStream/file_reader.h"
+#include "Libs/DataStream/file_reader.h"
 
 #include <QThread>
 #include <QFileInfo>

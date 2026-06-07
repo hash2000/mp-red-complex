@@ -1,6 +1,6 @@
 #include "DataLayer/inventory/inventory_data_writer_json_impl.h"
 #include "DataLayer/inventory/inventory_item.h"
-#include "Resources/resources.h"
+#include "Libs/Resources/resources.h"
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>

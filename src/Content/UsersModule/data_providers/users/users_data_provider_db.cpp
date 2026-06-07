@@ -1,6 +1,6 @@
 #include "Content/UsersModule/data_providers/users/users_data_provider_db.h"
 #include "Content/UsersModule/models/user/user.h"
-#include "Resources/resources.h"
+#include "Libs/Resources/resources.h"
 #include <QUuid>
 
 class UsersDataProviderDb::Private {

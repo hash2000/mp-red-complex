@@ -5,8 +5,8 @@
 #include "Launcher/commands/cmd/help_cmd.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/mdi_child_window.h"
-#include "Resources/resources.h"
-#include "Resources/variables/variables_context.h"
+#include "Libs/Resources/resources.h"
+#include "Libs/Resources/variables/variables_context.h"
 #include "Launcher/controllers.h"
 
 #include <QRegularExpression>

@@ -8,6 +8,7 @@ set(Launcher-Sources
 set(CMAKE_AUTOMOC ON)
 
 file(GLOB_RECURSE SRCS ${Launcher-Sources}/*.cpp)
+
 add_executable(Launcher
 	${SRCS}
 )

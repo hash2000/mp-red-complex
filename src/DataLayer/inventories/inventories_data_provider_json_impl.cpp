@@ -1,5 +1,5 @@
 #include "DataLayer/inventories/inventories_data_provider_json_impl.h"
-#include "Resources/resources.h"
+#include "Libs/Resources/resources.h"
 #include <QDir>
 
 class InventoriesDataProviderJsonImpl::Private {

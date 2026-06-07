@@ -2,10 +2,10 @@
 
 #include "ApplicationLayer/shaders/shaders_service.h"
 
-#include "Graphics/camera.h"
-#include "Graphics/tiles/tile_renderer.h"
-#include "Graphics/textures/texture_atlas.h"
-#include "Graphics/shaders/shader_program.h"
+#include "Libs/Graphics/camera.h"
+#include "Libs/Graphics/tiles/tile_renderer.h"
+#include "Libs/Graphics/textures/texture_atlas.h"
+#include "Libs/Graphics/shaders/shader_program.h"
 
 #include <QOpenGLFunctions_4_5_Core>
 #include <QWheelEvent>

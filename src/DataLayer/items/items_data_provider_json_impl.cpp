@@ -1,6 +1,6 @@
 #include "DataLayer/items/items_data_provider_json_impl.h"
-#include "DataStream/format/json/data_reader.h"
-#include "Resources/resources.h"
+#include "Libs/DataStream/format/json/data_reader.h"
+#include "Libs/Resources/resources.h"
 #include <QJsonObject>
 #include <QJsonArray>
 

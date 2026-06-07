@@ -1,6 +1,6 @@
 #include "DataLayer/shaders/shaders_data_provider_impl.h"
-#include "DataStream/format/text/data_reader.h"
-#include "Resources/resources.h"
+#include "Libs/DataStream/format/text/data_reader.h"
+#include "Libs/Resources/resources.h"
 
 class ShadersDataProviderLocalImpl::Private {
 public:

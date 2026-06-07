@@ -11,7 +11,7 @@
 #include "Content/UsersModule/services/users_service.h"
 #include "Content/UsersModule/models/user/user.h"
 #include "Content/BaseWidgets/mdi_area.h"
-#include "Resources/resources.h"
+#include "Libs/Resources/resources.h"
 
 #include <QSplitter>
 #include <QTabWidget>

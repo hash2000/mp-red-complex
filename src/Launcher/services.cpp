@@ -1,7 +1,7 @@
 #include "Launcher/services.h"
 #include "Launcher/services/time_service/time_service.h"
 #include "Launcher/services/world_service/world_service.h"
-#include "Resources/resources.h"
+#include "Libs/Resources/resources.h"
 #include "DataLayer/inventory/inventory_data_provider_json_impl.h"
 #include "DataLayer/inventory/inventory_data_writer_json_impl.h"
 #include "DataLayer/items/items_data_provider_json_impl.h"

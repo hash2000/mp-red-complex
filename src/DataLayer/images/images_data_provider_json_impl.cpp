@@ -1,6 +1,6 @@
 #include "DataLayer/images/images_data_provider_json_impl.h"
-#include "DataStream/format/pixmap/data_reader.h"
-#include "Resources/resources.h"
+#include "Libs/DataStream/format/pixmap/data_reader.h"
+#include "Libs/Resources/resources.h"
 #include <QPainter>
 #include <array>
 

@@ -1,6 +1,6 @@
 #pragma once
 #include "ApplicationLayer/items_placement_service.h"
-#include "Base/container_view.h"
+#include "Libs/Base/container_view.h"
 #include <QObject>
 #include <QUuid>
 #include <memory>
