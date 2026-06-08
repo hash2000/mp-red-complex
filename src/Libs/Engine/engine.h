@@ -17,14 +17,11 @@ public:
 	virtual ~Engine() = default;
 
 	void configure(const Config* config) override;
-
 	void setup(Config* config, Resources* resources);
-
 	void setupMainFrame(std::unique_ptr<MainFrame> &&mainFrame);
 
 private:
 	bool nativeEventFilter(const QByteArray &eventType, void *message, qintptr *result) override;
-
 	void registerTypes();
 
 private:

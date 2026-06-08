@@ -34,6 +34,7 @@
 #include "ApplicationLayer/materials/materials_service.h"
 
 // DatabasesService
+#include "Content/DatabaseModule/data_providers/databases_settings_data_provider_json_impl.h"
 #include "Content/DatabaseModule/services/databases_service.h"
 
 
@@ -43,7 +44,7 @@
 #include "Content/UsersModule/data_providers/characters/character_data_provider_json_impl.h"
 #include "Content/UsersModule/data_providers/users/users_data_provider_db.h"
 
-
+// HighlightingPluginManager
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
 
 #include <mutex>
@@ -91,6 +92,7 @@ public:
 		})
 
 		// Data Providers
+		, databaseSettingsDataProvider([this] { return std::make_unique<DatabaseSettingsDataProviderJsonImpl>(resources); })
 		, inventoryDataProvider([this] { return std::make_unique<InventoryDataProviderJsonImpl>(resources); })
 		, inventoryDataWriter([this] { return std::make_unique<InventoryDataWriterJsonImpl>(resources); })
 		, inventoriesDataProvider([this] { return std::make_unique<InventoriesDataProviderJsonImpl>(resources); })
@@ -136,7 +138,9 @@ public:
 			})
 
 		// Services
-		, databasesService([] { return std::make_unique<DatabasesService>(); })
+		, databasesService([this] {
+				return std::make_unique<DatabasesService>(databaseSettingsDataProvider.get());
+			})
 		, timeService([] { return std::make_unique<TimeService>(); })
 		, worldService([] { return std::make_unique<WorldService>(); })
 		, itemsService([this] {
@@ -195,6 +199,7 @@ public:
 	LazyPtr<WorldService> worldService;
 
 	// Data Providers (остаются для обратной совместимости и writer'ов)
+	LazyPtr<DatabaseSettingsDataProviderJsonImpl> databaseSettingsDataProvider;
 	LazyPtr<IInventoryDataProvider> inventoryDataProvider;
 	LazyPtr<IInventoryDataWriter> inventoryDataWriter;
 	LazyPtr<IItemsDataProvider> itemsDataProvider;
@@ -239,10 +244,8 @@ Services::Services(Resources* resources)
 	d->resources = resources;
 
 	// Подключаем сохранение к сигналу save()
-	connect(this, &Services::save,
-		d->inventoriesSaveManager.get(), &InventoriesSaveManager::saveAll);
-	connect(this, &Services::save,
-		d->itemsSaveManager.get(), &ItemsSaveManager::saveAll);
+	connect(this, &Services::save, d->inventoriesSaveManager.get(), &InventoriesSaveManager::saveAll);
+	connect(this, &Services::save, d->itemsSaveManager.get(), &ItemsSaveManager::saveAll);
 }
 
 Services::~Services() = default;
