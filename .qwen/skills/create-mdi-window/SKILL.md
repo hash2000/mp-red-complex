@@ -94,6 +94,8 @@ YourService::YourService(IYourDataProvider* dataProvider, QObject* parent)
     , d(std::make_unique<Private>(this)) {
     d->dataProvider = dataProvider;
 }
+
+YourService::~YourService() = default; // or implementation
 ```
 
 **Important: Lazy Dependency Injection with ThreadSafeLazyPtr**

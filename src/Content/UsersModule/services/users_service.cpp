@@ -10,11 +10,9 @@
 
 class UsersService::Private {
 public:
-	Private(UsersService* parent)
-		: q(parent) {
-	}
-
+	Private(UsersService* parent) : q(parent) { }
 	UsersService* q;
+
 	IUsersDataProvider* usersDataProvider = nullptr;
 	ICharacterDataProvider* characterDataProvider = nullptr;
 	ImagesService* ImagesService = nullptr;

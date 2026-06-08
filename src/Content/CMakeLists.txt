@@ -1,3 +1,4 @@
 add_subdirectory(BaseWidgets)
 add_subdirectory(CodeEditorWidget)
 add_subdirectory(UsersModule)
+add_subdirectory(DatabaseModule)

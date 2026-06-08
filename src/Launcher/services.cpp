@@ -33,6 +33,10 @@
 #include "ApplicationLayer/shaders/shaders_service.h"
 #include "ApplicationLayer/materials/materials_service.h"
 
+// DatabasesService
+#include "Content/DatabaseModule/services/databases_service.h"
+
+
 // UsersModule
 #include "Content/UsersModule/services/users_service.h"
 #include "Content/UsersModule/data_providers/users/users_data_provider_json_impl.h"
@@ -132,6 +136,7 @@ public:
 			})
 
 		// Services
+		, databasesService([] { return std::make_unique<DatabasesService>(); })
 		, timeService([] { return std::make_unique<TimeService>(); })
 		, worldService([] { return std::make_unique<WorldService>(); })
 		, itemsService([this] {
@@ -215,6 +220,7 @@ public:
 	LazyPtr<ItemsSaveManager> itemsSaveManager;
 
 	// Services
+	LazyPtr<DatabasesService> databasesService;
 	LazyPtr<ItemsService> itemsService;
 	LazyPtr<InventoriesService> inventoriesService;
 	LazyPtr<InventoryLoader> inventoryLoader;
@@ -252,6 +258,10 @@ void Services::postLoadEvent() {
 
 void Services::postSaveEvent() {
 	emit save();
+}
+
+DatabasesService* Services::databasesService() const {
+	return d->databasesService.get();
 }
 
 TimeService* Services::timeService() const {
