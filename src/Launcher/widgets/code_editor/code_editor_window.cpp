@@ -152,7 +152,6 @@ bool CodeEditorWindow::Private::handleCreate(const QStringList& args, CommandCon
 
 void CodeEditorWindow::Private::changeTargetPath(const QString& path) {
 	if (path.isEmpty()) {
-		context->printError(QString("Usage: [required window-create parameters] %1").arg(q->help()));
 		return;
 	}
 
