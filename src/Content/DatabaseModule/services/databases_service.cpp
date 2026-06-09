@@ -2,6 +2,7 @@
 #include "Content/DatabaseModule/data_providers/i_databases_settings_data_provider.h"
 #include "Libs/Resources/db/sqlite/sqlite_connection.h"
 #include "Libs/Resources/db/sqlite/sqlite_wal_manager.h"
+#include "Libs/Resources/db/sqlite/migration_manager.h"
 
 #include <QApplication>
 #include <QDir>
@@ -20,6 +21,7 @@ public:
 	};
 
 	std::map<QString, DatabaseEntry> entries;
+	std::map<QString, std::unique_ptr<MigrationManager>> migrators;
 	Resources* resources;
 	IDatabaseSettingsDataProvider* settingsDataProvider;
 };
@@ -62,6 +64,18 @@ void DatabasesService::shutdown() {
 	qInfo() << "All databases shut down";
 }
 
+MigrationManager* DatabasesService::migrationManager(const QString& name) {
+	const auto identName = name.toLower();
+	auto it = d->migrators.find(identName);
+	if (it != d->migrators.end()) {
+		return it->second.get();
+	}
+
+	auto migrator = std::make_unique<MigrationManager>();
+	const auto& inserted = d->migrators.emplace(identName, std::move(migrator));
+	return inserted.first->second.get();
+}
+
 SQLiteConnection* DatabasesService::connection(const QString& name) {
 	const auto identName = name.toLower();
 	const auto& db = d->entries.find(identName);
@@ -89,5 +103,17 @@ SQLiteConnection* DatabasesService::connection(const QString& name) {
 	entry.initialized = true;
 
 	const auto& inserted = d->entries.emplace(identName, std::move(entry));
-	return inserted.first->second.connection.get();
+	auto conn = inserted.first->second.connection.get();
+
+	const auto& migrator = d->migrators.find(identName);
+	if (migrator != d->migrators.end()) {
+		auto manager = migrator->second.get();
+		if (manager->needsMigration(*conn)) {
+			if (!manager->migrate(*conn)) {
+				qCritical() << "Database migration error:" << name;
+			}
+		}
+	}
+
+	return conn;
 }

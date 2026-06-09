@@ -64,8 +64,13 @@ bool MigrationManager::migrate(SQLiteConnection& db, int targetVersion) {
 
 	// Применяем миграции по порядку
 	for (auto& [version, migration] : d->migrations) {
-		if (version <= current) continue;
-		if (version > target) break;
+		if (version <= current) {
+			continue;
+		}
+
+		if (version > target) {
+			break;
+		}
 
 		qInfo() << "Applying migration" << version << ":" << migration->description();
 		emit migrationStarted(version, migration->description());
@@ -102,7 +107,9 @@ bool MigrationManager::rollback(SQLiteConnection& db, int steps) {
 
 	int rolled = 0;
 	for (const auto& record : applied) {
-		if (rolled >= steps) break;
+		if (rolled >= steps) {
+			break;
+		}
 
 		auto it = d->migrations.find(record.version);
 		if (it == d->migrations.end()) {

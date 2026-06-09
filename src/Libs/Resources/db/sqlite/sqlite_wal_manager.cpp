@@ -8,7 +8,7 @@ public:
 	Private(SQLiteWalManager* parent)
 		: q(parent) {}
 	SQLiteWalManager* q;
-	SQLiteConnection* conn;
+	SQLiteConnection* conn = nullptr;
 	QTimer timer;
 	int maxSizeMB = 10;  // Максимальный размер WAL в мегабайтах
 };
@@ -16,7 +16,7 @@ public:
 SQLiteWalManager::SQLiteWalManager(SQLiteConnection* conn, QObject* parent)
 	: QObject(parent)
 	, d(std::make_unique<Private>(this)) {
-
+	d->conn = conn;
 	connect(&d->timer, &QTimer::timeout, this, &SQLiteWalManager::onCheckpointTimer);
 }
 
@@ -35,6 +35,10 @@ void SQLiteWalManager::stopAutoCheckpoint() {
 }
 
 bool SQLiteWalManager::checkpoint(CheckpointMode mode) {
+	if (!d->conn) {
+		return false;
+	}
+
 	QString sql;
 	switch (mode) {
 	case PASSIVE:  sql = "PRAGMA wal_checkpoint(PASSIVE)";  break;
@@ -47,6 +51,10 @@ bool SQLiteWalManager::checkpoint(CheckpointMode mode) {
 }
 
 void SQLiteWalManager::onCheckpointTimer() {
+	if (!d->conn) {
+		return;
+	}
+
 	// Проверяем размер WAL файла
 	QString dbPath = d->conn->databaseName();
 	QFileInfo walFile(dbPath + "-wal");  // WAL файл: myapp.db-wal
