@@ -4,14 +4,8 @@ project(TestItemsService LANGUAGES CXX)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Test)
 
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-set(CMAKE_AUTOUIC ON)
-
 add_executable(TestItemsService
     test_items_service.cpp
-    
-    
 )
 
 target_include_directories(TestItemsService PRIVATE

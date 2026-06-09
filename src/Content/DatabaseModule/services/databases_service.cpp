@@ -4,6 +4,7 @@
 #include "Libs/Resources/db/sqlite/sqlite_wal_manager.h"
 
 #include <QApplication>
+#include <QDir>
 
 #include <map>
 
@@ -19,12 +20,14 @@ public:
 	};
 
 	std::map<QString, DatabaseEntry> entries;
+	Resources* resources;
 	IDatabaseSettingsDataProvider* settingsDataProvider;
 };
 
-DatabasesService::DatabasesService(IDatabaseSettingsDataProvider* settingsDataProvider, QObject* parent)
+DatabasesService::DatabasesService(Resources* resources, IDatabaseSettingsDataProvider* settingsDataProvider, QObject* parent)
 	: QObject(parent)
 	, d(std::make_unique<Private>(this)) {
+	d->resources = resources;
 	d->settingsDataProvider = settingsDataProvider;
 	// shutdown application
 	connect(qApp, &QApplication::aboutToQuit, this, &DatabasesService::onApplicationShutdown);
@@ -73,6 +76,7 @@ SQLiteConnection* DatabasesService::connection(const QString& name) {
 	}
 
 	Private::DatabaseEntry entry;
+	entry.connection = std::make_unique<SQLiteConnection>(d->resources);
 	if (!entry.connection->open(identName)) {
 		qCritical() << "Failed to open database:" << name;
 		return nullptr;

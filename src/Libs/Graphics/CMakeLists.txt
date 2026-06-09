@@ -4,10 +4,6 @@ set(Graphics-Sources
 	${RedComplex_SOURCE_DIR}/src/Libs/Graphics
 )
 
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-set(CMAKE_AUTOUIC ON)
-
 file(GLOB_RECURSE SRCS ${Graphics-Sources}/*.cpp)
 
 add_library(RedComplexGraphics ${SRCS})

@@ -4,10 +4,7 @@ set(Engine-Sources
 	${RedComplex_SOURCE_DIR}/src/Libs/Engine
 )
 
-set(CMAKE_AUTOMOC ON)
-
 file(GLOB_RECURSE SRCS ${Engine-Sources}/*.cpp)
-
 
 add_library(RedComplexEngine
 	${SRCS}

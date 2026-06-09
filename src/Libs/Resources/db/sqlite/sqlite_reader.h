@@ -1,6 +1,4 @@
 #pragma once
-#include <QSqlQuery>
-#include <QSqlRecord>
 #include <QVariant>
 #include <QString>
 #include <QVariantMap>
@@ -21,56 +19,39 @@ public:
 	bool prepare(const QString& sql);
 
 	// Биндинг параметров
-	void bindValue(const QString& placeholder, const QVariant& value, QSql::ParamType type = QSql::In);
-	void bindValue(int pos, const QVariant& value, QSql::ParamType type = QSql::In);
-	void addBindValue(const QVariant& value, QSql::ParamType type = QSql::In);
-
-	// Вспомогательный метод для биндинга map (Qt 6 совместимый)
+	void bindValue(int index, const QVariant& value);
+	void bindValue(const QString& name, const QVariant& value);
 	void bindValues(const QVariantMap& values);
-
-	// Именованные параметры с префиксом (удобный синтаксис)
 	void bindValues(const std::initializer_list<std::pair<QString, QVariant>>& values);
-
-	// Позиционные параметры из списка
 	void bindValuesList(const QVariantList& values);
+	void clearBindings();
 
 	// Навигация
 	bool next();
-	bool seek(int index, bool relative = false);
 	bool first();
 	bool last();
 	bool previous();
 
 	// Получение данных
-	QSqlRecord current() const;
-	std::optional<QSqlRecord> optionalCurrent() const;
-
-	// Удобные методы для получения значений
 	QVariant value(int column) const;
 	QVariant value(const QString& name) const;
 
 	template<typename T>
 	std::optional<T> getValue(int column) const {
-		if (!isValid() || isNull(column)) {
+		QVariant val = value(column);
+		if (val.isNull() || !val.canConvert<T>()) {
 			return std::nullopt;
 		}
-		QVariant val = value(column);
-		if (val.canConvert<T>()) {
-			return val.value<T>();
-		}
-		return std::nullopt;
+		return val.value<T>();
 	}
 
 	template<typename T>
 	std::optional<T> getValue(const QString& name) const {
-		if (!isValid() || isNull(name)) {
+		QVariant val = value(name);
+		if (val.isNull() || !val.canConvert<T>()) {
 			return std::nullopt;
 		}
-		QVariant val = value(name);
-		if (val.canConvert<T>()) {
-			return val.value<T>();
-		}
-		return std::nullopt;
+		return val.value<T>();
 	}
 
 	// Проверка на NULL
@@ -85,17 +66,10 @@ public:
 	// Состояние
 	bool isValid() const;
 	bool isActive() const;
-	bool isSelect() const;
-	int size() const;
-	int at() const;
 
 	// Сброс
+	void reset();
 	void finish();
-	bool reset();
-
-	// Получить сырой QSqlQuery (если нужно)
-	QSqlQuery& query();
-	const QSqlQuery& query() const;
 
 private:
 	class Private;

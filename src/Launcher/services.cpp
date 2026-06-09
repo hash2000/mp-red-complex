@@ -103,7 +103,7 @@ public:
 		, imagesDataProvider([this] {	return std::make_unique<ImagesDataProviderJsonImpl>(resources);	})
 		, tileGroupsDataProvider([this] {	return std::make_unique<TileGroupsDataProviderJsonImpl>(resources);	})
 		, mapDataProvider([this] {	return std::make_unique<MapDataProviderJsonImpl>(resources);	})
-		, usersDataProvider([this] {	return std::make_unique<UsersDataProviderDb>(resources);	})
+		, usersDataProvider([this] {	return std::make_unique<UsersDataProviderDb>(databasesService.get());	})
 		, characterDataProvider([this] {	return std::make_unique<CharacterDataProviderJsonImpl>(resources);	})
 		, shadersDataProvider([this] { return std::make_unique<ShadersDataProviderLocalImpl>(resources); })
 		, materialsDataProvider([this] { return std::make_unique<MaterialsDataProviderJsonImpl>(resources); })
@@ -139,7 +139,9 @@ public:
 
 		// Services
 		, databasesService([this] {
-				return std::make_unique<DatabasesService>(databaseSettingsDataProvider.get());
+				return std::make_unique<DatabasesService>(
+					resources,
+					databaseSettingsDataProvider.get());
 			})
 		, timeService([] { return std::make_unique<TimeService>(); })
 		, worldService([] { return std::make_unique<WorldService>(); })

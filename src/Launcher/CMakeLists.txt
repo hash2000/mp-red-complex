@@ -4,9 +4,6 @@ set(Launcher-Sources
 	${RedComplex_SOURCE_DIR}/src/Launcher
 )
 
-# Включаем MOC для Qt-классов с Q_OBJECT
-set(CMAKE_AUTOMOC ON)
-
 file(GLOB_RECURSE SRCS ${Launcher-Sources}/*.cpp)
 
 add_executable(Launcher

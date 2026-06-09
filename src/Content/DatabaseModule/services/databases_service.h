@@ -10,7 +10,7 @@ class IDatabaseSettingsDataProvider;
 class DatabasesService : public QObject {
 	Q_OBJECT
 public:
-	DatabasesService(IDatabaseSettingsDataProvider* settingsDataProvider, QObject* parent = nullptr);
+	DatabasesService(Resources* resources, IDatabaseSettingsDataProvider* settingsDataProvider, QObject* parent = nullptr);
 	~DatabasesService();
 
 	SQLiteConnection* connection(const QString& name);

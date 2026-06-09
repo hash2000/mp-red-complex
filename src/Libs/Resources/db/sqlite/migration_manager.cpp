@@ -157,11 +157,10 @@ QStringList MigrationManager::migrationHistory(SQLiteConnection& db) const {
 	);
 
 	while (reader && reader->next()) {
-		auto record = reader->current();
 		history << QString("v%1: %2 (applied at %3)")
-			.arg(record.value("version").toInt())
-			.arg(record.value("description").toString())
-			.arg(record.value("applied_at").toString());
+			.arg(reader->value("version").toInt())
+			.arg(reader->value("description").toString())
+			.arg(reader->value("applied_at").toString());
 	}
 
 	return history;
@@ -215,12 +214,11 @@ QList<MigrationManager::MigrationRecord> MigrationManager::getAppliedMigrations(
 	);
 
 	while (reader && reader->next()) {
-		auto record = reader->current();
 		MigrationRecord mr;
-		mr.version = record.value("version").toInt();
-		mr.description = record.value("description").toString();
+		mr.version = reader->value("version").toInt();
+		mr.description = reader->value("description").toString();
 		mr.appliedAt = QDateTime::fromString(
-			record.value("applied_at").toString(),
+			reader->value("applied_at").toString(),
 			Qt::ISODate
 		);
 		records.append(mr);

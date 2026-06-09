@@ -30,7 +30,7 @@ DatabaseSettingsDataProviderJsonImpl::DatabaseSettingsDataProviderJsonImpl(Resou
 DatabaseSettingsDataProviderJsonImpl::~DatabaseSettingsDataProviderJsonImpl() = default;
 
 bool DatabaseSettingsDataProviderJsonImpl::Private::loadFromFile() const {
-	const QString path = "assets/databases.json";
+	const QString path = "databases.json";
 	QWriteLocker locker(&cacheLock);
 	QFileInfo fileInfo(path);
 

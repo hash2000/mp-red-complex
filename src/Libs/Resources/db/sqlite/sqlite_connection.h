@@ -1,16 +1,12 @@
 #pragma once
 #include <QObject>
 #include <QString>
-#include <QSqlDatabase>
-#include <QSqlQuery>
-#include <QSqlRecord>
-#include <QSqlError>
-#include <QSqlField>
 #include <QVariant>
 #include <memory>
 
 class Resources;
 class SQLiteReader;
+typedef struct sqlite3 sqlite3;
 
 class SQLiteConnection : public QObject {
 	Q_OBJECT
@@ -42,8 +38,7 @@ public:
 	// Настройки
 	void setPragma(const QString& pragma, const QString& value);
 
-private:
-	QSqlDatabase dataBase();
+	sqlite3* handle() const;
 
 private:
 	friend class SQLiteReader;

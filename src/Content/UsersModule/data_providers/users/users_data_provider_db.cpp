@@ -1,6 +1,7 @@
 #include "Content/UsersModule/data_providers/users/users_data_provider_db.h"
+#include "Content/UsersModule/services/users_service.h"
+#include "Content/DatabaseModule/services/databases_service.h"
 #include "Content/UsersModule/models/user/user.h"
-#include "Libs/Resources/resources.h"
 #include <QUuid>
 
 class UsersDataProviderDb::Private {
@@ -9,17 +10,23 @@ public:
 		: q(parent) {}
 
 	UsersDataProviderDb* q;
-	Resources* resources;
+	DatabasesService* databasesService;
 };
 
-UsersDataProviderDb::UsersDataProviderDb(Resources* resources)
+UsersDataProviderDb::UsersDataProviderDb(DatabasesService* databasesService)
 	: d(std::make_unique<Private>(this)) {
-	d->resources = resources;
+	d->databasesService = databasesService;
 }
 
 UsersDataProviderDb::~UsersDataProviderDb() = default;
 
 std::optional<UserData> UsersDataProviderDb::loadUser(const QString& loginHash) const {
+	auto connection = d->databasesService->connection("users");
+	if (!connection) {
+		return std::nullopt;
+	}
+
+
 	return std::nullopt;
 }
 

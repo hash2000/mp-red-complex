@@ -4,11 +4,11 @@
 #include <optional>
 #include <memory>
 
-class Resources;
+class DatabasesService;
 
 class UsersDataProviderDb : public IUsersDataProvider {
 public:
-	UsersDataProviderDb(Resources* resources);
+	UsersDataProviderDb(DatabasesService* databasesService);
 	~UsersDataProviderDb() override;
 
 	std::optional<UserData> loadUser(const QString& loginHash) const override;
