@@ -26,7 +26,9 @@ SQLiteReader::SQLiteReader(SQLiteConnection& connection)
 	: d(std::make_unique<Private>(connection, this)) {
 }
 
-SQLiteReader::~SQLiteReader() = default;
+SQLiteReader::~SQLiteReader() {
+	finish();
+}
 
 bool SQLiteReader::exec(const QString& sql) {
 	finish();
@@ -346,6 +348,7 @@ bool SQLiteReader::isActive() const {
 void SQLiteReader::reset() {
 	if (d->stmt) {
 		sqlite3_reset(d->stmt);
+		sqlite3_clear_bindings(d->stmt);
 		d->hasRow = false;
 		d->firstNext = true;
 	}
@@ -353,6 +356,7 @@ void SQLiteReader::reset() {
 
 void SQLiteReader::finish() {
 	if (d->stmt) {
+		sqlite3_reset(d->stmt);
 		sqlite3_finalize(d->stmt);
 		d->stmt = nullptr;
 		d->hasRow = false;
