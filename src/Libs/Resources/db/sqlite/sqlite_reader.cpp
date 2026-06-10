@@ -55,6 +55,34 @@ bool SQLiteReader::exec() {
 	}
 
 	reset();
+
+	int rc = sqlite3_step(d->stmt);
+
+	if (rc == SQLITE_DONE) {
+		d->hasRow = false;
+		return true;  // Успешно для INSERT/UPDATE/DELETE
+	}
+	else if (rc == SQLITE_ROW) {
+		// Неожиданно получили строки для не-SELECT запроса
+		d->hasRow = true;
+		d->cacheColumnNames();
+		d->firstNext = false;
+		return true;
+	}
+	else {
+		qWarning() << "Execute error:" << d->connection.lastError();
+		d->hasRow = false;
+		return false;
+	}
+}
+
+bool SQLiteReader::execQuesry() {
+	if (!d->stmt) {
+		qWarning() << "No prepared statement";
+		return false;
+	}
+
+	reset();
 	d->firstNext = true;
 	return true;
 }
@@ -86,23 +114,23 @@ void SQLiteReader::bindValue(int index, const QVariant& value) {
 	int rc = SQLITE_OK;
 
 	if (value.isNull()) {
-		rc = sqlite3_bind_null(d->stmt, index + 1);
+		rc = sqlite3_bind_null(d->stmt, index);
 	}
 	else {
 
 		switch (value.type()) {
 		case QVariant::Int:
 		case QVariant::LongLong:
-		rc = sqlite3_bind_int64(d->stmt, index + 1, value.toLongLong());
+		rc = sqlite3_bind_int64(d->stmt, index, value.toLongLong());
 		break;
 
 		case QVariant::Double:
-		rc = sqlite3_bind_double(d->stmt, index + 1, value.toDouble());
+		rc = sqlite3_bind_double(d->stmt, index, value.toDouble());
 		break;
 
 		case QVariant::String: {
 			QByteArray utf8 = value.toString().toUtf8();
-			rc = sqlite3_bind_text(d->stmt, index + 1,
+			rc = sqlite3_bind_text(d->stmt, index,
 				utf8.constData(), utf8.size(),
 				SQLITE_TRANSIENT);
 			break;
@@ -110,14 +138,14 @@ void SQLiteReader::bindValue(int index, const QVariant& value) {
 
 		case QVariant::ByteArray: {
 			QByteArray data = value.toByteArray();
-			rc = sqlite3_bind_blob(d->stmt, index + 1,
+			rc = sqlite3_bind_blob(d->stmt, index,
 				data.constData(), data.size(),
 				SQLITE_TRANSIENT);
 			break;
 		}
 
 		case QVariant::Bool:
-		rc = sqlite3_bind_int(d->stmt, index + 1, value.toBool() ? 1 : 0);
+		rc = sqlite3_bind_int(d->stmt, index, value.toBool() ? 1 : 0);
 		break;
 
 		default:
@@ -148,7 +176,7 @@ void SQLiteReader::bindValue(const QString& name, const QVariant& value) {
 		return;
 	}
 
-	bindValue(index - 1, value);  // SQLite использует 1-based индексы
+	bindValue(index, value);
 }
 
 void SQLiteReader::bindValues(const QVariantMap& values) {
@@ -237,6 +265,10 @@ void SQLiteReader::Private::cacheColumnNames() {
 }
 
 QVariant SQLiteReader::Private::extractValue(int column) const {
+	if (column == -1) {
+		return QVariant();
+	}
+
 	int type = sqlite3_column_type(stmt, column);
 
 	switch (type) {
@@ -273,7 +305,8 @@ int SQLiteReader::Private::findColumn(const QString& name) const {
 				return i;
 			}
 		}
-		throw std::runtime_error("Column not found: " + name.toStdString());
+		qCritical() << "Column not found: " << name << "db:" << connection.databaseName();
+		return -1;
 	}
 	return index;
 }

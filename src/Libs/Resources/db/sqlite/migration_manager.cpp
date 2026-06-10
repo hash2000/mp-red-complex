@@ -86,7 +86,7 @@ bool MigrationManager::migrate(SQLiteConnection& db, int targetVersion) {
 
 		recordMigration(db, migration.get());
 		emit migrationCompleted(version, migration->description());
-		qInfo() << "Migration" << version << "applied successfully";
+		qInfo() << "Migration" << version << migration->description() << "applied successfully";
 	}
 
 	return true;
