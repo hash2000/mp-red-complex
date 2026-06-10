@@ -54,7 +54,7 @@ private:
 	bool applyMigration(SQLiteConnection& db, Migration* migration);
 	bool revertMigration(SQLiteConnection& db, Migration* migration);
 	QList<MigrationRecord> getAppliedMigrations(SQLiteConnection& db) const;
-	void recordMigration(SQLiteConnection& db, Migration* migration);
+	bool recordMigration(SQLiteConnection& db, Migration* migration);
 	void removeMigrationRecord(SQLiteConnection& db, int version);
 
 private:

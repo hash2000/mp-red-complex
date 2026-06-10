@@ -348,7 +348,7 @@ bool SQLiteReader::isActive() const {
 void SQLiteReader::reset() {
 	if (d->stmt) {
 		sqlite3_reset(d->stmt);
-		sqlite3_clear_bindings(d->stmt);
+	//	sqlite3_clear_bindings(d->stmt);
 		d->hasRow = false;
 		d->firstNext = true;
 	}

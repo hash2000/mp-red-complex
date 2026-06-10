@@ -84,7 +84,10 @@ bool MigrationManager::migrate(SQLiteConnection& db, int targetVersion) {
 			return false;
 		}
 
-		recordMigration(db, migration.get());
+		if (!recordMigration(db, migration.get())) {
+			return false;
+		}
+
 		emit migrationCompleted(version, migration->description());
 		qInfo() << "Migration" << version << migration->description() << "applied successfully";
 	}
@@ -234,7 +237,7 @@ QList<MigrationManager::MigrationRecord> MigrationManager::getAppliedMigrations(
 	return records;
 }
 
-void MigrationManager::recordMigration(SQLiteConnection& db, Migration* migration) {
+bool MigrationManager::recordMigration(SQLiteConnection& db, Migration* migration) {
 	auto insert = db.prepare(
 		"INSERT INTO _migrations (version, description) VALUES (:version, :description)"
 	);
@@ -242,7 +245,7 @@ void MigrationManager::recordMigration(SQLiteConnection& db, Migration* migratio
 		{ ":version", migration->version() },
 		{ ":description", migration->description() }
 		});
-	insert->exec();
+	return insert->exec();
 }
 
 void MigrationManager::removeMigrationRecord(SQLiteConnection& db, int version) {

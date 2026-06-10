@@ -111,6 +111,7 @@ SQLiteConnection* DatabasesService::connection(const QString& name) {
 		if (manager->needsMigration(*conn)) {
 			if (!manager->migrate(*conn)) {
 				qCritical() << "Database migration error:" << name;
+				return nullptr;
 			}
 		}
 	}
