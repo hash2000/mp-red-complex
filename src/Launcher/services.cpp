@@ -40,8 +40,7 @@
 
 // UsersModule
 #include "Content/UsersModule/services/users_service.h"
-#include "Content/UsersModule/data_providers/users/users_data_provider_json_impl.h"
-#include "Content/UsersModule/data_providers/characters/character_data_provider_json_impl.h"
+#include "Content/UsersModule/data_providers/characters/character_data_provider_db.h"
 #include "Content/UsersModule/data_providers/users/users_data_provider_db.h"
 
 // HighlightingPluginManager
@@ -104,7 +103,7 @@ public:
 		, tileGroupsDataProvider([this] {	return std::make_unique<TileGroupsDataProviderJsonImpl>(resources);	})
 		, mapDataProvider([this] {	return std::make_unique<MapDataProviderJsonImpl>(resources);	})
 		, usersDataProvider([this] {	return std::make_unique<UsersDataProviderDb>(databasesService.get());	})
-		, characterDataProvider([this] {	return std::make_unique<CharacterDataProviderJsonImpl>(resources);	})
+		, characterDataProvider([this] {	return std::make_unique<CharacterDataProviderDb>(databasesService.get());	})
 		, shadersDataProvider([this] { return std::make_unique<ShadersDataProviderLocalImpl>(resources); })
 		, materialsDataProvider([this] { return std::make_unique<MaterialsDataProviderJsonImpl>(resources); })
 

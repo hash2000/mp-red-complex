@@ -25,7 +25,8 @@ void build(MigrationManager* migrator) {
 								name TEXT(16) NOT NULL,
 								equipment_id TEXT(54) NOT NULL,
 								icon_path TEXT NOT NULL,
-								char_level INTEGER DEFAULT (1) NOT NULL
+								char_level INTEGER DEFAULT (1) NOT NULL,
+								is_active INTEGER DEFAULT (1) NOT NULL
 						);
 
             -- Таблица персонажей пользователей

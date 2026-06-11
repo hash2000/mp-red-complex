@@ -173,10 +173,9 @@ void CharacterEntryWidget::loadCharacterData() {
 		.arg(d->character->level));
 
 	// Иконка
-	if (!d->character->iconPath.isEmpty() && d->ImagesService) {
-		auto pixmap = d->ImagesService->getImage(d->character->iconPath, ImageType::Character);
-		if (!pixmap.isNull()) {
-			d->iconLabel->setPixmap(pixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-		}
+	if (!d->character->icon.isNull()) {
+		d->iconLabel->setPixmap(d->character->icon.scaled(64, 64,
+			Qt::KeepAspectRatio,
+			Qt::SmoothTransformation));
 	}
 }

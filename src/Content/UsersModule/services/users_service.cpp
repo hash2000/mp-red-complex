@@ -15,7 +15,7 @@ public:
 
 	IUsersDataProvider* usersDataProvider = nullptr;
 	ICharacterDataProvider* characterDataProvider = nullptr;
-	ImagesService* ImagesService = nullptr;
+	ImagesService* imagesService = nullptr;
 	QString currentUserId;
 	QUuid chestId;
 	bool authenticated = false;
@@ -41,17 +41,16 @@ public:
 
 		const auto& user = userOpt.value();
 		for (const auto& characterId : user.characters) {
-			Character characterData;
-			if (characterDataProvider->loadCharacter(characterId, characterData)) {
+			const auto characterData = characterDataProvider->loadCharacter(characterId);
+			if (characterData) {
 				auto handler = std::make_unique<CharacterItemHandler>();
-				handler->id = characterData.id;
-				handler->name = characterData.name;
-				handler->equipmentId = characterData.equipmentId;
-				handler->inventoryId = characterData.inventoryId;
-				handler->iconPath = characterData.iconPath;
+				handler->id = characterData->id;
+				handler->name = characterData->name;
+				handler->equipmentId = characterData->equipmentId;
+				handler->iconPath = characterData->iconPath;
 
 				if (!handler->iconPath.isEmpty()) {
-					handler->icon = ImagesService->getImage(handler->iconPath, ImageType::Character);
+					handler->icon = imagesService->getImage(handler->iconPath, ImageType::Character);
 				}
 
 				characters.emplace(characterId, std::move(handler));
@@ -69,7 +68,7 @@ UsersService::UsersService(
 	, d(std::make_unique<Private>(this)) {
 	d->usersDataProvider = usersDataProvider;
 	d->characterDataProvider = characterDataProvider;
-	d->ImagesService = ImagesService;
+	d->imagesService = ImagesService;
 }
 
 UsersService::~UsersService() = default;
@@ -117,7 +116,14 @@ std::optional<UserData> UsersService::currentUser() const {
 		return std::nullopt;
 	}
 
-	return d->usersDataProvider->loadUser(d->currentUserId);
+	auto userData = d->usersDataProvider->loadUser(d->currentUserId);
+	if (userData) {
+		if (!userData->iconPath.isEmpty()) {
+			userData->icon = d->imagesService->getImage(userData->iconPath, ImageType::Users);
+		}
+	}
+
+	return userData;
 }
 
 QString UsersService::currentUserId() const {

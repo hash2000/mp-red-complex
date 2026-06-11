@@ -2,14 +2,14 @@
 #include "Content/UsersModule/data_providers/characters/i_character_data_provider.h"
 #include <memory>
 
-class Resources;
+class DatabasesService;
 
-class CharacterDataProviderJsonImpl : public ICharacterDataProvider {
+class CharacterDataProviderDb : public ICharacterDataProvider {
 public:
-	CharacterDataProviderJsonImpl(Resources* resources);
-	~CharacterDataProviderJsonImpl() override;
+	CharacterDataProviderDb(DatabasesService* databasesService);
+	~CharacterDataProviderDb() override;
 
-	bool loadCharacter(const QUuid& id, Character& character) const override;
+	std::optional<Character> loadCharacter(const QUuid& id) const override;
 	bool saveCharacter(const Character& character) override;
 	bool deleteCharacter(const QUuid& id) override;
 

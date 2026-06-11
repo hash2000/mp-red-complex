@@ -48,7 +48,7 @@ std::optional<UserData> UsersDataProviderDb::loadUser(const QString& loginHash) 
 	UserData result;
 	result.loginHash = reader->value("id").toString();
 	result.displayName = reader->value("display_name").toString();
-	result.icon = reader->value("icon_path").toString();
+	result.iconPath = reader->value("icon_path").toString();
 	result.chestId = QUuid::fromString(reader->value("chest_id").toString());
 	result.passwordHash = reader->value("password_hash").toString();
 	d->loadCharacters(result);
@@ -158,7 +158,7 @@ bool UsersDataProviderDb::deleteUser(const QString& loginHash) {
 
 	reader->bindValue(":login", loginHash);
 
-	if (!reader || !reader->next()) {
+	if (!reader || !reader->exec()) {
 		qWarning() << "Can't delete user:" << loginHash;
 		return false;
 	}

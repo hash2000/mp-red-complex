@@ -18,7 +18,6 @@ public:
   QUuid id;
   QString name;
   QUuid equipmentId;
-  QUuid inventoryId;
 
   QString iconPath;
   QPixmap icon;
