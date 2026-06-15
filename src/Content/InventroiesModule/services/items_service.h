@@ -8,11 +8,13 @@
 
 class ImagesService;
 class IItemsDataProvider;
+class IEntitiesDataProvider;
 
 class ItemsService : public QObject {
 	Q_OBJECT
 public:
 	explicit ItemsService(
+		IEntitiesDataProvider* entitiesDataProvider,
 		IItemsDataProvider* itemsDataProvider,
 		ImagesService* imagesService,
 		QObject* parent = nullptr);
@@ -21,13 +23,10 @@ public:
 	using EntityView = decltype(make_deref_view(std::declval<const std::map<QString, std::unique_ptr<ItemEntity>>&>()));
 	EntityView entities() const;
 
-	using ItemView = decltype(make_deref_view(std::declval<const std::map<QUuid, std::unique_ptr<Item>>&>()));
-	ItemView items() const;
-
 	const ItemEntity* entityById(const QString& entityId) const;
-	const Item* itemById(const QUuid& id);
-	const Item* duplicate(const QUuid& id);
-	const Item* createItemByEntity(const QString& entityId);
+	std::shared_ptr<Item> itemById(const QUuid& id);
+	std::shared_ptr<Item> duplicate(const QUuid& id);
+	std::shared_ptr<Item> createItemByEntity(const QString& entityId);
 
 private:
 	class Private;
