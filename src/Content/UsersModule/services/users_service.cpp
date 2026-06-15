@@ -136,6 +136,7 @@ CharacterItemHandler* UsersService::getCharacter(const QUuid& characterId) const
 	}
 
 	auto it = d->characters.find(characterId);
+
 	if (it != d->characters.end()) {
 		return it->second.get();
 	}

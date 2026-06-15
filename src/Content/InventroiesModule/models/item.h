@@ -1,0 +1,113 @@
+#pragma once
+#include <QString>
+#include <QPixmap>
+#include <QUuid>
+
+#include <optional>
+#include <list>
+#include <vector>
+
+enum class ItemResourceType {
+	Undefined,
+	Ore, // Руда
+	Chemical, // Химикаты
+};
+
+enum class ItemType {
+	Equipment, // Экипировка (оружие, броня)
+	Resource, // Сырьё (ресурсы для крафта)
+	Component, // Запчасти (сложные элементы из сырья)
+	Container, // Ящики (могут содержать другие предметы)
+	Recipe, // Рецепт
+};
+
+enum class ItemRarityType {
+	Common,
+	Improved,
+	Stable,
+	Rare,
+	Unique,
+};
+
+// если этот предмет-экиперовка, сразу нежно знать куда эта экиперовка одевается
+enum class ItemSubType {
+	None,
+	Head,
+	Body,
+	Weapon,
+	Shield,
+	Gloves,
+	Boots,
+	Ring,
+	Amulet,
+	Resource,
+	Consumable,
+	Backpack,
+	Bag,
+	System,
+
+	LastSlot,
+};
+
+// рецепты
+class  ItemRecipe {
+public:
+	struct Ingredient {
+		QString itemId;
+		int amount;
+	};
+	std::vector<Ingredient> ingredients;
+};
+
+struct ItemContainerPermissions {
+	struct {
+		std::list<ItemResourceType> all;
+		std::list<ItemResourceType> any;
+	} resources;
+};
+
+class ItemContainer {
+public:
+	int rows = 1;
+	int cols = 1;
+
+	ItemContainerPermissions permissions;
+};
+
+class ItemEntity {
+public:
+	QString id;
+	QString name;
+	ItemType type;
+	QString description;
+	QString iconPath;
+	QPixmap icon;  // Загружается через ImagesService при загрузке сущностей
+
+	int width = 1;
+	int height = 1;
+	// стек 
+	int maxStack = 1;
+
+	ItemRarityType rarity = ItemRarityType::Common;
+
+	// если это экипировка, то какая
+	ItemSubType subType;
+
+	// рецепт
+	std::optional<ItemRecipe> recipe;
+
+	// контейнер
+	std::optional<ItemContainer> container;
+
+	// тип ресурса
+	std::list<ItemResourceType> resourceType;
+};
+
+class Item {
+public:
+	QUuid id;
+	QString entityId;
+	int level = 1;
+
+	const ItemEntity* entity;
+};

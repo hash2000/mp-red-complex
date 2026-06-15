@@ -30,12 +30,18 @@ std::optional<Character> CharacterDataProviderDb::loadCharacter(const QUuid& id)
 	}
 
 	auto reader = conn->executeQuery(R"(
-			SELECT * FROM characters c WHERE c.id = :id and is_active = 1
+			select * from characters c where c.id = :id and is_active = 1
 	)");
 
-	reader->bindValue(":id", id.toString(QUuid::WithoutBraces));
+	if (!reader) {
+		return std::nullopt;
+	}
 
-	if (!reader || !reader->next()) {
+	reader->bindValue(":id", id
+		.toString(QUuid::WithoutBraces)
+		.toLower());
+
+	if (!reader->first()) {
 		qWarning() << "Can't find character:" << id << "Maybe is inactive";
 		return std::nullopt;
 	}
@@ -57,8 +63,8 @@ bool CharacterDataProviderDb::saveCharacter(const Character& character) {
 	}
 
 	auto insert = conn->prepare(R"(
-		INSERT INTO characters(id, name, equipment_id, icon_path, char_level)
-		VALUES(:id, :name, :equipment_id, :icon_path, :char_level);
+		insert into characters(id, name, equipment_id, icon_path, char_level)
+		values(:id, :name, :equipment_id, :icon_path, :char_level);
 	)");
 
 	insert->bindValues({
@@ -85,8 +91,8 @@ bool CharacterDataProviderDb::deleteCharacter(const QUuid& id) {
 	}
 
 	auto reader = conn->prepare(R"(
-			UPDATE characters SET is_active = 0
-			WHERE id = :id;
+			update characters set is_active = 0
+			where id = :id;
 	)");
 
 	reader->bindValue(":id", id);

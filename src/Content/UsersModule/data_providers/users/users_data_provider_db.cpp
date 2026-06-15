@@ -35,7 +35,7 @@ std::optional<UserData> UsersDataProviderDb::loadUser(const QString& loginHash) 
 	}
 
 	auto reader = conn->executeQuery(R"(
-			SELECT * FROM users u	WHERE u.id = :login and is_active = 1
+			select * from users u	where u.id = :login and is_active = 1
 	)");
 
 	reader->bindValue(":login", loginHash);
@@ -63,7 +63,7 @@ bool UsersDataProviderDb::Private::loadCharacters(UserData& data) {
 	}
 
 	auto reader = conn->executeQuery(R"(
-			SELECT character_id FROM user_characters c WHERE c.users_id = :login
+			select character_id from user_characters c where c.users_id = :login
 	)");
 
 	if (!reader) {
@@ -92,13 +92,13 @@ bool UsersDataProviderDb::Private::saveCharacters(const UserData& data) {
 	}
 	QString valuesExpr = items.join(",");
 	QString query = QString(R"(
-		INSERT INTO user_characters (users_id, character_id, created_at, is_active)
-		SELECT * FROM (
-				VALUES 
+		insert into user_characters (users_id, character_id, created_at, is_active)
+		select * from (
+				values 
 					%1
-		) AS t(users_id, character_id, created_at)
-		ON CONFLICT(users_id, character_id)
-		DO UPDATE SET
+		) as t(users_id, character_id, created_at)
+		on conflict(users_id, character_id)
+		do update set
 				updated_at = datetime('now'),
 				is_active = 1;
 	)").arg(valuesExpr);
@@ -118,8 +118,8 @@ bool UsersDataProviderDb::saveUser(const UserData& user) {
 	}
 
 	auto insert = conn->prepare(R"(
-			INSERT INTO users (id, display_name, password_hash, chest_id, icon_path, is_active, created_at)
-			VALUES(:id, :displayName, :password, :chestId, :iconPath, 1, datetime('now'));
+			insert into users (id, display_name, password_hash, chest_id, icon_path, is_active, created_at)
+			values(:id, :displayName, :password, :chestId, :iconPath, 1, datetime('now'));
 	)");
 
 	insert->bindValues({
@@ -152,8 +152,8 @@ bool UsersDataProviderDb::deleteUser(const QString& loginHash) {
 	}
 
 	auto reader = conn->prepare(R"(
-			UPDATE users SET is_active = 0
-			WHERE id = :login;
+			update users set is_active = 0
+			where id = :login;
 	)");
 
 	reader->bindValue(":login", loginHash);

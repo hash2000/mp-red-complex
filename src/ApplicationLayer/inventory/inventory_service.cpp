@@ -16,9 +16,19 @@ struct InventoryViewCell {
 
 class InventoryService::Private {
 public:
-	Private(InventoryService* parent)
-	: q(parent) {
-	}
+	Private(InventoryService* parent) : q(parent) { }
+	InventoryService* q;
+
+	ItemsService* itemsService;
+	QUuid placementId;
+	QString inventoryName;
+	int rows;
+	int cols;
+	std::map<QUuid, std::unique_ptr<InventoryItemHandler>> inventoryItems;
+	std::vector<std::vector<std::unique_ptr<InventoryViewCell>>> cells;
+	QHash<QPoint, InventoryItemHandler*> items;
+	ItemContainerPermissions permissions;
+
 
 	InventoryItemHandler* makeInventoryitem(const Item* item) {
 		if (!item) {
@@ -113,17 +123,6 @@ public:
 
 		return nullptr;
 	}
-
-	InventoryService* q;
-	ItemsService* itemsService;
-	QUuid placementId;
-	QString inventoryName;
-	int rows;
-	int cols;
-	std::map<QUuid, std::unique_ptr<InventoryItemHandler>> inventoryItems;
-	std::vector<std::vector<std::unique_ptr<InventoryViewCell>>> cells;
-	QHash<QPoint, InventoryItemHandler*> items;
-	ItemContainerPermissions permissions;
 };
 
 InventoryService::InventoryService(ItemsService* itemsService, QObject* parent)
@@ -132,10 +131,7 @@ InventoryService::InventoryService(ItemsService* itemsService, QObject* parent)
 	d->itemsService = itemsService;
 }
 
-InventoryService::~InventoryService() {
-	qInfo() << "test"
-		;
-}
+InventoryService::~InventoryService() = default;
 
 bool InventoryService::load(const Inventory& inventory) {
 	d->rows = inventory.rows;
