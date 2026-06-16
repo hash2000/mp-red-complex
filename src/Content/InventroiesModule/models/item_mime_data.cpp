@@ -46,7 +46,7 @@ void ItemMimeData::setEntity(const ItemEntity& entity) {
 	height = entity.height;
 	maxStack = entity.maxStack;
 	type = static_cast<qint32>(entity.type);
-	equipmentType = static_cast<qint32>(entity.equipmentType);
+	subType = static_cast<qint32>(entity.subType);
 	entityId = entity.id;
 }
 
@@ -56,7 +56,7 @@ QByteArray ItemMimeData::toMimeData() const {
 
 	stream << id << entityId << name << x << y << width << height << count << maxStack
 		<< type
-		<< equipmentType
+		<< subType
 		<< owner;
 
 	return data;
@@ -70,7 +70,7 @@ ItemMimeData ItemMimeData::fromMimeData(const QByteArray& data) {
 		>> item.x >> item.y >> item.width >> item.height
 		>> item.count >> item.maxStack
 		>> item.type
-		>> item.equipmentType
+		>> item.subType
 		>> item.owner;
 
 	return item;

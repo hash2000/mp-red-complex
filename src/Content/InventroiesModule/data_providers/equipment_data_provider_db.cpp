@@ -5,6 +5,37 @@
 #include "libs/Resources/db/sqlite/sqlite_connection.h"
 #include "libs/Resources/db/sqlite/sqlite_reader.h"
 
+namespace {
+static QString kSql_itemsSelets = R"(
+		select ci.item_id, 
+			ci.position_base slot, 
+			i.item_level level, 
+			ie."type",
+			ie.sub_type, 
+			ie.width, 
+			ie.height, 
+			ie.rarity, 
+			ie.container_rows rows, 
+			ie.container_cols cols, 
+			ie.icon_path 
+		from container_items ci
+		join items i on i.id = ci.item_id and i.ia_active = 1
+		join item_entities ie on ie.id = i.entity_id 
+			where ie."type" in ('equipment', 'container') and
+				ie.sub_type != 'system' and
+				ci.container_id = :container_id
+)";
+static QString kSql_equipmentSelect = R"(
+		select c.name
+		from containers c 
+		join items i on i.id = c.item_id and i.ia_active = 1
+		join item_entities ie on ie.id = i.entity_id 
+			where ie."type" = 'equipment' and 
+				ie.sub_type = 'system' and
+				c.item_id = :container_id
+)";
+}
+
 class EquipmentDataProviderDb::Private {
 public:
 	Private(EquipmentDataProviderDb* parent)
@@ -32,26 +63,7 @@ void EquipmentDataProviderDb::Private::loadItems(Equipment& item) {
 		return;
 	}
 
-	auto reader = conn->executeQuery(R"(
-		select ci.item_id, 
-			ci.position_base slot, 
-			i.item_level level, 
-			ie."type",
-			ie.sub_type, 
-			ie.width, 
-			ie.height, 
-			ie.rarity, 
-			ie.container_rows rows, 
-			ie.container_cols cols, 
-			ie.icon_path 
-		from container_items ci
-		join items i on i.id = ci.item_id and i.ia_active = 1
-		join item_entities ie on ie.id = i.entity_id 
-			where ie."type" in ('equipment', 'container') and
-				ie.sub_type != 'system' and
-				ci.container_id = :container_id
-	)");
-
+	auto reader = conn->executeQuery(kSql_itemsSelets);
 	if (!reader) {
 		return;
 	}
@@ -76,39 +88,30 @@ void EquipmentDataProviderDb::Private::loadItems(Equipment& item) {
 	}
 }
 
-std::optional<Equipment> EquipmentDataProviderDb::get(const QUuid& id) {
+std::shared_ptr<Equipment> EquipmentDataProviderDb::get(const QUuid& id) {
 	auto conn = d->databasesService->connection("game");
 	if (!conn) {
-		return std::nullopt;
+		return std::shared_ptr<Equipment>();
 	}
 
-	auto reader = conn->executeQuery(R"(
-		select c.name
-		from containers c 
-		join items i on i.id = c.item_id and i.ia_active = 1
-		join item_entities ie on ie.id = i.entity_id 
-			where ie."type" = 'equipment' and 
-				ie.sub_type = 'system' and
-				c.item_id = :container_id
-	)");
-
+	auto reader = conn->executeQuery(kSql_equipmentSelect);
 	if (!reader) {
-		return std::nullopt;
+		return std::shared_ptr<Equipment>();
 	}
 
 	reader->bindValue(":container_id", id
 		.toString(QUuid::WithoutBraces)
 		.toLower());
 
-	if (!reader->first()) {
-		return std::nullopt;
+	if (!reader->next()) {
+		return std::shared_ptr<Equipment>();
 	}
 
-	Equipment item;
-	item.id = id;
-	item.name = reader->value("name").toString();
+	auto item = std::make_shared<Equipment>();
+	item->id = id;
+	item->name = reader->value("name").toString();
 
-	d->loadItems(item);
+	d->loadItems(*item);
 
 	return item;
 }

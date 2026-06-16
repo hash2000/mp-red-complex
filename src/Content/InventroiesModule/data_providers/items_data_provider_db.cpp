@@ -4,6 +4,18 @@
 #include "libs/Resources/db/sqlite/sqlite_connection.h"
 #include "libs/Resources/db/sqlite/sqlite_reader.h"
 
+namespace {
+static QString kSql_itemSelect = R"(
+		select entity_id, item_level
+		from items
+		where id = :item_id and ia_active = 1;
+)";
+static QString kSql_itemInsert = R"(
+		insert into items (id, entity_id)
+		values (:id, :entity_id)
+)";
+}
+
 class ItemsDataProviderDb::Private {
 public:
 	Private(ItemsDataProviderDb* paren) : q(paren) { }
@@ -23,15 +35,10 @@ ItemsDataProviderDb::~ItemsDataProviderDb() = default;
 std::shared_ptr<Item> ItemsDataProviderDb::item(const QUuid& id) const {
 	auto conn = d->databasesService->connection("game");
 	if (!conn) {
-		return;
+		return std::shared_ptr<Item>();
 	}
 
-	auto reader = conn->executeQuery(R"(
-		select entity_id, item_level
-		from items
-		where id = :item_id and ia_active = 1;
-	)");
-
+	auto reader = conn->executeQuery(kSql_itemSelect);
 	reader->bindValue(":item_id", id
 		.toString(QUuid::WithoutBraces)
 		.toLower());
@@ -53,14 +60,10 @@ bool ItemsDataProviderDb::setItem(const Item& item) const {
 
 	auto conn = d->databasesService->connection("game");
 	if (!conn) {
-		return;
+		return false;
 	}
 
-	auto insert = conn->prepare(R"(
-		insert into items (id, entity_id)
-		values (:id, :entity_id)
-	)");
-
+	auto insert = conn->prepare(kSql_itemInsert);
 	insert->bindValue(":entity_id", item.entityId);
 	insert->bindValue(":item_id", item.id
 		.toString(QUuid::WithoutBraces)

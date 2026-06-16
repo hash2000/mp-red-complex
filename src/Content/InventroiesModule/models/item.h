@@ -109,5 +109,5 @@ public:
 	QString entityId;
 	int level = 1;
 
-	const ItemEntity* entity;
+	std::shared_ptr<ItemEntity> entity;
 };

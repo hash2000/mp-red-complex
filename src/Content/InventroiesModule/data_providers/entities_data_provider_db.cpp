@@ -27,7 +27,6 @@ static QString kSql_entitySelectorExpr = R"(
 		left join entity_permissions_all pall on pall.entity_id = e.id 
 		left join entity_permissions_any pany on pany.entity_id = e.id
 )";
-
 static QString kSql_entityGroupByExpr = R"(
 		group by e.id, e.name, e.description, e.type, e.sub_type, 
 			e.icon_path, e.width, e.height, e.rarity, 
@@ -42,7 +41,7 @@ public:
 
 	DatabasesService* databasesService;
 
-	std::unique_ptr<ItemEntity> readEntity(SQLiteReader& reader);
+	std::shared_ptr<ItemEntity> readEntity(SQLiteReader& reader);
 	ItemResourceType resourceType(const QString& type);
 };
 
@@ -55,8 +54,8 @@ EntitiesDataProviderDb::EntitiesDataProviderDb(DatabasesService* databasesServic
 
 EntitiesDataProviderDb::~EntitiesDataProviderDb() = default;
 
-std::unique_ptr<ItemEntity> EntitiesDataProviderDb::Private::readEntity(SQLiteReader& reader) {
-	auto ent = std::make_unique<ItemEntity>();
+std::shared_ptr<ItemEntity> EntitiesDataProviderDb::Private::readEntity(SQLiteReader& reader) {
+	auto ent = std::make_shared<ItemEntity>();
 	ent->id = reader.value("id").toString();
 	ent->name = reader.value("name").toString();
 	ent->description = reader.value("description").toString();
@@ -106,20 +105,20 @@ ItemResourceType EntitiesDataProviderDb::Private::resourceType(const QString& ty
 	return ItemResourceType::Undefined;
 }
 
-std::list<std::unique_ptr<ItemEntity>> EntitiesDataProviderDb::entities() const {
+std::list<std::shared_ptr<ItemEntity>> EntitiesDataProviderDb::entities() const {
+	std::list<std::shared_ptr<ItemEntity>> result;
 	auto conn = d->databasesService->connection("game");
 	if (!conn) {
-		return;
+		return std::move(result);
 	}
 
 	auto reader = conn->executeQuery(QString("%1\n%2")
 		.arg(kSql_entitySelectorExpr)
 		.arg(kSql_entityGroupByExpr));
-	if (!reader) {
-		return;
-	}
 
-	std::list<std::unique_ptr<ItemEntity>> result;
+	if (!reader) {
+		return std::move(result);
+	}
 
 	while (reader->next()) {
 		auto ent = d->readEntity(*reader);
@@ -129,10 +128,10 @@ std::list<std::unique_ptr<ItemEntity>> EntitiesDataProviderDb::entities() const 
 	return std::move(result);
 }
 
-std::unique_ptr<ItemEntity> EntitiesDataProviderDb::entity(const QString& id) const {
+std::shared_ptr<ItemEntity> EntitiesDataProviderDb::entity(const QString& id) const {
 	auto conn = d->databasesService->connection("game");
 	if (!conn) {
-		return;
+		return std::shared_ptr<ItemEntity>();
 	}
 	auto reader = conn->executeQuery(QString("%1\nwhere e.id = :entity_id\n%2")
 		.arg(kSql_entitySelectorExpr)
@@ -142,7 +141,7 @@ std::unique_ptr<ItemEntity> EntitiesDataProviderDb::entity(const QString& id) co
 
 	if (!reader || !reader->next()) {
 		qWarning() << "Can't find entity:" << id;
-		return std::unique_ptr<ItemEntity>();
+		return std::shared_ptr<ItemEntity>();
 	}
 
 	auto ent = d->readEntity(*reader);

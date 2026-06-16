@@ -10,7 +10,7 @@ public:
 	EquipmentDataProviderDb(DatabasesService* databasesService);
 	~EquipmentDataProviderDb() override;
 
-	std::optional<Equipment> get(const QUuid& id) override;
+	std::shared_ptr<Equipment> get(const QUuid& id) override;
 	bool save(const QUuid& id, const Equipment& equipment) const override;
 
 private:

@@ -24,7 +24,7 @@ InventoryDataProviderDb::InventoryDataProviderDb(DatabasesService* databasesServ
 
 InventoryDataProviderDb::~InventoryDataProviderDb() = default;
 
-std::optional<Inventory> InventoryDataProviderDb::loadInventory(const QUuid& id) const {
+std::shared_ptr<Inventory> InventoryDataProviderDb::loadInventory(const QUuid& id) const {
 	//const auto path = QString("inventory/%1.json")
 	//	.arg(id.toString(QUuid::StringFormat::WithoutBraces).toLower());
 
@@ -49,7 +49,7 @@ std::optional<Inventory> InventoryDataProviderDb::loadInventory(const QUuid& id)
 	//	inventory.items.push_back(item);
 	//}
 
-	return std::nullopt;
+	return std::shared_ptr<Inventory>();
 }
 
 bool InventoryDataProviderDb::saveInventory(const QUuid& id, const Inventory& inventory) const {

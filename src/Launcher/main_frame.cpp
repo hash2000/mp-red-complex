@@ -9,7 +9,7 @@
 #include "Launcher/widgets/action_panel/action_panel_by_user_builder.h"
 #include "Launcher/widgets/action_panel/action_panel_widget.h"
 #include "Content/UsersModule/services/users_service.h"
-#include "Content/UsersModule/models/user/user.h"
+#include "Content/UsersModule/models/user.h"
 #include "Content/BaseWidgets/mdi_area.h"
 #include "Libs/Resources/resources.h"
 

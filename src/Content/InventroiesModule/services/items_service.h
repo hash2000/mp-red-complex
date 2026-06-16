@@ -20,10 +20,7 @@ public:
 		QObject* parent = nullptr);
 	~ItemsService() override;
 
-	using EntityView = decltype(make_deref_view(std::declval<const std::map<QString, std::unique_ptr<ItemEntity>>&>()));
-	EntityView entities() const;
-
-	const ItemEntity* entityById(const QString& entityId) const;
+	std::shared_ptr<ItemEntity> entityById(const QString& entityId) const;
 	std::shared_ptr<Item> itemById(const QUuid& id);
 	std::shared_ptr<Item> duplicate(const QUuid& id);
 	std::shared_ptr<Item> createItemByEntity(const QString& entityId);

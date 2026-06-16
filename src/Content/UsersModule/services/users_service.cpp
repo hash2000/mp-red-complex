@@ -1,8 +1,8 @@
 #include "Content/UsersModule/services/users_service.h"
-#include "Content/UsersModule/models/character/character_item_handler.h"
 #include "Content/UsersModule/data_providers/users/i_users_data_provider.h"
 #include "Content/UsersModule/data_providers/characters/i_character_data_provider.h"
-#include "Content/UsersModule/models/user/user.h"
+#include "Content/UsersModule/models/character.h"
+#include "Content/UsersModule/models/user.h"
 #include "ApplicationLayer/textures/images_service.h"
 
 #include <QCryptographicHash>
@@ -19,7 +19,7 @@ public:
 	QString currentUserId;
 	QUuid chestId;
 	bool authenticated = false;
-	std::map<QUuid, std::unique_ptr<CharacterItemHandler>> characters;
+	std::map<QUuid, std::shared_ptr<Character>> characters;
 
 	/// Создать хэш пароля
 	static QString hashPassword(const QString& password) {
@@ -34,27 +34,22 @@ public:
 	void loadCharacters() {
 		characters.clear();
 		
-		auto userOpt = usersDataProvider->loadUser(currentUserId);
-		if (!userOpt.has_value()) {
+		auto user = usersDataProvider->loadUser(currentUserId);
+		if (!user) {
 			return;
 		}
 
-		const auto& user = userOpt.value();
-		for (const auto& characterId : user.characters) {
-			const auto characterData = characterDataProvider->loadCharacter(characterId);
-			if (characterData) {
-				auto handler = std::make_unique<CharacterItemHandler>();
-				handler->id = characterData->id;
-				handler->name = characterData->name;
-				handler->equipmentId = characterData->equipmentId;
-				handler->iconPath = characterData->iconPath;
-
-				if (!handler->iconPath.isEmpty()) {
-					handler->icon = imagesService->getImage(handler->iconPath, ImageType::Character);
-				}
-
-				characters.emplace(characterId, std::move(handler));
+		for (auto& characterId : user->characters) {
+			auto character = characterDataProvider->loadCharacter(characterId);
+			if (!character) {
+				continue;
 			}
+
+			if (!character->iconPath.isEmpty()) {
+				character->icon = imagesService->getImage(character->iconPath, ImageType::Character);
+			}
+
+			characters[characterId] = character;			
 		}
 	}
 };
@@ -75,28 +70,27 @@ UsersService::~UsersService() = default;
 
 std::optional<QString> UsersService::login(const QString& login, const QString& password) {
 	const auto loginHash = Private::hashLogin(login);
-	auto userOpt = d->usersDataProvider->loadUser(loginHash);
-	if (!userOpt.has_value()) {
+	auto user = d->usersDataProvider->loadUser(loginHash);
+	if (!user) {
 		return std::nullopt;
 	}
 
-	const auto& user = userOpt.value();
 	QString passwordHash = Private::hashPassword(password);
 
-	if (user.passwordHash != passwordHash) {
+	if (user->passwordHash != passwordHash) {
 		return std::nullopt;
 	}
 
 	// Успешный вход
-	d->currentUserId = user.loginHash;
-	d->chestId = user.chestId;
+	d->currentUserId = user->loginHash;
+	d->chestId = user->chestId;
 	d->authenticated = true;
 
 	// Загружаем персонажей текущего пользователя
 	d->loadCharacters();
 
-	emit loginSuccess(user);
-	return user.loginHash;
+	emit loginSuccess(*user);
+	return user->loginHash;
 }
 
 void UsersService::logout() {
@@ -111,9 +105,9 @@ bool UsersService::isAuthenticated() const {
 	return d->authenticated;
 }
 
-std::optional<UserData> UsersService::currentUser() const {
+std::shared_ptr<UserData> UsersService::currentUser() const {
 	if (!d->authenticated || d->currentUserId.isEmpty()) {
-		return std::nullopt;
+		return std::shared_ptr<UserData>();
 	}
 
 	auto userData = d->usersDataProvider->loadUser(d->currentUserId);
@@ -130,16 +124,16 @@ QString UsersService::currentUserId() const {
 	return d->currentUserId;
 }
 
-CharacterItemHandler* UsersService::getCharacter(const QUuid& characterId) const {
+std::shared_ptr<Character> UsersService::getCharacter(const QUuid& characterId) const {
 	if (!d->authenticated) {
 		return nullptr;
 	}
 
 	auto it = d->characters.find(characterId);
-
 	if (it != d->characters.end()) {
-		return it->second.get();
+		return it->second;
 	}
+
 	return nullptr;
 }
 
@@ -161,8 +155,8 @@ QUuid UsersService::getChestId() const {
 
 std::optional<QString> UsersService::registerUser(const QString& login, const QString& password, const QString& displayName) {
 	const auto loginHash = Private::hashLogin(login);
-	const auto existingUser = d->usersDataProvider->loadUser(loginHash);
-	if (existingUser.has_value()) {
+	auto containsUser = d->usersDataProvider->containsUser(loginHash);
+	if (containsUser) {
 		return std::nullopt;
 	}
 

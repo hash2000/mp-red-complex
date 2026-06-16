@@ -8,6 +8,6 @@ class IEquipmentDataProvider {
 public:
 	virtual ~IEquipmentDataProvider() = default;
 
-	virtual std::optional<Equipment> get(const QUuid& id) = 0;
+	virtual std::shared_ptr<Equipment> get(const QUuid& id) = 0;
 	virtual bool save(const QUuid& id, const Equipment& equipment) const = 0;
 };

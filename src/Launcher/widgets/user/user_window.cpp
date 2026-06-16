@@ -5,7 +5,7 @@
 #include "Launcher/commands/command_context.h"
 #include "Content/UsersModule/widgets/user_widget.h"
 #include "Content/UsersModule/services/users_service.h"
-#include "Content/UsersModule/models/character/character_item_handler.h"
+#include "Content/UsersModule/models/character.h"
 
 class UserWindow::Private {
 public:
@@ -17,7 +17,7 @@ public:
 	UserWidget* userWidget = nullptr;
 	ApplicationController* applicationController = nullptr;
 
-	void executeCharCommand(const QString& target, const CharacterItemHandler* chr);
+	void executeCharCommand(const QString& target, const Character* chr);
 };
 
 UserWindow::UserWindow(const QString& id, QWidget* parent)
@@ -27,10 +27,10 @@ UserWindow::UserWindow(const QString& id, QWidget* parent)
 
 UserWindow::~UserWindow() = default;
 
-void UserWindow::Private::executeCharCommand(const QString& target, const CharacterItemHandler* chr) {
+void UserWindow::Private::executeCharCommand(const QString& target, const Character* chr) {
 	const auto itemIdStr = QString("id:%1")
 		.arg(chr->equipmentId
-			.toString(QUuid::StringFormat::WithoutBraces)
+			.toString(QUuid::WithoutBraces)
 			.toLower());
 
 	const auto title = QString("title:%1")
@@ -69,7 +69,7 @@ void UserWindow::onEquipmentRequested(const QUuid& characterId) {
 		return;
 	}
 
-	d->executeCharCommand("equipment", chr);
+	d->executeCharCommand("equipment", chr.get());
 }
 
 void UserWindow::onSpecificationsRequested(const QUuid& characterId) {
@@ -78,7 +78,7 @@ void UserWindow::onSpecificationsRequested(const QUuid& characterId) {
 		return;
 	}
 
-	d->executeCharCommand("character-specifications", chr);
+	d->executeCharCommand("character-specifications", chr.get());
 }
 
 void UserWindow::onUserLoggedOut() {

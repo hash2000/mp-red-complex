@@ -1,7 +1,7 @@
 #include "Content/UsersModule/widgets/user_widget.h"
 #include "Content/UsersModule/widgets/character_entry_widget.h"
 #include "Content/UsersModule/services/users_service.h"
-#include "Content/UsersModule/models/user/user.h"
+#include "Content/UsersModule/models/user.h"
 #include "ApplicationLayer/textures/images_service.h"
 #include <QLabel>
 #include <QVBoxLayout>
@@ -19,7 +19,7 @@ public:
 	UserWidget* q;
 	UsersService* usersService = nullptr;
 	ImagesService* ImagesService = nullptr;
-	std::optional<UserData> currentUser;
+	std::shared_ptr<UserData> currentUser;
 
 	// Элементы заголовка
 	QLabel* userIconLabel = nullptr;
@@ -189,27 +189,27 @@ void UserWidget::setupLayout() {
 
 void UserWidget::loadUserData() {
 	d->currentUser = d->usersService->currentUser();
-	if (!d->currentUser.has_value()) {
+	if (!d->currentUser) {
 		d->displayNameLabel->setText("Не авторизован");
 		d->userIdLabel->setText("N/A");
 		return;
 	}
 
-	const auto& user = d->currentUser.value();
+	const auto user = d->currentUser.get();
 
 	// DisplayName
-	d->displayNameLabel->setText(user.displayName.isEmpty() ? "Пользователь" : user.displayName);
+	d->displayNameLabel->setText(user->displayName.isEmpty() ? "Пользователь" : user->displayName);
 
 	// ID (показываем сокращённую версию)
-	QString shortId = user.loginHash;
+	QString shortId = user->loginHash;
 	if (shortId.length() > 12) {
 		shortId = shortId.left(12) + "...";
 	}
 	d->userIdLabel->setText(shortId);
 
 	// Иконка пользователя
-	if (!user.iconPath.isEmpty() && d->ImagesService) {
-		auto pixmap = d->ImagesService->getImage(user.iconPath, ImageType::Users);
+	if (!user->iconPath.isEmpty() && d->ImagesService) {
+		auto pixmap = d->ImagesService->getImage(user->iconPath, ImageType::Users);
 		if (!pixmap.isNull()) {
 			d->userIconLabel->setPixmap(pixmap.scaled(48, 48, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 		}

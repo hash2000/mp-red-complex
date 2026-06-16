@@ -29,9 +29,6 @@ public:
 
 	// Навигация
 	bool next();
-	bool first();
-	bool last();
-	bool previous();
 
 	// Получение данных
 	QVariant value(int column) const;

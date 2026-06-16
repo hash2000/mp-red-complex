@@ -1,10 +1,24 @@
 #include "Content/UsersModule/data_providers/characters/character_data_provider_db.h"
 #include "Content/UsersModule/data_providers/migrations/users_migrations.h"
 #include "Content/DatabaseModule/services/databases_service.h"
-#include "Content/UsersModule/models/character/character.h"
+#include "Content/UsersModule/models/character.h"
 #include "Libs/Resources/db/sqlite/migration_manager.h"
 #include "Libs/Resources/db/sqlite/sqlite_connection.h"
 #include "Libs/Resources/db/sqlite/sqlite_reader.h"
+
+namespace {
+static QString kSql_characterSelect = R"(
+		select * from characters c where c.id = :id and is_active = 1
+)";
+static QString kSql_characterInsert = R"(
+		insert into characters(id, name, equipment_id, icon_path, char_level)
+		values(:id, :name, :equipment_id, :icon_path, :char_level);
+)";
+static QString kSql_characterDelete = R"(
+		update characters set is_active = 0
+		where id = :id;
+)";
+}
 
 class CharacterDataProviderDb::Private {
 public:
@@ -23,37 +37,34 @@ CharacterDataProviderDb::CharacterDataProviderDb(DatabasesService* databasesServ
 
 CharacterDataProviderDb::~CharacterDataProviderDb() = default;
 
-std::optional<Character> CharacterDataProviderDb::loadCharacter(const QUuid& id) const {
+std::shared_ptr<Character> CharacterDataProviderDb::loadCharacter(const QUuid& id) const {
 	auto conn = d->databasesService->connection("users");
 	if (!conn) {
-		return std::nullopt;
+		return std::shared_ptr<Character>();
 	}
 
-	auto reader = conn->executeQuery(R"(
-			select * from characters c where c.id = :id and is_active = 1
-	)");
-
+	auto reader = conn->executeQuery(kSql_characterSelect);
 	if (!reader) {
-		return std::nullopt;
+		return std::shared_ptr<Character>();
 	}
 
 	reader->bindValue(":id", id
 		.toString(QUuid::WithoutBraces)
 		.toLower());
 
-	if (!reader->first()) {
+	if (!reader->next()) {
 		qWarning() << "Can't find character:" << id << "Maybe is inactive";
-		return std::nullopt;
+		return std::shared_ptr<Character>();
 	}
 
-	Character character;
-	character.id = id;
-	character.name = reader->value("name").toString();
-	character.equipmentId = QUuid::fromString(reader->value("equipment_id").toString());
-	character.iconPath = reader->value("icon_path").toString();
-	character.level = reader->value("char_level").toInt();
+	auto character = std::make_shared<Character>();
+	character->id = id;
+	character->name = reader->value("name").toString();
+	character->equipmentId = QUuid::fromString(reader->value("equipment_id").toString());
+	character->iconPath = reader->value("icon_path").toString();
+	character->level = reader->value("char_level").toInt();
 
-	return character;
+	return std::move(character);
 }
 
 bool CharacterDataProviderDb::saveCharacter(const Character& character) {
@@ -62,11 +73,7 @@ bool CharacterDataProviderDb::saveCharacter(const Character& character) {
 		return false;
 	}
 
-	auto insert = conn->prepare(R"(
-		insert into characters(id, name, equipment_id, icon_path, char_level)
-		values(:id, :name, :equipment_id, :icon_path, :char_level);
-	)");
-
+	auto insert = conn->prepare(kSql_characterInsert);
 	insert->bindValues({
 		{ ":id", character.id.toString(QUuid::WithoutBraces) },
 		{ ":name", character.name },
@@ -90,11 +97,7 @@ bool CharacterDataProviderDb::deleteCharacter(const QUuid& id) {
 		return false;
 	}
 
-	auto reader = conn->prepare(R"(
-			update characters set is_active = 0
-			where id = :id;
-	)");
-
+	auto reader = conn->prepare(kSql_characterDelete);
 	reader->bindValue(":id", id);
 
 	if (!reader || !reader->exec()) {

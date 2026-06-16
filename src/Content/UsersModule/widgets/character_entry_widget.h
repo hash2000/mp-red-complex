@@ -3,7 +3,7 @@
 #include <memory>
 
 class UsersService;
-class CharacterItemHandler;
+class Character;
 class QLabel;
 class QPushButton;
 class ImagesService;

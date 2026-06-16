@@ -1,6 +1,6 @@
 #include "Content/UsersModule/widgets/character_entry_widget.h"
 #include "Content/UsersModule/services/users_service.h"
-#include "Content/UsersModule/models/character/character_item_handler.h"
+#include "Content/UsersModule/models/character.h"
 #include "ApplicationLayer/textures/images_service.h"
 #include "DataLayer/images/i_images_data_provider.h"
 #include <QLabel>
@@ -18,7 +18,7 @@ public:
 	UsersService* usersService = nullptr;
 	ImagesService* ImagesService = nullptr;
 	QUuid characterId;
-	CharacterItemHandler* character = nullptr;
+	std::shared_ptr<Character> character;
 
 	// UI элементы
 	QLabel* iconLabel = nullptr;

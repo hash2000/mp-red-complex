@@ -13,7 +13,7 @@ public:
 	IEntitiesDataProvider* entitiesDataProvider;
 	IItemsDataProvider* itemsDataProvider;
 	ImagesService* imagesService;
-	std::map<QString, std::unique_ptr<ItemEntity>> entities;
+	std::unordered_map<QString, std::shared_ptr<ItemEntity>> entities;
 };
 
 ItemsService::ItemsService(
@@ -30,14 +30,10 @@ ItemsService::ItemsService(
 
 ItemsService::~ItemsService() = default;
 
-ItemsService::EntityView ItemsService::entities() const {
-	return make_deref_view(d->entities);
-}
-
-const ItemEntity* ItemsService::entityById(const QString& entityId) const {
+std::shared_ptr<ItemEntity> ItemsService::entityById(const QString& entityId) const {
 	const auto& it = d->entities.find(entityId);
 	if (it != d->entities.end()) {
-		return it->second.get();
+		return it->second;
 	}
 
 	auto entity = d->entitiesDataProvider->entity(entityId);
@@ -49,8 +45,8 @@ const ItemEntity* ItemsService::entityById(const QString& entityId) const {
 		entity->icon = d->imagesService->getImage(entity->iconPath, ImageType::Entity);
 	}
 
-	const auto inserted = d->entities.emplace(entityId, std::move(entity));
-	return inserted.first->second.get();
+	d->entities[entityId] = entity;
+	return entity;
 }
 
 std::shared_ptr<Item> ItemsService::itemById(const QUuid& id) {

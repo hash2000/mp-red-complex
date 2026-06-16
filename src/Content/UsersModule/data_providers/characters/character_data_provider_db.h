@@ -9,7 +9,7 @@ public:
 	CharacterDataProviderDb(DatabasesService* databasesService);
 	~CharacterDataProviderDb() override;
 
-	std::optional<Character> loadCharacter(const QUuid& id) const override;
+	std::shared_ptr<Character> loadCharacter(const QUuid& id) const override;
 	bool saveCharacter(const Character& character) override;
 	bool deleteCharacter(const QUuid& id) override;
 

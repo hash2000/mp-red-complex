@@ -11,8 +11,8 @@ public:
 	EntitiesDataProviderDb(DatabasesService* databasesService);
 	~EntitiesDataProviderDb() override;
 
-	std::list<std::unique_ptr<ItemEntity>> entities() const override;
-	std::unique_ptr<ItemEntity> entity(const QString& id) const override;
+	std::list<std::shared_ptr<ItemEntity>> entities() const override;
+	std::shared_ptr<ItemEntity> entity(const QString& id) const override;
 
 private:
 	class Private;

@@ -5,7 +5,7 @@
 #include <map>
 #include <list>
 
-class CharacterItemHandler;
+class Character;
 class ImagesService;
 class IUsersDataProvider;
 class ICharacterDataProvider;
@@ -33,7 +33,7 @@ public:
 	bool isAuthenticated() const;
 
 	/// Получить текущего пользователя
-	std::optional<UserData> currentUser() const;
+	std::shared_ptr<UserData> currentUser() const;
 
 	/// Получить текущего пользователя (ID)
 	QString currentUserId() const;
@@ -44,7 +44,7 @@ public:
 
 	/// Получить персонажа текущего пользователя по ID
 	/// Возвращает указатель на CharacterItemHandler или nullptr если персонаж не найден
-	CharacterItemHandler* getCharacter(const QUuid& characterId) const;
+	std::shared_ptr<Character> getCharacter(const QUuid& characterId) const;
 
 	/// Получить список всех идентификаторов персонажей текущего пользователя
 	std::list<QUuid> getAllCharacterIds() const;

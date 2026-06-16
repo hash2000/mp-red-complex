@@ -24,7 +24,7 @@ public:
 	int count;
 	int maxStack;
 	int type;
-	int equipmentType;
+	int subType;
 	int x;
 	int y;
 
