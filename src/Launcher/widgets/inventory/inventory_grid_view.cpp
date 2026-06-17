@@ -1,6 +1,6 @@
 #include "Launcher/widgets/inventory/inventory_grid_view.h"
 #include "Launcher/widgets/inventory/inventory_grid.h"
-#include "ApplicationLayer/inventories_service.h"
+#include "Content/InventroiesModule/services/inventories_service.h"
 
 class InventoryGridView::Private {
 public:

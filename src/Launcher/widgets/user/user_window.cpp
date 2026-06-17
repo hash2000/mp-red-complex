@@ -60,6 +60,7 @@ bool UserWindow::handleCommand(const QString& commandName, const QStringList& ar
 
 		return true;
 	}
+
 	return false;
 }
 

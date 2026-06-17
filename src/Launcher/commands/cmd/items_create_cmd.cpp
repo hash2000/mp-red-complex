@@ -5,10 +5,10 @@
 #include "Launcher/app_controller.h"
 #include "Launcher/controllers.h"
 #include "Launcher/services.h"
-#include "ApplicationLayer/inventory/inventory_service.h"
-#include "ApplicationLayer/inventories_service.h"
-#include "ApplicationLayer/items/items_service.h"
-#include "ApplicationLayer/items/item_mime_data.h"
+#include "Content/InventroiesModule/services/inventory_service.h"
+#include "Content/InventroiesModule/services/inventories_service.h"
+#include "Content/InventroiesModule/services/items_service.h"
+#include "Content/InventroiesModule/models/item_mime_data.h"
 
 #include <QMdiSubWindow>
 #include <QRegularExpression>

@@ -71,7 +71,7 @@ std::shared_ptr<Item> ItemsService::duplicate(const QUuid& id) {
 	}
 
 	item->id = QUuid::createUuid();
-	if (!d->itemsDataProvider->setItem(*item)) {
+	if (!d->itemsDataProvider->save(*item)) {
 		return std::shared_ptr<Item>();
 	}
 
@@ -88,7 +88,7 @@ std::shared_ptr<Item> ItemsService::createItemByEntity(const QString& entityId) 
 	item->entityId = entityId;
 	item->entity = entity;
 	item->id = QUuid::createUuid();
-	if (!d->itemsDataProvider->setItem(*item)) {
+	if (!d->itemsDataProvider->save(*item)) {
 		return std::shared_ptr<Item>();
 	}
 

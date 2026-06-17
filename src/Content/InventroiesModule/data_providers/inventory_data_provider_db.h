@@ -10,8 +10,8 @@ public:
 	InventoryDataProviderDb(DatabasesService* databasesService);
 	~InventoryDataProviderDb() override;
 
-	std::shared_ptr<Inventory> loadInventory(const QUuid& id) const override;
-	bool saveInventory(const QUuid& id, const Inventory& inventory) const override;
+	std::shared_ptr<Inventory> inventory(const QUuid& id) const override;
+	bool save(const QUuid& id, const Inventory& inventory) const override;
 
 private:
 	class Private;

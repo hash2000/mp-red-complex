@@ -7,7 +7,6 @@ class TimeService;
 class WorldService;
 class InventoriesService;
 class ItemsService;
-class InventoryLoader;
 class UsersService;
 class ImagesService;
 class TilesSelectorService;
@@ -29,7 +28,6 @@ public:
 	WorldService* worldService() const;
 	ItemsService* itemsService() const;
 	InventoriesService* inventoriesService() const;
-	InventoryLoader* inventoryLoader() const;
 	UsersService* usersService() const;
 	ImagesService* imagesService() const;
 	TilesSelectorService* tilesSelectorService() const;

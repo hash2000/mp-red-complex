@@ -1,6 +1,6 @@
 #include "Launcher/widgets/items/item_create_widget.h"
 #include "Launcher/styles/items_styles.h"
-#include "ApplicationLayer/items/items_service.h"
+#include "Content/InventroiesModule/services/items_service.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -242,19 +242,19 @@ void ItemCreateWidget::populateParamsTable() {
 	addRow("Тип", typeText);
 
 	// Тип экипировки (если применимо)
-	if (d->entity.equipmentType != ItemEquipmentType::None) {
+	if (d->entity.subType != ItemSubType::None) {
 		QString equipmentTypeText;
-		switch (d->entity.equipmentType) {
-		case ItemEquipmentType::Head: equipmentTypeText = "Голова"; break;
-		case ItemEquipmentType::Body: equipmentTypeText = "Тело"; break;
-		case ItemEquipmentType::Weapon: equipmentTypeText = "Оружие"; break;
-		case ItemEquipmentType::Shield: equipmentTypeText = "Щит"; break;
-		case ItemEquipmentType::Gloves: equipmentTypeText = "Перчатки"; break;
-		case ItemEquipmentType::Boots: equipmentTypeText = "Обувь"; break;
-		case ItemEquipmentType::Ring: equipmentTypeText = "Кольцо"; break;
-		case ItemEquipmentType::Amulet: equipmentTypeText = "Амулет"; break;
-		case ItemEquipmentType::Backpack: equipmentTypeText = "Рюкзак"; break;
-		case ItemEquipmentType::Bag: equipmentTypeText = "Сумка"; break;
+		switch (d->entity.subType) {
+		case ItemSubType::Head: equipmentTypeText = "Голова"; break;
+		case ItemSubType::Body: equipmentTypeText = "Тело"; break;
+		case ItemSubType::Weapon: equipmentTypeText = "Оружие"; break;
+		case ItemSubType::Shield: equipmentTypeText = "Щит"; break;
+		case ItemSubType::Gloves: equipmentTypeText = "Перчатки"; break;
+		case ItemSubType::Boots: equipmentTypeText = "Обувь"; break;
+		case ItemSubType::Ring: equipmentTypeText = "Кольцо"; break;
+		case ItemSubType::Amulet: equipmentTypeText = "Амулет"; break;
+		case ItemSubType::Backpack: equipmentTypeText = "Рюкзак"; break;
+		case ItemSubType::Bag: equipmentTypeText = "Сумка"; break;
 		default: equipmentTypeText = "—"; break;
 		}
 		addRow("Слот экипировки", equipmentTypeText);

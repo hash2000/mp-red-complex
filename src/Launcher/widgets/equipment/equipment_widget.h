@@ -1,5 +1,5 @@
 #pragma once
-#include "ApplicationLayer/equipment/equipment_item_handler.h"
+#include "Content/InventroiesModule/models/equipment_item_handler.h"
 #include <QFrame>
 #include <QUuid>
 #include <memory>

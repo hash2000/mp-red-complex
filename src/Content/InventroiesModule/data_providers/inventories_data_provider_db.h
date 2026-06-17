@@ -8,8 +8,8 @@ public:
 	InventoriesDataProviderDb(DatabasesService* databasesService);
 	~InventoriesDataProviderDb() override;
 
-	void loadInventories(std::list<QUuid>& inventories) const override;
-	void loadEquipments(std::list<QUuid>& equipments) const override;
+	void inventories(std::list<QUuid>& inventories) const override;
+	void equipments(std::list<QUuid>& equipments) const override;
 
 private:
 	class Private;

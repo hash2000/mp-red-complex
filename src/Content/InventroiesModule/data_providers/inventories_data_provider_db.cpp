@@ -24,7 +24,7 @@ InventoriesDataProviderDb::InventoriesDataProviderDb(DatabasesService* databases
 InventoriesDataProviderDb::~InventoriesDataProviderDb() = default;
 
 
-void InventoriesDataProviderDb::loadInventories(std::list<QUuid>& inventories) const {
+void InventoriesDataProviderDb::inventories(std::list<QUuid>& inventories) const {
 	//const QString basePath = d->resources->Variables.get("Resources.Path", "").toString();
 	//const QString path = QDir(basePath).filePath("data/inventory");
 
@@ -44,7 +44,7 @@ void InventoriesDataProviderDb::loadInventories(std::list<QUuid>& inventories) c
 	//}
 }
 
-void InventoriesDataProviderDb::loadEquipments(std::list<QUuid>& equipments) const {
+void InventoriesDataProviderDb::equipments(std::list<QUuid>& equipments) const {
 	//const QString basePath = d->resources->Variables.get("Resources.Path", "").toString();
 	//const QString path = QDir(basePath).filePath("data/equipment");
 

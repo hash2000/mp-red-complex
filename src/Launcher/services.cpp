@@ -2,16 +2,7 @@
 #include "Launcher/services/time_service/time_service.h"
 #include "Launcher/services/world_service/world_service.h"
 #include "Libs/Resources/resources.h"
-#include "DataLayer/inventory/inventory_data_provider_json_impl.h"
-#include "DataLayer/inventory/inventory_data_writer_json_impl.h"
-#include "DataLayer/items/items_data_provider_json_impl.h"
-#include "DataLayer/items/items_data_writer_json_impl.h"
-#include "DataLayer/equipment/equipment_data_provider_json_impl.h"
-#include "DataLayer/equipment/equipment_data_writer_json_impl.h"
-#include "DataLayer/inventories/inventories_data_provider_json_impl.h"
-#include "DataLayer/items/item_repository_json_impl.h"
-#include "DataLayer/inventory/inventory_repository_json_impl.h"
-#include "DataLayer/equipment/equipment_repository_json_impl.h"
+
 #include "DataLayer/images/images_data_provider_json_impl.h"
 #include "DataLayer/images/i_images_data_provider.h"
 #include "DataLayer/images/tile_groups_data_provider_json_impl.h"
@@ -21,11 +12,8 @@
 #include "DataLayer/shaders/shaders_data_provider_impl.h"
 #include "DataLayer/materials/material_data_provider_json_impl.h"
 
-#include "ApplicationLayer/items/items_service.h"
-#include "ApplicationLayer/inventories_service.h"
-#include "ApplicationLayer/inventory_loader.h"
-#include "ApplicationLayer/inventories_save_manager.h"
-#include "ApplicationLayer/items_save_manager.h"
+
+
 #include "ApplicationLayer/textures/images_service.h"
 #include "ApplicationLayer/maps/map_service.h"
 #include "ApplicationLayer/textures/textures_service.h"
@@ -33,10 +21,19 @@
 #include "ApplicationLayer/shaders/shaders_service.h"
 #include "ApplicationLayer/materials/materials_service.h"
 
+// Items service
+#include "Content/InventroiesModule/data_providers/items_data_provider_db.h"
+#include "Content/InventroiesModule/data_providers/entities_data_provider_db.h"
+#include "Content/InventroiesModule/data_providers/inventory_data_provider_db.h"
+#include "Content/InventroiesModule/data_providers/inventories_data_provider_db.h"
+#include "Content/InventroiesModule/data_providers/equipment_data_provider_db.h"
+#include "Content/InventroiesModule/services/items_service.h"
+#include "Content/InventroiesModule/services/equipment_service.h"
+#include "Content/InventroiesModule/services/inventories_service.h"
+
 // DatabasesService
 #include "Content/DatabaseModule/data_providers/databases_settings_data_provider_json_impl.h"
 #include "Content/DatabaseModule/services/databases_service.h"
-
 
 // UsersModule
 #include "Content/UsersModule/services/users_service.h"
@@ -92,13 +89,11 @@ public:
 
 		// Data Providers
 		, databaseSettingsDataProvider([this] { return std::make_unique<DatabaseSettingsDataProviderJsonImpl>(resources); })
-		, inventoryDataProvider([this] { return std::make_unique<InventoryDataProviderJsonImpl>(resources); })
-		, inventoryDataWriter([this] { return std::make_unique<InventoryDataWriterJsonImpl>(resources); })
-		, inventoriesDataProvider([this] { return std::make_unique<InventoriesDataProviderJsonImpl>(resources); })
-		, itemsDataProvider([this] { return std::make_unique<ItemsDataProviderJsonImpl>(resources); })
-		, equipmentDataProvider([this] { return std::make_unique<EquipmentDataProviderJsonImpl>(resources); })
-		, equipmentDataWriter([this] { return std::make_unique<EquipmentDataWriterJsonImpl>(resources); })
-		, itemsDataWriter([this] { return std::make_unique<ItemsDataWriterJsonImpl>(resources); })
+		, inventoryDataProvider([this] { return std::make_unique<InventoryDataProviderDb>(databasesService.get()); })
+		, inventoriesDataProvider([this] { return std::make_unique<InventoriesDataProviderDb>(databasesService.get()); })
+		, itemsDataProvider([this] { return std::make_unique<ItemsDataProviderDb>(databasesService.get()); })
+		, entitiesDataProvider([this] { return std::make_unique<EntitiesDataProviderDb>(databasesService.get()); })
+		, equipmentDataProvider([this] { return std::make_unique<EquipmentDataProviderDb>(databasesService.get()); })
 		, imagesDataProvider([this] {	return std::make_unique<ImagesDataProviderJsonImpl>(resources);	})
 		, tileGroupsDataProvider([this] {	return std::make_unique<TileGroupsDataProviderJsonImpl>(resources);	})
 		, mapDataProvider([this] {	return std::make_unique<MapDataProviderJsonImpl>(resources);	})
@@ -106,35 +101,6 @@ public:
 		, characterDataProvider([this] {	return std::make_unique<CharacterDataProviderDb>(databasesService.get());	})
 		, shadersDataProvider([this] { return std::make_unique<ShadersDataProviderLocalImpl>(resources); })
 		, materialsDataProvider([this] { return std::make_unique<MaterialsDataProviderJsonImpl>(resources); })
-
-		// Repositories
-		, itemRepository([this] {
-				return std::make_unique<ItemRepositoryJsonImpl>(
-					itemsDataProvider.get());
-			})
-		, inventoryRepository([this] {
-				return std::make_unique<InventoryRepositoryJsonImpl>(
-					inventoryDataProvider.get(),
-					inventoryDataWriter.get());
-			})
-		, equipmentRepository([this] {
-				return std::make_unique<EquipmentRepositoryJsonImpl>(
-					equipmentDataProvider.get(),
-					equipmentDataWriter.get());
-			})
-
-		// Save managers
-		, inventoriesSaveManager([this] {
-				return std::make_unique<InventoriesSaveManager>(
-					inventoriesService.get(),
-					inventoryDataWriter.get(),
-					equipmentDataWriter.get());
-			})
-		, itemsSaveManager([this] {
-				return std::make_unique<ItemsSaveManager>(
-					itemsService.get(),
-					itemsDataWriter.get());
-			})
 
 		// Services
 		, databasesService([this] {
@@ -146,19 +112,12 @@ public:
 		, worldService([] { return std::make_unique<WorldService>(); })
 		, itemsService([this] {
 				return std::make_unique<ItemsService>(
-					itemRepository.get(),
+					entitiesDataProvider.get(),
+					itemsDataProvider.get(),
 					imagesService.get());
 			})
 		, inventoriesService([this] {
 				return std::make_unique<InventoriesService>(
-					itemsService.get(),
-					inventoryLoader.get());
-			})
-		, inventoryLoader([this] {
-				return std::make_unique<InventoryLoader>(
-					inventoryRepository.get(),
-					equipmentRepository.get(),
-					itemRepository.get(),
 					itemsService.get());
 			})
 		, usersService([this] {
@@ -202,11 +161,9 @@ public:
 	// Data Providers (остаются для обратной совместимости и writer'ов)
 	LazyPtr<DatabaseSettingsDataProviderJsonImpl> databaseSettingsDataProvider;
 	LazyPtr<IInventoryDataProvider> inventoryDataProvider;
-	LazyPtr<IInventoryDataWriter> inventoryDataWriter;
 	LazyPtr<IItemsDataProvider> itemsDataProvider;
-	LazyPtr<IItemsDataWriter> itemsDataWriter;
+	LazyPtr<IEntitiesDataProvider> entitiesDataProvider;
 	LazyPtr<IEquipmentDataProvider> equipmentDataProvider;
-	LazyPtr<IEquipmentDataWriter> equipmentDataWriter;
 	LazyPtr<IInventoriesDataProvider> inventoriesDataProvider;
 	LazyPtr<IUsersDataProvider> usersDataProvider;
 	LazyPtr<ICharacterDataProvider> characterDataProvider;
@@ -216,20 +173,10 @@ public:
 	LazyPtr<IShadersDataProvider> shadersDataProvider;
 	LazyPtr<IMaterialsDataProvider> materialsDataProvider;
 
-	// Repositories (новый слой абстракции)
-	LazyPtr<IItemRepository> itemRepository;
-	LazyPtr<IInventoryRepository> inventoryRepository;
-	LazyPtr<IEquipmentRepository> equipmentRepository;
-
-	// Save managers
-	LazyPtr<InventoriesSaveManager> inventoriesSaveManager;
-	LazyPtr<ItemsSaveManager> itemsSaveManager;
-
 	// Services
 	LazyPtr<DatabasesService> databasesService;
 	LazyPtr<ItemsService> itemsService;
 	LazyPtr<InventoriesService> inventoriesService;
-	LazyPtr<InventoryLoader> inventoryLoader;
 	LazyPtr<UsersService> usersService;
 	LazyPtr<ImagesService> imagesService;
 	LazyPtr<TilesSelectorService> tilesSelectorService;
@@ -243,16 +190,11 @@ public:
 Services::Services(Resources* resources)
 	: d(std::make_unique<Private>(this)) {
 	d->resources = resources;
-
-	// Подключаем сохранение к сигналу save()
-	connect(this, &Services::save, d->inventoriesSaveManager.get(), &InventoriesSaveManager::saveAll);
-	connect(this, &Services::save, d->itemsSaveManager.get(), &ItemsSaveManager::saveAll);
 }
 
 Services::~Services() = default;
 
 void Services::run() {
-	d->itemsService->loadEntities();
 	timeService()->start();
 }
 
@@ -282,10 +224,6 @@ ItemsService* Services::itemsService() const {
 
 InventoriesService* Services::inventoriesService() const {
 	return d->inventoriesService.get();
-}
-
-InventoryLoader* Services::inventoryLoader() const {
-	return d->inventoryLoader.get();
 }
 
 UsersService* Services::usersService() const {

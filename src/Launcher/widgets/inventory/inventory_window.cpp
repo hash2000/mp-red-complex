@@ -1,11 +1,11 @@
 #include "Launcher/widgets/inventory/inventory_window.h"
 #include "Launcher/widgets/inventory/inventory_grid_view.h"
 #include "Launcher/widgets/inventory/inventory_grid.h"
-#include "ApplicationLayer/inventories_service.h"
-#include "ApplicationLayer/items/item_mime_data.h"
 #include "Launcher/commands/command_context.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/services.h"
+#include "Content/InventroiesModule/services/inventories_service.h"
+#include "Content/InventroiesModule/models/item_mime_data.h"
 #include <QVBoxLayout>
 #include <QUuid>
 #include <QMdiSubWindow>

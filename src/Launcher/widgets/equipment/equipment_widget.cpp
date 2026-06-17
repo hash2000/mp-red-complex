@@ -1,9 +1,9 @@
 #include "Launcher/widgets/equipment/equipment_widget.h"
 #include "Launcher/widgets/equipment/equipment_slot_widget.h"
-#include "ApplicationLayer/equipment/equipment_service.h"
-#include "ApplicationLayer/inventory/inventory_service.h"
-#include "ApplicationLayer/inventories_service.h"
-#include "ApplicationLayer/items/item_mime_data.h"
+#include "Content/InventroiesModule/services/equipment_service.h"
+#include "Content/InventroiesModule/services/inventory_service.h"
+#include "Content/InventroiesModule/services/inventories_service.h"
+#include "Content/InventroiesModule/models/item_mime_data.h"
 #include <QVBoxLayout>
 #include <QUuid>
 #include <map>

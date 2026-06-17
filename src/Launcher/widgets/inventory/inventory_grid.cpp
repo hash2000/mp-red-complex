@@ -2,10 +2,10 @@
 #include "Launcher/widgets/inventory/inventory_item_widget.h"
 #include "Launcher/widgets/inventory/drop_preview_widget.h"
 #include "Launcher/styles/items_styles.h"
-#include "ApplicationLayer/inventory/inventory_service.h"
-#include "ApplicationLayer/inventories_service.h"
-#include "ApplicationLayer/inventory/inventory_item_handler.h"
-#include "ApplicationLayer/items/item_mime_data.h"
+#include "Content/InventroiesModule/services/inventory_service.h"
+#include "Content/InventroiesModule/services/inventories_service.h"
+#include "Content/InventroiesModule/models/inventory_item_handler.h"
+#include "Content/InventroiesModule/models/item_mime_data.h"
 
 #include <QPoint>
 #include <QLayoutItem>
@@ -97,9 +97,11 @@ void InventoryGrid::setInventoryService(InventoriesService* inventories, const Q
 
 		// Инициализируем виджеты из текущего состояния сервиса
 		updateGridSize();
-		for (const auto &item : d->inventory->items()) {
-			createWidgetForItem(item);
-		}
+
+		// TODO: исправить
+		//for (const auto &item : d->inventory->items()) {
+		//	createWidgetForItem(item);
+		//}
 	}
 
 	setObjectName(newObjectName());

@@ -3,8 +3,8 @@
 #include "Launcher/widgets/inventory/inventory_grid.h"
 #include "Launcher/dragndrop/drag_event_builder.h"
 #include "Launcher/styles/items_styles.h"
-#include "ApplicationLayer/inventory/inventory_item_handler.h"
-#include "ApplicationLayer/items/item_mime_data.h"
+#include "Content/InventroiesModule/models/inventory_item_handler.h"
+#include "Content/InventroiesModule/models/item_mime_data.h"
 #include "Content/BaseWidgets/clicable_label.h"
 #include <QSlider>
 #include <QLineEdit>

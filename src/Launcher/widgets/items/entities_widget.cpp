@@ -1,7 +1,7 @@
 #include "Launcher/widgets/items/entities_widget.h"
 #include "Launcher/widgets/items/entty_entry_widget.h"
-#include "ApplicationLayer/inventories_service.h"
-#include "ApplicationLayer/items_placement_service.h"
+#include "Content/InventroiesModule/services/inventories_service.h"
+#include "Content/InventroiesModule/services/items_placement_service.h"
 #include <QScrollArea>
 #include <QVBoxLayout>
 #include <QHBoxLayout>

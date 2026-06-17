@@ -1,5 +1,5 @@
 #pragma once
-#include "DataLayer/items/item.h"
+#include "Content/InventroiesModule/models/item.h"
 #include <QWidget>
 
 class EntityItemTooltip : public QWidget {

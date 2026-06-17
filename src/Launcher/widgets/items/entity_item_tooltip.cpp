@@ -51,23 +51,23 @@ public:
 		QString details;
 		switch (item.type) {
 		case ItemType::Resource: {
-			if (item.equipmentType == ItemEquipmentType::Resource) {
+			if (item.subType == ItemSubType::Resource) {
 				details = "<b>Тип:</b> Сырьё";
 			}
 			break;
 		}
 		case ItemType::Equipment: {
 			QString slotName;
-			switch (item.equipmentType) {
-			case ItemEquipmentType::Head: slotName = "Голова"; break;
-			case ItemEquipmentType::Body: slotName = "Тело"; break;
-			case ItemEquipmentType::Weapon: slotName = "Оружие"; break;
-			case ItemEquipmentType::Shield: slotName = "Щит"; break;
-			case ItemEquipmentType::Gloves: slotName = "Перчатки"; break;
-			case ItemEquipmentType::Boots: slotName = "Обувь"; break;
-			case ItemEquipmentType::Ring: slotName = "Кольцо"; break;
-			case ItemEquipmentType::Amulet: slotName = "Амулет"; break;
-			case ItemEquipmentType::Consumable: slotName = "Расходник"; break;
+			switch (item.subType) {
+			case ItemSubType::Head: slotName = "Голова"; break;
+			case ItemSubType::Body: slotName = "Тело"; break;
+			case ItemSubType::Weapon: slotName = "Оружие"; break;
+			case ItemSubType::Shield: slotName = "Щит"; break;
+			case ItemSubType::Gloves: slotName = "Перчатки"; break;
+			case ItemSubType::Boots: slotName = "Обувь"; break;
+			case ItemSubType::Ring: slotName = "Кольцо"; break;
+			case ItemSubType::Amulet: slotName = "Амулет"; break;
+			case ItemSubType::Consumable: slotName = "Расходник"; break;
 			default: slotName = "Неизвестно";
 			}
 			details = QString("<b>Экипировка:</b> %1").arg(slotName);

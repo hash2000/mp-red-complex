@@ -56,7 +56,7 @@ std::shared_ptr<Item> ItemsDataProviderDb::item(const QUuid& id) const {
 	return std::move(item);
 }
 
-bool ItemsDataProviderDb::setItem(const Item& item) const {
+bool ItemsDataProviderDb::save(const Item& item) const {
 
 	auto conn = d->databasesService->connection("game");
 	if (!conn) {

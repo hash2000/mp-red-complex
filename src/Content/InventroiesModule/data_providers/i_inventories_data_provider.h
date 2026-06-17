@@ -6,7 +6,7 @@ class IInventoriesDataProvider {
 public:
 	virtual ~IInventoriesDataProvider() = default;
 
-	virtual void loadInventories(std::list<QUuid>& inventories) const = 0;
-	virtual void loadEquipments(std::list<QUuid>& equipments) const = 0;
+	virtual void inventories(std::list<QUuid>& inventories) const = 0;
+	virtual void equipments(std::list<QUuid>& equipments) const = 0;
 };
 

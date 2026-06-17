@@ -88,7 +88,7 @@ void EquipmentDataProviderDb::Private::loadItems(Equipment& item) {
 	}
 }
 
-std::shared_ptr<Equipment> EquipmentDataProviderDb::get(const QUuid& id) {
+std::shared_ptr<Equipment> EquipmentDataProviderDb::equipment(const QUuid& id) {
 	auto conn = d->databasesService->connection("game");
 	if (!conn) {
 		return std::shared_ptr<Equipment>();
