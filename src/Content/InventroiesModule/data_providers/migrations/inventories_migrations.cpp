@@ -81,36 +81,32 @@ void build(MigrationManager* migrator) {
 			CREATE INDEX IDX_entity_permissions_any_entity_id ON entity_permissions_any (entity_id);
 
 			-- Таблица созданных предметов
-			CREATE TABLE "items" (
+			CREATE TABLE items (
 				id TEXT NOT NULL,
-				entity_id TEXT NOT NULL, 
+				entity_id TEXT NOT NULL,
+				container_id TEXT,
+				count INTEGER NOT NULL,
+				position_base INTEGER NOT NULL, 
+				position_secondary INTEGER NOT NULL,
+				item_level INTEGER DEFAULT (1) NOT NULL,
 				ia_active INTEGER DEFAULT (1) NOT NULL, 
-				item_level INTEGER DEFAULT (1) NOT NULL, 
-				created_at TEXT DEFAULT (datetime('now')) NOT NULL,
-				CONSTRAINT PK_game_items PRIMARY KEY (id),
-				CONSTRAINT FK_items_entities FOREIGN KEY (entity_id) REFERENCES "item_entities"(id)
+				created_at TEXT DEFAULT (datetime('now')) NOT NULL, 
+				CONSTRAINT PK_items PRIMARY KEY (id),
+
+				CONSTRAINT FK_items_entities FOREIGN KEY (entity_id) REFERENCES "item_entities"(id),
+				CONSTRAINT FK_items_containers FOREIGN KEY (container_id) REFERENCES containers(item_id)
 			);
+
+			CREATE UNIQUE INDEX UQ_items_id_container_id ON items (id,container_id);
+			CREATE INDEX UQ_items_container_id ON items (container_id);
 
 			-- Таблица контейнеров - склады, рюкзаки, экипировка
 			-- для типа - container
-			CREATE TABLE "containers" (
+			CREATE TABLE containers (
 				item_id TEXT NOT NULL,
 				name TEXT NOT NULL,
 				CONSTRAINT PK_equipments PRIMARY KEY (item_id),
-				CONSTRAINT FK_containers_items FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE ON UPDATE CASCADE
-			);
-
-			-- Таблица предметов, которые находятся в контейнерах,
-			-- а также экипировка - position_base - это идентификатор слота в экипировке
-			CREATE TABLE "container_items" (
-				container_id TEXT NOT NULL,
-				item_id TEXT NOT NULL,
-				count INTEGER NOT NULL,
-				position_base INTEGER NOT NULL,
-				position_secondary INTEGER NOT NULL,
-				CONSTRAINT PK_container_items_containers PRIMARY KEY (container_id,item_id),
-				CONSTRAINT FK_container_items_items FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE ON UPDATE CASCADE,
-				CONSTRAINT FK_container_items_containers FOREIGN KEY (container_id) REFERENCES containers(item_id) ON DELETE CASCADE ON UPDATE CASCADE
+				CONSTRAINT FK_containers_items FOREIGN KEY (item_id) REFERENCES items(id)
 			);
 		)");
 	},
@@ -124,7 +120,6 @@ void build(MigrationManager* migrator) {
 			DROP TABLE IF EXISTS resources;
 			DROP TABLE IF EXISTS item_entity_equipment_type;
 			DROP TABLE IF EXISTS item_entity_types;
-			DROP TABLE IF EXISTS container_items;
 			DROP TABLE IF EXISTS containers;
 		)");
 	});

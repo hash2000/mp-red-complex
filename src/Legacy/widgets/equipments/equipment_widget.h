@@ -1,10 +1,10 @@
 #pragma once
-#include "Content/InventroiesModule/models/equipment_item_handler.h"
 #include <QFrame>
 #include <QUuid>
 #include <memory>
 
-class EquipmentSlot;
+enum class ItemSlotType;
+class ContainerItem;
 class InventoriesService;
 class ItemMimeData;
 
@@ -18,8 +18,8 @@ public:
 	bool setEquipmentService(const QUuid& id);
 
 private slots:
-	void onItemEquipped(const EquipmentItemHandler& item, EquipmentSlotType slot, const QUuid& inventoryId);
-	void onItemUnequipped(const EquipmentItemHandler& item, EquipmentSlotType slot);
+	void onItemEquipped(const ContainerItem& item, ItemSlotType slot, const QUuid& inventoryId);
+	void onItemUnequipped(const ContainerItem& item, ItemSlotType slot);
 
 signals:
 	void containerOpened(const ItemMimeData& container);

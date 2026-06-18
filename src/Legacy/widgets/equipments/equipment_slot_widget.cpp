@@ -3,7 +3,8 @@
 #include "Launcher/styles/items_styles.h"
 #include "Content/InventroiesModule/services/equipment_service.h"
 #include "Content/InventroiesModule/models/item_mime_data.h"
-#include "Content/InventroiesModule/models/equipment_item_handler.h"
+#include "Content/InventroiesModule/models/item.h"
+#include "Content/InventroiesModule/models/container.h"
 
 #include <QMouseEvent>
 #include <QDragEnterEvent>
@@ -15,21 +16,22 @@
 
 class EquipmentSlot::Private {
 public:
-  Private(EquipmentSlot* parent)
-	: q(parent) {
-  }
-
+  Private(EquipmentSlot* parent) : q(parent) { }
   EquipmentSlot* q;
 
-	EquipmentSlotType slot;
+	ItemSlotType slot;
   EquipmentWidget* parentWidget;
 	EquipmentService* equipmentService;
-	std::optional<EquipmentItemHandler> item;
+	std::shared_ptr<ContainerItem> item;
   bool highlighted = false;
   bool dragging = false;
 };
 
-EquipmentSlot::EquipmentSlot(EquipmentService* equipmentService, EquipmentSlotType type, EquipmentWidget* parentWidget, QWidget* parent)
+EquipmentSlot::EquipmentSlot(
+	EquipmentService* equipmentService,
+	ItemSlotType type,
+	EquipmentWidget* parentWidget,
+	QWidget* parent)
   : d(std::make_unique<Private>(this))
 	, QLabel(parent) {
 	setAcceptDrops(true);
@@ -42,16 +44,16 @@ EquipmentSlot::EquipmentSlot(EquipmentService* equipmentService, EquipmentSlotTy
 
 	// Специальные размеры для некоторых слотов
 	switch (type) {
-	case EquipmentSlotType::Backpack:
-	case EquipmentSlotType::Bag1:
-	case EquipmentSlotType::Bag2:
+	case ItemSlotType::Backpack:
+	case ItemSlotType::Bag1:
+	case ItemSlotType::Bag2:
 		setFixedSize(48, 48);
 		break;
-	case EquipmentSlotType::WeaponLeft:
-	case EquipmentSlotType::WeaponRight:
+	case ItemSlotType::WeaponLeft:
+	case ItemSlotType::WeaponRight:
 		setFixedSize(48, 96); // Вертикальное оружие
 		break;
-	case EquipmentSlotType::Body:
+	case ItemSlotType::Body:
 		setFixedSize(64, 96); // Тело выше
 		break;
 	}
@@ -80,7 +82,7 @@ EquipmentSlot::EquipmentSlot(EquipmentService* equipmentService, EquipmentSlotTy
 EquipmentSlot::~EquipmentSlot() = default;
 
 bool EquipmentSlot::isOccupied() const {
-  return d->item.has_value();
+  return (bool)d->item;
 }
 
 bool EquipmentSlot::isHighlighted() const {
@@ -94,12 +96,12 @@ void EquipmentSlot::setHighlighted(bool highlighted) {
 	}
 }
 
-EquipmentSlotType EquipmentSlot::slotType() const {
+ItemSlotType EquipmentSlot::slotType() const {
   return d->slot;
 }
 
-void EquipmentSlot::setItem(const EquipmentItemHandler& item) {
-	const auto position = EquipmentItemHandler::convertSlotToPosition(d->slot);
+void EquipmentSlot::setItem(std::shared_ptr<ContainerItem> item) {
+	const auto position = ContainerItem::convertSlotToPosition(d->slot);
 	if (!d->equipmentService->canPlaceItem(item, position.y(), position.x(), false)) {
 		return;
 	}
@@ -111,8 +113,8 @@ void EquipmentSlot::setItem(const EquipmentItemHandler& item) {
 }
 
 void EquipmentSlot::clearItem() {
-	if (d->item.has_value()) {
-		d->equipmentService->unequipItem(d->item.value(), d->slot);
+	if (d->item) {
+		d->equipmentService->unequipItem(d->item, d->slot);
 		d->item.reset();
 		clear();
 		updateVisualState();
@@ -128,8 +130,8 @@ void EquipmentSlot::mousePressEvent(QMouseEvent* event) {
 }
 
 void EquipmentSlot::mouseDoubleClickEvent(QMouseEvent* event) {
-	if (event->button() == Qt::LeftButton && d->item.has_value() && d->item.value().entity->container.has_value()) {
-		emit containerOpened(ItemMimeData(d->item.value()));
+	if (event->button() == Qt::LeftButton && d->item && d->item->item->entity->container.has_value()) {
+		emit containerOpened(ItemMimeData(*d->item));
 	}
 }
 
@@ -141,7 +143,7 @@ void EquipmentSlot::dragEnterEvent(QDragEnterEvent* event) {
 
 	QByteArray data = event->mimeData()->data("application/x-game-item");
 	const auto item = ItemMimeData::fromMimeData(data);
-	const auto position = EquipmentItemHandler::convertSlotToPosition(d->slot);
+	const auto position = ContainerItem::convertSlotToPosition(d->slot);
 
 	if (d->equipmentService->canPlaceItem(item, position.y(), position.x(), false)) {
 		setHighlighted(true);
@@ -158,13 +160,13 @@ void EquipmentSlot::dragLeaveEvent(QDragLeaveEvent* event) {
 }
 
 void EquipmentSlot::startDrag() {
-	if (!d->item.has_value()) {
+	if (!d->item) {
 		return;
 	}
 
-	const auto itemPtr = d->item.value();
+	const auto itemPtr = d->item.get();
 
-	DragEventBuilder builder(this, ItemMimeData(itemPtr), *itemPtr.entity, d->equipmentService->placementId());
+	DragEventBuilder builder(this, ItemMimeData(*itemPtr), *itemPtr->item->entity, d->equipmentService->placementId());
 
 	const auto dropAction = builder.ExecDrag(Qt::MoveAction);
 
@@ -217,25 +219,25 @@ void EquipmentSlot::paintEvent(QPaintEvent* event) {
 		painter.setPen(QColor(100, 116, 139));
 
 		switch (d->slot) {
-		case EquipmentSlotType::Head: painter.drawText(rect(), Qt::AlignCenter, "H"); break;
-		case EquipmentSlotType::Body: painter.drawText(rect(), Qt::AlignCenter, "B"); break;
-		case EquipmentSlotType::WeaponLeft: painter.drawText(rect(), Qt::AlignCenter, "L"); break;
-		case EquipmentSlotType::WeaponRight: painter.drawText(rect(), Qt::AlignCenter, "R"); break;
-		case EquipmentSlotType::Gloves: painter.drawText(rect(), Qt::AlignCenter, "G"); break;
-		case EquipmentSlotType::Amulet: painter.drawText(rect(), Qt::AlignCenter, "A"); break;
-		case EquipmentSlotType::Boots: painter.drawText(rect(), Qt::AlignCenter, "F"); break;
-		case EquipmentSlotType::Ring1: painter.drawText(rect(), Qt::AlignCenter, "R1"); break;
-		case EquipmentSlotType::Ring2: painter.drawText(rect(), Qt::AlignCenter, "R2"); break;
-		case EquipmentSlotType::Ring3: painter.drawText(rect(), Qt::AlignCenter, "R3"); break;
-		case EquipmentSlotType::Backpack: painter.drawText(rect(), Qt::AlignCenter, "Bp"); break;
-		case EquipmentSlotType::Bag1: painter.drawText(rect(), Qt::AlignCenter, "B1"); break;
-		case EquipmentSlotType::Bag2: painter.drawText(rect(), Qt::AlignCenter, "B2"); break;
+		case ItemSlotType::Head: painter.drawText(rect(), Qt::AlignCenter, "H"); break;
+		case ItemSlotType::Body: painter.drawText(rect(), Qt::AlignCenter, "B"); break;
+		case ItemSlotType::WeaponLeft: painter.drawText(rect(), Qt::AlignCenter, "L"); break;
+		case ItemSlotType::WeaponRight: painter.drawText(rect(), Qt::AlignCenter, "R"); break;
+		case ItemSlotType::Gloves: painter.drawText(rect(), Qt::AlignCenter, "G"); break;
+		case ItemSlotType::Amulet: painter.drawText(rect(), Qt::AlignCenter, "A"); break;
+		case ItemSlotType::Boots: painter.drawText(rect(), Qt::AlignCenter, "F"); break;
+		case ItemSlotType::Ring1: painter.drawText(rect(), Qt::AlignCenter, "R1"); break;
+		case ItemSlotType::Ring2: painter.drawText(rect(), Qt::AlignCenter, "R2"); break;
+		case ItemSlotType::Ring3: painter.drawText(rect(), Qt::AlignCenter, "R3"); break;
+		case ItemSlotType::Backpack: painter.drawText(rect(), Qt::AlignCenter, "Bp"); break;
+		case ItemSlotType::Bag1: painter.drawText(rect(), Qt::AlignCenter, "B1"); break;
+		case ItemSlotType::Bag2: painter.drawText(rect(), Qt::AlignCenter, "B2"); break;
 		}
 	}
 }
 
 void EquipmentSlot::updateVisualState() {
-	setProperty("occupied", d->item.has_value());
+	setProperty("occupied", (bool)d->item);
 	setProperty("highlight", d->highlighted);
 
 	// Применяем изменения стиля

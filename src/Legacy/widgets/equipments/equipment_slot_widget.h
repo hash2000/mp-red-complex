@@ -1,30 +1,31 @@
 #pragma once
-#include <QWidget>
 #include <QLabel>
 #include <QFrame>
-#include <QMap>
-#include <optional>
 #include <memory>
 
 class EquipmentWidget;
 class EquipmentService;
-class EquipmentItemHandler;
 class ItemMimeData;
-enum class EquipmentSlotType;
+class ContainerItem;
+enum class ItemSlotType;
 
 class EquipmentSlot : public QLabel {
   Q_OBJECT
 public:
-  explicit EquipmentSlot(EquipmentService* equipmentService, EquipmentSlotType type, EquipmentWidget* parentWidget, QWidget* parent = nullptr);
+  explicit EquipmentSlot(
+		EquipmentService* equipmentService,
+		ItemSlotType type,
+		EquipmentWidget* parentWidget,
+		QWidget* parent = nullptr);
   ~EquipmentSlot() override;
 
 	bool isOccupied() const;
 	bool isHighlighted() const;
   void setHighlighted(bool highlighted);
 
-	EquipmentSlotType slotType() const;
+	ItemSlotType slotType() const;
 	void clearItem();
-	void setItem(const EquipmentItemHandler& item);
+	void setItem(std::shared_ptr<ContainerItem> item);
 
 signals:
 	void containerOpened(const ItemMimeData& container);

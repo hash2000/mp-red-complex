@@ -133,6 +133,7 @@ std::shared_ptr<ItemEntity> EntitiesDataProviderDb::entity(const QString& id) co
 	if (!conn) {
 		return std::shared_ptr<ItemEntity>();
 	}
+
 	auto reader = conn->executeQuery(QString("%1\nwhere e.id = :entity_id\n%2")
 		.arg(kSql_entitySelectorExpr)
 		.arg(kSql_entityGroupByExpr));

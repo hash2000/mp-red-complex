@@ -29,9 +29,11 @@ enum class ItemRarityType {
 	Unique,
 };
 
-// если этот предмет-экиперовка, сразу нежно знать куда эта экиперовка одевается
+// Подтип указывает куда может быть установлен предмет
 enum class ItemSubType {
 	None,
+	//-----------
+	// Экипировка
 	Head,
 	Body,
 	Weapon,
@@ -44,9 +46,30 @@ enum class ItemSubType {
 	Consumable,
 	Backpack,
 	Bag,
+	//-----------
 	System,
 
 	LastSlot,
+};
+
+// Слот куда конкретно установлен предмет в контейнере
+enum class ItemSlotType {
+	//-----------
+	// Экипировка
+	Head,
+	Body,
+	WeaponLeft,
+	WeaponRight,
+	Gloves,
+	Amulet,
+	Boots,
+	Ring1,
+	Ring2,
+	Ring3,
+	Backpack,
+	Bag1,
+	Bag2,
+	//-----------
 };
 
 // рецепты
@@ -79,27 +102,20 @@ public:
 	QString id;
 	QString name;
 	ItemType type;
+	ItemSubType subType;
 	QString description;
 	QString iconPath;
-	QPixmap icon;  // Загружается через ImagesService при загрузке сущностей
+	QPixmap icon;
 
 	int width = 1;
 	int height = 1;
-	// стек 
+
 	int maxStack = 1;
 
 	ItemRarityType rarity = ItemRarityType::Common;
 
-	// если это экипировка, то какая
-	ItemSubType subType;
-
-	// рецепт
 	std::optional<ItemRecipe> recipe;
-
-	// контейнер
 	std::optional<ItemContainer> container;
-
-	// тип ресурса
 	std::list<ItemResourceType> resourceType;
 };
 

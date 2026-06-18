@@ -24,12 +24,11 @@
 // Items service
 #include "Content/InventroiesModule/data_providers/items_data_provider_db.h"
 #include "Content/InventroiesModule/data_providers/entities_data_provider_db.h"
-#include "Content/InventroiesModule/data_providers/inventory_data_provider_db.h"
+#include "Content/InventroiesModule/data_providers/container_data_provider_db.h"
 #include "Content/InventroiesModule/data_providers/inventories_data_provider_db.h"
-#include "Content/InventroiesModule/data_providers/equipment_data_provider_db.h"
-#include "Content/InventroiesModule/services/items_service.h"
-#include "Content/InventroiesModule/services/equipment_service.h"
-#include "Content/InventroiesModule/services/inventories_service.h"
+//#include "Content/InventroiesModule/services/items_service.h"
+//#include "Content/InventroiesModule/services/equipment_service.h"
+//#include "Content/InventroiesModule/services/inventories_service.h"
 
 // DatabasesService
 #include "Content/DatabaseModule/data_providers/databases_settings_data_provider_json_impl.h"
@@ -89,11 +88,10 @@ public:
 
 		// Data Providers
 		, databaseSettingsDataProvider([this] { return std::make_unique<DatabaseSettingsDataProviderJsonImpl>(resources); })
-		, inventoryDataProvider([this] { return std::make_unique<InventoryDataProviderDb>(databasesService.get()); })
 		, inventoriesDataProvider([this] { return std::make_unique<InventoriesDataProviderDb>(databasesService.get()); })
 		, itemsDataProvider([this] { return std::make_unique<ItemsDataProviderDb>(databasesService.get()); })
 		, entitiesDataProvider([this] { return std::make_unique<EntitiesDataProviderDb>(databasesService.get()); })
-		, equipmentDataProvider([this] { return std::make_unique<EquipmentDataProviderDb>(databasesService.get()); })
+		, containerDataProvider([this] { return std::make_unique<ContainerDataProvider>(databasesService.get()); })
 		, imagesDataProvider([this] {	return std::make_unique<ImagesDataProviderJsonImpl>(resources);	})
 		, tileGroupsDataProvider([this] {	return std::make_unique<TileGroupsDataProviderJsonImpl>(resources);	})
 		, mapDataProvider([this] {	return std::make_unique<MapDataProviderJsonImpl>(resources);	})
@@ -110,16 +108,16 @@ public:
 			})
 		, timeService([] { return std::make_unique<TimeService>(); })
 		, worldService([] { return std::make_unique<WorldService>(); })
-		, itemsService([this] {
-				return std::make_unique<ItemsService>(
-					entitiesDataProvider.get(),
-					itemsDataProvider.get(),
-					imagesService.get());
-			})
-		, inventoriesService([this] {
-				return std::make_unique<InventoriesService>(
-					itemsService.get());
-			})
+		//, itemsService([this] {
+		//		return std::make_unique<ItemsService>(
+		//			entitiesDataProvider.get(),
+		//			itemsDataProvider.get(),
+		//			imagesService.get());
+		//	})
+		//, inventoriesService([this] {
+		//		return std::make_unique<InventoriesService>(
+		//			itemsService.get());
+		//	})
 		, usersService([this] {
 				return std::make_unique<UsersService>(
 					usersDataProvider.get(),
@@ -160,10 +158,9 @@ public:
 
 	// Data Providers (остаются для обратной совместимости и writer'ов)
 	LazyPtr<DatabaseSettingsDataProviderJsonImpl> databaseSettingsDataProvider;
-	LazyPtr<IInventoryDataProvider> inventoryDataProvider;
+	LazyPtr<IContainerDataProvider> containerDataProvider;
 	LazyPtr<IItemsDataProvider> itemsDataProvider;
 	LazyPtr<IEntitiesDataProvider> entitiesDataProvider;
-	LazyPtr<IEquipmentDataProvider> equipmentDataProvider;
 	LazyPtr<IInventoriesDataProvider> inventoriesDataProvider;
 	LazyPtr<IUsersDataProvider> usersDataProvider;
 	LazyPtr<ICharacterDataProvider> characterDataProvider;
@@ -175,8 +172,8 @@ public:
 
 	// Services
 	LazyPtr<DatabasesService> databasesService;
-	LazyPtr<ItemsService> itemsService;
-	LazyPtr<InventoriesService> inventoriesService;
+	//LazyPtr<ItemsService> itemsService;
+	//LazyPtr<InventoriesService> inventoriesService;
 	LazyPtr<UsersService> usersService;
 	LazyPtr<ImagesService> imagesService;
 	LazyPtr<TilesSelectorService> tilesSelectorService;
@@ -219,11 +216,11 @@ WorldService* Services::worldService() const {
 }
 
 ItemsService* Services::itemsService() const {
-	return d->itemsService.get();
+	return nullptr; // d->itemsService.get();
 }
 
 InventoriesService* Services::inventoriesService() const {
-	return d->inventoriesService.get();
+	return nullptr; // d->inventoriesService.get();
 }
 
 UsersService* Services::usersService() const {

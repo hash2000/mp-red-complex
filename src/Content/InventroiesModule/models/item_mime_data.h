@@ -4,21 +4,13 @@
 
 class Item;
 class ItemEntity;
-class InventoryItemHandler;
-class EquipmentItemHandler;
-
-enum class ItemOwner {
-	Unknown,
-	Inventory,
-	Equipment,
-};
+class ContainerItem;
 
 class ItemMimeData {
 public:
 	QUuid id;
 	QString name;
 	QString entityId;
-	int owner;
 	int width;
 	int height;
 	int count;
@@ -30,8 +22,7 @@ public:
 
 public:
 	ItemMimeData();
-	ItemMimeData(const InventoryItemHandler& item);
-	ItemMimeData(const EquipmentItemHandler& item);
+	ItemMimeData(const ContainerItem& item);
 	ItemMimeData(const Item& item);
 
 	static ItemMimeData fromMimeData(const QByteArray& data);
