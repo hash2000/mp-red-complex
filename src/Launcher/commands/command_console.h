@@ -18,7 +18,7 @@ public:
 	bool isVisible() const;
 
 	// Добавление сообщения в историю (извне)
-	void appendMessage(const QString& message, const QString& styleClass = "info");
+	void appendMessage(const QString& message, const QString& styleClass);
 
 protected:
 	void showEvent(QShowEvent* event) override;
@@ -31,7 +31,7 @@ private slots:
 	void onHistoryUp();
 	void onHistoryDown();
 	void onCompleterActivated(const QString& text);
-	void onOutputRequested(const QString& message, const QString& styleClass);
+	void onOutputRequested(const QString& message, const QString& styleClass, const QString& type);
 
 private:
 	void setupUi();

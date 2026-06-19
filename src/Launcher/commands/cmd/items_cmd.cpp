@@ -18,8 +18,9 @@ public:
 	Private(ItemsCommand* parent) : q(parent) {}
 	ItemsCommand* q;
 
-	bool showContainerItems(Services* services, const QUuid& containerId);
-	bool showItem(Services* services, const QUuid& containerId);
+	void printItem(CommandContext* context, std::shared_ptr<Item> item);
+	bool showContainerItems(CommandContext* context, const QUuid& containerId);
+	bool showItem(CommandContext* context, const QUuid& containerId);
 };
 
 ItemsCommand::ItemsCommand(QObject* parent)
@@ -29,31 +30,38 @@ ItemsCommand::ItemsCommand(QObject* parent)
 
 ItemsCommand::~ItemsCommand() = default;
 
-bool ItemsCommand::Private::showContainerItems(Services* services, const QUuid& containerId) {
+void ItemsCommand::Private::printItem(CommandContext* context, std::shared_ptr<Item> item) {
+
+}
+
+bool ItemsCommand::Private::showContainerItems(CommandContext* context, const QUuid& containerId) {
 
 
 	return false;
 }
 
-bool ItemsCommand::Private::showItem(Services* services, const QUuid& containerId) {
+bool ItemsCommand::Private::showItem(CommandContext* context, const QUuid& containerId) {
+	auto controller = context->controllers()->windowsController();
+	auto services = context->services();
 	auto itemsService = services->itemsService();
-	auto item = itemsService->item(QUuid::fromString("d3ba53dc-2582-4da0-9fee-2f85f982a4a2"));
+	auto item = itemsService->item(containerId);
+	if (!item) {
+		return false;
+	}
 
-	return false;
+	printItem(context, item);
+	return true;
 }
 
 bool ItemsCommand::execute(CommandContext* context, const QStringList& args) {
-	auto controller = context->controllers()->windowsController();
-	auto services = context->services();
-
 	const auto action = parseArgsValue(args, "action");
 	if (action.isEmpty()) {
 		context->printError(QString("Usage: %1").arg(help()));
 		return false;
 	}
 
-	if (action == "show-container") return d->showContainerItems(services, QUuid::fromString(parseArgsValue(args, "id")));
-	if (action == "show-item") return d->showContainerItems(services, QUuid::fromString(parseArgsValue(args, "id")));
+	if (action == "show-container") return d->showContainerItems(context, QUuid::fromString(parseArgsValue(args, "id")));
+	if (action == "show-item") return d->showContainerItems(context, QUuid::fromString(parseArgsValue(args, "id")));
 
 
 

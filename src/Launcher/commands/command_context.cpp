@@ -1,4 +1,5 @@
 #include "Launcher/commands/command_context.h"
+#include "Launcher/commands/command_console/console_table.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/controllers/windows_controller.h"
 #include "Launcher/services.h"
@@ -56,10 +57,21 @@ bool CommandContext::isGlobalContext() const {
 	return d->globalContext == nullptr;
 }
 
-void CommandContext::print(const QString& message, const QString& styleClass) {
-	QMetaObject::invokeMethod(this, [this, message, styleClass]() {
-		emit outputRequested(message, styleClass);
+void CommandContext::print(const QString& message, const QString& styleClass, const QString& type) {
+	QMetaObject::invokeMethod(this, [this, message, styleClass, type]() {
+		emit outputRequested(message, styleClass, type);
 		}, Qt::QueuedConnection);
+}
+
+void CommandContext::print(const ConsoleTable& table, const QString& styleClass) {
+	const auto html = table.toHtml();
+	if (!html.isEmpty()) {
+		// Оборачиваем таблицу в div для стилизации
+		const auto wrappedHtml = QString("<div class=\"%1\">%2</div>")
+			.arg(styleClass)
+			.arg(html);
+		print(wrappedHtml, styleClass, kCommandPrintStyle_Table);
+	}
 }
 
 void CommandContext::printSystem(const QString& message) {

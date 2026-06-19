@@ -5,9 +5,9 @@
 #include "Launcher/commands/cmd/help_cmd.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/mdi_child_window.h"
+#include "Launcher/controllers.h"
 #include "Libs/Resources/resources.h"
 #include "Libs/Resources/variables/variables_context.h"
-#include "Launcher/controllers.h"
 
 #include <QRegularExpression>
 #include <QDebug>
@@ -195,9 +195,6 @@ QStringList CommandProcessor::availableCommands() const {
 	for (auto it = d->commands.cbegin(); it != d->commands.cend(); it++) {
 		result << it->first;
 	}
-
-	result.append(d->resources->Variables.available());
-	result.sort();
 	return result;
 }
 

@@ -3,7 +3,7 @@
 
 class VariablesContext {
 public:
-	QVariant get(const QString& name, const QVariant& def);
+	QVariant get(const QString& name, const QVariant& def) const;
 	QVariant set(const QString& name, const QVariant& value);
 
 	QStringList available() const;

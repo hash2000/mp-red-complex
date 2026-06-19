@@ -2,6 +2,8 @@
 #include "Launcher/commands/command_context.h"
 #include "Launcher/commands/command_processor.h"
 #include "Launcher/app_controller.h"
+#include "Libs/Resources/resources.h"
+#include "Libs/Resources/variables/variables_context.h"
 
 #include <QFontDatabase>
 #include <QScrollBar>
@@ -17,6 +19,66 @@
 #include <QListWidget>
 #include <QToolButton>
 #include <QStringListModel>
+
+namespace {
+// Настройка стилей окна вывода
+static QString kQTextEditOutputAreaStyle = R"(
+    QTextEdit {
+        background-color: #1e1e1e;
+        color: #d4d4d4;
+        border: 1px solid #3e3e42;
+        border-radius: 3px;
+        font-family: 'Consolas', 'Courier New', monospace;
+        font-size: 10pt;
+    }
+)";
+// Настройка форматирования текста
+static QString kQTextEditOutputAreaDocumentStyleSheet = R"(
+    /* Стили для таблиц */
+    table.console-table {
+        border-collapse: collapse;
+        margin: 8px 0;
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        display: block;
+    }
+    
+    table.console-table th,
+    table.console-table td {
+        border: 1px solid #4a4a4a;
+        padding: 0px 8px;
+        vertical-align: top;
+        white-space: pre-wrap;
+        word-break: break-word;
+        min-width: 80px;
+    }
+    
+    table.console-table th {
+        background-color: #2d2d2d;
+        font-weight: bold;
+        color: #ffffff;
+        position: sticky;
+        top: 0;
+    }
+    
+    table.console-table tr:nth-child(even) {
+        background-color: #252526;
+    }
+    
+    table.console-table tr:nth-child(odd) {
+        background-color: #1e1e1e;
+    }
+
+    .timestamp { color: #808080; font-size: 8pt; }
+    .command { color: #569cd6; font-weight: bold; }
+    .error { color: #f44336; }
+    .success { color: #66cc66; }
+    .system { color: #79b8ff; font-style: italic; }
+    .info { color: #d4d4d4; }
+		.warning { color: #FFE66D; }
+)";
+}
 
 class CommandConsole::Private {
 public:
@@ -39,6 +101,8 @@ public:
 	// Автодополнение
 	QCompleter* completer;
 	QStringListModel* completerModel;
+
+	void appendTable(const QString& message, const QString& styleClass);
 };
 
 
@@ -127,9 +191,12 @@ void CommandConsole::setupCompleter() {
 	// Обновление списка команд для автодополнения
 	QTimer::singleShot(0, this, [this]() {
 		if (d->controller && d->controller->commandProcessor()) {
-			d->completerModel->setStringList(
-				d->controller->commandProcessor()->availableCommands()
-			);
+			QStringList list;
+			list.append(d->controller->commandProcessor()->availableCommands());
+			list.append(d->controller->resources()->Variables.available());
+			list.sort();
+
+			d->completerModel->setStringList(list);
 		}
 	});
 
@@ -137,27 +204,8 @@ void CommandConsole::setupCompleter() {
 }
 
 void CommandConsole::setupOutputStyling() {
-	// CSS-стилизация вывода
-	QString styleSheet = R"(
-        QTextEdit {
-            background-color: #1e1e1e;
-            color: #d4d4d4;
-            border: 1px solid #3e3e42;
-            border-radius: 3px;
-        }
-    )";
-	d->outputArea->setStyleSheet(styleSheet);
-
-	// Настройка форматирования текста
-	d->outputArea->document()->setDefaultStyleSheet(R"(
-        .timestamp { color: #808080; font-size: 8pt; }
-        .command { color: #569cd6; font-weight: bold; }
-        .error { color: #f44336; }
-        .success { color: #66cc66; }
-        .system { color: #79b8ff; font-style: italic; }
-        .info { color: #d4d4d4; }
-				.warning { color: #FFE66D; }
-    )");
+	d->outputArea->setStyleSheet(kQTextEditOutputAreaStyle);
+	d->outputArea->document()->setDefaultStyleSheet(kQTextEditOutputAreaDocumentStyleSheet);
 }
 
 void CommandConsole::onCommandSubmitted() {
@@ -241,8 +289,14 @@ void CommandConsole::onCompleterActivated(const QString& text) {
 		// Фокус остаётся в поле ввода, можно продолжить ввод
 }
 
-void CommandConsole::onOutputRequested(const QString& message, const QString& styleClass) {
-	appendMessage(message, styleClass);
+void CommandConsole::onOutputRequested(const QString& message, const QString& styleClass, const QString& type) {
+	if (type == kCommandPrintStyle_Plane) appendMessage(message, styleClass);
+	else if (type == kCommandPrintStyle_Table) d->appendTable(message, styleClass);
+
+	auto sb = d->outputArea->verticalScrollBar();
+	if (sb->value() >= sb->maximum() - 50) {
+		sb->setValue(sb->maximum());
+	}
 }
 
 void CommandConsole::addToHistory(const QString& command) {
@@ -266,6 +320,13 @@ QString CommandConsole::getHistoryEntry(int offset) {
 	return d->commandHistory.at(index);
 }
 
+void CommandConsole::Private::appendTable(const QString& message, const QString& styleClass) {
+	QTextCursor cursor = outputArea->textCursor();
+	cursor.movePosition(QTextCursor::End);
+	outputArea->setTextCursor(cursor);
+	outputArea->insertHtml(message);
+}
+
 void CommandConsole::appendMessage(const QString& message, const QString& styleClass) {
 	QString safeMessage = message.toHtmlEscaped();
 	safeMessage
@@ -280,9 +341,6 @@ void CommandConsole::appendMessage(const QString& message, const QString& styleC
 	cursor.movePosition(QTextCursor::End);
 	d->outputArea->setTextCursor(cursor);
 	d->outputArea->insertHtml(html);
-
-	auto sb = d->outputArea->verticalScrollBar();
-	sb->setValue(sb->maximum());
 }
 
 void CommandConsole::showConsole() {
