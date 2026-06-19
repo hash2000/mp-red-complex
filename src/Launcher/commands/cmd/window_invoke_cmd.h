@@ -1,9 +1,9 @@
 #pragma once
 #include "Launcher/commands/command.h"
 
-class WindowInvokeCommand : public ICommand {
+class WindowInvokeCommand : public CommandAbstraction {
 public:
-	explicit WindowInvokeCommand(QObject* parent = nullptr) : ICommand(parent) {}
+	WindowInvokeCommand(QObject* parent = nullptr) : CommandAbstraction(parent) {}
 
 	bool execute(CommandContext* context, const QStringList& args) override;
 

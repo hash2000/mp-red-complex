@@ -22,7 +22,7 @@ public:
 	CommandProcessor* q;
 
 	Resources* resources;
-	std::map<QString, std::unique_ptr<ICommand>> commands;
+	std::map<QString, std::unique_ptr<CommandAbstraction>> commands;
 };
 
 // Парсинг командной строки с поддержкой кавычек
@@ -80,7 +80,7 @@ CommandProcessor::CommandProcessor(Resources* resources, QObject* parent)
 
 CommandProcessor::~CommandProcessor() = default;
 
-void CommandProcessor::registerCommand(std::unique_ptr<ICommand> command) {
+void CommandProcessor::registerCommand(std::unique_ptr<CommandAbstraction> command) {
 	QString name = command->name().toLower();
 	if (d->commands.contains(name)) {
 		qWarning() << "Command already registered:" << name;
@@ -152,7 +152,7 @@ bool CommandProcessor::execute(const QString& commandLine, CommandContext* conte
 	return executeCommand(command, context, cmdName, args);
 }
 
-bool CommandProcessor::executeCommand(ICommand* command, CommandContext* context, const QString& cmdName, const QStringList& args) {
+bool CommandProcessor::executeCommand(CommandAbstraction* command, CommandContext* context, const QString& cmdName, const QStringList& args) {
 	// Проверка количества аргументов
 	if (args.size() < command->minArgs()) {
 		context->printError(QString("Command '%1' requires at least %2 arguments")
@@ -201,12 +201,12 @@ QStringList CommandProcessor::availableCommands() const {
 	return result;
 }
 
-ICommand* CommandProcessor::findCommand(const QString& name) const {
+CommandAbstraction* CommandProcessor::findCommand(const QString& name) const {
 	QString key = name.toLower();
 	return findCommandUnsafe(key);
 }
 
-ICommand* CommandProcessor::findCommandUnsafe(const QString& name) const {
+CommandAbstraction* CommandProcessor::findCommandUnsafe(const QString& name) const {
 	auto it = d->commands.find(name);
 	return (it != d->commands.end()) ? it->second.get() : nullptr;
 }

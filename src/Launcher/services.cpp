@@ -26,7 +26,7 @@
 #include "Content/InventroiesModule/data_providers/entities_data_provider_db.h"
 #include "Content/InventroiesModule/data_providers/container_data_provider_db.h"
 #include "Content/InventroiesModule/data_providers/inventories_data_provider_db.h"
-//#include "Content/InventroiesModule/services/items_service.h"
+#include "Content/InventroiesModule/services/items_service.h"
 //#include "Content/InventroiesModule/services/equipment_service.h"
 //#include "Content/InventroiesModule/services/inventories_service.h"
 
@@ -108,12 +108,12 @@ public:
 			})
 		, timeService([] { return std::make_unique<TimeService>(); })
 		, worldService([] { return std::make_unique<WorldService>(); })
-		//, itemsService([this] {
-		//		return std::make_unique<ItemsService>(
-		//			entitiesDataProvider.get(),
-		//			itemsDataProvider.get(),
-		//			imagesService.get());
-		//	})
+		, itemsService([this] {
+				return std::make_unique<ItemsService>(
+					imagesService.get(),
+					entitiesDataProvider.get(),
+					itemsDataProvider.get());
+			})
 		//, inventoriesService([this] {
 		//		return std::make_unique<InventoriesService>(
 		//			itemsService.get());
@@ -172,7 +172,7 @@ public:
 
 	// Services
 	LazyPtr<DatabasesService> databasesService;
-	//LazyPtr<ItemsService> itemsService;
+	LazyPtr<ItemsService> itemsService;
 	//LazyPtr<InventoriesService> inventoriesService;
 	LazyPtr<UsersService> usersService;
 	LazyPtr<ImagesService> imagesService;
@@ -216,7 +216,7 @@ WorldService* Services::worldService() const {
 }
 
 ItemsService* Services::itemsService() const {
-	return nullptr; // d->itemsService.get();
+	return d->itemsService.get();
 }
 
 InventoriesService* Services::inventoriesService() const {

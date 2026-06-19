@@ -8,7 +8,7 @@
 #include "Launcher/commands/cmd/windows_close_cmd.h"
 #include "Launcher/commands/cmd/window_create_cmd.h"
 #include "Launcher/commands/cmd/states_store_cmd.h"
-#include "Launcher/commands/cmd/items_create_cmd.h"
+#include "Launcher/commands/cmd/items_cmd.h"
 #include "Launcher/commands/cmd/user_logout_cmd.h"
 #include "Launcher/commands/cmd/window_invoke_cmd.h"
 #include "Launcher/controllers.h"
@@ -43,14 +43,14 @@ ApplicationController::ApplicationController(Resources* resources, QObject* pare
 	d->commandContext = std::make_unique<CommandContext>(this, nullptr /*is global context*/);
 
 	// Регистрация встроенных системных команд
-	d->commandProcessor->registerCommand(std::make_unique<ListWindowsCommand>());
-	d->commandProcessor->registerCommand(std::make_unique<CloseWindowsCommand>());
-	d->commandProcessor->registerCommand(std::make_unique<CloseAllWindowsCommand>());
-	d->commandProcessor->registerCommand(std::make_unique<CreateWindowCommand>());
-	d->commandProcessor->registerCommand(std::make_unique<StatesStoreCommand>());
-	d->commandProcessor->registerCommand(std::make_unique<ItemsCreateCommand>());
-	d->commandProcessor->registerCommand(std::make_unique<UserLogoutCommand>());
-	d->commandProcessor->registerCommand(std::make_unique<WindowInvokeCommand>());
+	d->commandProcessor->registerCommand(std::make_unique<ListWindowsCommand>(this));
+	d->commandProcessor->registerCommand(std::make_unique<CloseWindowsCommand>(this));
+	d->commandProcessor->registerCommand(std::make_unique<CloseAllWindowsCommand>(this));
+	d->commandProcessor->registerCommand(std::make_unique<CreateWindowCommand>(this));
+	d->commandProcessor->registerCommand(std::make_unique<StatesStoreCommand>(this));
+	d->commandProcessor->registerCommand(std::make_unique<ItemsCommand>(this));
+	d->commandProcessor->registerCommand(std::make_unique<UserLogoutCommand>(this));
+	d->commandProcessor->registerCommand(std::make_unique<WindowInvokeCommand>(this));
 
 	d->commandContext->services()->run();
 

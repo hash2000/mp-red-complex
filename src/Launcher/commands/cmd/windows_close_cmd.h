@@ -1,9 +1,11 @@
 #pragma once
 #include "Launcher/commands/command.h"
 
-class CloseWindowsCommand : public ICommand {
+class CloseWindowsCommand : public CommandAbstraction {
 	Q_OBJECT
 public:
+	CloseWindowsCommand(QObject* parent = nullptr) : CommandAbstraction(parent) {}
+
 	bool execute(CommandContext* context, const QStringList& args) override;
 
 	QString name() const override { return "window-close"; }

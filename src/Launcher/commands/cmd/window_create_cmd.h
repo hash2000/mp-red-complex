@@ -1,9 +1,11 @@
 #pragma once
 #include "Launcher/commands/command.h"
 
-class CreateWindowCommand : public ICommand {
+class CreateWindowCommand : public CommandAbstraction {
 	Q_OBJECT
 public:
+	CreateWindowCommand(QObject* parent = nullptr) : CommandAbstraction(parent) {}
+
 	bool execute(CommandContext* context, const QStringList& args) override;
 
 	QString name() const override { return "window-create"; }

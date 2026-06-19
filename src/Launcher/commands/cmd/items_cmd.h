@@ -1,11 +1,12 @@
 #pragma once
 #include "Launcher/commands/command.h"
+#include <memory>
 
-class ItemsCreateCommand : public ICommand {
+class ItemsCommand : public CommandAbstraction {
 	Q_OBJECT
 public:
-	ItemsCreateCommand();
-	~ItemsCreateCommand() override;
+	ItemsCommand(QObject* parent = nullptr);
+	~ItemsCommand() override;
 
 	bool execute(CommandContext* context, const QStringList& args) override;
 

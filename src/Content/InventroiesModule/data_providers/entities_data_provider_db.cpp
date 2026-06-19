@@ -43,6 +43,8 @@ public:
 
 	std::shared_ptr<ItemEntity> readEntity(SQLiteReader& reader);
 	ItemResourceType resourceType(const QString& type);
+	ItemType itemType(const QString& type);
+	ItemSubType itemSubType(const QString& type);
 };
 
 EntitiesDataProviderDb::EntitiesDataProviderDb(DatabasesService* databasesService)
@@ -56,11 +58,11 @@ EntitiesDataProviderDb::~EntitiesDataProviderDb() = default;
 
 std::shared_ptr<ItemEntity> EntitiesDataProviderDb::Private::readEntity(SQLiteReader& reader) {
 	auto ent = std::make_shared<ItemEntity>();
-	ent->id = reader.value("id").toString();
+	ent->id = QUuid::fromString(reader.value("id").toString());
 	ent->name = reader.value("name").toString();
+	ent->type = itemType(reader.value("type").toString());
+	ent->subType = itemSubType(reader.value("sub_type").toString());
 	ent->description = reader.value("description").toString();
-	ent->type = static_cast<ItemType>(reader.value("type").toInt());
-	ent->subType = static_cast<ItemSubType>(reader.value("sub_type").toInt());
 	ent->iconPath = reader.value("icon_path").toString();
 	ent->width = reader.value("width").toInt();
 	ent->height = reader.value("height").toInt();
@@ -69,7 +71,7 @@ std::shared_ptr<ItemEntity> EntitiesDataProviderDb::Private::readEntity(SQLiteRe
 
 	if (ent->type == ItemType::Resource) {
 		const QString resourceIds = reader.value("resource_ids").toString();
-		const QStringList ids = resourceIds.split(",");
+		const QStringList ids = resourceIds.split(",", Qt::SkipEmptyParts);
 
 		for (const auto& typeName : ids) {
 			ent->resourceType.push_back(resourceType(typeName));
@@ -77,9 +79,9 @@ std::shared_ptr<ItemEntity> EntitiesDataProviderDb::Private::readEntity(SQLiteRe
 	}
 	else if (ent->type == ItemType::Container) {
 		const QString permissions_for_all = reader.value("permissions_for_all").toString();
-		const QStringList all = permissions_for_all.split(",");
+		const QStringList all = permissions_for_all.split(",", Qt::SkipEmptyParts);
 		const QString permissions_for_any = reader.value("permissions_for_any").toString();
-		const QStringList any = permissions_for_any.split(",");
+		const QStringList any = permissions_for_any.split(",", Qt::SkipEmptyParts);
 
 		ent->container = ItemContainer();
 		ent->container->rows = reader.value("container_rows").toInt();
@@ -101,8 +103,37 @@ ItemResourceType EntitiesDataProviderDb::Private::resourceType(const QString& ty
 	if (type == "ore") return ItemResourceType::Ore;
 	else if (type == "chemical") return ItemResourceType::Chemical;
 	else
-		qWarning() << "Load item entity: Undefined resource type:" << type;
+		qWarning() << "Load item entity : Undefined resource type:" << type;
 	return ItemResourceType::Undefined;
+}
+
+ItemType EntitiesDataProviderDb::Private::itemType(const QString& type) {
+	if (type == "resource") return ItemType::Resource;
+	else if (type == "equipment") return ItemType::Equipment;
+	else if (type == "component") return ItemType::Component;
+	else if (type == "container") return ItemType::Container;
+	else if (type == "recipe") return ItemType::Recipe;
+	else
+		qWarning() << "Load item entity: Undefined type:" << type;
+	return ItemType::Undefined;
+}
+
+ItemSubType EntitiesDataProviderDb::Private::itemSubType(const QString& type) {
+	if (type == "head") return ItemSubType::Head;
+	if (type == "body") return ItemSubType::Body;
+	if (type == "weapon") return ItemSubType::Weapon;
+	if (type == "shield") return ItemSubType::Shield;
+	if (type == "gloves") return ItemSubType::Gloves;
+	if (type == "boots") return ItemSubType::Boots;
+	if (type == "ring") return ItemSubType::Ring;
+	if (type == "amulet") return ItemSubType::Amulet;
+	if (type == "resource") return ItemSubType::Resource;
+	if (type == "consumable") return ItemSubType::Consumable;
+	if (type == "backpack") return ItemSubType::Backpack;
+	if (type == "root") return ItemSubType::Root;
+	else
+		qWarning() << "Load item entity: Undefined sub type:" << type;
+	return ItemSubType::Undefined;
 }
 
 std::list<std::shared_ptr<ItemEntity>> EntitiesDataProviderDb::entities() const {
@@ -128,7 +159,7 @@ std::list<std::shared_ptr<ItemEntity>> EntitiesDataProviderDb::entities() const 
 	return std::move(result);
 }
 
-std::shared_ptr<ItemEntity> EntitiesDataProviderDb::entity(const QString& id) const {
+std::shared_ptr<ItemEntity> EntitiesDataProviderDb::entity(const QUuid& id) const {
 	auto conn = d->databasesService->connection("game");
 	if (!conn) {
 		return std::shared_ptr<ItemEntity>();
@@ -138,7 +169,9 @@ std::shared_ptr<ItemEntity> EntitiesDataProviderDb::entity(const QString& id) co
 		.arg(kSql_entitySelectorExpr)
 		.arg(kSql_entityGroupByExpr));
 
-	reader->bindValue(":entity_id", id);
+	reader->bindValue(":entity_id", id
+		.toString(QUuid::WithoutBraces)
+		.toLower());
 
 	if (!reader || !reader->next()) {
 		qWarning() << "Can't find entity:" << id;

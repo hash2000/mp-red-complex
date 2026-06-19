@@ -9,8 +9,8 @@ class ContainerItem;
 class ItemMimeData {
 public:
 	QUuid id;
+	QUuid entityId;
 	QString name;
-	QString entityId;
 	int width;
 	int height;
 	int count;

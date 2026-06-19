@@ -14,6 +14,7 @@ enum class ItemResourceType {
 };
 
 enum class ItemType {
+	Undefined,
 	Equipment, // Экипировка (оружие, броня)
 	Resource, // Сырьё (ресурсы для крафта)
 	Component, // Запчасти (сложные элементы из сырья)
@@ -31,7 +32,7 @@ enum class ItemRarityType {
 
 // Подтип указывает куда может быть установлен предмет
 enum class ItemSubType {
-	None,
+	Undefined,
 	//-----------
 	// Экипировка
 	Head,
@@ -47,7 +48,7 @@ enum class ItemSubType {
 	Backpack,
 	Bag,
 	//-----------
-	System,
+	Root,
 
 	LastSlot,
 };
@@ -99,7 +100,7 @@ public:
 
 class ItemEntity {
 public:
-	QString id;
+	QUuid id;
 	QString name;
 	ItemType type;
 	ItemSubType subType;
@@ -122,7 +123,7 @@ public:
 class Item {
 public:
 	QUuid id;
-	QString entityId;
+	QUuid entityId;
 	int level = 1;
 
 	std::shared_ptr<ItemEntity> entity;

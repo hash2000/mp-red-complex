@@ -1,4 +1,4 @@
-#include "Launcher/commands/cmd/items_create_cmd.h"
+#include "Launcher/commands/cmd/items_cmd.h"
 #include "Launcher/commands/command_processor.h"
 #include "Launcher/commands/command_context.h"
 #include "Launcher/controllers/windows_controller.h"
@@ -7,29 +7,57 @@
 #include "Launcher/services.h"
 //#include "Content/InventroiesModule/services/inventory_service.h"
 //#include "Content/InventroiesModule/services/inventories_service.h"
-//#include "Content/InventroiesModule/services/items_service.h"
+#include "Content/InventroiesModule/services/items_service.h"
 #include "Content/InventroiesModule/models/item_mime_data.h"
 
 #include <QMdiSubWindow>
-#include <QRegularExpression>
 #include <QUuid>
 
-class ItemsCreateCommand::Private {
+class ItemsCommand::Private {
 public:
-	Private(ItemsCreateCommand* parent) : q(parent) { }	
-	ItemsCreateCommand* q;
+	Private(ItemsCommand* parent) : q(parent) {}
+	ItemsCommand* q;
 
-
+	bool showContainerItems(Services* services, const QUuid& containerId);
+	bool showItem(Services* services, const QUuid& containerId);
 };
 
-
-ItemsCreateCommand::ItemsCreateCommand()
-: d(std::make_unique<Private>(this)) {
+ItemsCommand::ItemsCommand(QObject* parent)
+	: d(std::make_unique<Private>(this))
+	, CommandAbstraction(parent) {
 }
 
-ItemsCreateCommand::~ItemsCreateCommand() = default;
+ItemsCommand::~ItemsCommand() = default;
 
-bool ItemsCreateCommand::execute(CommandContext* context, const QStringList& args) {
+bool ItemsCommand::Private::showContainerItems(Services* services, const QUuid& containerId) {
+
+
+	return false;
+}
+
+bool ItemsCommand::Private::showItem(Services* services, const QUuid& containerId) {
+	auto itemsService = services->itemsService();
+	auto item = itemsService->item(QUuid::fromString("d3ba53dc-2582-4da0-9fee-2f85f982a4a2"));
+
+	return false;
+}
+
+bool ItemsCommand::execute(CommandContext* context, const QStringList& args) {
+	auto controller = context->controllers()->windowsController();
+	auto services = context->services();
+
+	const auto action = parseArgsValue(args, "action");
+	if (action.isEmpty()) {
+		context->printError(QString("Usage: %1").arg(help()));
+		return false;
+	}
+
+	if (action == "show-container") return d->showContainerItems(services, QUuid::fromString(parseArgsValue(args, "id")));
+	if (action == "show-item") return d->showContainerItems(services, QUuid::fromString(parseArgsValue(args, "id")));
+
+
+
+
 	//auto controller = context->controllers()->windowsController();
 	//auto services = context->services();
 	//auto inventoriesService = services->inventoriesService();

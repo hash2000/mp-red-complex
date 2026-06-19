@@ -5,7 +5,6 @@
 #include "Launcher/controllers/windows_controller.h"
 #include "Launcher/app_controller.h"
 
-#include <QRegularExpression>
 #include <QStringList>
 
 QString WindowInvokeCommand::help() const {
@@ -21,7 +20,7 @@ bool WindowInvokeCommand::execute(CommandContext* context, const QStringList& ar
 	auto controller = context->controllers()->windowsController();
 	auto services = context->services();
 
-	const auto cmd = args.filter(QRegularExpression("^cmd:")).value(0).mid(4);
+	const auto cmd = parseArgsValue(args, "cmd");
 	if (cmd.isEmpty()) {
 		context->printError(QString("Need parameter 'cmd'. Usage: %1").arg(help()));
 		return false;
@@ -29,7 +28,7 @@ bool WindowInvokeCommand::execute(CommandContext* context, const QStringList& ar
 
 	MdiChildWindow* targetEntry;
 
-	const auto target = args.filter(QRegularExpression("^target:")).value(0).mid(7);
+	const auto target = parseArgsValue(args, "target");
 	if (target.isEmpty()) {
 		auto activeEntry = controller->activeWindowEntry();
 		targetEntry = activeEntry.first.data();

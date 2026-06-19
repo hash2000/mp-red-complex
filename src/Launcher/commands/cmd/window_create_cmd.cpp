@@ -6,7 +6,6 @@
 #include "Launcher/windows_builder.h"
 
 #include <QMdiSubWindow>
-#include <QRegularExpression>
 #include <QUuid>
 
 bool CreateWindowCommand::execute(CommandContext* context, const QStringList& args) {
@@ -19,9 +18,9 @@ bool CreateWindowCommand::execute(CommandContext* context, const QStringList& ar
 		return false;
 	}
 
-	auto id = args.filter(QRegularExpression("^id:")).value(0).mid(3);
-	const auto target = args.filter(QRegularExpression("^target:")).value(0).mid(7);
-	const auto alternateTitle = args.filter(QRegularExpression("^title:")).value(0).mid(6);
+	auto id = parseArgsValue(args, "id");
+	const auto target = parseArgsValue(args, "target");
+	const auto alternateTitle = parseArgsValue(args, "title");
 
 	if (target.isEmpty()) {
 		context->printError(QString("Need parameter 'target'. Usage: %1").arg(help()));

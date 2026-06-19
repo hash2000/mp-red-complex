@@ -50,7 +50,7 @@ std::shared_ptr<Item> ItemsDataProviderDb::item(const QUuid& id) const {
 
 	auto item = std::make_shared<Item>();
 	item->id = id;
-	item->entityId = reader->value("entity_id").toString();
+	item->entityId = QUuid::fromString(reader->value("entity_id").toString());
 	item->level = reader->value("item_level").toInt();
 
 	return std::move(item);

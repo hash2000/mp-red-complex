@@ -12,7 +12,7 @@ public:
 	~EntitiesDataProviderDb() override;
 
 	std::list<std::shared_ptr<ItemEntity>> entities() const override;
-	std::shared_ptr<ItemEntity> entity(const QString& id) const override;
+	std::shared_ptr<ItemEntity> entity(const QUuid& id) const override;
 
 private:
 	class Private;

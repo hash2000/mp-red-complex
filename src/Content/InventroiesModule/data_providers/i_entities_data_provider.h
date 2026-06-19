@@ -9,5 +9,5 @@ public:
 	virtual ~IEntitiesDataProvider() = default;
 
 	virtual std::list<std::shared_ptr<ItemEntity>> entities() const = 0;
-	virtual std::shared_ptr<ItemEntity> entity(const QString& id) const = 0;
+	virtual std::shared_ptr<ItemEntity> entity(const QUuid& id) const = 0;
 };

@@ -1,9 +1,9 @@
 #pragma once
 #include "Launcher/commands/command.h"
 
-class HelpCommand : public ICommand {
+class HelpCommand : public CommandAbstraction {
 public:
-	explicit HelpCommand(QObject* parent = nullptr) : ICommand(parent) {}
+	HelpCommand(QObject* parent = nullptr) : CommandAbstraction(parent) { }
 
 	bool execute(CommandContext* context, const QStringList& args) override;
 
