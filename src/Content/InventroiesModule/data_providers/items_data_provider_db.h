@@ -12,6 +12,7 @@ public:
 	~ItemsDataProviderDb() override;
 
 	std::shared_ptr<Item> item(const QUuid& id) const override;
+	std::list<std::shared_ptr<Item>> itemsFromContainer(const QUuid& constainerId) const override;
 	bool save(const Item& item) const override;
 
 private:

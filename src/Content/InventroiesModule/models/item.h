@@ -100,7 +100,7 @@ public:
 
 class ItemEntity {
 public:
-	QUuid id;
+	QString id;
 	QString name;
 	ItemType type;
 	ItemSubType subType;
@@ -123,8 +123,15 @@ public:
 class Item {
 public:
 	QUuid id;
-	QUuid entityId;
+	QUuid containerId;
+	QString entityId;
 	int level = 1;
+	int count = 1;
+
+	struct {
+		int base;
+		int secondary;
+	} position;
 
 	std::shared_ptr<ItemEntity> entity;
 };

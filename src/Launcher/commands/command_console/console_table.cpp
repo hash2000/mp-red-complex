@@ -1,6 +1,11 @@
 #include "Launcher/commands/command_console/console_table.h"
+#include "Launcher/commands/command_console/console_image.h"
 
 #include <QTextDocument>
+#include <QBuffer>
+#include <QByteArray>
+#include <QIODevice>
+#include <QPixmap>
 
 ConsoleTable::ConsoleTable(const QStringList& columnNames) {
 	for (const QString& name : columnNames) {
@@ -96,6 +101,7 @@ QString ConsoleTable::toHtml() const {
 	if (!_rows.isEmpty()) {
 		html += "  <tbody>\n";
 		for (const QList<QVariant>& row : _rows) {
+			bool useEscapeHtml = true;
 			html += "    <tr>";
 			for (int i = 0; i < row.size() && i < _columnData.size(); ++i) {
 				QString cellContent;
@@ -103,6 +109,11 @@ QString ConsoleTable::toHtml() const {
 
 				if (value.isNull()) {
 					cellContent = "";
+				}
+				else if (value.type() == QVariant::Pixmap) {
+					ConsoleImage image(value, -1, 16);
+					cellContent = image.toHtml();
+					useEscapeHtml = false;
 				}
 				else if (value.type() == QVariant::String) {
 					cellContent = value.toString();
@@ -117,7 +128,7 @@ QString ConsoleTable::toHtml() const {
 				QString cssAlign = alignmentToCss(_columnData[i].alignment);
 				html += QString("\n      <td style=\"%1\">%2</td>")
 					.arg(cssAlign)
-					.arg(escapeHtml(cellContent));
+					.arg(useEscapeHtml ? escapeHtml(cellContent) : cellContent);
 			}
 			html += "\n    </tr>\n";
 		}

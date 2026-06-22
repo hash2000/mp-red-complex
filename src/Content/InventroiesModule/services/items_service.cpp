@@ -16,9 +16,10 @@ public:
 	ImagesService* imagesService;
 	IEntitiesDataProvider* entitiesDataProvider;
 	IItemsDataProvider* itemsDataProvider;
-	std::map<QUuid, std::shared_ptr<ItemEntity>> entities;
+	std::map<QString, std::shared_ptr<ItemEntity>> entities;
 
 	void loadEntitieas();
+	bool populateItem(std::shared_ptr<Item> item);
 };
 
 ItemsService::ItemsService(
@@ -41,34 +42,55 @@ void ItemsService::Private::loadEntitieas() {
 	entities.clear();
 	auto list = entitiesDataProvider->entities();
 	for (auto i : list) {
-		if (!i->iconPath.isEmpty()) {
-			i->icon = imagesService->getImage(i->iconPath, ImageType::Item);
+		const auto iconPath = i->iconPath;
+		if (!iconPath.isEmpty()) {
+			i->icon = imagesService->getImage(iconPath, ImageType::Item);
 		}
 
 		entities.emplace(i->id, i);
 	}
 }
 
+bool ItemsService::Private::populateItem(std::shared_ptr<Item> item) {
+	if (item->entityId.isEmpty()) {
+		qWarning() << "Load item" << item->id << ". Undefined entity";
+		return false;
+	}
+
+	const auto& it = entities.find(item->entityId);
+	if (it == entities.end()) {
+		qWarning() << "Load item" << item->id << ". Entity is unknown";
+		return false;
+	}
+
+	item->entity = it->second;
+	return true;
+}
+
 std::shared_ptr<Item> ItemsService::item(const QUuid& id) {
 	auto ptr = d->itemsDataProvider->item(id);
 	if (!ptr) {
+		qWarning() << "Load item" << id << ". Undefined item";
 		return std::shared_ptr<Item>();
 	}
 
-	if (ptr->entityId.isNull()) {
-		qWarning() << "Load item" << id << ". Undefined entity";
+	if (!d->populateItem(ptr)) {
 		return std::shared_ptr<Item>();
 	}
-
-	const auto& it = d->entities.find(ptr->entityId);
-	if (it == d->entities.end()) {
-		qWarning() << "Load item" << id << ". Entity is unknown";
-		return std::shared_ptr<Item>();
-	}
-
-	ptr->entity = it->second;
 
 	return ptr;
+}
+
+std::list<std::shared_ptr<Item>> ItemsService::itemsFromContainer(const QUuid& containerId) {
+	auto items = d->itemsDataProvider->itemsFromContainer(containerId);
+
+	for (auto item : items) {
+		if (!d->populateItem(item)) {
+			return std::list<std::shared_ptr<Item>>();
+		}
+	}
+
+	return items;
 }
 
 std::shared_ptr<Item> ItemsService::duplicate(const QUuid& id) {
@@ -90,7 +112,7 @@ std::shared_ptr<Item> ItemsService::duplicate(const QUuid& id) {
 	return newPtr;
 }
 
-std::shared_ptr<Item> ItemsService::createItemByEntity(const QUuid& entityId) {
+std::shared_ptr<Item> ItemsService::createItemByEntity(const QString& entityId) {
 	auto ent = entity(entityId);
 	if (!ent) {
 		return std::shared_ptr<Item>();
@@ -109,7 +131,7 @@ std::shared_ptr<Item> ItemsService::createItemByEntity(const QUuid& entityId) {
 	return newPtr;
 }
 
-std::shared_ptr<ItemEntity> ItemsService::entity(const QUuid& entityId) {
+std::shared_ptr<ItemEntity> ItemsService::entity(const QString& entityId) {
 	const auto& it = d->entities.find(entityId);
 	if (it == d->entities.end()) {
 		return std::shared_ptr<ItemEntity>();

@@ -10,9 +10,9 @@ public:
 
 	bool execute(CommandContext* context, const QStringList& args) override;
 
-	QString name() const override { return "items-create"; }
-	QString description() const override { return "Create new item in specified inventory"; }
-	QString help() const override { return "items-create entity:entityId count:count inventory:inventoryId"; }
+	QString name() const override { return "items"; }
+	QString description() const override { return "Operations with items"; }
+	QString help() const override;
 
 private:
 	class Private;

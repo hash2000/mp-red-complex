@@ -1,5 +1,6 @@
 #pragma once
 #include <QObject>
+#include <list>
 #include <memory>
 
 class IEntitiesDataProvider;
@@ -19,9 +20,10 @@ public:
 	~ItemsService() override;
 
 	std::shared_ptr<Item> item(const QUuid& id);
+	std::list<std::shared_ptr<Item>> itemsFromContainer(const QUuid& containerId);
 	std::shared_ptr<Item> duplicate(const QUuid& id);
-	std::shared_ptr<Item> createItemByEntity(const QUuid& entityId);
-	std::shared_ptr<ItemEntity> entity(const QUuid& entityId);
+	std::shared_ptr<Item> createItemByEntity(const QString& entityId);
+	std::shared_ptr<ItemEntity> entity(const QString& entityId);
 
 private:
 	class Private;

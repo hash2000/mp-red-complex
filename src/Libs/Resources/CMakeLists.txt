@@ -15,7 +15,7 @@ target_link_libraries(RedComplexResources
 		Qt6::Core
 		Qt6::Gui
 		Qt6::Widgets
-		SQLite::SQLite3
+		SQLite3::SQLite3
 
 		RedComplexBase
 		RedComplexDataStream

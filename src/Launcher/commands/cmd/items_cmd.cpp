@@ -1,6 +1,8 @@
 #include "Launcher/commands/cmd/items_cmd.h"
 #include "Launcher/commands/command_processor.h"
 #include "Launcher/commands/command_context.h"
+#include "Launcher/commands/command_console/console_table.h"
+#include "Launcher/commands/command_console/console_image.h"
 #include "Launcher/controllers/windows_controller.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/controllers.h"
@@ -8,7 +10,7 @@
 //#include "Content/InventroiesModule/services/inventory_service.h"
 //#include "Content/InventroiesModule/services/inventories_service.h"
 #include "Content/InventroiesModule/services/items_service.h"
-#include "Content/InventroiesModule/models/item_mime_data.h"
+#include "Content/InventroiesModule/models/item.h"
 
 #include <QMdiSubWindow>
 #include <QUuid>
@@ -18,9 +20,9 @@ public:
 	Private(ItemsCommand* parent) : q(parent) {}
 	ItemsCommand* q;
 
-	void printItem(CommandContext* context, std::shared_ptr<Item> item);
+	void printItem(ConsoleTable& table, std::shared_ptr<Item> item);
 	bool showContainerItems(CommandContext* context, const QUuid& containerId);
-	bool showItem(CommandContext* context, const QUuid& containerId);
+	bool showItem(CommandContext* context, const QUuid& itemId);
 };
 
 ItemsCommand::ItemsCommand(QObject* parent)
@@ -30,26 +32,64 @@ ItemsCommand::ItemsCommand(QObject* parent)
 
 ItemsCommand::~ItemsCommand() = default;
 
-void ItemsCommand::Private::printItem(CommandContext* context, std::shared_ptr<Item> item) {
+QString ItemsCommand::help() const {
+	return R"(
+items action:
+	show-container id:{containerId}
+	show-item id:{itemId}
+	)";
+}
 
+void ItemsCommand::Private::printItem(ConsoleTable& table, std::shared_ptr<Item> item) {
+	table.addRow({
+		item->entity->icon,
+		item->id.toString(QUuid::WithoutBraces),
+		item->entity->id,
+		item->containerId.toString(QUuid::WithoutBraces),
+		item->level,
+		item->count,
+		item->position.base,
+		item->position.secondary
+		});
 }
 
 bool ItemsCommand::Private::showContainerItems(CommandContext* context, const QUuid& containerId) {
-
-
-	return false;
-}
-
-bool ItemsCommand::Private::showItem(CommandContext* context, const QUuid& containerId) {
 	auto controller = context->controllers()->windowsController();
 	auto services = context->services();
 	auto itemsService = services->itemsService();
-	auto item = itemsService->item(containerId);
-	if (!item) {
+	auto items = itemsService->itemsFromContainer(containerId);
+	if (items.empty()) {
+		context->printWarning(QString("Container is empty or undefined. %1")
+			.arg(containerId
+				.toString(QUuid::WithoutBraces)));
 		return false;
 	}
 
-	printItem(context, item);
+	ConsoleTable table({ "..", "Id", "EntityId", "ContainerId", "Lvl", "Count", "x", "y" });
+
+	for (auto item : items) {
+		printItem(table, item);
+	}
+
+	context->print(table);
+	return true;
+}
+
+bool ItemsCommand::Private::showItem(CommandContext* context, const QUuid& itemId) {
+	auto controller = context->controllers()->windowsController();
+	auto services = context->services();
+	auto itemsService = services->itemsService();
+	auto item = itemsService->item(itemId);
+	if (!item) {
+		context->printWarning(QString("Item is undefined. %1")
+			.arg(itemId
+				.toString(QUuid::WithoutBraces)));
+		return false;
+	}
+
+	ConsoleTable table({ "..", "Id", "EntityId", "ContainerId", "Lvl", "Count", "x", "y" });
+	printItem(table, item);
+	context->print(table);
 	return true;
 }
 
@@ -61,7 +101,7 @@ bool ItemsCommand::execute(CommandContext* context, const QStringList& args) {
 	}
 
 	if (action == "show-container") return d->showContainerItems(context, QUuid::fromString(parseArgsValue(args, "id")));
-	if (action == "show-item") return d->showContainerItems(context, QUuid::fromString(parseArgsValue(args, "id")));
+	if (action == "show-item") return d->showItem(context, QUuid::fromString(parseArgsValue(args, "id")));
 
 
 
