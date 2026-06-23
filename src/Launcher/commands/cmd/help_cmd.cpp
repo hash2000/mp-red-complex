@@ -11,10 +11,10 @@ bool HelpCommand::execute(CommandContext* context, const QStringList& args) {
 
 	if (args.isEmpty()) {
 		context->print("Commands:");
-		ConsoleTable commandsTab({ "Name", "Descroption" });
+		ConsoleTable commandsTab({ "Name", "Descroption", "Help" });
 		for (const auto& name : processor->availableCommands()) {
 			const auto cmd = processor->findCommand(name);
-			commandsTab.addRow({ cmd->name(), cmd->description() });
+			commandsTab.addRow({ cmd->name(), cmd->description(), cmd->help() });
 		}
 		context->print(commandsTab);
 
@@ -42,8 +42,8 @@ bool HelpCommand::execute(CommandContext* context, const QStringList& args) {
 		const auto& variables = context->applicationController()->resources()->Variables;
 		const auto var = variables.get(cmdName, QVariant());
 		if (var.isValid()) {
-			ConsoleTable variablesTab({ "Name", "Value" });
-			variablesTab.addRow({ cmdName, var.toString() });
+			ConsoleTable variablesTab({ "Name", "Value", "Help" });
+			variablesTab.addRow({ cmdName, var.toString(), cmd->help() });
 			context->print(variablesTab);
 			return true;
 		}
