@@ -5,7 +5,6 @@
 class Resources;
 class TimeService;
 class WorldService;
-class InventoriesService;
 class ItemsService;
 class UsersService;
 class ImagesService;
@@ -27,7 +26,6 @@ public:
 	TimeService* timeService() const;
 	WorldService* worldService() const;
 	ItemsService* itemsService() const;
-	InventoriesService* inventoriesService() const;
 	UsersService* usersService() const;
 	ImagesService* imagesService() const;
 	TilesSelectorService* tilesSelectorService() const;

@@ -294,9 +294,7 @@ void CommandConsole::onOutputRequested(const QString& message, const QString& st
 	else if (type == kCommandPrintStyle_Table) d->appendTable(message, styleClass);
 
 	auto sb = d->outputArea->verticalScrollBar();
-	if (sb->value() >= sb->maximum() - 50) {
-		sb->setValue(sb->maximum());
-	}
+	sb->setValue(sb->maximum());
 }
 
 void CommandConsole::addToHistory(const QString& command) {

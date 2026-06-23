@@ -3,7 +3,7 @@
 #include "libs/Resources/db/sqlite/sqlite_reader.h"
 
 
-namespace DataProviders::Readers {
+namespace Inventory::Readers {
 ItemReader::ItemReader(std::shared_ptr<Item> item)
 	: _item(item) {
 	if (!_item) {

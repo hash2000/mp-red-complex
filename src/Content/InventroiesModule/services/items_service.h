@@ -20,10 +20,14 @@ public:
 	~ItemsService() override;
 
 	std::shared_ptr<Item> item(const QUuid& id);
+	std::list<std::shared_ptr<Item>> containers();
+	std::list<std::shared_ptr<Item>> equipments();
 	std::list<std::shared_ptr<Item>> itemsFromContainer(const QUuid& containerId);
 	std::shared_ptr<Item> duplicate(const QUuid& id);
 	std::shared_ptr<Item> createItemByEntity(const QString& entityId);
 	std::shared_ptr<ItemEntity> entity(const QString& entityId);
+	std::list<std::shared_ptr<ItemEntity>> entities();
+	bool changeItemContainer(std::shared_ptr<Item> item, const QUuid& containerId);
 
 private:
 	class Private;

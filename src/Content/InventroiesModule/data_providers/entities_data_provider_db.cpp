@@ -68,7 +68,7 @@ std::list<std::shared_ptr<ItemEntity>> EntitiesDataProviderDb::entities() const 
 	}
 
 	while (reader->next()) {
-		DataProviders::Readers::EntityReader rd;
+		Inventory::Readers::EntityReader rd;
 		auto ent = rd.read(*reader);
 		result.push_back(ent);
 	}
@@ -95,6 +95,6 @@ std::shared_ptr<ItemEntity> EntitiesDataProviderDb::entity(const QUuid& id) cons
 		return std::shared_ptr<ItemEntity>();
 	}
 
-	DataProviders::Readers::EntityReader rd;
+	Inventory::Readers::EntityReader rd;
 	return rd.read(*reader);
 }

@@ -67,6 +67,15 @@ bool ItemsService::Private::populateItem(std::shared_ptr<Item> item) {
 	return true;
 }
 
+std::list<std::shared_ptr<ItemEntity>> ItemsService::entities() {
+	std::list<std::shared_ptr<ItemEntity>> result;
+	for (const auto& [id, ptr] : d->entities) {
+		result.push_back(ptr);
+	}
+
+	return result;
+}
+
 std::shared_ptr<Item> ItemsService::item(const QUuid& id) {
 	auto ptr = d->itemsDataProvider->item(id);
 	if (!ptr) {
@@ -79,6 +88,30 @@ std::shared_ptr<Item> ItemsService::item(const QUuid& id) {
 	}
 
 	return ptr;
+}
+
+std::list<std::shared_ptr<Item>> ItemsService::containers() {
+	auto items = d->itemsDataProvider->containers();
+
+	for (auto item : items) {
+		if (!d->populateItem(item)) {
+			return std::list<std::shared_ptr<Item>>();
+		}
+	}
+
+	return items;
+}
+
+std::list<std::shared_ptr<Item>> ItemsService::equipments() {
+	auto items = d->itemsDataProvider->equipments();
+
+	for (auto item : items) {
+		if (!d->populateItem(item)) {
+			return std::list<std::shared_ptr<Item>>();
+		}
+	}
+
+	return items;
 }
 
 std::list<std::shared_ptr<Item>> ItemsService::itemsFromContainer(const QUuid& containerId) {
@@ -129,6 +162,15 @@ std::shared_ptr<Item> ItemsService::createItemByEntity(const QString& entityId) 
 	}
 
 	return newPtr;
+}
+
+bool ItemsService::changeItemContainer(std::shared_ptr<Item> item, const QUuid& containerId) {
+	if (!d->itemsDataProvider->changeContainer(*item, containerId)) {
+		return false;
+	}
+
+	item->containerId = containerId;
+	return true;
 }
 
 std::shared_ptr<ItemEntity> ItemsService::entity(const QString& entityId) {

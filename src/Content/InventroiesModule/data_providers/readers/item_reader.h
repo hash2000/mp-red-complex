@@ -4,7 +4,7 @@
 class SQLiteReader;
 class Item;
 
-namespace DataProviders::Readers {
+namespace Inventory::Readers {
 class ItemReader {
 public:
 	ItemReader(std::shared_ptr<Item> item = std::shared_ptr<Item>());
