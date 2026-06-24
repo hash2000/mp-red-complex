@@ -11,7 +11,7 @@
 #include "Launcher/widgets/materials/materials_window.h"
 #include "Launcher/widgets/code_editor/code_editor_window.h"
 
-#include "ApplicationLayer/shaders/shaders_service.h"
+#include "Content/ShadersModule/services/shaders_service.h"
 
 #include <map>
 #include <functional>

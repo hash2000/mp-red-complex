@@ -1,6 +1,6 @@
-#include "ApplicationLayer/shaders/shaders_service.h"
-#include "ApplicationLayer/shaders/shader_features.h"
-#include "DataLayer/shaders/i_shaders_data_provider.h"
+#include "Content/ShadersModule/services/shaders_service.h"
+#include "Content/ShadersModule/services/shader_features.h"
+#include "Content/ShadersModule/data_providers/i_shaders_data_provider.h"
 #include "Libs/Graphics/shaders/shader_program.h"
 #include <map>
 

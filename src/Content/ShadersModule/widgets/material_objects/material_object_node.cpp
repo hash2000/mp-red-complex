@@ -1,4 +1,4 @@
-#include "Launcher/widgets/materials/material_objects/material_object_node.h"
+#include "Content/ShadersModule/widgets/material_objects/material_object_node.h"
 #include <QUuid>
 
 namespace MaterialObjectsRoles {

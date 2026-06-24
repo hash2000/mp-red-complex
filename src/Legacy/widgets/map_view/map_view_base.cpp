@@ -1,6 +1,6 @@
 #include "Launcher/widgets/map_view/map_view_base.h"
 
-#include "ApplicationLayer/shaders/shaders_service.h"
+#include "Content/ShadersModule/services/shaders_service.h"
 
 #include "Libs/Graphics/camera.h"
 #include "Libs/Graphics/tiles/tile_renderer.h"

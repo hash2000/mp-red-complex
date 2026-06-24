@@ -6,7 +6,7 @@
 #include "Launcher/commands/command_context.h"
 #include "ApplicationLayer/maps/map_service.h"
 #include "Content/TexturesModule/services/tiles_selector_service.h"
-#include "ApplicationLayer/shaders/shaders_service.h"
+#include "Content/ShadersModule/services/shaders_service.h"
 #include <memory>
 
 class MapEditorWindow::Private {

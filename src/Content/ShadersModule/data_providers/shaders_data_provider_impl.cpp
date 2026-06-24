@@ -1,4 +1,4 @@
-#include "DataLayer/shaders/shaders_data_provider_impl.h"
+#include "Content/ShadersModule/data_providers/shaders_data_provider_impl.h"
 #include "Libs/DataStream/format/text/data_reader.h"
 #include "Libs/Resources/resources.h"
 

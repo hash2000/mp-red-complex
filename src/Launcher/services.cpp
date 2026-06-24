@@ -3,9 +3,9 @@
 #include "Launcher/services/world_service/world_service.h"
 #include "Libs/Resources/resources.h"
 
-#include "DataLayer/shaders/shaders_data_provider_impl.h"
+#include "Content/ShadersModule/data_providers/shaders_data_provider_impl.h"
 #include "DataLayer/materials/material_data_provider_json_impl.h"
-#include "ApplicationLayer/shaders/shaders_service.h"
+#include "Content/ShadersModule/services/shaders_service.h"
 #include "ApplicationLayer/materials/materials_service.h"
 
 // TexturesModeule

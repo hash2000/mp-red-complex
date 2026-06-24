@@ -5,7 +5,7 @@
 #include "Launcher/app_controller.h"
 #include "Launcher/services.h"
 #include "Launcher/commands/command_context.h"
-#include "ApplicationLayer/shaders/shaders_service.h"
+#include "Content/ShadersModule/services/shaders_service.h"
 
 class MapWindow::Private {
 public:

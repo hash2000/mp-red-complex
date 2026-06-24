@@ -1,5 +1,5 @@
 #pragma once
-#include "DataLayer/shaders/i_shaders_data_provider.h"
+#include "Content/ShadersModule/data_providers/i_shaders_data_provider.h"
 #include <memory>
 
 class Resources;

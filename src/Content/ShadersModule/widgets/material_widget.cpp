@@ -1,4 +1,4 @@
-#include "Launcher/widgets/materials/material_widget.h"
+#include "Content/ShadersModule/widgets/material_widget.h"
 #include <QOpenGLFunctions_4_5_Core>
 #include <memory>
 
