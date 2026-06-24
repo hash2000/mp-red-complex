@@ -1,4 +1,4 @@
-#include "Content/ShadersModule/widgets/material_variables.h"
+#include "Content/MaterialsModule/widgets/material_variables.h"
 #include <QSplitter>
 #include <QTableView>
 #include <QStandardItemModel>

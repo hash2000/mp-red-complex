@@ -33,5 +33,6 @@ target_link_libraries(Launcher
 		RedComplexInventoriesModule
 		RedComplexTexturesModule
 		RedComplexShadersModule
+		RedComplexMaterialsModule
 )
 

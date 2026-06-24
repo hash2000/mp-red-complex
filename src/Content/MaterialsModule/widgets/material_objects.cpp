@@ -1,9 +1,7 @@
-#include "Content/ShadersModule/widgets/material_objects.h"
-#include "Content/ShadersModule/widgets/material_objects/material_object_menu_actions.h"
-#include "Content/ShadersModule/widgets/material_objects/material_object_node.h"
-#include "Launcher/i_app_commands.h"
-#include "ApplicationLayer/materials/materials_service.h"
-#include "ApplicationLayer/materials/material_mime_data.h"
+#include "Content/MaterialsModule/widgets/material_objects.h"
+#include "Content/MaterialsModule/widgets/material_objects/material_object_menu_actions.h"
+#include "Content/MaterialsModule/widgets/material_objects/material_object_node.h"
+#include "Content/MaterialsModule/services/materials_service.h"
 #include "Content/BaseWidgets/properties/properties_list_widget.h"
 
 #include <QSplitter>

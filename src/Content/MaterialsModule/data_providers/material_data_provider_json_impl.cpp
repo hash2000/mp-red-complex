@@ -1,4 +1,4 @@
-#include "DataLayer/materials/material_data_provider_json_impl.h"
+#include "Content/MaterialsModule/data_providers/material_data_provider_json_impl.h"
 #include "Libs/DataStream/format/json/data_reader.h"
 #include "Libs/DataStream/format/json/data_writer.h"
 #include "Libs/Resources/resources.h"

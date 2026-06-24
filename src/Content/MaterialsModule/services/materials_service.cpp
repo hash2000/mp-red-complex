@@ -1,6 +1,6 @@
-#include "ApplicationLayer/materials/materials_service.h"
-#include "ApplicationLayer/materials/material_mime_data.h"
-#include "DataLayer/materials/i_material_data_provider.h"
+#include "Content/MaterialsModule/services/materials_service.h"
+#include "Content/MaterialsModule/services/material_mime_data.h"
+#include "Content/MaterialsModule/data_providers/i_material_data_provider.h"
 
 #include <map>
 
