@@ -11,8 +11,5 @@ public:
 	QString toHtml() const;
 
 private:
-	void setPixmap(const QPixmap& value, int width, int height);
-
-private:
 	std::optional<QPixmap> _pixmap;
 };

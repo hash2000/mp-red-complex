@@ -1,5 +1,5 @@
 #include "Launcher/widgets/items/entities_window.h"
-//#include "Launcher/widgets/items/entities_widget.h"
+#include "Content/InventoriesModule/widgets/entities_widget.h"
 //#include "Launcher/widgets/items/item_create_widget.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/commands/command_context.h"
@@ -8,9 +8,7 @@
 #include "Launcher/mdi_child_window.h"
 #include "Launcher/services.h"
 #include "Launcher/controllers.h"
-//#include "Content/InventoriesModule/services/items_service.h"
-//#include "Content/InventoriesModule/services/inventory_service.h"
-//#include "Content/InventoriesModule/services/inventories_service.h"
+#include "Content/InventoriesModule/services/items_service.h"
 #include "Content/InventoriesModule/models/item_mime_data.h"
 
 
@@ -19,9 +17,8 @@ public:
 	Private(EntitiesWindow* parent) : q(parent) { }
 	EntitiesWindow* q;
 
-	//ItemsService* itemsService;
-	//EntitiesWidget* widget;
-	//InventoriesService* inventoriesService = nullptr;
+	ItemsService* itemsService;
+	EntitiesWidget* widget;
 	ApplicationController* controller = nullptr;
 	WindowsController* windowsController = nullptr;
 };
@@ -36,24 +33,25 @@ EntitiesWindow::~EntitiesWindow() = default;
 
 bool EntitiesWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) {
 	if (commandName == "create") {
-		//auto services = context->services();
-		//d->controller = context->applicationController();
-		//d->windowsController = context->controllers()->windowsController();
-		//d->inventoriesService = services->inventoriesService();
-		//d->itemsService = services->itemsService();
-		//d->widget = new EntitiesWidget(d->itemsService, nullptr, this);
-		//d->widget->setInventoriesService(d->inventoriesService);
+		auto services = context->services();
+		d->controller = context->applicationController();
+		d->windowsController = context->controllers()->windowsController();
+		d->itemsService = services->itemsService();
+		d->widget = new EntitiesWidget(d->itemsService, this);
 
-		//// TODO: исправить
-		////for (const auto& item : d->itemsService->entities()) {
-		////	d->widget->addItemEntity(item);
-		////}
+		for (auto item : d->itemsService->entities()) {
+			if (item->subType == ItemSubType::Root) {
+				continue;
+			}
 
-		//setWidget(d->widget);
+			d->widget->addItemEntity(*item);
+		}
 
-		//connect(d->widget, &EntitiesWidget::itemCreateRequested, this, &EntitiesWindow::onItemCreateRequested);
+		setWidget(d->widget);
+
+		connect(d->widget, &EntitiesWidget::itemCreateRequested, this, &EntitiesWindow::onItemCreateRequested);
 		//connect(d->widget, &EntitiesWidget::inventorySelectionRequested, this, &EntitiesWindow::onInventorySelectionRequested);
-		//onInventorySelectionRequested();
+		onInventorySelectionRequested();
 
 		return true;
 	}

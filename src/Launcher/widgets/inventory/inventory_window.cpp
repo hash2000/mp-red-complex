@@ -31,10 +31,10 @@ InventoryWindow::~InventoryWindow() = default;
 bool InventoryWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context)
 {
 	if (commandName == "create") {
-		//const auto target = QUuid::fromString(windowId());
-		//if (target.isNull()) {
-		//	return false;
-		//}
+		const auto target = QUuid::fromString(windowId());
+		if (target.isNull()) {
+			return false;
+		}
 
 		//auto services = context->services();
 		//auto controller = context->applicationController();

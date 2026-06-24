@@ -1,7 +1,7 @@
 #include "Launcher/widgets/action_panel/action_panel_widget.h"
 #include "Launcher/controllers/action_panel_controller.h"
 #include "Content/TexturesModule/services/images_service.h"
-#include "Launcher/styles/items_styles.h"
+#include "Content/InventoriesModule/styles/items_styles.h"
 #include <QToolButton>
 #include <QVBoxLayout>
 #include <QPushButton>

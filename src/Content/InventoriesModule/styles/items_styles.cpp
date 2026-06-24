@@ -1,6 +1,25 @@
-#include "Launcher/styles/items_styles.h"
+#include "Content/InventoriesModule/styles/items_styles.h"
+#include "Content/InventoriesModule/models/item.h"
+
+
+void FlatPrimaryButtonStyle::drawControl(
+	ControlElement element,
+	const QStyleOption* option, 
+	QPainter* painter,
+	const QWidget* widget) const {
+	if (element == CE_PushButtonLabel) {
+		QStyleOptionButton myOpt(*qstyleoption_cast<const QStyleOptionButton*>(option));
+		myOpt.palette.setColor(QPalette::ButtonText, QColor("#0f172a"));
+		QProxyStyle::drawControl(element, &myOpt, painter, widget);
+		return;
+	}
+	QProxyStyle::drawControl(element, option, painter, widget);
+}
 
 namespace ItemsStyles {
+
+
+
 	QString rarityColor(ItemRarityType rarity) {
 		switch (rarity) {
 		case ItemRarityType::Common:    return "#9ca3af";    // Серый
