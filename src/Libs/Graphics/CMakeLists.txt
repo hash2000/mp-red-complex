@@ -1,12 +1,18 @@
 message(STATUS "> Build Graphics")
 
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+
 set(Graphics-Sources
 	${RedComplex_SOURCE_DIR}/src/Libs/Graphics
 )
 
 file(GLOB_RECURSE SRCS ${Graphics-Sources}/*.cpp)
 
-add_library(RedComplexGraphics ${SRCS})
+qt_add_library(RedComplexGraphics STATIC
+	${SRCS}
+)
 
 get_target_property(QT_GUI_INC Qt6::Gui INTERFACE_INCLUDE_DIRECTORIES)
 

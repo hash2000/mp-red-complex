@@ -1,12 +1,16 @@
 message(STATUS "> Build CodeEditorWidget")
 
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+
 set(CodeEditorWidget-Sources
 	${RedComplex_SOURCE_DIR}/src/Content/CodeEditorWidget
 )
 
 file(GLOB_RECURSE SRCS ${CodeEditorWidget-Sources}/*.cpp)
 
-add_library(RedComplexCodeEditorWidget
+qt_add_library(RedComplexCodeEditorWidget STATIC
 	${SRCS}
 )
 

@@ -1,12 +1,16 @@
 message(STATUS "> Build DataFormat")
 
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+
 set(DataFormat-Sources
 	${RedComplex_SOURCE_DIR}/src/Libs/DataFormat
 )
 
 file(GLOB_RECURSE SRCS ${DataFormat-Sources}/*.cpp)
 
-add_library(RedComplexDataFormat
+qt_add_library(RedComplexDataFormat STATIC
 	${SRCS}
 )
 

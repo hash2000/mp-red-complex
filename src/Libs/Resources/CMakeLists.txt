@@ -1,12 +1,16 @@
 message(STATUS "> Build Resources")
 
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+
 set(Resources-Sources
 	${RedComplex_SOURCE_DIR}/src/Libs/Resources
 )
 
 file(GLOB_RECURSE SRCS ${Resources-Sources}/*.cpp)
 
-add_library(RedComplexResources
+qt_add_library(RedComplexResources STATIC
 	${SRCS}
 )
 

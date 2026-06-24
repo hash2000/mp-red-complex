@@ -1,12 +1,16 @@
 message(STATUS "> Build Engine")
 
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+
 set(Engine-Sources
 	${RedComplex_SOURCE_DIR}/src/Libs/Engine
 )
 
 file(GLOB_RECURSE SRCS ${Engine-Sources}/*.cpp)
 
-add_library(RedComplexEngine
+qt_add_library(RedComplexEngine STATIC
 	${SRCS}
 )
 

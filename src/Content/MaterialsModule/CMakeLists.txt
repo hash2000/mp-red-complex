@@ -1,12 +1,16 @@
 message(STATUS "> Build MaterialsModule")
 
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+
 set(MaterialsModule-Sources
 	${RedComplex_SOURCE_DIR}/src/Content/MaterialsModule
 )
 
 file(GLOB_RECURSE SRCS ${MaterialsModule-Sources}/*.cpp)
 
-add_library(RedComplexMaterialsModule
+qt_add_library(RedComplexMaterialsModule STATIC
 	${SRCS}
 )
 

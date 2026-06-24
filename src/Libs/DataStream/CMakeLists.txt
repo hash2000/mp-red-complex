@@ -1,5 +1,9 @@
 message(STATUS "> Build DataStream")
 
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+
 set(DataStream-Sources
 	${RedComplex_SOURCE_DIR}/src/Libs/DataStream
 )
@@ -7,7 +11,7 @@ set(DataStream-Sources
 file(GLOB_RECURSE SRCS ${DataStream-Sources}/*.cpp)
 
 
-add_library(RedComplexDataStream
+qt_add_library(RedComplexDataStream STATIC
 	${SRCS}
 )
 
