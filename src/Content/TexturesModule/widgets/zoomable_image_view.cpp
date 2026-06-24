@@ -1,4 +1,4 @@
-#include "Launcher/widgets/textures/zoomable_image_view.h"
+#include "Content/TexturesModule/widgets/zoomable_image_view.h"
 #include <QPainter>
 #include <QWheelEvent>
 #include <QMouseEvent>

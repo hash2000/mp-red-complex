@@ -2,8 +2,9 @@
 #include "Content/InventoriesModule/data_providers/i_items_data_provider.h"
 #include "Content/InventoriesModule/data_providers/i_entities_data_provider.h"
 #include "Content/InventoriesModule/models/item.h"
+#include "Content/TexturesModule/data_providers/i_images_data_provider.h"
+#include "Content/TexturesModule/services/images_service.h"
 
-#include "ApplicationLayer/textures/images_service.h"
 
 #include <QDebug>
 #include <map>

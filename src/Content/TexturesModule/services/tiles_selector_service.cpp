@@ -1,6 +1,7 @@
-#include "ApplicationLayer/textures/tiles_selector_service.h"
-#include "ApplicationLayer/textures/images_service.h"
-#include "DataLayer/images/i_tile_groups_data_provider.h"
+#include "Content/TexturesModule/services/tiles_selector_service.h"
+#include "Content/TexturesModule/services/images_service.h"
+#include "Content/TexturesModule/data_providers/i_tile_groups_data_provider.h"
+
 #include <QFileInfo>
 #include <optional>
 

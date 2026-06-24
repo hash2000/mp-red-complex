@@ -3,7 +3,8 @@
 #include "Content/UsersModule/data_providers/characters/i_character_data_provider.h"
 #include "Content/UsersModule/models/character.h"
 #include "Content/UsersModule/models/user.h"
-#include "ApplicationLayer/textures/images_service.h"
+#include "Content/TexturesModule/services/images_service.h"
+#include "Content/TexturesModule/data_providers/i_images_data_provider.h"
 
 #include <QCryptographicHash>
 #include <QUuid>

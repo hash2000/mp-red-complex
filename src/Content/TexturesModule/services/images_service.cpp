@@ -1,5 +1,5 @@
-#include "ApplicationLayer/textures/images_service.h"
-#include "DataLayer/images/i_images_data_provider.h"
+#include "Content/TexturesModule/services/images_service.h"
+#include "Content/TexturesModule/data_providers/i_images_data_provider.h"
 #include <QPixmap>
 #include <QPainter>
 #include <QHash>

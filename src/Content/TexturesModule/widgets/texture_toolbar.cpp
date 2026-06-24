@@ -1,5 +1,5 @@
-#include "Launcher/widgets/textures/texture_toolbar.h"
-#include "DataLayer/images/i_images_data_provider.h"
+#include "Content/TexturesModule/widgets/texture_toolbar.h"
+#include "Content/TexturesModule/data_providers/i_images_data_provider.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QPushButton>

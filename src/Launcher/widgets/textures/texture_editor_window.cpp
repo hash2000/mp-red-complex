@@ -1,11 +1,11 @@
 #include "Launcher/widgets/textures/texture_editor_window.h"
-#include "Launcher/widgets/textures/texture_editor_widget.h"
-#include "ApplicationLayer/textures/images_service.h"
-#include "ApplicationLayer/textures/tiles_selector_service.h"
+#include "Content/TexturesModule/widgets/texture_editor_widget.h"
+#include "Content/TexturesModule/data_providers/i_images_data_provider.h"
+#include "Content/TexturesModule/services/images_service.h"
+#include "Content/TexturesModule/services/tiles_selector_service.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/services.h"
 #include "Launcher/commands/command_context.h"
-#include "DataLayer/images/i_images_data_provider.h"
 
 class TextureEditorWindow::Private {
 public:

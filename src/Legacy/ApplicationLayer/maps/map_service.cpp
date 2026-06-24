@@ -1,6 +1,6 @@
 #include "ApplicationLayer/maps/map_service.h"
-#include "ApplicationLayer/textures/tiles_selector_service.h"
-#include "ApplicationLayer/textures/images_service.h"
+#include "Content/TexturesModule/services/tiles_selector_service.h"
+#include "Content/TexturesModule/services/images_service.h"
 #include "DataLayer/maps/i_map_data_provider.h"
 #include <QFileInfo>
 

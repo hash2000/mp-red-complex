@@ -2,7 +2,8 @@
 #include "Content/UsersModule/widgets/character_entry_widget.h"
 #include "Content/UsersModule/services/users_service.h"
 #include "Content/UsersModule/models/user.h"
-#include "ApplicationLayer/textures/images_service.h"
+#include "Content/TexturesModule/services/images_service.h"
+#include "Content/TexturesModule/data_providers/i_images_data_provider.h"
 #include <QLabel>
 #include <QVBoxLayout>
 #include <QHBoxLayout>

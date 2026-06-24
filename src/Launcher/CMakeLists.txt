@@ -31,5 +31,6 @@ target_link_libraries(Launcher
 		RedComplexUsersModule
 		RedComplexDatabaseModule
 		RedComplexInventoriesModule
+		RedComplexTexturesModule
 )
 

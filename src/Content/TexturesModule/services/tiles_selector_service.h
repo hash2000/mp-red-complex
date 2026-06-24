@@ -1,11 +1,14 @@
 #pragma once
-#include "DataLayer/images/i_tile_groups_data_provider.h"
 #include <QObject>
 #include <QList>
 #include <QPixmap>
 #include <memory>
 #include <optional>
 
+class ITileGroupsDataProvider;
+struct TileSetMetadata;
+struct TileGroup;
+enum class ImageType;
 
 class TilesSelectorService : public QObject {
 	Q_OBJECT

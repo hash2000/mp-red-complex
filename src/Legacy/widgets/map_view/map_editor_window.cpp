@@ -5,7 +5,7 @@
 #include "Launcher/services.h"
 #include "Launcher/commands/command_context.h"
 #include "ApplicationLayer/maps/map_service.h"
-#include "ApplicationLayer/textures/tiles_selector_service.h"
+#include "Content/TexturesModule/services/tiles_selector_service.h"
 #include "ApplicationLayer/shaders/shaders_service.h"
 #include <memory>
 

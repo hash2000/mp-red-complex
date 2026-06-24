@@ -1,4 +1,4 @@
-#include "Launcher/widgets/textures/tile_set_params_dialog.h"
+#include "Content/TexturesModule/widgets/tile_set_params_dialog.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>

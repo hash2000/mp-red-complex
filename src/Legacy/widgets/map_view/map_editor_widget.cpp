@@ -3,8 +3,8 @@
 #include "Launcher/widgets/map_view/apply_map_filter_dialog.h"
 
 #include "ApplicationLayer/maps/map_service.h"
-#include "ApplicationLayer/textures/tiles_selector_service.h"
-#include "ApplicationLayer/textures/textures_service.h"
+#include "Content/TexturesModule/services/tiles_selector_service.h"
+#include "Content/TexturesModule/services/textures_service.h"
 
 #include "Libs/Graphics/textures/texture_atlas.h"
 #include "Libs/Graphics/tiles/tile_renderer.h"

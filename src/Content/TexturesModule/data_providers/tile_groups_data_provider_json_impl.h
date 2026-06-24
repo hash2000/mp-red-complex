@@ -1,5 +1,5 @@
 #pragma once
-#include "DataLayer/images/i_tile_groups_data_provider.h"
+#include "Content/TexturesModule/data_providers/i_tile_groups_data_provider.h"
 #include <memory>
 
 class Resources;

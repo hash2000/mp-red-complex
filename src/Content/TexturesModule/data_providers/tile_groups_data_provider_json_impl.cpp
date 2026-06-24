@@ -1,4 +1,4 @@
-#include "DataLayer/images/tile_groups_data_provider_json_impl.h"
+#include "Content/TexturesModule/data_providers/tile_groups_data_provider_json_impl.h"
 #include "Libs/DataStream/format/json/data_reader.h"
 #include "Libs/Resources/resources.h"
 #include <QJsonDocument>

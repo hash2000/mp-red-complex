@@ -3,19 +3,19 @@
 #include "Launcher/services/world_service/world_service.h"
 #include "Libs/Resources/resources.h"
 
-#include "DataLayer/images/images_data_provider_json_impl.h"
-#include "DataLayer/images/i_images_data_provider.h"
-#include "DataLayer/images/tile_groups_data_provider_json_impl.h"
-#include "DataLayer/images/i_tile_groups_data_provider.h"
 #include "DataLayer/shaders/shaders_data_provider_impl.h"
 #include "DataLayer/materials/material_data_provider_json_impl.h"
-
-
-#include "ApplicationLayer/textures/images_service.h"
-#include "ApplicationLayer/textures/textures_service.h"
-#include "ApplicationLayer/textures/tiles_selector_service.h"
 #include "ApplicationLayer/shaders/shaders_service.h"
 #include "ApplicationLayer/materials/materials_service.h"
+
+// TexturesModeule
+#include "Content/TexturesModule/data_providers/images_data_provider_json_impl.h"
+#include "Content/TexturesModule/data_providers/i_images_data_provider.h"
+#include "Content/TexturesModule/data_providers/tile_groups_data_provider_json_impl.h"
+#include "Content/TexturesModule/data_providers/i_tile_groups_data_provider.h"
+#include "Content/TexturesModule/services/images_service.h"
+#include "Content/TexturesModule/services/textures_service.h"
+#include "Content/TexturesModule/services/tiles_selector_service.h"
 
 // Items service
 #include "Content/InventoriesModule/data_providers/items_data_provider_db.h"

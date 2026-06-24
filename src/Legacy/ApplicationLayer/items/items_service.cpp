@@ -1,7 +1,7 @@
 #include "ApplicationLayer/items/items_service.h"
 #include "ApplicationLayer/items/i_item_repository.h"
-#include "ApplicationLayer/textures/images_service.h"
-#include "DataLayer/images/i_images_data_provider.h"
+#include "Content/TexturesModule/services/images_service.h"
+#include "Content/TexturesModule/data_providers/i_images_data_provider.h"
 #include <QDebug>
 #include <map>
 

@@ -1,11 +1,12 @@
-#include "Launcher/widgets/textures/texture_editor_widget.h"
-#include "Launcher/widgets/textures/zoomable_image_view.h"
-#include "Launcher/widgets/textures/texture_toolbar.h"
-#include "Launcher/widgets/textures/tile_set_params_dialog.h"
-#include "Launcher/widgets/textures/tile_groups_dialog.h"
-#include "ApplicationLayer/textures/images_service.h"
-#include "ApplicationLayer/textures/tiles_selector_service.h"
-#include "DataLayer/images/i_images_data_provider.h"
+#include "Content/TexturesModule/widgets/texture_editor_widget.h"
+#include "Content/TexturesModule/widgets/zoomable_image_view.h"
+#include "Content/TexturesModule/widgets/texture_toolbar.h"
+#include "Content/TexturesModule/widgets/tile_set_params_dialog.h"
+#include "Content/TexturesModule/widgets/tile_groups_dialog.h"
+#include "Content/TexturesModule/services/images_service.h"
+#include "Content/TexturesModule/services/tiles_selector_service.h"
+#include "Content/TexturesModule/data_providers/i_images_data_provider.h"
+#include "Content/TexturesModule/data_providers/i_tile_groups_data_provider.h"
 #include <QSplitter>
 #include <QListWidget>
 #include <QListWidgetItem>
@@ -270,7 +271,7 @@ void TextureEditorWidget::loadsPage() {
 
 void TextureEditorWidget::updatePreview(const QString& fileName) {
 	d->currentTexturePath = fileName;  // Сохраняем путь для группировки
-	const auto pixmap = d->ImagesService->getImage(fileName, d->currentType);
+	const auto pixmap = d->ImagesService->getImage(fileName, d->currentType, kDefaultImageTag);
 	if (!pixmap.isNull()) {
 		d->previewLabel->setPixmap(pixmap);
 	} else {
