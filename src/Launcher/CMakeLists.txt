@@ -22,8 +22,6 @@ target_link_libraries(Launcher
 		RedComplexBase
 		RedComplexBaseWidgets
 		RedComplexGraphics		
-		RedComplexDataLayer
-		RedComplexApplicationLayer
 		RedComplexEngine
 
 		RedComplexCodeEditorWidget

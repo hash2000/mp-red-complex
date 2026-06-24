@@ -24,7 +24,6 @@ target_link_libraries(RedComplexShadersModule
 
 		RedComplexBase
 		RedComplexDataStream
-		RedComplexDataLayer
 		RedComplexResources
 		RedComplexGraphics
 )

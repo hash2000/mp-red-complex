@@ -22,7 +22,6 @@ target_link_libraries(RedComplexInventoriesModule
 
 		RedComplexBase
 		RedComplexDataStream
-		RedComplexDataLayer
 		RedComplexResources
 
 		RedComplexTexturesModule

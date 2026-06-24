@@ -19,8 +19,6 @@ target_link_libraries(TestItemsService PRIVATE
     Qt6::Gui
 
     RedComplexResources
-    RedComplexDataLayer
-    RedComplexApplicationLayer
 )
 
 add_test(NAME TestItemsService COMMAND TestItemsService)
