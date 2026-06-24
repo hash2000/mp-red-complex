@@ -1,10 +1,10 @@
 #include "Launcher/widgets/equipment/equipment_slot_widget.h"
 #include "Launcher/dragndrop/drag_event_builder.h"
 #include "Launcher/styles/items_styles.h"
-#include "Content/InventroiesModule/services/equipment_service.h"
-#include "Content/InventroiesModule/models/item_mime_data.h"
-#include "Content/InventroiesModule/models/item.h"
-#include "Content/InventroiesModule/models/container.h"
+#include "Content/InventoriesModule/services/equipment_service.h"
+#include "Content/InventoriesModule/models/item_mime_data.h"
+#include "Content/InventoriesModule/models/item.h"
+#include "Content/InventoriesModule/models/container.h"
 
 #include <QMouseEvent>
 #include <QDragEnterEvent>

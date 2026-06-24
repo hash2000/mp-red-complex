@@ -1,6 +1,6 @@
-#include "Content/InventroiesModule/data_providers/readers/entity_reader.h"
-#include "Content/InventroiesModule/models/item.h"
-#include "Content/InventroiesModule/models/extensions/entity_extensions.h"
+#include "Content/InventoriesModule/data_providers/readers/entity_reader.h"
+#include "Content/InventoriesModule/models/item.h"
+#include "Content/InventoriesModule/models/extensions/entity_extensions.h"
 #include "libs/Resources/db/sqlite/sqlite_reader.h"
 #include <QDebug>
 

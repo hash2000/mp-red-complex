@@ -30,6 +30,6 @@ target_link_libraries(Launcher
 
 		RedComplexUsersModule
 		RedComplexDatabaseModule
-		RedComplexInventroiesModule
+		RedComplexInventoriesModule
 )
 

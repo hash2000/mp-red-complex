@@ -7,9 +7,9 @@
 #include "Launcher/app_controller.h"
 #include "Launcher/controllers.h"
 #include "Launcher/services.h"
-#include "Content/InventroiesModule/services/items_service.h"
-#include "Content/InventroiesModule/models/item.h"
-#include "Content/InventroiesModule/models/extensions/entity_extensions.h"
+#include "Content/InventoriesModule/services/items_service.h"
+#include "Content/InventoriesModule/models/item.h"
+#include "Content/InventoriesModule/models/extensions/entity_extensions.h"
 
 #include <QMdiSubWindow>
 #include <QUuid>

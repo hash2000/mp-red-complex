@@ -1,5 +1,5 @@
-#include "Content/InventroiesModule/models/container.h"
-#include "Content/InventroiesModule/models/item.h"
+#include "Content/InventoriesModule/models/container.h"
+#include "Content/InventoriesModule/models/item.h"
 #include <QIODevice>
 
 bool ContainerItem::compare(const ContainerItem& other) const {

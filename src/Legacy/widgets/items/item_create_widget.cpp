@@ -1,6 +1,6 @@
 #include "Launcher/widgets/items/item_create_widget.h"
 #include "Launcher/styles/items_styles.h"
-#include "Content/InventroiesModule/services/items_service.h"
+#include "Content/InventoriesModule/services/items_service.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>

@@ -8,10 +8,10 @@
 #include "Launcher/mdi_child_window.h"
 #include "Launcher/services.h"
 #include "Launcher/controllers.h"
-//#include "Content/InventroiesModule/services/items_service.h"
-//#include "Content/InventroiesModule/services/inventory_service.h"
-//#include "Content/InventroiesModule/services/inventories_service.h"
-#include "Content/InventroiesModule/models/item_mime_data.h"
+//#include "Content/InventoriesModule/services/items_service.h"
+//#include "Content/InventoriesModule/services/inventory_service.h"
+//#include "Content/InventoriesModule/services/inventories_service.h"
+#include "Content/InventoriesModule/models/item_mime_data.h"
 
 
 class EntitiesWindow::Private {

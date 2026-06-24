@@ -1,5 +1,5 @@
 #pragma once
-#include "Content/InventroiesModule/data_providers/i_entities_data_provider.h"
+#include "Content/InventoriesModule/data_providers/i_entities_data_provider.h"
 #include <QPixmap>
 #include <QUuid>
 #include <memory>

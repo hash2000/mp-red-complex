@@ -9,8 +9,6 @@ class ItemsService;
 class UsersService;
 class ImagesService;
 class TilesSelectorService;
-class MapService;
-class IMapDataProvider;
 class TexturesService;
 class ShadersService;
 class MaterialsService;
@@ -29,7 +27,6 @@ public:
 	UsersService* usersService() const;
 	ImagesService* imagesService() const;
 	TilesSelectorService* tilesSelectorService() const;
-	MapService* mapService() const;
 	TexturesService* texturesService() const;
 	MaterialsService* materialsService() const;
 	HighlightingPluginManager* highlightingPluginManager() const;

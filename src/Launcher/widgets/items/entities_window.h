@@ -1,5 +1,5 @@
 #pragma once
-#include "Content/InventroiesModule/models/item.h"
+#include "Content/InventoriesModule/models/item.h"
 #include "Launcher/mdi_child_window.h"
 #include <QObject>
 

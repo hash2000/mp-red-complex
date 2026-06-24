@@ -1,11 +1,11 @@
 #include "Launcher/widgets/equipment/equipment_widget.h"
 #include "Launcher/widgets/equipment/equipment_slot_widget.h"
-#include "Content/InventroiesModule/services/equipment_service.h"
-#include "Content/InventroiesModule/services/inventory_service.h"
-#include "Content/InventroiesModule/services/inventories_service.h"
-#include "Content/InventroiesModule/models/item_mime_data.h"
-#include "Content/InventroiesModule/models/item.h"
-#include "Content/InventroiesModule/models/container.h"
+#include "Content/InventoriesModule/services/equipment_service.h"
+#include "Content/InventoriesModule/services/inventory_service.h"
+#include "Content/InventoriesModule/services/inventories_service.h"
+#include "Content/InventoriesModule/models/item_mime_data.h"
+#include "Content/InventoriesModule/models/item.h"
+#include "Content/InventoriesModule/models/container.h"
 #include <QVBoxLayout>
 #include <QUuid>
 #include <map>

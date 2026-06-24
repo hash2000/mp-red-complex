@@ -4,8 +4,8 @@
 #include "Launcher/commands/command_context.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/services.h"
-//#include "Content/InventroiesModule/services/inventories_service.h"
-#include "Content/InventroiesModule/models/item_mime_data.h"
+//#include "Content/InventoriesModule/services/inventories_service.h"
+#include "Content/InventoriesModule/models/item_mime_data.h"
 #include <QVBoxLayout>
 #include <QUuid>
 #include <QMdiSubWindow>

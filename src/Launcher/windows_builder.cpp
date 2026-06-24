@@ -1,8 +1,6 @@
 #include "Launcher/windows_builder.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/services.h"
-#include "Launcher/widgets/map_view/map_window.h"
-#include "Launcher/widgets/map_view/map_editor_window.h"
 #include "Launcher/widgets/equipment/equipment_window.h"
 #include "Launcher/widgets/inventory/inventory_window.h"
 #include "Launcher/widgets/items/entities_window.h"
@@ -33,9 +31,6 @@ WindowsBuilder::WindowsBuilder(ApplicationController* appController)
 : d(std::make_unique<Private>(this)) {
 	d->appController = appController;
 
-	d->factory.emplace("map", [](const QString& id, QWidget* parent) {
-		return new MapWindow(id, parent);
-		});
 	d->factory.emplace("equipment", [](const QString& id, QWidget* parent) {
 		return new EquipmentWindow(id, parent);
 		});
@@ -56,9 +51,6 @@ WindowsBuilder::WindowsBuilder(ApplicationController* appController)
 		});
 	d->factory.emplace("texture-editor", [](const QString& id, QWidget* parent) {
 		return new TextureEditorWindow(id, parent);
-		});
-	d->factory.emplace("map-editor", [](const QString& id, QWidget* parent) {
-		return new MapEditorWindow(id, parent);
 		});
 	d->factory.emplace("material-editor", [](const QString& id, QWidget* parent) {
 		return new MaterialsWindow(id, parent);

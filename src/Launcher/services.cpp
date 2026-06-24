@@ -7,24 +7,20 @@
 #include "DataLayer/images/i_images_data_provider.h"
 #include "DataLayer/images/tile_groups_data_provider_json_impl.h"
 #include "DataLayer/images/i_tile_groups_data_provider.h"
-#include "DataLayer/maps/i_map_data_provider.h"
-#include "DataLayer/maps/map_data_provider_json_impl.h"
 #include "DataLayer/shaders/shaders_data_provider_impl.h"
 #include "DataLayer/materials/material_data_provider_json_impl.h"
 
 
-
 #include "ApplicationLayer/textures/images_service.h"
-#include "ApplicationLayer/maps/map_service.h"
 #include "ApplicationLayer/textures/textures_service.h"
 #include "ApplicationLayer/textures/tiles_selector_service.h"
 #include "ApplicationLayer/shaders/shaders_service.h"
 #include "ApplicationLayer/materials/materials_service.h"
 
 // Items service
-#include "Content/InventroiesModule/data_providers/items_data_provider_db.h"
-#include "Content/InventroiesModule/data_providers/entities_data_provider_db.h"
-#include "Content/InventroiesModule/services/items_service.h"
+#include "Content/InventoriesModule/data_providers/items_data_provider_db.h"
+#include "Content/InventoriesModule/data_providers/entities_data_provider_db.h"
+#include "Content/InventoriesModule/services/items_service.h"
 
 // DatabasesService
 #include "Content/DatabaseModule/data_providers/databases_settings_data_provider_json_impl.h"
@@ -88,7 +84,6 @@ public:
 		, entitiesDataProvider([this] { return std::make_unique<EntitiesDataProviderDb>(databasesService.get()); })
 		, imagesDataProvider([this] {	return std::make_unique<ImagesDataProviderJsonImpl>(resources);	})
 		, tileGroupsDataProvider([this] {	return std::make_unique<TileGroupsDataProviderJsonImpl>(resources);	})
-		, mapDataProvider([this] {	return std::make_unique<MapDataProviderJsonImpl>(resources);	})
 		, usersDataProvider([this] {	return std::make_unique<UsersDataProviderDb>(databasesService.get());	})
 		, characterDataProvider([this] {	return std::make_unique<CharacterDataProviderDb>(databasesService.get());	})
 		, shadersDataProvider([this] { return std::make_unique<ShadersDataProviderLocalImpl>(resources); })
@@ -122,12 +117,6 @@ public:
 				return std::make_unique<TilesSelectorService>(
 					tileGroupsDataProvider.get());
 			})
-		, mapService([this] {
-				return std::make_unique<MapService>(
-					tilesSelectorService.get(),
-					imagesService.get(),
-					mapDataProvider.get());
-			})
 		, texturesService([this] {
 				return std::make_unique<TexturesService>(
 					imagesService.get());
@@ -154,7 +143,6 @@ public:
 	LazyPtr<ICharacterDataProvider> characterDataProvider;
 	LazyPtr<IImagesDataProvider> imagesDataProvider;
 	LazyPtr<ITileGroupsDataProvider> tileGroupsDataProvider;
-	LazyPtr<IMapDataProvider> mapDataProvider;
 	LazyPtr<IShadersDataProvider> shadersDataProvider;
 	LazyPtr<IMaterialsDataProvider> materialsDataProvider;
 
@@ -165,7 +153,6 @@ public:
 	LazyPtr<ImagesService> imagesService;
 	LazyPtr<TilesSelectorService> tilesSelectorService;
 	LazyPtr<TexturesService> texturesService;
-	LazyPtr<MapService> mapService;
 	LazyPtr<MaterialsService> materialsService;
 
 	LazyPtr<HighlightingPluginManager> highlightingPluginManager;
@@ -216,10 +203,6 @@ ImagesService* Services::imagesService() const {
 
 TilesSelectorService* Services::tilesSelectorService() const {
 	return d->tilesSelectorService.get();
-}
-
-MapService* Services::mapService() const {
-	return d->mapService.get();
 }
 
 TexturesService* Services::texturesService() const {

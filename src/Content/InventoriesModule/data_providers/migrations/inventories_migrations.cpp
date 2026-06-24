@@ -1,4 +1,4 @@
-#include "Content/InventroiesModule/data_providers/migrations/inventories_migrations.h"
+#include "Content/InventoriesModule/data_providers/migrations/inventories_migrations.h"
 #include "Libs/Resources/db/sqlite/migration_manager.h"
 #include "Libs/Resources/db/sqlite/sqlite_connection.h"
 

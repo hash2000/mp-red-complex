@@ -1,7 +1,7 @@
-#include "Content/InventroiesModule/services/items_service.h"
-#include "Content/InventroiesModule/data_providers/i_items_data_provider.h"
-#include "Content/InventroiesModule/data_providers/i_entities_data_provider.h"
-#include "Content/InventroiesModule/models/item.h"
+#include "Content/InventoriesModule/services/items_service.h"
+#include "Content/InventoriesModule/data_providers/i_items_data_provider.h"
+#include "Content/InventoriesModule/data_providers/i_entities_data_provider.h"
+#include "Content/InventoriesModule/models/item.h"
 
 #include "ApplicationLayer/textures/images_service.h"
 

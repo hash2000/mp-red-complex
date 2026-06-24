@@ -2,10 +2,10 @@
 #include "Launcher/widgets/inventory/inventory_item_widget.h"
 #include "Launcher/widgets/inventory/drop_preview_widget.h"
 #include "Launcher/styles/items_styles.h"
-#include "Content/InventroiesModule/services/inventory_service.h"
-#include "Content/InventroiesModule/services/inventories_service.h"
-#include "Content/InventroiesModule/models/inventory_item_handler.h"
-#include "Content/InventroiesModule/models/item_mime_data.h"
+#include "Content/InventoriesModule/services/inventory_service.h"
+#include "Content/InventoriesModule/services/inventories_service.h"
+#include "Content/InventoriesModule/models/inventory_item_handler.h"
+#include "Content/InventoriesModule/models/item_mime_data.h"
 
 #include <QPoint>
 #include <QLayoutItem>

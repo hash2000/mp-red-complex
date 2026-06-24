@@ -1,7 +1,7 @@
 #include "Launcher/dragndrop/drag_event_builder.h"
 #include "Launcher/styles/items_styles.h"
-#include "Content/InventroiesModule/models/item_mime_data.h"
-#include "Content/InventroiesModule/models/item.h"
+#include "Content/InventoriesModule/models/item_mime_data.h"
+#include "Content/InventoriesModule/models/item.h"
 #include <QDrag>
 #include <QMimeData>
 

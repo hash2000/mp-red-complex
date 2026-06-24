@@ -4,7 +4,7 @@
 #include "Launcher/app_controller.h"
 #include "Launcher/services.h"
 
-#include "Content/InventroiesModule/models/item_mime_data.h"
+#include "Content/InventoriesModule/models/item_mime_data.h"
 #include <QVBoxLayout>
 #include <QUuid>
 

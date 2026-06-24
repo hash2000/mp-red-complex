@@ -1,5 +1,5 @@
-#include "Content/InventroiesModule/models/extensions/entity_extensions.h"
-#include "Content/InventroiesModule/models/item.h"
+#include "Content/InventoriesModule/models/extensions/entity_extensions.h"
+#include "Content/InventoriesModule/models/item.h"
 #include <QDebug>
 
 namespace Inventory::Entities {

@@ -1,5 +1,5 @@
-#include "Content/InventroiesModule/data_providers/readers/item_reader.h"
-#include "Content/InventroiesModule/models/item.h"
+#include "Content/InventoriesModule/data_providers/readers/item_reader.h"
+#include "Content/InventoriesModule/models/item.h"
 #include "libs/Resources/db/sqlite/sqlite_reader.h"
 
 
