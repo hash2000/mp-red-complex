@@ -1,6 +1,6 @@
-#include "Content/UsersModule/widgets/character_entry_widget.h"
-#include "Content/UsersModule/services/users_service.h"
-#include "Content/UsersModule/models/character.h"
+#include "Content/CharactersModule/widgets/character_entry_widget.h"
+#include "Content/CharactersModule/services/characters_service.h"
+#include "Content/CharactersModule/models/character.h"
 #include "Content/TexturesModule/services/images_service.h"
 #include "Libs/Graphics/textures/extensions/pixmap_extensions.h"
 
@@ -159,22 +159,23 @@ void CharacterEntryWidget::setupLayout() {
 }
 
 void CharacterEntryWidget::loadCharacterData() {
-	d->character = d->usersService->getCharacter(d->characterId);
-	if (!d->character) {
-		d->nameLabel->setText("Неизвестный персонаж");
-		d->levelLabel->setText("Ур. ?");
-		return;
-	}
 
-	// Имя
-	d->nameLabel->setText(d->character->name);
+	//d->character = d->usersService->getCharacter(d->characterId);
+	//if (!d->character) {
+	//	d->nameLabel->setText("Неизвестный персонаж");
+	//	d->levelLabel->setText("Ур. ?");
+	//	return;
+	//}
 
-	// Уровень
-	d->levelLabel->setText(QString("Ур. %1")
-		.arg(d->character->level));
+	//// Имя
+	//d->nameLabel->setText(d->character->name);
 
-	// Иконка
-	if (!d->character->icon.isNull()) {
-		d->iconLabel->setPixmap(Extensions::Pixmaps::scale(d->character->icon, 64, -1));
-	}
+	//// Уровень
+	//d->levelLabel->setText(QString("Ур. %1")
+	//	.arg(d->character->level));
+
+	//// Иконка
+	//if (!d->character->icon.isNull()) {
+	//	d->iconLabel->setPixmap(Extensions::Pixmaps::scale(d->character->icon, 64, -1));
+	//}
 }

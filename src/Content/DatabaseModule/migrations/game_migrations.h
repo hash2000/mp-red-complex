@@ -2,6 +2,6 @@
 
 class MigrationManager;
 
-namespace InventoriesMigrations {
+namespace GameMigrations {
 void build(MigrationManager* migrator);
 };

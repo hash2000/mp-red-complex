@@ -1,7 +1,6 @@
-#include "Content/UsersModule/data_providers/characters/character_data_provider_db.h"
-#include "Content/UsersModule/data_providers/migrations/users_migrations.h"
+#include "Content/CharactersModule/data_providers/character_data_provider_db.h"
 #include "Content/DatabaseModule/services/databases_service.h"
-#include "Content/UsersModule/models/character.h"
+#include "Content/CharactersModule/models/character.h"
 #include "Libs/Resources/db/sqlite/migration_manager.h"
 #include "Libs/Resources/db/sqlite/sqlite_connection.h"
 #include "Libs/Resources/db/sqlite/sqlite_reader.h"
@@ -31,13 +30,15 @@ public:
 CharacterDataProviderDb::CharacterDataProviderDb(DatabasesService* databasesService)
 : d(std::make_unique<Private>(this)) {
 	d->databasesService = databasesService;
-	auto migrator = d->databasesService->migrationManager("users");
-	UsersMigrations::build(migrator);
 }
 
 CharacterDataProviderDb::~CharacterDataProviderDb() = default;
 
-std::shared_ptr<Character> CharacterDataProviderDb::loadCharacter(const QUuid& id) const {
+std::shared_ptr<Character> CharacterDataProviderDb::userCharacter(const QUuid& id) const {
+	return std::shared_ptr<Character>();
+}
+
+std::shared_ptr<Character> CharacterDataProviderDb::character(const QUuid& id) const {
 	auto conn = d->databasesService->connection("users");
 	if (!conn) {
 		return std::shared_ptr<Character>();

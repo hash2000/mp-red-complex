@@ -5,10 +5,8 @@
 #include <map>
 #include <list>
 
-class Character;
 class ImagesService;
 class IUsersDataProvider;
-class ICharacterDataProvider;
 class UserData;
 
 /// Сервис управления пользователями
@@ -17,9 +15,9 @@ class UsersService : public QObject {
 public:
 	explicit UsersService(
 		IUsersDataProvider* usersDataProvider,
-		ICharacterDataProvider* characterDataProvider,
-		ImagesService* ImagesService,
+		ImagesService* imagesService,
 		QObject* parent = nullptr);
+
 	~UsersService() override;
 
 	/// Войти пользователя по логину и паролю
@@ -41,17 +39,6 @@ public:
 	/// Зарегистрировать нового пользователя
 	/// Возвращает ID созданного пользователя или nullopt при ошибке
 	std::optional<QString> registerUser(const QString& login, const QString& password, const QString& displayName);
-
-	/// Получить персонажа текущего пользователя по ID
-	/// Возвращает указатель на CharacterItemHandler или nullptr если персонаж не найден
-	std::shared_ptr<Character> getCharacter(const QUuid& characterId) const;
-
-	/// Получить список всех идентификаторов персонажей текущего пользователя
-	std::list<QUuid> getAllCharacterIds() const;
-
-	/// Получить идентификатор сундука текущего аккаунта
-	/// Возвращает QUuid или пустой QUuid если пользователь не авторизован
-	QUuid getChestId() const;
 
 	/// Создать хэш пароля (для тестирования и отладки)
 	static QString hashPassword(const QString& password);

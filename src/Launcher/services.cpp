@@ -29,9 +29,11 @@
 #include "Content/DatabaseModule/data_providers/databases_settings_data_provider_json_impl.h"
 #include "Content/DatabaseModule/services/databases_service.h"
 
+// CharactersModule
+#include "Content/CharactersModule/data_providers/character_data_provider_db.h"
+
 // UsersModule
 #include "Content/UsersModule/services/users_service.h"
-#include "Content/UsersModule/data_providers/characters/character_data_provider_db.h"
 #include "Content/UsersModule/data_providers/users/users_data_provider_db.h"
 
 // HighlightingPluginManager
@@ -109,7 +111,6 @@ public:
 		, usersService([this] {
 				return std::make_unique<UsersService>(
 					usersDataProvider.get(),
-					characterDataProvider.get(),
 					imagesService.get());
 			})
 		, imagesService([this] {

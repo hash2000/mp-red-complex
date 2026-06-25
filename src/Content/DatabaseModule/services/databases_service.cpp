@@ -4,9 +4,13 @@
 #include "Libs/Resources/db/sqlite/sqlite_wal_manager.h"
 #include "Libs/Resources/db/sqlite/migration_manager.h"
 
+#include "Content/DatabaseModule/migrations/game_migrations.h"
+#include "Content/DatabaseModule/migrations/users_migrations.h"
+
 #include <QApplication>
 #include <QDir>
 
+#include <functional>
 #include <map>
 
 class DatabasesService::Private {
@@ -17,11 +21,12 @@ public:
 	struct DatabaseEntry {
 		std::unique_ptr<SQLiteConnection> connection;
 		std::unique_ptr<SQLiteWalManager> walManager;
+		std::unique_ptr<MigrationManager> migrator;
 		bool initialized = false;
 	};
 
 	std::map<QString, DatabaseEntry> entries;
-	std::map<QString, std::unique_ptr<MigrationManager>> migrators;
+	std::map<QString, std::function<void (MigrationManager*)>> migrations;
 	Resources* resources;
 	IDatabaseSettingsDataProvider* settingsDataProvider;
 };
@@ -31,6 +36,12 @@ DatabasesService::DatabasesService(Resources* resources, IDatabaseSettingsDataPr
 	, d(std::make_unique<Private>(this)) {
 	d->resources = resources;
 	d->settingsDataProvider = settingsDataProvider;
+
+	d->migrations = {
+		{ "game", [](MigrationManager* manager) { GameMigrations::build(manager); } },
+		{ "users", [](MigrationManager* manager) { UsersMigrations::build(manager); } },
+	};
+
 	// shutdown application
 	connect(qApp, &QApplication::aboutToQuit, this, &DatabasesService::onApplicationShutdown);
 }
@@ -64,18 +75,6 @@ void DatabasesService::shutdown() {
 	qInfo() << "All databases shut down";
 }
 
-MigrationManager* DatabasesService::migrationManager(const QString& name) {
-	const auto identName = name.toLower();
-	auto it = d->migrators.find(identName);
-	if (it != d->migrators.end()) {
-		return it->second.get();
-	}
-
-	auto migrator = std::make_unique<MigrationManager>();
-	const auto& inserted = d->migrators.emplace(identName, std::move(migrator));
-	return inserted.first->second.get();
-}
-
 SQLiteConnection* DatabasesService::connection(const QString& name) {
 	const auto identName = name.toLower();
 	const auto& db = d->entries.find(identName);
@@ -100,21 +99,25 @@ SQLiteConnection* DatabasesService::connection(const QString& name) {
 	entry.walManager->startAutoCheckpoint(
 		settings->walCheckInterval,
 		settings->walMaxSizeMb);
+	entry.migrator = std::make_unique<MigrationManager>();
 	entry.initialized = true;
 
 	const auto& inserted = d->entries.emplace(identName, std::move(entry));
 	auto conn = inserted.first->second.connection.get();
 
-	const auto& migrator = d->migrators.find(identName);
-	if (migrator != d->migrators.end()) {
-		auto manager = migrator->second.get();
-		if (manager->needsMigration(*conn)) {
-			if (!manager->migrate(*conn)) {
-				qCritical() << "Database migration error:" << name;
-				return nullptr;
-			}
-		}
+	auto migrator = inserted.first->second.migrator.get();
+
+	const auto& migratorInitializer = d->migrations.find(name);
+	if (migratorInitializer != d->migrations.end()) {
+		migratorInitializer->second(migrator);
 	}
+
+	if (migrator->needsMigration(*conn)) {
+		if (!migrator->migrate(*conn)) {
+			qCritical() << "Database migration error:" << name;
+			return nullptr;
+		}
+	}	
 
 	return conn;
 }

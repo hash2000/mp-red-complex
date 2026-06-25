@@ -1,5 +1,4 @@
 #include "Content/InventoriesModule/data_providers/items_data_provider_db.h"
-#include "Content/InventoriesModule/data_providers/migrations/inventories_migrations.h"
 #include "Content/InventoriesModule/data_providers/readers/item_reader.h"
 #include "Content/DatabaseModule/services/databases_service.h"
 #include "libs/Resources/db/sqlite/sqlite_connection.h"
@@ -43,8 +42,6 @@ public:
 ItemsDataProviderDb::ItemsDataProviderDb(DatabasesService* databasesService)
 	: d(std::make_unique<Private>(this)) {
 	d->databasesService = databasesService;
-	auto migrator = d->databasesService->migrationManager("game");
-	InventoriesMigrations::build(migrator);
 }
 
 ItemsDataProviderDb::~ItemsDataProviderDb() = default;

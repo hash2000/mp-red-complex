@@ -1,9 +1,9 @@
-#include "Content/InventoriesModule/data_providers/migrations/inventories_migrations.h"
+#include "Content/DatabaseModule/migrations/game_migrations.h"
 #include "Libs/Resources/db/sqlite/migration_manager.h"
 #include "Libs/Resources/db/sqlite/sqlite_connection.h"
 
 
-namespace InventoriesMigrations {
+namespace GameMigrations {
 void build(MigrationManager* migrator) {
 	migrator->addMigration(1, "Initialized database",
 		[](SQLiteConnection& db) -> bool {
@@ -108,6 +108,32 @@ void build(MigrationManager* migrator) {
 				CONSTRAINT PK_equipments PRIMARY KEY (item_id),
 				CONSTRAINT FK_containers_items FOREIGN KEY (item_id) REFERENCES items(id)
 			);
+
+			-- Таблица пользователей игры, сюда вносятся пользователи из users.db для целостности данных
+			-- При необходимости дополнится игровыми данными
+			CREATE TABLE users (
+				user_id TEXT NOT NULL,
+				storage_id TEXT NOT NULL,
+				CONSTRAINT PK_users PRIMARY KEY (user_id),
+				CONSTRAINT FK_users_containers FOREIGN KEY (storage_id) REFERENCES containers(item_id)
+			);
+
+			-- Таблица персонажей пользователя
+			CREATE TABLE user_characters (
+				id TEXT NOT NULL,
+				name TEXT NOT NULL,
+				equipment_id TEXT NOT NULL,
+				icon_path TEXT NOT NULL,
+				char_level INTEGER DEFAULT (1) NOT NULL,
+				is_active INTEGER DEFAULT (1) NOT NULL,
+				user_id TEXT NOT NULL,
+				created_at TEXT DEFAULT (datetime('now')) NOT NULL,
+				CONSTRAINT PK_user_characters PRIMARY KEY (id),
+				CONSTRAINT FK_user_characters_containers FOREIGN KEY (equipment_id) REFERENCES containers(item_id),
+				CONSTRAINT FK_user_characters_users FOREIGN KEY (user_id) REFERENCES users(user_id)
+			);
+
+			CREATE INDEX IDX_user_characters_user_id ON user_characters (user_id);
 		)");
 	},
 		[](SQLiteConnection& db) -> bool {
@@ -121,6 +147,8 @@ void build(MigrationManager* migrator) {
 			DROP TABLE IF EXISTS item_entity_equipment_type;
 			DROP TABLE IF EXISTS item_entity_types;
 			DROP TABLE IF EXISTS containers;
+			DROP TABLE IF EXISTS user_characters;
+			DROP TABLE IF EXISTS users;
 		)");
 	});
 

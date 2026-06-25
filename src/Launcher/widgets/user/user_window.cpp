@@ -5,7 +5,7 @@
 #include "Launcher/commands/command_context.h"
 #include "Content/UsersModule/widgets/user_widget.h"
 #include "Content/UsersModule/services/users_service.h"
-#include "Content/UsersModule/models/character.h"
+//#include "Content/UsersModule/models/character.h"
 
 class UserWindow::Private {
 public:
@@ -17,7 +17,7 @@ public:
 	UserWidget* userWidget = nullptr;
 	ApplicationController* applicationController = nullptr;
 
-	void executeCharCommand(const QString& target, const Character* chr);
+//	void executeCharCommand(const QString& target, const Character* chr);
 };
 
 UserWindow::UserWindow(const QString& id, QWidget* parent)
@@ -27,21 +27,21 @@ UserWindow::UserWindow(const QString& id, QWidget* parent)
 
 UserWindow::~UserWindow() = default;
 
-void UserWindow::Private::executeCharCommand(const QString& target, const Character* chr) {
-	const auto itemIdStr = QString("id:%1")
-		.arg(chr->equipmentId
-			.toString(QUuid::WithoutBraces)
-			.toLower());
-
-	const auto title = QString("title:%1")
-		.arg(chr->name);
-
-	const auto fullTarget = QString("target:%1")
-		.arg(target);
-
-	applicationController->executeCommandByName("window-create", QStringList{
-		fullTarget, itemIdStr, title });
-}
+//void UserWindow::Private::executeCharCommand(const QString& target, const Character* chr) {
+//	const auto itemIdStr = QString("id:%1")
+//		.arg(chr->equipmentId
+//			.toString(QUuid::WithoutBraces)
+//			.toLower());
+//
+//	const auto title = QString("title:%1")
+//		.arg(chr->name);
+//
+//	const auto fullTarget = QString("target:%1")
+//		.arg(target);
+//
+//	applicationController->executeCommandByName("window-create", QStringList{
+//		fullTarget, itemIdStr, title });
+//}
 
 bool UserWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) {
 	if (commandName == "create") {
@@ -65,21 +65,21 @@ bool UserWindow::handleCommand(const QString& commandName, const QStringList& ar
 }
 
 void UserWindow::onEquipmentRequested(const QUuid& characterId) {
-	const auto chr = d->usersService->getCharacter(characterId);
-	if (!chr) {
-		return;
-	}
+	//const auto chr = d->usersService->getCharacter(characterId);
+	//if (!chr) {
+	//	return;
+	//}
 
-	d->executeCharCommand("equipment", chr.get());
+	//d->executeCharCommand("equipment", chr.get());
 }
 
 void UserWindow::onSpecificationsRequested(const QUuid& characterId) {
-	const auto chr = d->usersService->getCharacter(characterId);
-	if (!chr) {
-		return;
-	}
+	//const auto chr = d->usersService->getCharacter(characterId);
+	//if (!chr) {
+	//	return;
+	//}
 
-	d->executeCharCommand("character-specifications", chr.get());
+	//d->executeCharCommand("character-specifications", chr.get());
 }
 
 void UserWindow::onUserLoggedOut() {

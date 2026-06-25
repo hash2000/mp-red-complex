@@ -1,6 +1,7 @@
 add_subdirectory(BaseWidgets)
 add_subdirectory(CodeEditorWidget)
 add_subdirectory(UsersModule)
+add_subdirectory(CharactersModule)
 add_subdirectory(DatabaseModule)
 add_subdirectory(InventoriesModule)
 add_subdirectory(TexturesModule)

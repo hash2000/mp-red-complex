@@ -27,6 +27,7 @@ target_link_libraries(Launcher
 		RedComplexCodeEditorWidget
 
 		RedComplexUsersModule
+		RedComplexCharactersModule
 		RedComplexDatabaseModule
 		RedComplexInventoriesModule
 		RedComplexTexturesModule

@@ -1,5 +1,5 @@
 #pragma once
-#include "Content/UsersModule/data_providers/characters/i_character_data_provider.h"
+#include "Content/CharactersModule/data_providers/i_character_data_provider.h"
 #include <memory>
 
 class DatabasesService;
@@ -9,7 +9,8 @@ public:
 	CharacterDataProviderDb(DatabasesService* databasesService);
 	~CharacterDataProviderDb() override;
 
-	std::shared_ptr<Character> loadCharacter(const QUuid& id) const override;
+	std::shared_ptr<Character> userCharacter(const QUuid& id) const override;
+	std::shared_ptr<Character> character(const QUuid& id) const override;
 	bool saveCharacter(const Character& character) override;
 	bool deleteCharacter(const QUuid& id) override;
 

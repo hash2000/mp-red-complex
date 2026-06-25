@@ -13,7 +13,6 @@ public:
 	DatabasesService(Resources* resources, IDatabaseSettingsDataProvider* settingsDataProvider, QObject* parent = nullptr);
 	~DatabasesService();
 
-	MigrationManager* migrationManager(const QString& name);
 	SQLiteConnection* connection(const QString& name);
 
 private:

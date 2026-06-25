@@ -1,5 +1,4 @@
 #include "Content/UsersModule/data_providers/users/users_data_provider_db.h"
-#include "Content/UsersModule/data_providers/migrations/users_migrations.h"
 #include "Content/DatabaseModule/services/databases_service.h"
 #include "Content/UsersModule/models/user.h"
 #include "Libs/Resources/db/sqlite/migration_manager.h"
@@ -50,8 +49,6 @@ public:
 UsersDataProviderDb::UsersDataProviderDb(DatabasesService* databasesService)
 	: d(std::make_unique<Private>(this)) {
 	d->databasesService = databasesService;
-	auto migrator = d->databasesService->migrationManager("users");
-	UsersMigrations::build(migrator);
 }
 
 UsersDataProviderDb::~UsersDataProviderDb() = default;

@@ -6,6 +6,10 @@
 class ActionPanelByUserBuilder::Private {
 public:
 	Private(ActionPanelByUserBuilder* parent) : q(parent) { }
+	ActionPanelByUserBuilder* q;
+
+	ActionPanelController* panel;
+	UsersService* usersService;
 
 	void addProfileButton() {
 		QString cmd = QString("window-create target:user-profile id:%1")
@@ -14,10 +18,10 @@ public:
 	}
 
 	void addChestButton() {
-		QString cmd = QString("window-create target:inventory id:%1")
-			.arg(usersService->getChestId().toString(QUuid::StringFormat::WithoutBraces));
+		//QString cmd = QString("window-create target:inventory id:%1")
+		//	.arg(usersService->getChestId().toString(QUuid::StringFormat::WithoutBraces));
 
-		panel->addButton(ActionButtonConfig("Chest", "💼", "Сундук", cmd, 2));
+		//panel->addButton(ActionButtonConfig("Chest", "💼", "Сундук", cmd, 2));
 	}
 
 	void addEntitiesButton() {
@@ -37,9 +41,6 @@ public:
 		panel->addButton(ActionButtonConfig("CodeEditor", "🖹", "Редактор кода", "window-create target:code-editor", 2));
 	}
 
-	ActionPanelByUserBuilder* q;
-	ActionPanelController* panel;
-	UsersService* usersService;
 };
 
 

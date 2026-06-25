@@ -1,5 +1,5 @@
 #include "Content/UsersModule/widgets/user_widget.h"
-#include "Content/UsersModule/widgets/character_entry_widget.h"
+//#include "Content/UsersModule/widgets/character_entry_widget.h"
 #include "Content/UsersModule/services/users_service.h"
 #include "Content/UsersModule/models/user.h"
 #include "Content/TexturesModule/services/images_service.h"
@@ -35,7 +35,7 @@ public:
 	QScrollArea* scrollArea = nullptr;
 
 	// Список виджетов персонажей
-	std::list<CharacterEntryWidget*> characterWidgets;
+//	std::list<CharacterEntryWidget*> characterWidgets;
 };
 
 UserWidget::UserWidget(UsersService* usersService, ImagesService* ImagesService, QWidget* parent)
@@ -220,55 +220,55 @@ void UserWidget::loadUserData() {
 }
 
 void UserWidget::loadCharacters() {
-	clearCharacters();
+	//clearCharacters();
 
-	const auto characterIds = d->usersService->getAllCharacterIds();
-	if (characterIds.empty()) {
-		auto* noCharsLabel = new QLabel("Нет персонажей", d->charactersContainer);
-		noCharsLabel->setStyleSheet("color: #718096; padding: 12px; font-size: 12px;");
-		noCharsLabel->setAlignment(Qt::AlignCenter);
-		d->charactersLayout->addWidget(noCharsLabel);
-		return;
-	}
+	//const auto characterIds = d->usersService->getAllCharacterIds();
+	//if (characterIds.empty()) {
+	//	auto* noCharsLabel = new QLabel("Нет персонажей", d->charactersContainer);
+	//	noCharsLabel->setStyleSheet("color: #718096; padding: 12px; font-size: 12px;");
+	//	noCharsLabel->setAlignment(Qt::AlignCenter);
+	//	d->charactersLayout->addWidget(noCharsLabel);
+	//	return;
+	//}
 
-	int index = 0;
-	int totalChars = static_cast<int>(characterIds.size());
+	//int index = 0;
+	//int totalChars = static_cast<int>(characterIds.size());
 
-	for (const auto& charId : characterIds) {
-		auto* charWidget = new CharacterEntryWidget(
-			d->usersService,
-			d->ImagesService,
-			charId,
-			d->charactersContainer);
+	//for (const auto& charId : characterIds) {
+	//	auto* charWidget = new CharacterEntryWidget(
+	//		d->usersService,
+	//		d->ImagesService,
+	//		charId,
+	//		d->charactersContainer);
 
-		// Подключаем сигналы кнопок
-		connect(charWidget, &CharacterEntryWidget::equipmentClicked,
-			this, &UserWidget::equipmentRequested);
-		connect(charWidget, &CharacterEntryWidget::specificationsClicked,
-			this, &UserWidget::specificationsRequested);
+	//	// Подключаем сигналы кнопок
+	//	connect(charWidget, &CharacterEntryWidget::equipmentClicked,
+	//		this, &UserWidget::equipmentRequested);
+	//	connect(charWidget, &CharacterEntryWidget::specificationsClicked,
+	//		this, &UserWidget::specificationsRequested);
 
-		d->characterWidgets.push_back(charWidget);
-		d->charactersLayout->addWidget(charWidget);  // Просто добавляем в конец
+	//	d->characterWidgets.push_back(charWidget);
+	//	d->charactersLayout->addWidget(charWidget);  // Просто добавляем в конец
 
-		// Добавляем разделитель после персонажа (кроме последнего)
-		if (index < totalChars - 1) {
-			auto* separator = new QFrame(d->charactersContainer);
-			separator->setFrameShape(QFrame::HLine);
-			separator->setStyleSheet(
-				"background-color: #2d3748; "
-				"border: none; "
-				"height: 1px;"
-			);
-			separator->setMaximumHeight(1);
-			separator->setMinimumHeight(1);
-			d->charactersLayout->addWidget(separator);
-		}
-		
-		++index;
-	}
+	//	// Добавляем разделитель после персонажа (кроме последнего)
+	//	if (index < totalChars - 1) {
+	//		auto* separator = new QFrame(d->charactersContainer);
+	//		separator->setFrameShape(QFrame::HLine);
+	//		separator->setStyleSheet(
+	//			"background-color: #2d3748; "
+	//			"border: none; "
+	//			"height: 1px;"
+	//		);
+	//		separator->setMaximumHeight(1);
+	//		separator->setMinimumHeight(1);
+	//		d->charactersLayout->addWidget(separator);
+	//	}
+	//	
+	//	++index;
+	//}
 
-	// Устанавливаем начальную ширину
-	updateCharactersContainerWidth();
+	//// Устанавливаем начальную ширину
+	//updateCharactersContainerWidth();
 }
 
 void UserWidget::updateCharactersContainerWidth() {
@@ -284,18 +284,18 @@ void UserWidget::updateCharactersContainerWidth() {
 }
 
 void UserWidget::clearCharacters() {
-	// Удаляем все виджеты персонажей
-	for (auto* widget : d->characterWidgets) {
-		widget->deleteLater();
-	}
-	d->characterWidgets.clear();
+	//// Удаляем все виджеты персонажей
+	//for (auto* widget : d->characterWidgets) {
+	//	widget->deleteLater();
+	//}
+	//d->characterWidgets.clear();
 
-	// Удаляем ВСЕ элементы layout (разделители, лейблы)
-	QLayoutItem* child;
-	while ((child = d->charactersLayout->takeAt(0)) != nullptr) {
-		if (child->widget()) {
-			child->widget()->deleteLater();
-		}
-		delete child;
-	}
+	//// Удаляем ВСЕ элементы layout (разделители, лейблы)
+	//QLayoutItem* child;
+	//while ((child = d->charactersLayout->takeAt(0)) != nullptr) {
+	//	if (child->widget()) {
+	//		child->widget()->deleteLater();
+	//	}
+	//	delete child;
+	//}
 }
