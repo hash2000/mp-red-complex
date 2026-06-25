@@ -2,7 +2,8 @@
 #include "Content/UsersModule/services/users_service.h"
 #include "Content/UsersModule/models/character.h"
 #include "Content/TexturesModule/services/images_service.h"
-#include "Content/TexturesModule/data_providers/i_images_data_provider.h"
+#include "Libs/Graphics/textures/extensions/pixmap_extensions.h"
+
 #include <QLabel>
 #include <QPushButton>
 #include <QVBoxLayout>
@@ -174,8 +175,6 @@ void CharacterEntryWidget::loadCharacterData() {
 
 	// Иконка
 	if (!d->character->icon.isNull()) {
-		d->iconLabel->setPixmap(d->character->icon.scaled(64, 64,
-			Qt::KeepAspectRatio,
-			Qt::SmoothTransformation));
+		d->iconLabel->setPixmap(Extensions::Pixmaps::scale(d->character->icon, 64, -1));
 	}
 }

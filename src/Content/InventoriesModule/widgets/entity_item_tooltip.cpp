@@ -1,6 +1,7 @@
 #include "Content/InventoriesModule/widgets/entity_item_tooltip.h"
 #include "Content/InventoriesModule/styles/items_styles.h"
 #include "Content/InventoriesModule/models/item.h"
+#include "Libs/Graphics/textures/extensions/pixmap_extensions.h"
 
 #include <QLabel>
 #include <QVBoxLayout>
@@ -30,7 +31,7 @@ public:
 
 		// Иконка
 		if (!item.icon.isNull()) {
-			iconLabel->setPixmap(item.icon.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+			iconLabel->setPixmap(Extensions::Pixmaps::scale(item.icon, 64, -1));
 		}
 		else {
 			QPixmap placeholder(64, 64);
@@ -204,7 +205,7 @@ EntityItemTooltip::EntityItemTooltip(QWidget* parent)
 	// Иконка (увеличенная)
 	d->iconLabel = new QLabel();
 	d->iconLabel->setScaledContents(true);
-	d->iconLabel->setStyleSheet("background-color: rgba(0, 0, 0, 100); border-radius: 6px;");
+	d->iconLabel->setStyleSheet("background-color: transparent; border-radius: 6px;");
 
 	// Правая колонка: название + описание
 	auto infoLayout = new QVBoxLayout();

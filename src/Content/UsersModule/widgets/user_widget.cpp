@@ -4,6 +4,8 @@
 #include "Content/UsersModule/models/user.h"
 #include "Content/TexturesModule/services/images_service.h"
 #include "Content/TexturesModule/data_providers/i_images_data_provider.h"
+#include "Libs/Graphics/textures/extensions/pixmap_extensions.h"
+
 #include <QLabel>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -209,11 +211,8 @@ void UserWidget::loadUserData() {
 	d->userIdLabel->setText(shortId);
 
 	// Иконка пользователя
-	if (!user->iconPath.isEmpty() && d->ImagesService) {
-		auto pixmap = d->ImagesService->getImage(user->iconPath, ImageType::Users);
-		if (!pixmap.isNull()) {
-			d->userIconLabel->setPixmap(pixmap.scaled(48, 48, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-		}
+	if (!user->icon.isNull()) {
+		d->userIconLabel->setPixmap(Extensions::Pixmaps::scale(user->icon, 48, -1));
 	}
 
 	// Загружаем персонажей

@@ -78,7 +78,7 @@ bool CreateWindowCommand::execute(CommandContext* context, const QStringList& ar
 		return false;
 	}
 
-	context->printSuccess(QString("Can't register window '%1' with title '%2' and id '%3'")
+	context->printSuccess(QString("Register window '%1' with title '%2' and id '%3'")
 		.arg(target)
 		.arg(title)
 		.arg(id));

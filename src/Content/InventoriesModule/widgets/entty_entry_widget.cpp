@@ -48,7 +48,7 @@ EntityEntryWidget::EntityEntryWidget(const ItemEntity& entity, QWidget* parent)
 	d->iconLabel->setFixedSize(32, 32);
 	d->iconLabel->installEventFilter(this);
 	d->iconLabel->setScaledContents(true);
-	d->iconLabel->setStyleSheet("background-color: rgba(0, 0, 0, 80); border-radius: 4px;");
+	d->iconLabel->setStyleSheet("background-color: transparent; border-radius: 4px;");
 
 	if (!entity.icon.isNull()) {
 		d->iconLabel->setPixmap(Extensions::Pixmaps::scale(entity.icon, -1, 32));
