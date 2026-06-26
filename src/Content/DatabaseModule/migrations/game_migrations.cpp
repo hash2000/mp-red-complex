@@ -54,7 +54,7 @@ void build(MigrationManager* migrator) {
 				entity_id TEXT NOT NULL,
 				resource_id TEXT NOT NULL,
 				CONSTRAINT PK_entity_resource PRIMARY KEY (entity_id,resource_id),
-				CONSTRAINT FK_entity_resource_entities FOREIGN KEY (entity_id) REFERENCES "item_entities"(id) ON DELETE CASCADE ON UPDATE CASCADE,
+				CONSTRAINT FK_entity_resource_entities FOREIGN KEY (entity_id) REFERENCES "item_entities"(id),
 				CONSTRAINT FK_entity_resource_resources FOREIGN KEY (resource_id) REFERENCES resources(id)
 			);
 

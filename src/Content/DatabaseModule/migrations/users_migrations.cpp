@@ -24,12 +24,18 @@ void build(MigrationManager* migrator) {
 					CONSTRAINT PK_permissions PRIMARY KEY (id)
 				);
 
+				INSERT INTO permissions (id) VALUES('--users-view');
+				INSERT INTO permissions (id) VALUES('--users-create');
+				INSERT INTO permissions (id) VALUES('--user-can-register-in-game');
+				INSERT INTO permissions (id) VALUES('--user-can-register-in-messages');
+				INSERT INTO permissions (id) VALUES('--characters-view');
+
 				-- Таблица разрешений пользователя
 				CREATE TABLE users_permission (
 					user_id TEXT NOT NULL,
 					permission TEXT NOT NULL,
 					is_active INTEGER DEFAULT (1) NOT NULL,
-					CONSTRAINT PK_users_permission PRIMARY KEY (user_id),
+					CONSTRAINT PK_users_permission PRIMARY KEY (user_id, permission),
 					CONSTRAINT FK_users_permission_users FOREIGN KEY (user_id) REFERENCES users(id),
 					CONSTRAINT FK_users_permission_permissions FOREIGN KEY (permission) REFERENCES permissions(id)
 				);
