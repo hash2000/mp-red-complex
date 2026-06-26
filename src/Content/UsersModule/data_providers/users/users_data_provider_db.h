@@ -11,9 +11,10 @@ public:
 	~UsersDataProviderDb() override;
 
 	std::shared_ptr<UserData> loadUser(const QString& loginHash) const override;
-	bool saveUser(const UserData& loginHash) override;
+	bool saveUser(const std::shared_ptr<UserData> user) override;
 	bool deleteUser(const QString& loginHash) override;
 	bool containsUser(const QString& loginHash) override;
+	std::set<QString> permissions(const QString& id) const override;
 
 private:
 	class Private;

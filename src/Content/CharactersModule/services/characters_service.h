@@ -1,7 +1,10 @@
 #pragma once
 #include <QObject>
+#include <list>
+#include <memory>
 
 class Character;
+class UsersService;
 class ICharacterDataProvider;
 class ImagesService;
 
@@ -11,16 +14,14 @@ public:
 
 	explicit CharactersService(
 		ICharacterDataProvider* characterDataProvider,
+		UsersService* usersService,
 		ImagesService* imagesService,
 		QObject* parent = nullptr);
+
 	~CharactersService() override;
 
-	/// Получить персонажа текущего пользователя по ID
-/// Возвращает указатель на CharacterItemHandler или nullptr если персонаж не найден
-	std::shared_ptr<Character> getCharacter(const QUuid& characterId) const;
-
-	/// Получить список всех идентификаторов персонажей текущего пользователя
-	std::list<QUuid> getAllCharacterIds() const;
+	std::shared_ptr<Character> character(const QUuid& characterId) const;
+	std::list<std::shared_ptr<Character>> charactersByUser(const QString& userId) const;
 
 private:
 	class Private;

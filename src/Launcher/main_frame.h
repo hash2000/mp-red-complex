@@ -2,7 +2,7 @@
 #include "Libs/Engine/main_frame.h"
 
 class Resources;
-class UserData;
+class UserView;
 
 class LauncherMainFrame : public MainFrame {
 public:
@@ -11,7 +11,7 @@ public:
 
 private slots:
 	void onToggleCommandConsole(bool visible);
-	void onUserLogin(const UserData& user);
+	void onUserLogin(const UserView& user);
 	void onUserLogout();
 
 private:

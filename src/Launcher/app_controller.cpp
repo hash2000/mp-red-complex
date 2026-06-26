@@ -3,16 +3,17 @@
 #include "Launcher/commands/command.h"
 #include "Launcher/commands/command_processor.h"
 #include "Launcher/commands/command_context.h"
+#include "Launcher/controllers.h"
+#include "Launcher/services.h"
 #include "Launcher/commands/cmd/windows_close_all_cmd.h"
 #include "Launcher/commands/cmd/windows_list_cmd.h"
 #include "Launcher/commands/cmd/windows_close_cmd.h"
 #include "Launcher/commands/cmd/window_create_cmd.h"
 #include "Launcher/commands/cmd/states_store_cmd.h"
 #include "Launcher/commands/cmd/items_cmd.h"
-#include "Launcher/commands/cmd/user_logout_cmd.h"
+#include "Launcher/commands/cmd/users_cmd.h"
 #include "Launcher/commands/cmd/window_invoke_cmd.h"
-#include "Launcher/controllers.h"
-#include "Launcher/services.h"
+#include "Launcher/commands/cmd/characters_cmd.h"
 
 #include <QMdiArea>
 #include <QMdiSubWindow>
@@ -49,8 +50,9 @@ ApplicationController::ApplicationController(Resources* resources, QObject* pare
 	d->commandProcessor->registerCommand(std::make_unique<CreateWindowCommand>(this));
 	d->commandProcessor->registerCommand(std::make_unique<StatesStoreCommand>(this));
 	d->commandProcessor->registerCommand(std::make_unique<ItemsCommand>(this));
-	d->commandProcessor->registerCommand(std::make_unique<UserLogoutCommand>(this));
+	d->commandProcessor->registerCommand(std::make_unique<UsersCommand>(this));
 	d->commandProcessor->registerCommand(std::make_unique<WindowInvokeCommand>(this));
+	d->commandProcessor->registerCommand(std::make_unique<CharactersCommand>(this));
 
 	d->commandContext->services()->run();
 

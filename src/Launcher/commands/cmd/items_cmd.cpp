@@ -37,8 +37,7 @@ ItemsCommand::ItemsCommand(QObject* parent)
 ItemsCommand::~ItemsCommand() = default;
 
 QString ItemsCommand::help() const {
-	return R"(
-items action:
+	return R"(items action:
 	show-entities
 	show-container id:{containerId}
 	show-item id:{itemId}

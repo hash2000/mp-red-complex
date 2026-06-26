@@ -6,7 +6,7 @@
 #include "Launcher/widgets/action_panel/action_panel_by_user_builder.h"
 #include "Launcher/controllers/action_panel_controller.h"
 #include "Content/UsersModule/widgets/login_widget.h"
-#include "Content/UsersModule/models/user.h"
+#include "Content/UsersModule/models/user_view.h"
 #include "Content/UsersModule/services/users_service.h"
 #include <QMessageBox>
 

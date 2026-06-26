@@ -17,11 +17,29 @@ void build(MigrationManager* migrator) {
 					created_at TEXT DEFAULT (datetime('now')),
 					CONSTRAINT USERS_PK PRIMARY KEY (id)
 				);
+
+				-- Таблица существующих разрешений
+				CREATE TABLE permissions (
+					id TEXT NOT NULL,
+					CONSTRAINT PK_permissions PRIMARY KEY (id)
+				);
+
+				-- Таблица разрешений пользователя
+				CREATE TABLE users_permission (
+					user_id TEXT NOT NULL,
+					permission TEXT NOT NULL,
+					is_active INTEGER DEFAULT (1) NOT NULL,
+					CONSTRAINT PK_users_permission PRIMARY KEY (user_id),
+					CONSTRAINT FK_users_permission_users FOREIGN KEY (user_id) REFERENCES users(id),
+					CONSTRAINT FK_users_permission_permissions FOREIGN KEY (permission) REFERENCES permissions(id)
+				);
 		)");
 	},
 		[](SQLiteConnection& db) -> bool {
 			return db.execute(R"(
+				DROP TABLE IF EXISTS users_permission;
 				DROP TABLE IF EXISTS users;
+				DROP TABLE IF EXISTS permissions;
 		)");
 	});
 

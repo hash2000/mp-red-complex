@@ -14,6 +14,7 @@ class ShadersService;
 class MaterialsService;
 class HighlightingPluginManager;
 class DatabasesService;
+class CharactersService;
 
 class Services: public QObject {
 	Q_OBJECT
@@ -31,6 +32,7 @@ public:
 	MaterialsService* materialsService() const;
 	HighlightingPluginManager* highlightingPluginManager() const;
 	DatabasesService* databasesService() const;
+	CharactersService* charactersService() const;
 
 	// для каждого контекста opengl должен быть свой
 	std::unique_ptr<ShadersService> shadersService() const;

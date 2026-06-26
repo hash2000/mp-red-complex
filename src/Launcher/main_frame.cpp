@@ -9,7 +9,7 @@
 #include "Launcher/widgets/action_panel/action_panel_by_user_builder.h"
 #include "Launcher/widgets/action_panel/action_panel_widget.h"
 #include "Content/UsersModule/services/users_service.h"
-#include "Content/UsersModule/models/user.h"
+#include "Content/UsersModule/models/user_view.h"
 #include "Content/BaseWidgets/mdi_area.h"
 #include "Libs/Resources/resources.h"
 
@@ -142,8 +142,6 @@ void LauncherMainFrame::Private::setupActionPanel() {
 	builder.build();
 }
 
-
-
 void LauncherMainFrame::onToggleCommandConsole(bool visible) {
 	if (visible) {
 		d->commandConsole->showConsole();
@@ -157,8 +155,8 @@ void LauncherMainFrame::onUserLogout() {
 	d->setupActionPanel();
 }
 
-void LauncherMainFrame::onUserLogin(const UserData& user) {
-	qDebug() << "User login" << user.displayName;
+void LauncherMainFrame::onUserLogin(const UserView& user) {
+	qDebug() << "User login" << user.data->displayName;
 	ActionPanelByUserBuilder builder(
 		d->commandContext->controllers()->actionPanelController(),
 		d->commandContext->services()->usersService());

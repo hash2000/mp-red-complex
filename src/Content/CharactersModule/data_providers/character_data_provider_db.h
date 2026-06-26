@@ -9,9 +9,9 @@ public:
 	CharacterDataProviderDb(DatabasesService* databasesService);
 	~CharacterDataProviderDb() override;
 
-	std::shared_ptr<Character> userCharacter(const QUuid& id) const override;
+	std::list<std::shared_ptr<Character>> userCharacters(const QString& userId) const override;
 	std::shared_ptr<Character> character(const QUuid& id) const override;
-	bool saveCharacter(const Character& character) override;
+	bool saveCharacters(const QString& userId, const std::list<std::shared_ptr<Character>>& characters) override;
 	bool deleteCharacter(const QUuid& id) override;
 
 private:

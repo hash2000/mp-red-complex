@@ -1,6 +1,7 @@
 #pragma once
 #include <QUuid>
 #include <QString>
+#include <QDateTime>
 #include <QHash>
 #include <QPixmap>
 
@@ -10,9 +11,7 @@ public:
 	QString loginHash;
 	QString passwordHash;
 	QString displayName;
-	QHash<QString, QString> metadata;
-	std::list<QUuid> characters;
-	QUuid chestId;
+	QDateTime createdAt;
 
 	QString iconPath;
 	QPixmap icon;

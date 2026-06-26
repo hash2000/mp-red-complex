@@ -7,7 +7,7 @@
 
 class ImagesService;
 class IUsersDataProvider;
-class UserData;
+class UserView;
 
 /// Сервис управления пользователями
 class UsersService : public QObject {
@@ -31,7 +31,7 @@ public:
 	bool isAuthenticated() const;
 
 	/// Получить текущего пользователя
-	std::shared_ptr<UserData> currentUser() const;
+	std::shared_ptr<UserView> currentUser() const;
 
 	/// Получить текущего пользователя (ID)
 	QString currentUserId() const;
@@ -39,13 +39,9 @@ public:
 	/// Зарегистрировать нового пользователя
 	/// Возвращает ID созданного пользователя или nullopt при ошибке
 	std::optional<QString> registerUser(const QString& login, const QString& password, const QString& displayName);
-
-	/// Создать хэш пароля (для тестирования и отладки)
-	static QString hashPassword(const QString& password);
-
 signals:
 	/// Сигнал об успешном входе
-	void loginSuccess(const UserData& user);
+	void loginSuccess(const UserView& user);
 
 	/// Сигнал о выходе
 	void loggedOut();

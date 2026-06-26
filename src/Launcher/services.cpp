@@ -31,6 +31,7 @@
 
 // CharactersModule
 #include "Content/CharactersModule/data_providers/character_data_provider_db.h"
+#include "Content/CharactersModule/services/characters_service.h"
 
 // UsersModule
 #include "Content/UsersModule/services/users_service.h"
@@ -129,6 +130,12 @@ public:
 				return std::make_unique<MaterialsService>(
 					materialsDataProvider.get());
 			})
+		, charactersService([this] {
+				return std::make_unique<CharactersService>(
+					characterDataProvider.get(),
+					usersService.get(),
+					imagesService.get());
+			})		
 	{
 	}
 
@@ -158,6 +165,7 @@ public:
 	LazyPtr<TilesSelectorService> tilesSelectorService;
 	LazyPtr<TexturesService> texturesService;
 	LazyPtr<MaterialsService> materialsService;
+	LazyPtr<CharactersService> charactersService;
 
 	LazyPtr<HighlightingPluginManager> highlightingPluginManager;
 };
@@ -224,4 +232,8 @@ std::unique_ptr<ShadersService> Services::shadersService() const {
 
 HighlightingPluginManager* Services::highlightingPluginManager() const {
 	return d->highlightingPluginManager.get();
+}
+
+CharactersService* Services::charactersService() const {
+	return d->charactersService.get();
 }

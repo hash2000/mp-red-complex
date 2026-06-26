@@ -16,6 +16,7 @@ enum class CharacterStats {
 class Character {
 public:
   QUuid id;
+	QString userId;
   QString name;
   QUuid equipmentId;
 

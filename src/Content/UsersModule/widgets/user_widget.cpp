@@ -1,7 +1,7 @@
 #include "Content/UsersModule/widgets/user_widget.h"
 //#include "Content/UsersModule/widgets/character_entry_widget.h"
 #include "Content/UsersModule/services/users_service.h"
-#include "Content/UsersModule/models/user.h"
+#include "Content/UsersModule/models/user_view.h"
 #include "Content/TexturesModule/services/images_service.h"
 #include "Content/TexturesModule/data_providers/i_images_data_provider.h"
 #include "Libs/Graphics/textures/extensions/pixmap_extensions.h"
@@ -22,7 +22,7 @@ public:
 	UserWidget* q;
 	UsersService* usersService = nullptr;
 	ImagesService* ImagesService = nullptr;
-	std::shared_ptr<UserData> currentUser;
+	std::shared_ptr<UserView> currentUser;
 
 	// Элементы заголовка
 	QLabel* userIconLabel = nullptr;
@@ -201,18 +201,18 @@ void UserWidget::loadUserData() {
 	const auto user = d->currentUser.get();
 
 	// DisplayName
-	d->displayNameLabel->setText(user->displayName.isEmpty() ? "Пользователь" : user->displayName);
+	d->displayNameLabel->setText(user->data->displayName.isEmpty() ? "Пользователь" : user->data->displayName);
 
 	// ID (показываем сокращённую версию)
-	QString shortId = user->loginHash;
+	QString shortId = user->data->loginHash;
 	if (shortId.length() > 12) {
 		shortId = shortId.left(12) + "...";
 	}
 	d->userIdLabel->setText(shortId);
 
 	// Иконка пользователя
-	if (!user->icon.isNull()) {
-		d->userIconLabel->setPixmap(Extensions::Pixmaps::scale(user->icon, 48, -1));
+	if (!user->data->icon.isNull()) {
+		d->userIconLabel->setPixmap(Extensions::Pixmaps::scale(user->data->icon, 48, -1));
 	}
 
 	// Загружаем персонажей
