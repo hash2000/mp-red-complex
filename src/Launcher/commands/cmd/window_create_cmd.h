@@ -1,0 +1,14 @@
+#pragma once
+#include "Launcher/commands/command.h"
+
+class CreateWindowCommand : public CommandAbstraction {
+	Q_OBJECT
+public:
+	CreateWindowCommand(QObject* parent = nullptr) : CommandAbstraction(parent) {}
+
+	bool execute(CommandContext* context, const QStringList& args) override;
+
+	QString name() const override { return "window-create"; }
+	QString description() const override { return "Create new MDI window by type"; }
+	QString help() const override { return "window-create target:<type> id:<id>"; }
+};

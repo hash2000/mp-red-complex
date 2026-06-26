@@ -1,0 +1,6 @@
+add_subdirectory(Base)
+add_subdirectory(Resources)
+add_subdirectory(Graphics)
+add_subdirectory(Engine)
+add_subdirectory(DataFormat)
+add_subdirectory(DataStream)

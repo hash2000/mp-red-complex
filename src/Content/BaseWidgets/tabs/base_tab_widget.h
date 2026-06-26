@@ -1,0 +1,25 @@
+#pragma once
+#include "Libs/Resources/resources.h"
+#include <QWidget>
+#include <QHBoxLayout>
+#include <memory>
+
+class BaseTabWidget : public QWidget {
+	Q_OBJECT
+public:
+	BaseTabWidget(Resources* resources, const QVariantMap& params,
+		QWidget* parent = nullptr);
+
+	std::shared_ptr<DataStream> currentStream() const;
+
+	void dragEnterEvent(QDragEnterEvent* event) override;
+	void dropEvent(QDropEvent* event) override;
+
+signals:
+	void requestContainer(const QVariantMap& params);
+
+protected:
+	Resources* _resources;
+	QVariantMap _params;
+};
+

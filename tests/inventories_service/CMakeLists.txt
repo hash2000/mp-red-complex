@@ -4,14 +4,8 @@ project(TestInventoriesService LANGUAGES CXX)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Test)
 
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-set(CMAKE_AUTOUIC ON)
-
 add_executable(TestInventoriesService
     test_inventories_service.cpp
-    
-    
 )
 
 target_include_directories(TestInventoriesService PRIVATE
@@ -23,9 +17,8 @@ target_link_libraries(TestInventoriesService PRIVATE
     Qt6::Core
     Qt6::Test
     Qt6::Gui
-    Resources
-    DataLayer
-    ApplicationLayer
+
+    RedComplexResources
 )
 
 add_test(NAME TestInventoriesService COMMAND TestInventoriesService)

@@ -4,12 +4,12 @@ set(Launcher-Sources
 	${RedComplex_SOURCE_DIR}/src/Launcher
 )
 
-set(CMAKE_AUTOMOC ON)
-
 file(GLOB_RECURSE SRCS ${Launcher-Sources}/*.cpp)
+
 add_executable(Launcher
 	${SRCS}
 )
+
 
 target_link_libraries(Launcher
 	PRIVATE
@@ -19,9 +19,19 @@ target_link_libraries(Launcher
 		Qt6::OpenGL
 		Qt6::OpenGLWidgets
 
-		Base
-		Resources
-		DataFormat
-		Engine
+		RedComplexBase
+		RedComplexBaseWidgets
+		RedComplexGraphics		
+		RedComplexEngine
+
+		RedComplexCodeEditorWidget
+
+		RedComplexUsersModule
+		RedComplexCharactersModule
+		RedComplexDatabaseModule
+		RedComplexInventoriesModule
+		RedComplexTexturesModule
+		RedComplexShadersModule
+		RedComplexMaterialsModule
 )
 

@@ -1,5 +1,4 @@
 #include <QtTest/QtTest>
-#include "ApplicationLayer/items/items_service.h"
 
 class TestItemsService : public QObject {
 	Q_OBJECT
@@ -14,10 +13,6 @@ private slots:
 	void init();
 	void cleanup();
 
-
-private:
-
-	ItemEntity createTestEntity(const QString& id = "test-item");
 };
 
 void TestItemsService::initTestCase() {}

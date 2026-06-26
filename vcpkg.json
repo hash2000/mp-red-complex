@@ -12,6 +12,9 @@
 		},
 		{
 			"name": "entt"
+		},
+		{
+			"name": "sqlite3"
 		}
 	]
 }

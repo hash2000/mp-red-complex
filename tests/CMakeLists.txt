@@ -10,11 +10,6 @@ set(Test-Mocks
     mock_items_data_provider.cpp
 )
 
-# Автоматическое включение MOC для Qt-классов
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-set(CMAKE_AUTOUIC ON)
-
 # Поддиректории с тестами
 add_subdirectory(items_service)
 add_subdirectory(inventories_service)

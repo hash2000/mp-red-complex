@@ -22,8 +22,8 @@ if (dataDir.isEmpty()) {
 ## Чтение JSON из `assets`
 
 ```cpp
-#include "DataStream/format/json/data_reader.h"
-#include "Resources/resources.h"
+#include "Libs/DataStream/format/json/data_reader.h"
+#include "Libs/Resources/resources.h"
 
 QJsonObject json;
 Format::Json::DataReader reader(resources, "assets", "items/entities_ids.json");
@@ -47,7 +47,7 @@ if (!reader.read(json)) {
 ## Чтение изображения (Pixmap)
 
 ```cpp
-#include "DataStream/format/pixmap/data_reader.h"
+#include "Libs/DataStream/format/pixmap/data_reader.h"
 
 QPixmap pixmap;
 Format::Pixmap::DataReader reader(resources, "assets", "textures/tiles/ground.png");

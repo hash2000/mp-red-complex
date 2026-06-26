@@ -1,0 +1,26 @@
+#pragma once
+#include <QUuid>
+#include <QString>
+#include <QPixmap>
+#include <array>
+
+enum class CharacterStats {
+  Intellect,
+  Strength,
+  Endurance,
+  Agility,
+
+  Count,
+};
+
+class Character {
+public:
+  QUuid id;
+	QString userId;
+  QString name;
+  QUuid equipmentId;
+
+  QString iconPath;
+  QPixmap icon;
+  int level = 1;
+};
