@@ -3,6 +3,9 @@
 #include "Launcher/services/world_service/world_service.h"
 #include "Libs/Resources/resources.h"
 
+// FetchApiModule
+#include "Content/FetchApiModule/services/fetch_service.h"
+
 // ShadersModule
 #include "Content/ShadersModule/data_providers/shaders_data_provider_impl.h"
 #include "Content/ShadersModule/services/shaders_service.h"
@@ -136,6 +139,9 @@ public:
 					usersService.get(),
 					imagesService.get());
 			})		
+		, fetchApiService([this] {
+				return std::make_unique<FetchApiService>();
+			})		
 	{
 	}
 
@@ -166,6 +172,7 @@ public:
 	LazyPtr<TexturesService> texturesService;
 	LazyPtr<MaterialsService> materialsService;
 	LazyPtr<CharactersService> charactersService;
+	LazyPtr<FetchApiService> fetchApiService;
 
 	LazyPtr<HighlightingPluginManager> highlightingPluginManager;
 };
@@ -236,4 +243,8 @@ HighlightingPluginManager* Services::highlightingPluginManager() const {
 
 CharactersService* Services::charactersService() const {
 	return d->charactersService.get();
+}
+
+FetchApiService* Services::fetchApiService() const {
+	return d->fetchApiService.get();
 }

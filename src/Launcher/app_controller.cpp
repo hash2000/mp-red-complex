@@ -13,6 +13,7 @@
 #include "Launcher/commands/cmd/items_cmd.h"
 #include "Launcher/commands/cmd/users_cmd.h"
 #include "Launcher/commands/cmd/window_invoke_cmd.h"
+#include "Launcher/commands/cmd/fetch_api_cmd.h"
 #include "Launcher/commands/cmd/characters_cmd.h"
 
 #include <QMdiArea>
@@ -53,6 +54,7 @@ ApplicationController::ApplicationController(Resources* resources, QObject* pare
 	d->commandProcessor->registerCommand(std::make_unique<UsersCommand>(this));
 	d->commandProcessor->registerCommand(std::make_unique<WindowInvokeCommand>(this));
 	d->commandProcessor->registerCommand(std::make_unique<CharactersCommand>(this));
+	d->commandProcessor->registerCommand(std::make_unique<FetchApiCommand>(this));
 
 	d->commandContext->services()->run();
 

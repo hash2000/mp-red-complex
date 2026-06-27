@@ -18,6 +18,7 @@ target_link_libraries(Launcher
 		Qt6::Widgets
 		Qt6::OpenGL
 		Qt6::OpenGLWidgets
+		Qt6::Network
 
 		RedComplexBase
 		RedComplexBaseWidgets
@@ -26,12 +27,15 @@ target_link_libraries(Launcher
 
 		RedComplexCodeEditorWidget
 
-		RedComplexUsersModule
 		RedComplexCharactersModule
 		RedComplexDatabaseModule
+		RedComplexFetchApiModule
 		RedComplexInventoriesModule
-		RedComplexTexturesModule
-		RedComplexShadersModule
 		RedComplexMaterialsModule
+		RedComplexMessagerModule
+		RedComplexShadersModule
+		RedComplexTexturesModule
+		RedComplexUsersModule
+
 )
 

@@ -1,0 +1,77 @@
+#include "Content/FetchApiModule/services/fetch_service.h"
+#include "Content/FetchApiModule/models/fetch_opt.h"
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+
+class FetchApiService::Private {
+public:
+	Private(FetchApiService* parent) : q(parent) { }
+	FetchApiService* q;
+
+	QNetworkAccessManager* networkManager;
+};
+
+FetchApiService::FetchApiService(QObject* parent)
+	: d(std::make_unique<Private>(this))
+	, QObject(parent) {
+	d->networkManager = new QNetworkAccessManager(this);
+}
+
+FetchApiService::~FetchApiService() = default;
+
+bool FetchApiService::fetchRequest(
+	const FetchApiOpt& request,
+	SuccessCallback onSuccess,
+	ErrorCallback onError,
+	ProgressCallback onProgress) {
+	QNetworkReply* reply = nullptr;
+	QNetworkRequest options = request.request;
+
+	switch (request.action) {
+	case FetchApiActions::Get: {
+		reply = d->networkManager->get(options);
+		break;
+	}
+	case FetchApiActions::Post: {
+		if (request.body.isEmpty()) {
+			return false;
+		}
+		reply = d->networkManager->post(options, request.body);
+		break;
+	}
+	case FetchApiActions::Delete: {
+		options.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+		reply = d->networkManager->sendCustomRequest(options, "DELETE", request.body);
+		break;
+	}
+	case FetchApiActions::Put: {
+		options.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+		reply = d->networkManager->sendCustomRequest(options, "PUT", request.body);
+		break;
+	}
+	default:
+	return false;
+	}
+
+	connect(reply, &QNetworkReply::finished, this, [reply, onSuccess, onError, onProgress]() {
+		reply->deleteLater();
+		if (reply->error() != QNetworkReply::NoError) {
+			if (onError) {
+				onError(reply->error(), reply->errorString());
+			}
+			return;
+		}
+
+		int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+		QByteArray data = reply->readAll();
+		if (onSuccess) {
+			onSuccess(status, data);
+		}
+	});
+
+	if (onProgress) {
+		connect(reply, &QNetworkReply::downloadProgress, onProgress);
+	}
+
+	return true;
+}

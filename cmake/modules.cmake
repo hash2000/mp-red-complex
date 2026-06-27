@@ -5,7 +5,8 @@ find_package(Qt6
 		Core
 		Gui
 		Widgets
-		OpenGLWidgets)
+		OpenGLWidgets
+		Network)
 
 find_package(ZLIB REQUIRED)
 

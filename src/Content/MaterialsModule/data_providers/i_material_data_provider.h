@@ -1,5 +1,5 @@
 #pragma once
-#include "Content/MaterialsModule/data_providers/material.h"
+#include "Content/MaterialsModule/models/material.h"
 #include <list>
 
 class IMaterialsDataProvider {
