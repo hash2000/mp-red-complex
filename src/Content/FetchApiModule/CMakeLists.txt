@@ -1,9 +1,5 @@
 message(STATUS "> Build FetchApiModule")
 
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-set(CMAKE_AUTOUIC ON)
-
 set(FetchApiModule-Sources
 	${RedComplex_SOURCE_DIR}/src/Content/FetchApiModule
 )
@@ -13,6 +9,10 @@ file(GLOB_RECURSE SRCS ${FetchApiModule-Sources}/*.cpp)
 qt_add_library(RedComplexFetchApiModule STATIC
 	${SRCS}
 )
+
+set_target_properties(RedComplexFetchApiModule PROPERTIES CMAKE_AUTOMOC ON)
+set_target_properties(RedComplexFetchApiModule PROPERTIES CMAKE_AUTORCC ON)
+set_target_properties(RedComplexFetchApiModule PROPERTIES CMAKE_AUTOUIC ON)
 
 target_link_libraries(RedComplexFetchApiModule
 	PRIVATE
@@ -26,4 +26,11 @@ target_link_libraries(RedComplexFetchApiModule
 		RedComplexBase
 		RedComplexDataStream
 		RedComplexResources
+)
+
+qt_import_plugins(RedComplexFetchApiModule
+    INCLUDE
+			Qt6::QTlsBackendOpenSSLPlugin
+			Qt6::QSchannelBackendPlugin
+			Qt6::QTlsBackendCertOnlyPlugin
 )

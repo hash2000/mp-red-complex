@@ -1,9 +1,5 @@
 message(STATUS "> Build InventoriesModule")
 
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-set(CMAKE_AUTOUIC ON)
-
 set(InventoriesModule-Sources
 	${RedComplex_SOURCE_DIR}/src/Content/InventoriesModule
 )
@@ -13,6 +9,10 @@ file(GLOB_RECURSE SRCS ${InventoriesModule-Sources}/*.cpp)
 qt_add_library(RedComplexInventoriesModule STATIC
 	${SRCS}
 )
+
+set_target_properties(RedComplexInventoriesModule PROPERTIES CMAKE_AUTOMOC ON)
+set_target_properties(RedComplexInventoriesModule PROPERTIES CMAKE_AUTORCC ON)
+set_target_properties(RedComplexInventoriesModule PROPERTIES CMAKE_AUTOUIC ON)
 
 target_link_libraries(RedComplexInventoriesModule
 	PRIVATE

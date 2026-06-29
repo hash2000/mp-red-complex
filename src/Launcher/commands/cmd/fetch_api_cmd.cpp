@@ -12,6 +12,7 @@
 #include "Content/FetchApiModule/models/fetch_opt.h"
 
 #include <QNetworkRequest>
+#include <QSslSocket>
 
 
 class FetchApiCommand::Private {
@@ -25,6 +26,8 @@ public:
 		const QString& headers,
 		const QString& body
 		);
+
+	bool showSsl(CommandContext* context);
 };
 
 
@@ -37,8 +40,10 @@ FetchApiCommand::~FetchApiCommand() = default;
 
 QString FetchApiCommand::help() const {
 	return R"(fetch-api
-	action:[post,get,put,delete,...]
-	location:{location}
+	action:
+	show-ssl
+	[post,get,put,delete,...]
+		location:{location}
 	)";
 }
 
@@ -104,12 +109,25 @@ bool FetchApiCommand::Private::sendRequest(CommandContext* context,
 	return true;
 }
 
+bool FetchApiCommand::Private::showSsl(CommandContext* context) {
+	ConsoleTable table({ "Option", "Value" });
+	table.addRow({ "SSL Support", QSslSocket::supportsSsl() });
+	table.addRow({ "Backend", QSslSocket::activeBackend() });
+	table.addRow({ "OpenSSL build", QSslSocket::sslLibraryBuildVersionString() });
+	table.addRow({ "OpenSSL runtime", QSslSocket::sslLibraryVersionString() });
+
+	context->print(table);
+	return true;
+}
+
 bool FetchApiCommand::execute(CommandContext* context, const QStringList& args) {
 	const auto action = parseArgsValue(args, "action");
 	if (action.isEmpty()) {
 		context->printError(QString("Usage: %1").arg(help()));
 		return false;
 	}
+
+	if (action == "show-ssl") return d->showSsl(context);
 
 	const auto result = d->sendRequest(context, action,
 		parseArgsValue(args, "location"),

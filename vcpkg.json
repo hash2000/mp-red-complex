@@ -4,7 +4,9 @@
 		{
 			"name": "qtbase",
 			"features": [
-				"opengl"
+				"opengl",
+				"openssl",
+				"dnslookup"
 			]
 		},
 		{
@@ -15,6 +17,10 @@
 		},
 		{
 			"name": "sqlite3"
+		},
+		{
+			"name": "openssl",
+			"features": [ "tools" ]
 		}
 	]
 }

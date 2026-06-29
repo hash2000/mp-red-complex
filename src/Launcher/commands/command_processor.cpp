@@ -23,10 +23,25 @@ public:
 
 	Resources* resources;
 	std::map<QString, std::unique_ptr<CommandAbstraction>> commands;
+
+	QStringList parseCommandLine(const QString& line);
 };
 
 // Парсинг командной строки с поддержкой кавычек
-static QStringList parseCommandLine(const QString& line) {
+
+
+CommandProcessor::CommandProcessor(Resources* resources, QObject* parent)
+	: QObject(parent)
+	, d(std::make_unique<Private>(this)) {
+	d->resources = resources;
+
+	// Регистрация встроенных служебных команд
+	registerCommand(std::make_unique<HelpCommand>(this));
+}
+
+CommandProcessor::~CommandProcessor() = default;
+
+QStringList CommandProcessor::Private::parseCommandLine(const QString& line) {
 	QStringList tokens;
 	QString currentToken;
 	bool inQuotes = false;
@@ -68,17 +83,6 @@ static QStringList parseCommandLine(const QString& line) {
 
 	return tokens;
 }
-
-CommandProcessor::CommandProcessor(Resources* resources, QObject* parent)
-	: QObject(parent)
-	, d(std::make_unique<Private>(this)) {
-	d->resources = resources;
-
-	// Регистрация встроенных служебных команд
-	registerCommand(std::make_unique<HelpCommand>(this));
-}
-
-CommandProcessor::~CommandProcessor() = default;
 
 void CommandProcessor::registerCommand(std::unique_ptr<CommandAbstraction> command) {
 	QString name = command->name().toLower();

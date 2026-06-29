@@ -1,9 +1,5 @@
 message(STATUS "> Build DatabaseModule")
 
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-set(CMAKE_AUTOUIC ON)
-
 set(DatabaseModule-Sources
 	${RedComplex_SOURCE_DIR}/src/Content/DatabaseModule
 )
@@ -13,6 +9,10 @@ file(GLOB_RECURSE SRCS ${DatabaseModule-Sources}/*.cpp)
 qt_add_library(RedComplexDatabaseModule STATIC
 	${SRCS}
 )
+
+set_target_properties(RedComplexDatabaseModule PROPERTIES CMAKE_AUTOMOC ON)
+set_target_properties(RedComplexDatabaseModule PROPERTIES CMAKE_AUTORCC ON)
+set_target_properties(RedComplexDatabaseModule PROPERTIES CMAKE_AUTOUIC ON)
 
 target_link_libraries(RedComplexDatabaseModule
 	PRIVATE

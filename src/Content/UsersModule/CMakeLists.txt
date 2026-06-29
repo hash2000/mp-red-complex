@@ -1,9 +1,5 @@
 message(STATUS "> Build UsersModule")
 
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-set(CMAKE_AUTOUIC ON)
-
 set(UsersModule-Sources
 	${RedComplex_SOURCE_DIR}/src/Content/UsersModule
 )
@@ -13,6 +9,10 @@ file(GLOB_RECURSE SRCS ${UsersModule-Sources}/*.cpp)
 qt_add_library(RedComplexUsersModule STATIC
 	${SRCS}
 )
+
+set_target_properties(RedComplexUsersModule PROPERTIES CMAKE_AUTOMOC ON)
+set_target_properties(RedComplexUsersModule PROPERTIES CMAKE_AUTORCC ON)
+set_target_properties(RedComplexUsersModule PROPERTIES CMAKE_AUTOUIC ON)
 
 target_link_libraries(RedComplexUsersModule
 	PRIVATE

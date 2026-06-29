@@ -1,5 +1,6 @@
 #include "Launcher/main_frame.h"
 #include "Libs/Engine/application.h"
+#include <QCoreApplication>
 
 class LauncherApplication : public Application {
 protected:

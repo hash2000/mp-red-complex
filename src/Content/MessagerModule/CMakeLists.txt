@@ -14,6 +14,10 @@ qt_add_library(RedComplexMessagerModule STATIC
 	${SRCS}
 )
 
+set_target_properties(RedComplexMessagerModule PROPERTIES CMAKE_AUTOMOC ON)
+set_target_properties(RedComplexMessagerModule PROPERTIES CMAKE_AUTORCC ON)
+set_target_properties(RedComplexMessagerModule PROPERTIES CMAKE_AUTOUIC ON)
+
 target_link_libraries(RedComplexMessagerModule
 	PRIVATE
 		Qt6::Core

@@ -53,6 +53,16 @@ bool FetchApiService::fetchRequest(
 	return false;
 	}
 
+	if (request.sslPolicy == FetchApiSslPolicy::IgnoreErrors) {
+		reply->ignoreSslErrors();
+	}
+	else if (request.sslPolicy == FetchApiSslPolicy::Strict) {
+		options.setSslConfiguration(QSslConfiguration::defaultConfiguration());
+	}
+	else if (request.sslPolicy == FetchApiSslPolicy::TrustCustomCa) {
+
+	}
+
 	connect(reply, &QNetworkReply::finished, this, [reply, onSuccess, onError, onProgress]() {
 		reply->deleteLater();
 		if (reply->error() != QNetworkReply::NoError) {
