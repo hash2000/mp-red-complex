@@ -4,6 +4,7 @@
 #include "Content/TexturesModule/services/images_service.h"
 #include "Content/TexturesModule/services/tiles_selector_service.h"
 #include "Launcher/app_controller.h"
+#include "Launcher/commands/instruction.h"
 #include "Launcher/services.h"
 #include "Launcher/commands/command_context.h"
 
@@ -20,8 +21,9 @@ TextureEditorWindow::TextureEditorWindow(const QString& id, QWidget* parent)
 
 TextureEditorWindow::~TextureEditorWindow() = default;
 
-bool TextureEditorWindow::handleCommand(const QString& commandName, const QStringList& /*args*/, CommandContext* context) {
-	if (commandName == "create") {
+bool TextureEditorWindow::handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) {
+	const auto action = cmd->parameters.value("action");
+	if (!action.isNull() && action == "create") {
 		auto services = context->services();
 		auto editorWidget = new TextureEditorWidget(
 			services->imagesService(),

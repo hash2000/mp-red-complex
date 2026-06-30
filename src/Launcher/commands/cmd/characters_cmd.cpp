@@ -3,6 +3,7 @@
 #include "Launcher/commands/command_context.h"
 #include "Launcher/commands/command_console/console_table.h"
 #include "Launcher/commands/command_console/console_image.h"
+#include "Launcher/commands/instruction.h"
 #include "Launcher/controllers/windows_controller.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/controllers.h"
@@ -81,15 +82,16 @@ bool CharactersCommand::Private::showCharacter(CommandContext* context, const QU
 	return true;
 }
 
-bool CharactersCommand::execute(CommandContext* context, const QStringList& args) {
-	const auto action = parseArgsValue(args, "action");
+bool CharactersCommand::execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
+	const auto action = instruction->parameter("action")
+		.toString();
 	if (action.isEmpty()) {
 		context->printError(QString("Usage: %1").arg(help()));
 		return false;
 	}
 
-	if (action == "show-user") return d->showCharacters(context, parseArgsValue(args, "id"));
-	else if (action == "show-character") return d->showCharacter(context, QUuid::fromString(parseArgsValue(args, "id")));
+	if (action == "show-user") return d->showCharacters(context, instruction->parameter("id").toString());
+	else if (action == "show-character") return d->showCharacter(context, instruction->parameter("id").toUuid());
 
 	return true;
 }

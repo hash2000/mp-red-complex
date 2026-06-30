@@ -1,15 +1,16 @@
 #include "Launcher/commands/cmd/windows_close_cmd.h"
 #include "Launcher/commands/command_context.h"
+#include "Launcher/commands/instruction.h"
 #include "Launcher/controllers.h"
 #include "Launcher/controllers/windows_controller.h"
 
-bool CloseWindowsCommand::execute(CommandContext* context, const QStringList& args) {
-	if (args.isEmpty()) {
+bool CloseWindowsCommand::execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
+	if (instruction->parameters.isEmpty()) {
 		context->printError(QString("Usage: %1").arg(help()));
 		return false;
 	}
 
-	QString target = args.first().toLower();
+	QString target = instruction->parameter("target").toString();
 	auto controller = context->controllers()->windowsController();
 
 	if (target == "active") {

@@ -14,7 +14,7 @@ public:
 	QString windowTitle() const override { return "Профиль пользователя"; }
 	QSize windowDefaultSizes() const override { return QSize(400, 600); }
 
-	bool handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) override;
+	bool handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) override;
 
 private slots:
 	void onEquipmentRequested(const QUuid& characterId);

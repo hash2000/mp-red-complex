@@ -15,7 +15,7 @@ public:
 	QSize windowDefaultSizes() const override { return QSize(800, 600); }
 	QString help() const;
 
-	bool handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) override;
+	bool handleCommand(const std::shared_ptr<Instruction> instruction, CommandContext* context) override;
 
 private slots:
 	void onOpenDocumentClick();

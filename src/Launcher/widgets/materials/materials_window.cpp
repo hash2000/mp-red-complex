@@ -5,6 +5,7 @@
 #include "Launcher/app_controller.h"
 #include "Launcher/services.h"
 #include "Launcher/commands/command_context.h"
+#include "Launcher/commands/instruction.h"
 #include "Launcher/controllers.h"
 
 #include <QHeaderView>
@@ -64,9 +65,10 @@ void MaterialsWindow::setupUi() {
 	connect(d->objectTree, &MaterialObjects::editMaterialFile, this, &MaterialsWindow::onEditMaterialFile);
 }
 
-bool MaterialsWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) {
+bool MaterialsWindow::handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) {
 	// Обработка команд (пока пусто, может быть расширено)
-	if (commandName == "create") {
+	const auto action = cmd->parameters.value("action");
+	if (!action.isNull() && action == "create") {
 		auto services = context->services();
 		d->materialsService = services->materialsService();
 		d->applicationCommands = context->applicationController();
@@ -85,8 +87,12 @@ void MaterialsWindow::onEditMaterialFile(MaterialObjectTypes type, const QString
 	const auto cmdPath = QString("path:%1").arg(path);
 	const auto cmdId = QString("id:%1").arg(path);
 
-	d->applicationCommands->executeCommandByName("window-create",
-		QStringList{ "target:code-editor", cmdPath, cmdId });
+	d->applicationCommands->executeCommand("window-create",
+		{
+			{ "target", "code-editor" },
+			{ "path", path },
+			{ "id", path }
+		});
 }
 
 

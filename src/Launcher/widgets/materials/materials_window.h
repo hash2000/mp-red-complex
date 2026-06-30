@@ -15,7 +15,7 @@ public:
 	QString windowTitle() const override { return "Materials"; }
 	QSize windowDefaultSizes() const override { return QSize(1024, 768); }
 
-	bool handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) override;
+	bool handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) override;
 
 private slots:
 	void onEditMaterialFile(MaterialObjectTypes type, const QString& path);

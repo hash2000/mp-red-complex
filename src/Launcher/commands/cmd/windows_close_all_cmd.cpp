@@ -1,11 +1,10 @@
 #include "Launcher/commands/cmd/windows_close_all_cmd.h"
 #include "Launcher/commands/command_context.h"
+#include "Launcher/commands/instruction.h"
 #include "Launcher/controllers.h"
 #include "Launcher/controllers/windows_controller.h"
 
-bool CloseAllWindowsCommand::execute(CommandContext* context, const QStringList& args) {
-	Q_UNUSED(args);
-
+bool CloseAllWindowsCommand::execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
 	auto controller = context->controllers()->windowsController();
 	auto windows = controller->allWindows();
 

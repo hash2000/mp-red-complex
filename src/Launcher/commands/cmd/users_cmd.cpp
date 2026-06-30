@@ -3,6 +3,7 @@
 #include "Launcher/commands/command_context.h"
 #include "Launcher/commands/command_console/console_table.h"
 #include "Launcher/commands/command_console/console_image.h"
+#include "Launcher/commands/instruction.h"
 #include "Launcher/controllers/windows_controller.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/controllers.h"
@@ -110,16 +111,17 @@ bool UsersCommand::Private::registerInTarget(CommandContext* context, const QStr
 	}
 }
 
-bool UsersCommand::execute(CommandContext* context, const QStringList& args) {
-	const auto action = parseArgsValue(args, "action");
+bool UsersCommand::execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
+	const auto action = instruction->parameter("action")
+		.toString();
 	if (action.isEmpty()) {
 		context->printError(QString("Usage: %1").arg(help()));
 		return false;
 	}
 
 	if (action == "login") return d->login(context,
-		parseArgsValue(args, "login"),
-		parseArgsValue(args, "password"));
+		instruction->parameter("login").toString(),
+		instruction->parameter("password").toString());
 	else if (action == "logout") return d->logout(context);
 
 	return true;

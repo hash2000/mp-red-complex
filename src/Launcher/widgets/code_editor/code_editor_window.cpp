@@ -3,6 +3,7 @@
 #include "Launcher/app_controller.h"
 #include "Launcher/services.h"
 #include "Launcher/commands/command_context.h"
+#include "Launcher/commands/instruction.h"
 
 #include <QRegularExpression>
 #include <QVBoxLayout>
@@ -26,8 +27,8 @@ public:
 	void changeTargetPath(const QString& path);
 
 	// Команды
-	bool handleCreate(const QStringList& args, CommandContext* context);
-	bool handleStyle(const QStringList& args, CommandContext* context);
+	bool handleCreate(const std::shared_ptr<Instruction> instruction, CommandContext* context);
+	bool handleStyle(const std::shared_ptr<Instruction> instruction, CommandContext* context);
 	bool handleStyleWordWrap(const QString& value);
 	bool handleStyleFont(const QString& value);
 	
@@ -41,7 +42,7 @@ CodeEditorWindow::CodeEditorWindow(const QString& id, QWidget* parent)
 CodeEditorWindow::~CodeEditorWindow() = default;
 
 QString CodeEditorWindow::help() const {
-	return R"(code-editor
+	return R"(code-editor action:
 		create path:<path>
 		style word-wrap:[true|false] font:[fontname]
 )";
@@ -89,9 +90,15 @@ void CodeEditorWindow::Private::setupUI(Services* services) {
 	q->setWidget(buttonsContainer);
 }
 
-bool CodeEditorWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) {
-	if (commandName == "create") return d->handleCreate(args, context);
-	else if (commandName == "style") return d->handleStyle(args, context);
+bool CodeEditorWindow::handleCommand(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
+	const auto action = instruction->parameter("action")
+		.toString();
+	if (action.isEmpty()) {
+		return false;
+	}
+
+	if (action == "create") return d->handleCreate(instruction, context);
+	else if (action == "style") return d->handleStyle(instruction, context);
 
 	return false;
 }
@@ -117,33 +124,21 @@ bool CodeEditorWindow::Private::handleStyleFont(const QString& value) {
 	return true;
 }
 
-bool CodeEditorWindow::Private::handleStyle(const QStringList& args, CommandContext* context) {
+bool CodeEditorWindow::Private::handleStyle(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
 	if (!this->editor) {
 		return false;
 	}
 
-	const auto params = args.filter(QRegularExpression("^(word-wrap:|font:)"));
-	for (const auto& it : params) {
-		const auto pv = it.split(":");
-		if (pv.count() != 2) {
-			context->printWarning(QString("Command format error").arg(it));
-			continue;
-		}
-
-		const auto variable = pv[0];
-		const auto value = pv[1];
-
-		if (variable == "word-wrap") return handleStyleWordWrap(value);
-		else if (variable == "font") return handleStyleFont(value);
-	}
+	handleStyleWordWrap(instruction->parameter("word-wrap").toString());
+	handleStyleFont(instruction->parameter("font").toString());
 
 	return true;
 }
 
-bool CodeEditorWindow::Private::handleCreate(const QStringList& args, CommandContext* context) {
+bool CodeEditorWindow::Private::handleCreate(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
 	auto services = context->services();
 	this->context = context;
-	const auto path = args.filter(QRegularExpression("^path:")).value(0).mid(5);
+	const auto path = instruction->parameter("path").toString();
 	this->setupUI(services);
 	changeTargetPath(path);
 

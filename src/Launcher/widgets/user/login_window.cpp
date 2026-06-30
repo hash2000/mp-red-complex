@@ -1,6 +1,7 @@
 #include "Launcher/widgets/user/login_window.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/commands/command_context.h"
+#include "Launcher/commands/instruction.h"
 #include "Launcher/controllers.h"
 #include "Launcher/services.h"
 #include "Launcher/widgets/action_panel/action_panel_by_user_builder.h"
@@ -27,8 +28,9 @@ LoginWindow::LoginWindow(const QString& id, QWidget* parent)
 
 LoginWindow::~LoginWindow() = default;
 
-bool LoginWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) {
-	if (commandName == "create") {
+bool LoginWindow::handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) {
+	const auto action = cmd->parameters.value("action");
+	if (!action.isNull() && action == "create") {
 		auto services = context->services();
 		d->usersService = services->usersService();
 		d->loginWidget = new LoginWidget(d->usersService, this);

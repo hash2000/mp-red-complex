@@ -2,14 +2,15 @@
 #include "Launcher/commands/command_processor.h"
 #include "Launcher/commands/command_context.h"
 #include "Launcher/commands/command_console/console_table.h"
+#include "Launcher/commands/instruction.h"
 #include "Launcher/app_controller.h"
 #include "Libs/Resources/resources.h"
 #include "Libs/Resources/variables/variables_context.h"
 
-bool HelpCommand::execute(CommandContext* context, const QStringList& args) {
+bool HelpCommand::execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
 	const auto processor = context->applicationController()->commandProcessor();
 
-	if (args.isEmpty()) {
+	if (instruction->parameters.isEmpty()) {
 		context->print("Commands:");
 		ConsoleTable commandsTab({ "Name", "Descroption", "Help" });
 		for (const auto& name : processor->availableCommands()) {
@@ -30,7 +31,7 @@ bool HelpCommand::execute(CommandContext* context, const QStringList& args) {
 		return true;
 	}
 	else {
-		QString cmdName = args.first();
+		QString cmdName = instruction->command;
 		const auto cmd = processor->findCommand(cmdName);
 		if (cmd) {
 			ConsoleTable commandsTab({ "Name", "Descroption" });

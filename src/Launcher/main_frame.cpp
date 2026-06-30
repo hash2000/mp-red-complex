@@ -1,5 +1,6 @@
 #include "Launcher/main_frame.h"
 #include "Launcher/commands/command_console.h"
+#include "Launcher/commands/command_processor.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/services.h"
 #include "Launcher/controllers.h"
@@ -69,7 +70,11 @@ LauncherMainFrame::LauncherMainFrame(Resources* resources)
 
 	addAction(toggleAction);
 
-	d->controller->executeCommandByName("window-create", QStringList{ "target:warmup", "id:opengl-warmup" });
+	d->controller->executeCommand("window-create",
+		{
+			{ "target", "warmup" },
+			{ "id", "opengl-warmup" },
+		});
 }
 
 LauncherMainFrame::~LauncherMainFrame() = default;

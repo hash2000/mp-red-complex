@@ -6,7 +6,7 @@ class ListWindowsCommand : public CommandAbstraction {
 public:
 	ListWindowsCommand(QObject* parent = nullptr) : CommandAbstraction(parent) {}
 
-	bool execute(CommandContext* context, const QStringList& args) override;
+	bool execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) override;
 
 	QString name() const override { return "windows-list"; }
 	QString description() const override { return "List all open MDI windows"; }

@@ -20,7 +20,7 @@ public:
 
 	bool NeedFixedSize() const override { return true; }
 
-	bool handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) override;
+	bool handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) override;
 
 private slots:
 	void onLoginSuccess();

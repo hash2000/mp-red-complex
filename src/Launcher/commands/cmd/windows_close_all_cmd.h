@@ -6,7 +6,7 @@ class CloseAllWindowsCommand : public CommandAbstraction {
 public:
 	CloseAllWindowsCommand(QObject* parent = nullptr) : CommandAbstraction(parent) {}
 
-	bool execute(CommandContext* context, const QStringList& args) override;
+	bool execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) override;
 
 	QString name() const override { return "windows-closeall"; }
 	QString description() const override { return "Close all open windows"; }

@@ -21,7 +21,6 @@ class FetchApiOpt {
 public:
 	QNetworkRequest request;
 	FetchApiActions action;
-	QString location;
 	QByteArray body;
 	FetchApiSslPolicy sslPolicy = FetchApiSslPolicy::Strict;
 };

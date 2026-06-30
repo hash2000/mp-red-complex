@@ -1,6 +1,7 @@
 #include "Launcher/commands/cmd/window_invoke_cmd.h"
 #include "Launcher/commands/command_processor.h"
 #include "Launcher/commands/command_context.h"
+#include "Launcher/commands/instruction.h"
 #include "Launcher/controllers.h"
 #include "Launcher/controllers/windows_controller.h"
 #include "Launcher/app_controller.h"
@@ -16,11 +17,12 @@ QString WindowInvokeCommand::help() const {
 }
 
 
-bool WindowInvokeCommand::execute(CommandContext* context, const QStringList& args) {
+bool WindowInvokeCommand::execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
 	auto controller = context->controllers()->windowsController();
 	auto services = context->services();
 
-	const auto cmd = parseArgsValue(args, "cmd");
+	const auto cmd = instruction->parameter("cmd")
+		.toString();
 	if (cmd.isEmpty()) {
 		context->printError(QString("Need parameter 'cmd'. Usage: %1").arg(help()));
 		return false;
@@ -28,7 +30,8 @@ bool WindowInvokeCommand::execute(CommandContext* context, const QStringList& ar
 
 	MdiChildWindow* targetEntry;
 
-	const auto target = parseArgsValue(args, "target");
+	const auto target = instruction->parameter("target")
+		.toString();
 	if (target.isEmpty()) {
 		auto activeEntry = controller->activeWindowEntry();
 		targetEntry = activeEntry.first.data();
@@ -42,7 +45,7 @@ bool WindowInvokeCommand::execute(CommandContext* context, const QStringList& ar
 		return false;
 	}
 
-	if (!targetEntry->handleCommand(cmd, args, context)) {
+	if (!targetEntry->handleCommand(instruction, context)) {
 		context->printError(QString("Method '%1' returned false. target  title '%2'")
 			.arg(cmd)
 			.arg(target));

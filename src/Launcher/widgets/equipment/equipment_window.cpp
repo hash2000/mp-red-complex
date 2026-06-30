@@ -1,6 +1,7 @@
 #include "Launcher/widgets/equipment/equipment_window.h"
 //#include "Launcher/widgets/equipment/equipment_widget.h"
 #include "Launcher/commands/command_context.h"
+#include "Launcher/commands/instruction.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/services.h"
 
@@ -23,8 +24,10 @@ EquipmentWindow::EquipmentWindow(const QString& id, QWidget* parent)
 
 EquipmentWindow::~EquipmentWindow() = default;
 
-bool EquipmentWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) {
-	if (commandName == "create") {
+bool EquipmentWindow::handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) {
+	const auto action = cmd->parameter("action")
+		.toString();
+	if (action == "create") {
 		//const auto target = QUuid::fromString(windowId());
 		//if (target.isNull()) {
 		//	return false;

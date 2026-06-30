@@ -3,6 +3,7 @@
 #include "Launcher/commands/command_context.h"
 #include "Launcher/commands/command_console/console_table.h"
 #include "Launcher/commands/command_console/console_image.h"
+#include "Launcher/commands/instruction.h"
 #include "Launcher/controllers/windows_controller.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/controllers.h"
@@ -182,20 +183,21 @@ bool ItemsCommand::Private::changeContainerId(CommandContext* context, const QUu
 	return true;
 }
 
-bool ItemsCommand::execute(CommandContext* context, const QStringList& args) {
-	const auto action = parseArgsValue(args, "action");
+bool ItemsCommand::execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
+	const auto action = instruction->parameter("action")
+		.toString();
 	if (action.isEmpty()) {
 		context->printError(QString("Usage: %1").arg(help()));
 		return false;
 	}
 
 	if (action == "show-container") return d->showContainerItems(context,
-		QUuid::fromString(parseArgsValue(args, "id")));
+		instruction->parameter("id").toUuid());
 	else if (action == "show-item") return d->showItem(context,
-		QUuid::fromString(parseArgsValue(args, "id")));
+		instruction->parameter("id").toUuid());
 	else if (action == "change-container") return d->changeContainerId(context,
-		QUuid::fromString(parseArgsValue(args, "itemId")),
-		QUuid::fromString(parseArgsValue(args, "containerId")));
+		instruction->parameter("itemId").toUuid(),
+		instruction->parameter("containerId").toUuid());
 	else if (action == "show-containers") return d->showContainers(context);
 	else if (action == "show-equipments") return d->showEquipments(context);
 	else if (action == "show-entities") return d->showEntities(context);

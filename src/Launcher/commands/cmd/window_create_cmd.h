@@ -6,7 +6,7 @@ class CreateWindowCommand : public CommandAbstraction {
 public:
 	CreateWindowCommand(QObject* parent = nullptr) : CommandAbstraction(parent) {}
 
-	bool execute(CommandContext* context, const QStringList& args) override;
+	bool execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) override;
 
 	QString name() const override { return "window-create"; }
 	QString description() const override { return "Create new MDI window by type"; }

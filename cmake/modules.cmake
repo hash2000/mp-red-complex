@@ -7,6 +7,7 @@ find_package(Qt6
 		Widgets
 		OpenGLWidgets
 		Network
+		Xml
 )
 
 qt_standard_project_setup()

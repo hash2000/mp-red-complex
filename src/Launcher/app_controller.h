@@ -2,7 +2,7 @@
 #include "Launcher/i_app_commands.h"
 #include <QObject>
 #include <QPointer>
-#include <QHash>
+#include <QMap>
 #include <QPair>
 #include <QList>
 #include <memory>
@@ -22,34 +22,13 @@ public:
 	CommandContext* commandContext() const;
 	Resources* resources() const;
 
-	/**
-	 * Выполнение команды по текстовой строке
-	 * @param commandText Полная строка команды (например: "focus editor1")
-	 * @param requester Объект, инициировавший выполнение (для контекста)
-	 * @return true если команда найдена и выполнена без исключений
-	 */
-	bool executeCommand(const QString& commandText, QObject* requester = nullptr) override;
+	bool execute(const QString& commandText, QObject* requester = nullptr) override;
 
-	/**
-	 * Прямой вызов команды по имени с аргументами
-	 */
-	bool executeCommandByName(const QString& commandName,
-		const QStringList& args,
-		QObject* requester = nullptr) override;
+	bool executeCommand(const QString& commandName, const QMap<QString, QString>& args,
+		QObject* requester = nullptr);
 
 signals:
-	/**
-	 * Сигнал об успешном выполнении команды
-	 * @param commandName Имя команды
-	 * @param executionTimeMs Время выполнения в миллисекундах
-	 */
-	void commandExecuted(const QString& commandName, qint64 executionTimeMs);
-
-	/**
-	 * Сигнал об ошибке выполнения команды
-	 * @param commandName Имя команды
-	 * @param errorMessage Текст ошибки
-	 */
+	void commandExecuted(const QString& commandName);
 	void commandFailed(const QString& commandName, const QString& errorMessage);
 
 private:

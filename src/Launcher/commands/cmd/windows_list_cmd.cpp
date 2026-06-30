@@ -1,12 +1,11 @@
 #include "Launcher/commands/cmd/windows_list_cmd.h"
 #include "Launcher/commands/command_context.h"
+#include "Launcher/commands/instruction.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/controllers.h"
 #include "Launcher/controllers/windows_controller.h"
 
-bool ListWindowsCommand::execute(CommandContext* context, const QStringList& args) {
-	Q_UNUSED(args);
-
+bool ListWindowsCommand::execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
 	auto controller = context->controllers()->windowsController();
 	auto entries = controller->windowEntries();
 

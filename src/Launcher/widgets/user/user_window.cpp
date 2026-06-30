@@ -3,6 +3,7 @@
 #include "Launcher/services.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/commands/command_context.h"
+#include "Launcher/commands/instruction.h"
 #include "Content/UsersModule/widgets/user_widget.h"
 #include "Content/UsersModule/services/users_service.h"
 //#include "Content/UsersModule/models/character.h"
@@ -43,8 +44,9 @@ UserWindow::~UserWindow() = default;
 //		fullTarget, itemIdStr, title });
 //}
 
-bool UserWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) {
-	if (commandName == "create") {
+bool UserWindow::handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) {
+	const auto action = cmd->parameters.value("action");
+	if (!action.isNull() && action == "create") {
 		auto services = context->services();
 		d->applicationController = context->applicationController();
 		d->usersService = services->usersService();

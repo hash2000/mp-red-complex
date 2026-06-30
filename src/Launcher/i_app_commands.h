@@ -10,12 +10,11 @@ public:
 	 * @param requester Объект, инициировавший выполнение (для контекста)
 	 * @return true если команда найдена и выполнена без исключений
 	 */
-	virtual bool executeCommand(const QString& commandText, QObject* requester = nullptr) = 0;
+	virtual bool execute(const QString& commandText, QObject* requester = nullptr) = 0;
 
 	/**
 	 * Прямой вызов команды по имени с аргументами
 	 */
-	virtual bool executeCommandByName(const QString& commandName,
-		const QStringList& args,
+	virtual bool executeCommand(const QString& commandName,	const QMap<QString, QString>& args,
 		QObject* requester = nullptr) = 0;
 };

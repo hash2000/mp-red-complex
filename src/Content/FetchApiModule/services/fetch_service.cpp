@@ -33,7 +33,7 @@ bool FetchApiService::fetchRequest(
 		break;
 	}
 	case FetchApiActions::Post: {
-		if (request.body.isEmpty()) {
+		if (request.body.isNull()) {
 			return false;
 		}
 		reply = d->networkManager->post(options, request.body);

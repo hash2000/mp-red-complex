@@ -2,6 +2,7 @@
 //#include "Launcher/widgets/inventory/inventory_grid_view.h"
 //#include "Launcher/widgets/inventory/inventory_grid.h"
 #include "Launcher/commands/command_context.h"
+#include "Launcher/commands/instruction.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/services.h"
 //#include "Content/InventoriesModule/services/inventories_service.h"
@@ -28,9 +29,10 @@ InventoryWindow::InventoryWindow(const QString& id, QWidget* parent)
 
 InventoryWindow::~InventoryWindow() = default;
 
-bool InventoryWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context)
+bool InventoryWindow::handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context)
 {
-	if (commandName == "create") {
+	const auto action = cmd->parameters.value("action");
+	if (!action.isNull() && action == "create") {
 		const auto target = QUuid::fromString(windowId());
 		if (target.isNull()) {
 			return false;

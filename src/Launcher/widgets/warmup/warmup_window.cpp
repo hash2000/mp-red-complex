@@ -26,9 +26,8 @@ WarmupWindow::WarmupWindow(const QString& id, QWidget* parent)
 
 WarmupWindow::~WarmupWindow() = default;
 
-bool WarmupWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) {
-	Q_UNUSED(commandName);
-	Q_UNUSED(args);
+bool WarmupWindow::handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) {
+	Q_UNUSED(cmd);
 	Q_UNUSED(context);
 
 	if (s_allreadyWarmedUp) {

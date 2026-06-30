@@ -80,65 +80,11 @@ Resources* ApplicationController::resources() const {
 	return d->resources;
 }
 
-bool ApplicationController::executeCommand(const QString& commandText, QObject* requester) {
-	Q_UNUSED(requester); // Может использоваться для аудита/логгирования
-
-	if (!d->commandProcessor || commandText.trimmed().isEmpty()) {
-		return false;
-	}
-
-	QElapsedTimer timer;
-	timer.start();
-
-	bool success = d->commandProcessor->execute(commandText, d->commandContext.get());
-
-	qint64 elapsed = timer.elapsed();
-	QString cmdName = commandText.split(' ', Qt::SkipEmptyParts).value(0);
-
-	if (success) {
-		emit commandExecuted(cmdName, elapsed);
-	}
-	else {
-		emit commandFailed(cmdName, "Execution failed or command not found");
-	}
-
-	return success;
+bool ApplicationController::execute(const QString& commandText, QObject* requester) {
+	return d->commandProcessor->execute(commandText, d->commandContext.get());
 }
 
-bool ApplicationController::executeCommandByName(const QString& commandName,
-	const QStringList& args,
+bool ApplicationController::executeCommand(const QString& commandName, const QMap<QString, QString>& args,
 	QObject* requester) {
-	Q_UNUSED(requester);
-
-	if (!d->commandProcessor) {
-		return false;
-	}
-
-	auto command = d->commandProcessor->findCommand(commandName);
-	if (!command) {
-		emit commandFailed(commandName, "Command not found");
-		return false;
-	}
-
-	QElapsedTimer timer;
-	timer.start();
-
-	bool success = false;
-	try {
-		success = command->execute(d->commandContext.get(), args);
-	}
-	catch (const std::exception& e) {
-		emit commandFailed(commandName, QString::fromUtf8(e.what()));
-		return false;
-	}
-
-	qint64 elapsed = timer.elapsed();
-	if (success) {
-		emit commandExecuted(commandName, elapsed);
-	}
-	else {
-		emit commandFailed(commandName, "Command execution returned false");
-	}
-
-	return success;
+	return d->commandProcessor->executeCommand(commandName, args, d->commandContext.get());
 }

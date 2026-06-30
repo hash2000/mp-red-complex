@@ -5,6 +5,7 @@
 #include <QSize>
 #include <QPointer>
 
+class Instruction;
 class CommandContext;
 class QMdiArea;
 
@@ -28,9 +29,7 @@ public:
 	/// Центрировать окно относительно родительского MDI area
 	void setupMdiArea();
 
-	virtual bool handleCommand(const QString& commandName,
-		const QStringList& args,
-		class CommandContext* context);
+	virtual bool handleCommand(const std::shared_ptr<Instruction> cmd, class CommandContext* context);
 
 private:
 	class Private;

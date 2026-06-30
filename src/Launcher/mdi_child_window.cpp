@@ -84,11 +84,9 @@ void MdiChildWindow::setupMdiArea() {
 	update();
 }
 
-bool MdiChildWindow::handleCommand(const QString& commandName,
-	const QStringList& args,
+bool MdiChildWindow::handleCommand(const std::shared_ptr<Instruction> cmd,
 	CommandContext* context) {
-	Q_UNUSED(commandName);
-	Q_UNUSED(args);
+	Q_UNUSED(cmd);
 	Q_UNUSED(context);
 	return false;
 }

@@ -1,5 +1,6 @@
 #include "Launcher/commands/cmd/window_create_cmd.h"
 #include "Launcher/commands/command_context.h"
+#include "Launcher/commands/instruction.h"
 #include "Launcher/controllers/windows_controller.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/controllers.h"
@@ -8,19 +9,13 @@
 #include <QMdiSubWindow>
 #include <QUuid>
 
-bool CreateWindowCommand::execute(CommandContext* context, const QStringList& args) {
+bool CreateWindowCommand::execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
 	auto app = context->applicationController();
 	auto controller = context->controllers()->windowsController();
 	auto mdiArea = controller->mdiArea();
-
-	if (args.count() < 1) {
-		context->printError(QString("Usage: %1").arg(help()));
-		return false;
-	}
-
-	auto id = parseArgsValue(args, "id");
-	const auto target = parseArgsValue(args, "target");
-	const auto alternateTitle = parseArgsValue(args, "title");
+	auto id = instruction->parameter("id").toString();
+	const auto target = instruction->parameter("target").toString();
+	const auto alternateTitle = instruction->parameter("title").toString();
 
 	if (target.isEmpty()) {
 		context->printError(QString("Need parameter 'target'. Usage: %1").arg(help()));
@@ -45,7 +40,7 @@ bool CreateWindowCommand::execute(CommandContext* context, const QStringList& ar
 		return false;
 	}
 
-	if (!widget->handleCommand("create", args, context)) {
+	if (!widget->handleCommand(instruction, context)) {
 		context->printError(QString("Method create returned false. %1")
 			.arg(target));
 		delete widget;

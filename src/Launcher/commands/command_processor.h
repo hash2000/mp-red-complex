@@ -19,6 +19,9 @@ public:
   // Выполнение команды по тексту
   bool execute(const QString& commandLine, CommandContext* context);
 
+	bool executeCommand(const QString& commandName, const QMap<QString, QString>& args,
+		CommandContext* context);
+
   // Получение списка доступных команд
   QStringList availableCommands() const;
 
@@ -28,10 +31,6 @@ public:
   // Справка по команде
   QString helpForCommand(const QString& name) const;
   QString fullHelp() const;
-
-private:
-	CommandAbstraction* findCommandUnsafe(const QString& name) const;
-	bool executeCommand(CommandAbstraction* command, CommandContext* context, const QString& cmdName, const QStringList& args);
 
 signals:
   void commandExecuted(const QString& commandName, bool success);

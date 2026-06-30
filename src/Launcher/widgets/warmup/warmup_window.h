@@ -14,9 +14,7 @@ public:
 	QString windowTitle() const override { return "OpenGL Warmup"; }
 	QSize windowDefaultSizes() const override { return QSize(1, 1); }
 
-	bool handleCommand(const QString& commandName,
-		const QStringList& args,
-		CommandContext* context) override;
+	bool handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) override;
 
 private:
 	class Private;

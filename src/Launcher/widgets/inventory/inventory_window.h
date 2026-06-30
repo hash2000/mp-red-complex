@@ -15,7 +15,7 @@ public:
 
 	QSize windowDefaultSizes() const override { return QSize(460, 500); }
 
-	bool handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) override;
+	bool handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) override;
 
 protected:
 	void closeEvent(QCloseEvent* closeEvent) override;

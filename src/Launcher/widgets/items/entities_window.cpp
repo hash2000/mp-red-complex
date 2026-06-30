@@ -3,7 +3,7 @@
 //#include "Launcher/widgets/items/item_create_widget.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/commands/command_context.h"
-#include "Launcher/commands/command_processor.h"
+#include "Launcher/commands/instruction.h"
 #include "Launcher/controllers/windows_controller.h"
 #include "Launcher/mdi_child_window.h"
 #include "Launcher/services.h"
@@ -31,8 +31,9 @@ EntitiesWindow::EntitiesWindow(const QString& id, QWidget* parent)
 EntitiesWindow::~EntitiesWindow() = default;
 
 
-bool EntitiesWindow::handleCommand(const QString& commandName, const QStringList& args, CommandContext* context) {
-	if (commandName == "create") {
+bool EntitiesWindow::handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) {
+	const auto action = cmd->parameters.value("action");
+	if (!action.isNull() && action == "create") {
 		auto services = context->services();
 		d->controller = context->applicationController();
 		d->windowsController = context->controllers()->windowsController();

@@ -5,7 +5,8 @@
 #include <QVariantMap>
 #include <memory>
 
-class CommandContext; // forward declaration
+class CommandContext;
+class Instruction;
 
 class CommandAbstraction : public QObject {
 public:
@@ -13,7 +14,7 @@ public:
 	virtual ~CommandAbstraction() = default;
 
 	// Выполнение команды
-	virtual bool execute(CommandContext* context, const QStringList& args) = 0;
+	virtual bool execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) = 0;
 
 	// Название команды (для вызова из консоли)
 	virtual QString name() const = 0;
@@ -22,13 +23,17 @@ public:
 	virtual QString description() const = 0;
 
 	// Подробная справка (синтаксис, примеры)
-	virtual QString help() const;
+	virtual QString help() const {
+		return description();
+	}
 
 	// Минимальное количество аргументов (без учёта имени команды)
-	virtual int minArgs() const;
+	virtual int minArgs() const {
+		return 0;
+	}
 
 	// Максимальное количество аргументов (-1 = без ограничения)
-	virtual int maxArgs() const;
-
-	static QString parseArgsValue(const QStringList& args, const QString& name);
+	virtual int maxArgs() const {
+		return -1;
+	}
 };

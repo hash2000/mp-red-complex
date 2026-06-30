@@ -8,7 +8,7 @@ public:
 	ItemsCommand(QObject* parent = nullptr);
 	~ItemsCommand() override;
 
-	bool execute(CommandContext* context, const QStringList& args) override;
+	bool execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) override;
 
 	QString name() const override { return "items"; }
 	QString description() const override { return "Operations with items"; }

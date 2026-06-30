@@ -22,6 +22,7 @@ target_link_libraries(Launcher
 		Qt6::OpenGL
 		Qt6::OpenGLWidgets
 		Qt6::Network
+		Qt6::Xml
 
 		RedComplexBase
 		RedComplexBaseWidgets
