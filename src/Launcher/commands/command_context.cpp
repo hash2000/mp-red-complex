@@ -1,5 +1,6 @@
 #include "Launcher/commands/command_context.h"
 #include "Launcher/commands/command_console/console_table.h"
+#include "Launcher/commands/command_console/console_json.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/controllers/windows_controller.h"
 #include "Launcher/services.h"
@@ -65,13 +66,20 @@ void CommandContext::print(const QString& message, const QString& styleClass, co
 
 void CommandContext::print(const ConsoleTable& table, const QString& styleClass) {
 	const auto html = table.toHtml();
-	if (!html.isEmpty()) {
-		// Оборачиваем таблицу в div для стилизации
-		const auto wrappedHtml = QString("<div class=\"%1\">%2</div>")
-			.arg(styleClass)
-			.arg(html);
-		print(wrappedHtml, styleClass, kCommandPrintStyle_Table);
+	if (html.isEmpty()) {
+		return;
 	}
+
+	print(html, styleClass, kCommandPrintStyle_Table);
+}
+
+void CommandContext::print(const ConsoleJson& json, const QString& styleClass) {
+	const auto html = json.toHtml();
+	if (html.isEmpty()) {
+		return;
+	}
+
+	print(html, styleClass, kCommandPrintStyle_Json);
 }
 
 void CommandContext::printSystem(const QString& message) {

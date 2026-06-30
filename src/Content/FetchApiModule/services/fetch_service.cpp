@@ -40,12 +40,12 @@ bool FetchApiService::fetchRequest(
 		break;
 	}
 	case FetchApiActions::Delete: {
-		options.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+	//	options.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 		reply = d->networkManager->sendCustomRequest(options, "DELETE", request.body);
 		break;
 	}
 	case FetchApiActions::Put: {
-		options.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+	//	options.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 		reply = d->networkManager->sendCustomRequest(options, "PUT", request.body);
 		break;
 	}

@@ -3,6 +3,7 @@
 #include "Launcher/commands/command_context.h"
 #include "Launcher/commands/command_console/console_table.h"
 #include "Launcher/commands/command_console/console_image.h"
+#include "Launcher/commands/command_console/console_json.h"
 #include "Launcher/commands/instruction.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/controllers.h"
@@ -95,6 +96,8 @@ bool FetchApiCommand::Private::sendRequest(CommandContext* context,
 
 	fetchService->fetchRequest(opt,
 		[context] (int statusCode, const QByteArray& data) {
+			ConsoleJson json(data);
+			context->print(json);
 			context->printSuccess(QString("fetch-api %1 %2 bytes")
 				.arg(statusCode)
 				.arg(data.length()));

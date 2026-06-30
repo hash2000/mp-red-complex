@@ -10,9 +10,11 @@ class MdiArea;
 class Services;
 class Controllers;
 class ConsoleTable;
+class ConsoleJson;
 
 constexpr const char* kCommandPrintStyle_Plane = "text/plain";
 constexpr const char* kCommandPrintStyle_Table = "application/table";
+constexpr const char* kCommandPrintStyle_Json = "application/json";
 
 class CommandContext : public QObject {
 	Q_OBJECT
@@ -35,6 +37,7 @@ public:
 	// Вывод в консоль (безопасный из любого потока)
 	void print(const QString& message, const QString& styleClass = "info", const QString& type = kCommandPrintStyle_Plane);
 	void print(const ConsoleTable& table, const QString& styleClass = "info");
+	void print(const ConsoleJson& json, const QString& styleClass = "info");
 	void printSystem(const QString& message);
 	void printError(const QString& message);
 	void printSuccess(const QString& message);

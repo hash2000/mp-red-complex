@@ -33,8 +33,16 @@ static QString kQTextEditOutputAreaStyle = R"(
     }
 )";
 // Настройка форматирования текста
-static QString kQTextEditOutputAreaDocumentStyleSheet = R"(
-    /* Стили для таблиц */
+static QString kQTextEditOutputAreaDocumentStyleSheet = R"(		
+    .timestamp { color: #808080; font-size: 8pt; }
+    .command { color: #569cd6; font-weight: bold; }
+    .error { color: #f44336; }
+    .success { color: #66cc66; }
+    .system { color: #79b8ff; font-style: italic; }
+    .info { color: #d4d4d4; }
+		.warning { color: #FFE66D; }
+
+		/* Стили для таблиц */
     table.console-table {
         border-collapse: collapse;
         margin: 8px 0;
@@ -70,13 +78,78 @@ static QString kQTextEditOutputAreaDocumentStyleSheet = R"(
         background-color: #1e1e1e;
     }
 
-    .timestamp { color: #808080; font-size: 8pt; }
-    .command { color: #569cd6; font-weight: bold; }
-    .error { color: #f44336; }
-    .success { color: #66cc66; }
-    .system { color: #79b8ff; font-style: italic; }
-    .info { color: #d4d4d4; }
-		.warning { color: #FFE66D; }
+    /* Стили для JSON Viewer */
+    .json-viewer {
+        margin: 4px 0;
+        border-left: 3px solid #569cd6;
+    }
+    
+    .json-viewer .json-node {
+        padding: 2px 0;
+    }
+    
+    .json-viewer .json-key {
+        color: #9cdcfe;
+        font-weight: bold;
+    }
+    
+    .json-viewer .json-string {
+        color: #ce9178;
+    }
+    
+    .json-viewer .json-number {
+        color: #b5cea8;
+    }
+    
+    .json-viewer .json-boolean {
+        color: #569cd6;
+        font-weight: bold;
+    }
+    
+    .json-viewer .json-null {
+        color: #808080;
+        font-style: italic;
+    }
+    
+    .json-viewer .json-bracket {
+        color: #d4d4d4;
+        font-weight: bold;
+    }
+    
+    .json-viewer .json-punctuation {
+        color: #d4d4d4;
+    }
+    
+    .json-viewer .json-more {
+        color: #6a9955;
+        font-style: italic;
+        padding-left: 20px;
+    }
+    
+    .json-viewer .json-children {
+        padding-left: 20px;
+        border-left: 1px solid #2d2d30;
+        margin: 2px 0 2px 5px;
+    }
+    
+    /* Стили для разных статусов */
+    .json-viewer-success {
+        border-left-color: #66cc66;
+    }
+    
+    .json-viewer-error {
+        border-left-color: #f44336;
+    }
+    
+    .json-viewer-warning {
+        border-left-color: #FFE66D;
+    }
+    
+    /* Подсветка при наведении для QTextEdit (поддерживается) */
+    .json-viewer .json-node:hover {
+        background-color: #2d2d30;
+        border-radius: 2px;
+    }
 )";
 }
 
@@ -103,6 +176,7 @@ public:
 	QStringListModel* completerModel;
 
 	void appendTable(const QString& message, const QString& styleClass);
+	void appendJson(const QString& message, const QString& styleClass);
 };
 
 
@@ -292,6 +366,7 @@ void CommandConsole::onCompleterActivated(const QString& text) {
 void CommandConsole::onOutputRequested(const QString& message, const QString& styleClass, const QString& type) {
 	if (type == kCommandPrintStyle_Plane) appendMessage(message, styleClass);
 	else if (type == kCommandPrintStyle_Table) d->appendTable(message, styleClass);
+	else if (type == kCommandPrintStyle_Json) d->appendJson(message, styleClass);
 
 	auto sb = d->outputArea->verticalScrollBar();
 	sb->setValue(sb->maximum());
@@ -321,8 +396,25 @@ QString CommandConsole::getHistoryEntry(int offset) {
 void CommandConsole::Private::appendTable(const QString& message, const QString& styleClass) {
 	QTextCursor cursor = outputArea->textCursor();
 	cursor.movePosition(QTextCursor::End);
+
+	QString html = QString("<br><div class=\"%1\">%2</div>")
+		.arg(styleClass)
+		.arg(message);
+
 	outputArea->setTextCursor(cursor);
-	outputArea->insertHtml(message);
+	outputArea->insertHtml(html);
+}
+
+void CommandConsole::Private::appendJson(const QString& message, const QString& styleClass) {
+	QTextCursor cursor = outputArea->textCursor();
+	cursor.movePosition(QTextCursor::End);
+
+	QString html = QString("<br><div class=\"%1\">%2</div>")
+		.arg(styleClass)
+		.arg(message);
+
+	outputArea->setTextCursor(cursor);
+	outputArea->insertHtml(html);
 }
 
 void CommandConsole::appendMessage(const QString& message, const QString& styleClass) {
