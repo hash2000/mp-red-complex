@@ -19,6 +19,7 @@
 #include <QListWidget>
 #include <QToolButton>
 #include <QStringListModel>
+#include <QSplitter>
 
 namespace {
 // Настройка стилей окна вывода
@@ -164,16 +165,13 @@ public:
 
 	// UI элементы
 	QTextEdit* outputArea;
-	QLineEdit* inputLine;
+	QTextEdit* inputLine;
 	QVBoxLayout* layout;
+	QSplitter* splitter;
 
 	// История команд
 	QStringList commandHistory;
 	int historyIndex = -1; // -1 = после последней команды
-
-	// Автодополнение
-	QCompleter* completer;
-	QStringListModel* completerModel;
 
 	void appendTable(const QString& message, const QString& styleClass);
 	void appendJson(const QString& message, const QString& styleClass);
@@ -188,7 +186,6 @@ CommandConsole::CommandConsole(ApplicationController* controller, CommandContext
 	d->context = context;
 
 	setupUi();
-	setupCompleter();
 	setupOutputStyling();
 
 	// Подключение сигналов контекста
@@ -211,20 +208,30 @@ void CommandConsole::setupUi() {
 	d->outputArea->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
 
 	// Поле ввода
-	d->inputLine = new QLineEdit(this);
+	d->inputLine = new QTextEdit(this);
 	d->inputLine->setPlaceholderText("Enter command...");
 	d->inputLine->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+	d->inputLine->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-	// Макет
+	// Создаем сплиттер
+	d->splitter = new QSplitter(Qt::Vertical, this);
+	d->splitter->addWidget(d->outputArea);
+	d->splitter->addWidget(d->inputLine);
+	d->splitter->setStretchFactor(1, 0);
+	d->splitter->setCollapsible(1, false);
+
+	// Устанавливаем начальные размеры (outputArea - 70%, inputLine - 30%)
+	d->splitter->setSizes({ static_cast<int>(height() * 0.7), static_cast<int>(height() * 0.3) });
+
+	// Или можно задать минимальные размеры
+	d->outputArea->setMinimumHeight(100);
+	d->inputLine->setMinimumHeight(50);
+
+	// Макет для размещения сплиттера
 	d->layout = new QVBoxLayout(this);
 	d->layout->setContentsMargins(4, 4, 4, 4);
 	d->layout->setSpacing(4);
-	d->layout->addWidget(d->outputArea, 1);
-	d->layout->addWidget(d->inputLine, 0);
-
-	// Подключение сигналов ввода
-	connect(d->inputLine, &QLineEdit::returnPressed, this, &CommandConsole::onCommandSubmitted);
-	connect(d->inputLine, &QLineEdit::textChanged, this, &CommandConsole::onCommandTextChanged);
+	d->layout->addWidget(d->splitter);
 
 	// Горячие клавиши истории
 	d->inputLine->installEventFilter(this);
@@ -234,47 +241,12 @@ bool CommandConsole::eventFilter(QObject* obj, QEvent* event) {
 	if (obj == d->inputLine && event->type() == QEvent::KeyPress) {
 		QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
 
-		if (keyEvent->key() == Qt::Key_Up) {
-			onHistoryUp();
+		if (keyEvent->key() == Qt::Key_Return && keyEvent->modifiers() == Qt::ShiftModifier) {
+			submitCommend();
 			return true;
-		}
-		else if (keyEvent->key() == Qt::Key_Down) {
-			onHistoryDown();
-			return true;
-		}
-		else if (keyEvent->key() == Qt::Key_Tab && !d->inputLine->text().trimmed().isEmpty()) {
-			// Принудительное завершение по Tab
-			if (d->completer && d->completer->completionCount() > 0) {
-				d->completer->complete();
-				return true;
-			}
 		}
 	}
 	return QWidget::eventFilter(obj, event);
-}
-
-void CommandConsole::setupCompleter() {
-	d->completerModel = new QStringListModel(this);
-	d->completer = new QCompleter(d->completerModel, this);
-	d->completer->setCaseSensitivity(Qt::CaseInsensitive);
-	d->completer->setCompletionMode(QCompleter::PopupCompletion);
-	d->completer->setFilterMode(Qt::MatchStartsWith);
-
-	d->inputLine->setCompleter(d->completer);
-
-	// Обновление списка команд для автодополнения
-	QTimer::singleShot(0, this, [this]() {
-		if (d->controller && d->controller->commandProcessor()) {
-			QStringList list;
-			list.append(d->controller->commandProcessor()->availableCommands());
-			list.append(d->controller->resources()->Variables.available());
-			list.sort();
-
-			d->completerModel->setStringList(list);
-		}
-	});
-
-	connect(d->completer, QOverload<const QString&>::of(&QCompleter::activated), this, &CommandConsole::onCompleterActivated);
 }
 
 void CommandConsole::setupOutputStyling() {
@@ -282,8 +254,8 @@ void CommandConsole::setupOutputStyling() {
 	d->outputArea->document()->setDefaultStyleSheet(kQTextEditOutputAreaDocumentStyleSheet);
 }
 
-void CommandConsole::onCommandSubmitted() {
-	QString command = d->inputLine->text().trimmed();
+void CommandConsole::submitCommend() {
+	QString command = d->inputLine->document()->toPlainText();
 	if (command.isEmpty()) {
 		return;
 	}
@@ -322,11 +294,6 @@ void CommandConsole::executeCommand(const QString& command) {
 	}
 }
 
-void CommandConsole::onCommandTextChanged(const QString& text) {
-	// Обновление подсказок при необходимости
-	Q_UNUSED(text)
-}
-
 void CommandConsole::onHistoryUp() {
 	if (d->commandHistory.isEmpty()) {
 		return;
@@ -340,7 +307,6 @@ void CommandConsole::onHistoryUp() {
 	}
 
 	d->inputLine->setText(getHistoryEntry(0));
-	d->inputLine->selectAll(); // для удобства редактирования
 }
 
 void CommandConsole::onHistoryDown() {
@@ -356,11 +322,6 @@ void CommandConsole::onHistoryDown() {
 		++d->historyIndex;
 		d->inputLine->setText(getHistoryEntry(0));
 	}
-}
-
-void CommandConsole::onCompleterActivated(const QString& text) {
-	Q_UNUSED(text)
-		// Фокус остаётся в поле ввода, можно продолжить ввод
 }
 
 void CommandConsole::onOutputRequested(const QString& message, const QString& styleClass, const QString& type) {

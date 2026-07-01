@@ -26,20 +26,17 @@ protected:
 	bool eventFilter(QObject* obj, QEvent* event) override;
 
 private slots:
-	void onCommandSubmitted();
-	void onCommandTextChanged(const QString& text);
 	void onHistoryUp();
 	void onHistoryDown();
-	void onCompleterActivated(const QString& text);
 	void onOutputRequested(const QString& message, const QString& styleClass, const QString& type);
 
 private:
 	void setupUi();
-	void setupCompleter();
 	void addToHistory(const QString& command);
 	QString getHistoryEntry(int offset);
 	void executeCommand(const QString& command);
 	void focusInput();
+	void submitCommend();
 
 	// Стилизация вывода
 	void setupOutputStyling();
