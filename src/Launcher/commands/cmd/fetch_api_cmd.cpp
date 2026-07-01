@@ -97,6 +97,10 @@ bool FetchApiCommand::Private::sendRequest(CommandContext* context,
 	fetchService->fetchRequest(opt,
 		[context] (int statusCode, const QByteArray& data) {
 			ConsoleJson json(data);
+			if (!json.isValid()) {
+				context->printError(json.getErrorMessage());
+				return;
+			}
 			context->print(json);
 			context->printSuccess(QString("fetch-api %1 %2 bytes")
 				.arg(statusCode)
