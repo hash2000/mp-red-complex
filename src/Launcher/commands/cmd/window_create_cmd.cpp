@@ -13,9 +13,9 @@ bool CreateWindowCommand::execute(const std::shared_ptr<Instruction> instruction
 	auto app = context->applicationController();
 	auto controller = context->controllers()->windowsController();
 	auto mdiArea = controller->mdiArea();
-	auto id = instruction->parameter("id").toString();
-	const auto target = instruction->parameter("target").toString();
-	const auto alternateTitle = instruction->parameter("title").toString();
+	auto id = instruction->text("id");
+	const auto target = instruction->text("target");
+	const auto alternateTitle = instruction->text("title");
 
 	if (target.isEmpty()) {
 		context->printError(QString("Need parameter 'target'. Usage: %1").arg(help()));

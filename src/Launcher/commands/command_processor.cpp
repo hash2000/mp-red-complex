@@ -202,6 +202,17 @@ std::shared_ptr<Instruction> CommandProcessor::Private::parseCommandLine(const Q
 				instruction->parameters.insert(paramName, QVariant::fromValue(iniMap));
 				continue;
 			}
+
+			// TEXT
+			if (rest.size() >= 6 && rest.mid(0, 6).compare(u"<text>", Qt::CaseInsensitive) == 0) {
+				pos += 6;
+				const int endPos = line.indexOf(u"</text>", pos, Qt::CaseInsensitive);
+				QString content = (endPos < 0) ? line.mid(pos) : line.mid(pos, endPos - pos);
+				pos = (endPos < 0) ? len : endPos + 7;
+
+				instruction->parameters.insert(paramName, content);
+				continue;
+			}
 		}
 
 		// Обычный текст

@@ -16,6 +16,7 @@
 #include <QNetworkRequest>
 #include <QSslSocket>
 #include <QJsonDocument>
+#include <QHttpHeaders>
 
 
 class FetchApiCommand::Private {
@@ -27,7 +28,8 @@ public:
 		const QString& action,
 		const QString& location,
 		const QString& headers,
-		const QByteArray& body
+		const QByteArray& body,
+		bool showEditor
 		);
 
 	bool showSsl(CommandContext* context);
@@ -54,9 +56,9 @@ bool FetchApiCommand::Private::sendRequest(CommandContext* context,
 	const QString& action,
 	const QString& location,
 	const QString& headers,
-	const QByteArray& body
+	const QByteArray& body,
+	bool showEditor
 ) {
-	auto controller = context->controllers()->windowsController();
 	auto services = context->services();
 	auto fetchService = services->fetchApiService();
 
@@ -95,18 +97,31 @@ bool FetchApiCommand::Private::sendRequest(CommandContext* context,
 	}
 
 	fetchService->fetchRequest(opt,
-		[context] (int statusCode, const QByteArray& data) {
-			ConsoleJson json(data);
-			if (!json.isValid()) {
-				context->printError(json.getErrorMessage());
-				return;
+		[context, showEditor] (int statusCode, const QByteArray& data, const QHttpHeaders& headers) {
+			QString lang = "txt";
+			const auto contentType = QString::fromUtf8(headers.value("Content-Type"));
+			if (contentType == "application/json") {
+				lang = "json";
+				ConsoleJson json(data);
+				if (!json.isValid()) {
+					context->printError(json.getErrorMessage());
+					return;
+				}
+				context->print(json);
 			}
-			context->print(json);
 			context->printSuccess(QString("fetch-api %1 %2 bytes")
 				.arg(statusCode)
 				.arg(data.length()));
+			if (showEditor) {
+				context->applicationController()->executeCommand("window-create", {
+					{ "action", "create" },
+					{ "target", "code-editor" },
+					{ "lang", lang },
+					{ "text", QString::fromUtf8(data) },
+					});
+			}
 		},
-		[context] (int errorCode, const QString& errorString) {
+		[context] (int errorCode, const QString& errorString, const QHttpHeaders& headers) {
 			context->printError(QString("fetch-api %1 %2")
 				.arg(errorCode)
 				.arg(errorString));
@@ -130,8 +145,7 @@ bool FetchApiCommand::Private::showSsl(CommandContext* context) {
 }
 
 bool FetchApiCommand::execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
-	const auto action = instruction->parameter("action")
-		.toString();
+	const auto action = instruction->text("action");
 	if (action.isEmpty()) {
 		context->printError(QString("Usage: %1").arg(help()));
 		return false;
@@ -139,14 +153,16 @@ bool FetchApiCommand::execute(const std::shared_ptr<Instruction> instruction, Co
 
 	if (action == "show-ssl") return d->showSsl(context);
 
+	const auto showEditor = instruction->text("show-editor", "false") != "false";
 	auto body = instruction->parameter("body")
 		.toJsonDocument()
 		.toJson(QJsonDocument::Compact);
 
 	const auto result = d->sendRequest(context, action,
-		instruction->parameter("location").toString(),
-		instruction->parameter("headers").toString(),
-		body);
+		instruction->text("location"),
+		instruction->text("headers"),
+		body,
+		showEditor);
 
 	return result;
 }

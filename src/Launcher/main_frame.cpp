@@ -114,6 +114,7 @@ void LauncherMainFrame::Private::setupConsole() {
 }
 
 void LauncherMainFrame::Private::setupView() {
+
 	// Горизонтальный сплиттер для основной области и панели действий
 	auto* horizontalSplitter = new QSplitter(Qt::Horizontal);
 
@@ -123,6 +124,7 @@ void LauncherMainFrame::Private::setupView() {
 	verticalSplitter->addWidget(commandConsole);
 	verticalSplitter->setStretchFactor(0, 1);
 	verticalSplitter->setStretchFactor(1, 0);
+	verticalSplitter->setCollapsible(1, false);
 
 	horizontalSplitter->addWidget(verticalSplitter);
 

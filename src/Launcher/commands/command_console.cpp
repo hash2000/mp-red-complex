@@ -3,7 +3,7 @@
 #include "Launcher/commands/command_processor.h"
 #include "Launcher/app_controller.h"
 #include "Libs/Resources/resources.h"
-#include "Libs/Resources/variables/variables_context.h"
+#include "Libs/Base/extensions/text_edit_extensions.h"
 
 #include <QFontDatabase>
 #include <QScrollBar>
@@ -198,6 +198,7 @@ CommandConsole::CommandConsole(ApplicationController* controller, CommandContext
 CommandConsole::~CommandConsole() = default;
 
 void CommandConsole::setupUi() {
+	using namespace Extensions;
 	setWindowTitle("Command Console");
 	resize(600, 250);
 
@@ -206,12 +207,14 @@ void CommandConsole::setupUi() {
 	d->outputArea->setReadOnly(true);
 	d->outputArea->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 	d->outputArea->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+	TextEdit::setTabDistance(d->outputArea, 2);
 
 	// Поле ввода
 	d->inputLine = new QTextEdit(this);
 	d->inputLine->setPlaceholderText("Enter command...");
 	d->inputLine->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
 	d->inputLine->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+	TextEdit::setTabDistance(d->inputLine, 2);
 
 	// Создаем сплиттер
 	d->splitter = new QSplitter(Qt::Vertical, this);
@@ -221,7 +224,7 @@ void CommandConsole::setupUi() {
 	d->splitter->setCollapsible(1, false);
 
 	// Устанавливаем начальные размеры (outputArea - 70%, inputLine - 30%)
-	d->splitter->setSizes({ static_cast<int>(height() * 0.7), static_cast<int>(height() * 0.3) });
+	d->splitter->setSizes({ static_cast<int>(height() * 0.8), static_cast<int>(height() * 0.2) });
 
 	// Или можно задать минимальные размеры
 	d->outputArea->setMinimumHeight(100);

@@ -184,8 +184,7 @@ bool ItemsCommand::Private::changeContainerId(CommandContext* context, const QUu
 }
 
 bool ItemsCommand::execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
-	const auto action = instruction->parameter("action")
-		.toString();
+	const auto action = instruction->text("action");
 	if (action.isEmpty()) {
 		context->printError(QString("Usage: %1").arg(help()));
 		return false;

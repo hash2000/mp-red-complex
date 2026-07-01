@@ -40,12 +40,10 @@ bool FetchApiService::fetchRequest(
 		break;
 	}
 	case FetchApiActions::Delete: {
-	//	options.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 		reply = d->networkManager->sendCustomRequest(options, "DELETE", request.body);
 		break;
 	}
 	case FetchApiActions::Put: {
-	//	options.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 		reply = d->networkManager->sendCustomRequest(options, "PUT", request.body);
 		break;
 	}
@@ -67,15 +65,15 @@ bool FetchApiService::fetchRequest(
 		reply->deleteLater();
 		if (reply->error() != QNetworkReply::NoError) {
 			if (onError) {
-				onError(reply->error(), reply->errorString());
+				onError(reply->error(), reply->errorString(), reply->headers());
 			}
 			return;
 		}
 
-		int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+		int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();		
 		QByteArray data = reply->readAll();
 		if (onSuccess) {
-			onSuccess(status, data);
+			onSuccess(status, data, reply->headers());
 		}
 	});
 

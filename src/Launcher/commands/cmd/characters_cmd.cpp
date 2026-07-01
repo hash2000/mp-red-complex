@@ -83,14 +83,13 @@ bool CharactersCommand::Private::showCharacter(CommandContext* context, const QU
 }
 
 bool CharactersCommand::execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
-	const auto action = instruction->parameter("action")
-		.toString();
+	const auto action = instruction->text("action");
 	if (action.isEmpty()) {
 		context->printError(QString("Usage: %1").arg(help()));
 		return false;
 	}
 
-	if (action == "show-user") return d->showCharacters(context, instruction->parameter("id").toString());
+	if (action == "show-user") return d->showCharacters(context, instruction->text("id"));
 	else if (action == "show-character") return d->showCharacter(context, instruction->parameter("id").toUuid());
 
 	return true;

@@ -3,6 +3,7 @@
 #include "Content/CodeEditorWidget/highlights/plugins/highlighter_plugin.h"
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
 #include "Libs/DataStream/file_reader.h"
+#include "Libs/Base/extensions/text_edit_extensions.h"
 
 #include <QThread>
 #include <QFileInfo>
@@ -33,8 +34,11 @@ CodeEditorWidget::CodeEditorWidget(HighlightingPluginManager* pluginManager, QWi
 CodeEditorWidget::~CodeEditorWidget() = default;
 
 void CodeEditorWidget::Private::setupUI() {
+	using namespace Extensions;
+
 	highlighter = new Highlighter(pluginManager, q->document());
 	highlighter->setLanguage("txt");
+	TextEdit::setTabDistance(q, 2);
 }
 
 void CodeEditorWidget::Private::setupStyling() {
@@ -72,6 +76,14 @@ void CodeEditorWidget::reloadFile() {
 
 	clear();
 	thread->start();
+}
+
+bool CodeEditorWidget::setLanguage(const QString& lang) {
+	if (lang.isEmpty()) {
+		return false;
+	}
+
+	return d->highlighter->setLanguage(lang.toLower());
 }
 
 void CodeEditorWidget::onBlockRead(const QStringList& lines) {

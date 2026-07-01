@@ -13,6 +13,7 @@ public:
 	void reloadFile();
 
 	void setText(const QString& text);
+	bool setLanguage(const QString& lang);
 
 private slots:
 	void onBlockRead(const QStringList& lines);

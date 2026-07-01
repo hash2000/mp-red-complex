@@ -112,16 +112,15 @@ bool UsersCommand::Private::registerInTarget(CommandContext* context, const QStr
 }
 
 bool UsersCommand::execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
-	const auto action = instruction->parameter("action")
-		.toString();
+	const auto action = instruction->text("action");
 	if (action.isEmpty()) {
 		context->printError(QString("Usage: %1").arg(help()));
 		return false;
 	}
 
 	if (action == "login") return d->login(context,
-		instruction->parameter("login").toString(),
-		instruction->parameter("password").toString());
+		instruction->text("login"),
+		instruction->text("password"));
 	else if (action == "logout") return d->logout(context);
 
 	return true;

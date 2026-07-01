@@ -10,7 +10,7 @@ bool CloseWindowsCommand::execute(const std::shared_ptr<Instruction> instruction
 		return false;
 	}
 
-	QString target = instruction->parameter("target").toString();
+	const auto target = instruction->text("target");
 	auto controller = context->controllers()->windowsController();
 
 	if (target == "active") {
@@ -20,7 +20,7 @@ bool CloseWindowsCommand::execute(const std::shared_ptr<Instruction> instruction
 			return false;
 		}
 
-		QString windowId = activeEntry.second;
+		const auto windowId = activeEntry.second;
 		controller->closeWindowById(windowId);
 		context->printSuccess(QString("Closed active window [%1]")
 			.arg(windowId));

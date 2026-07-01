@@ -29,9 +29,10 @@ public:
 	// Команды
 	bool handleCreate(const std::shared_ptr<Instruction> instruction, CommandContext* context);
 	bool handleStyle(const std::shared_ptr<Instruction> instruction, CommandContext* context);
+	bool handleLanguageHighlighter(const std::shared_ptr<Instruction> instruction, CommandContext* context);
+	bool handlePlantText(const std::shared_ptr<Instruction> instruction, CommandContext* context);
 	bool handleStyleWordWrap(const QString& value);
 	bool handleStyleFont(const QString& value);
-	
 };
 
 CodeEditorWindow::CodeEditorWindow(const QString& id, QWidget* parent)
@@ -91,8 +92,7 @@ void CodeEditorWindow::Private::setupUI(Services* services) {
 }
 
 bool CodeEditorWindow::handleCommand(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
-	const auto action = instruction->parameter("action")
-		.toString();
+	const auto action = instruction->text("action");
 	if (action.isEmpty()) {
 		return false;
 	}
@@ -104,6 +104,10 @@ bool CodeEditorWindow::handleCommand(const std::shared_ptr<Instruction> instruct
 }
 
 bool CodeEditorWindow::Private::handleStyleWordWrap(const QString& value) {
+	if (value.isEmpty()) {
+		return false;
+	}
+
 	if (value == "true") {
 		this->editor->setLineWrapMode(QTextEdit::LineWrapMode::WidgetWidth);
 	}
@@ -119,8 +123,19 @@ bool CodeEditorWindow::Private::handleStyleWordWrap(const QString& value) {
 }
 
 bool CodeEditorWindow::Private::handleStyleFont(const QString& value) {
+	if (value.isEmpty()) {
+		return false;
+	}
 
+	return true;
+}
 
+bool CodeEditorWindow::Private::handleLanguageHighlighter(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
+	return this->editor->setLanguage(instruction->text("lang", "txt"));
+}
+
+bool CodeEditorWindow::Private::handlePlantText(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
+	this->editor->setText(instruction->text("text"));
 	return true;
 }
 
@@ -129,8 +144,8 @@ bool CodeEditorWindow::Private::handleStyle(const std::shared_ptr<Instruction> i
 		return false;
 	}
 
-	handleStyleWordWrap(instruction->parameter("word-wrap").toString());
-	handleStyleFont(instruction->parameter("font").toString());
+	handleStyleWordWrap(instruction->text("word-wrap"));
+	handleStyleFont(instruction->text("font"));
 
 	return true;
 }
@@ -138,9 +153,13 @@ bool CodeEditorWindow::Private::handleStyle(const std::shared_ptr<Instruction> i
 bool CodeEditorWindow::Private::handleCreate(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
 	auto services = context->services();
 	this->context = context;
-	const auto path = instruction->parameter("path").toString();
+	const auto path = instruction->text("path");
 	this->setupUI(services);
 	changeTargetPath(path);
+
+	handleStyle(instruction, context);
+	handleLanguageHighlighter(instruction, context);
+	handlePlantText(instruction, context);
 
 	return true;
 }
@@ -181,16 +200,6 @@ void CodeEditorWindow::onSaveDocumentClick() {
 	}
 
 	QString content = d->editor->toPlainText();
-
-// TODO:
-// сделать корректную обработку endline на уровне загрузки
-// сделать настройку
-//#ifdef Q_OS_WIN
-//	content.replace('\n', "\r\n");
-//#endif
-// Записываем UTF-8 BOM если нужно
-// file.write("\xEF\xBB\xBF"); // раскомментировать если нужен BOM
-
 	QTextStream stream(&file);
 	stream.setEncoding(QStringConverter::Utf8);
 	stream << content;

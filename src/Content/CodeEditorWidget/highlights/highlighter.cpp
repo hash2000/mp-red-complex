@@ -45,9 +45,10 @@ Highlighter::Highlighter(HighlightingPluginManager* pluginManager, QTextDocument
 
 Highlighter::~Highlighter() = default;
 
-void Highlighter::setLanguage(const QString& language) {
+bool Highlighter::setLanguage(const QString& language) {
 	d->plugin = d->pluginManager->pluginForLanguage(language);
 	rehighlight();
+	return d->plugin != nullptr;
 }
 
 void Highlighter::highlightBlock(const QString& text) {

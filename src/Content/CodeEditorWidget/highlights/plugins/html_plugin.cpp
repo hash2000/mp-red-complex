@@ -138,9 +138,9 @@ void HtmlPlugin::install() {
 	embeddedJsFormat.setBackground(QColor("#1E1E1E"));
 
 	addEmbeddedBlockRule(EmbeddedBlockRule{
-		QRegularExpression(R"(<script[^>]*>)"),    // Начало: <script>
-		QRegularExpression(R"(</script>)"),        // Конец: </script>
-		"javascript",          // Фиксированный язык
+		QRegularExpression(R"(<script[^>]*\btype\s*=\s*['"]application/json['"][^>]*>)", QRegularExpression::CaseInsensitiveOption),
+		QRegularExpression(R"(</script>)", QRegularExpression::CaseInsensitiveOption),
+		"json", // Фиксированный язык
 		embeddedJsFormat,
 		25 });
 

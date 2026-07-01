@@ -16,7 +16,7 @@ public:
 	explicit Highlighter(HighlightingPluginManager* pluginManager, QTextDocument* parent = nullptr);
 	~Highlighter() override;
 
-	void setLanguage(const QString& language);
+	bool setLanguage(const QString& language);
 
 protected:
 	void highlightBlock(const QString& text) override;

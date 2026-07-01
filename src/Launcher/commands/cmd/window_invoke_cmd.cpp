@@ -21,8 +21,7 @@ bool WindowInvokeCommand::execute(const std::shared_ptr<Instruction> instruction
 	auto controller = context->controllers()->windowsController();
 	auto services = context->services();
 
-	const auto cmd = instruction->parameter("cmd")
-		.toString();
+	const auto cmd = instruction->text("cmd");
 	if (cmd.isEmpty()) {
 		context->printError(QString("Need parameter 'cmd'. Usage: %1").arg(help()));
 		return false;
@@ -30,8 +29,7 @@ bool WindowInvokeCommand::execute(const std::shared_ptr<Instruction> instruction
 
 	MdiChildWindow* targetEntry;
 
-	const auto target = instruction->parameter("target")
-		.toString();
+	const auto target = instruction->text("target");
 	if (target.isEmpty()) {
 		auto activeEntry = controller->activeWindowEntry();
 		targetEntry = activeEntry.first.data();
