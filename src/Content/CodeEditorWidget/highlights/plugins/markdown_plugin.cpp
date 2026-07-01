@@ -2,7 +2,6 @@
 #include <QRegularExpression>
 
 MarkdownPlugin::~MarkdownPlugin() = default;
-
 MarkdownPlugin::LanguageInfo MarkdownPlugin::languageInfo() const {
 	return {
 		"Markdown",

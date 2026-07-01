@@ -1,7 +1,6 @@
 #include "Content/CodeEditorWidget/highlights/plugins/plane_text_plugin.h"
 
 PlaneTextPlugin::~PlaneTextPlugin() = default;
-
 PlaneTextPlugin::LanguageInfo PlaneTextPlugin::languageInfo() const {
 	return {
 		"Text File",

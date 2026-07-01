@@ -3,6 +3,9 @@
 #include "Content/CodeEditorWidget/highlights/plugins/plane_text_plugin.h"
 #include "Content/CodeEditorWidget/highlights/plugins/markdown_plugin.h"
 #include "Content/CodeEditorWidget/highlights/plugins/bash_plugin.h"
+#include "Content/CodeEditorWidget/highlights/plugins/html_plugin.h"
+#include "Content/CodeEditorWidget/highlights/plugins/css_plugin.h"
+#include "Content/CodeEditorWidget/highlights/plugins/json_plugin.h"
 
 #include <QFileInfo>
 #include <map>
@@ -28,6 +31,9 @@ void HighlightingPluginManager::loadPlugins(const QString& pluginsDir) {
 	registerPlugin(std::make_unique<PlaneTextPlugin>());
 	registerPlugin(std::make_unique<MarkdownPlugin>());
 	registerPlugin(std::make_unique<BashPlugin>());
+	registerPlugin(std::make_unique<HtmlPlugin>());
+	registerPlugin(std::make_unique<CssPlugin>());
+	registerPlugin(std::make_unique<JsonPlugin>());
 }
 
 void HighlightingPluginManager::registerPlugin(std::unique_ptr<HighlightingPlugin> plugin) {

@@ -1,7 +1,6 @@
 #include "Content/CodeEditorWidget/highlights/plugins/glsl_plugin.h"
 
 GLSLPlugin::~GLSLPlugin() = default;
-
 GLSLPlugin::LanguageInfo GLSLPlugin::languageInfo() const {
 	return {
 		"GLSL Shader",

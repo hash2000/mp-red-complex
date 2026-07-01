@@ -3,7 +3,6 @@
 #include <QRegularExpression>
 
 BashPlugin::~BashPlugin() = default;
-
 BashPlugin::LanguageInfo BashPlugin::languageInfo() const {
 	return { "Bash", {
 		".sh", ".bash", ".bashrc", ".bash_profile", ".profile" },
