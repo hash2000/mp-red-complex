@@ -19,4 +19,5 @@ target_link_libraries(RedComplexCodeEditorWidget
 		Qt6::Core
 		Qt6::Gui
 		Qt6::Widgets
+		Qt6::Concurrent
 )

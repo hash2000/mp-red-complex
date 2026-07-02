@@ -1,9 +1,10 @@
 #include "Content/CodeEditorWidget/code_editor_widget.h"
 #include "Content/CodeEditorWidget/language_info.h"
 #include "Content/CodeEditorWidget/highlights/highlighter.h"
-#include "Content/CodeEditorWidget/highlights/plugins/highlighter_plugin.h"
+#include "Content/CodeEditorWidget/highlights/highlighter_plugin.h"
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
 #include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
+#include "Content/CodeEditorWidget/formatters/formatter_plugin.h"
 #include "Libs/DataStream/file_reader.h"
 #include "Libs/Base/extensions/text_edit_extensions.h"
 
@@ -11,6 +12,7 @@
 #include <QFileInfo>
 #include <QJsonParseError>
 #include <QJsonDocument>
+#include <QScrollBar>
 
 class CodeEditorWidget::Private {
 public:
@@ -20,6 +22,7 @@ public:
 	Highlighter* highlighter = nullptr;
 	HighlightingPluginManager* pluginManager;
 	FormatterPluginManager* formatterManager;
+	FormatterPlugin* currentFormatter = nullptr;
 	QString path;
 	QString previusSuffix;
 
@@ -37,6 +40,8 @@ CodeEditorWidget::CodeEditorWidget(
 	d->formatterManager = formatterManager;
 	d->setupUI();
 	d->setupStyling();
+
+	connect(this, &QTextEdit::textChanged, this, &CodeEditorWidget::onTextChanged);
 }
 
 CodeEditorWidget::~CodeEditorWidget() = default;
@@ -100,20 +105,71 @@ void CodeEditorWidget::formatDocument() {
 		return;
 	}
 
-	const auto langType = plugin->languageInfo().mimeType;
-	if (langType == "application/json") {
-		QJsonParseError error;
-		QJsonDocument doc = QJsonDocument::fromJson(toPlainText().toUtf8(), &error);
-		if (error.error != QJsonParseError::NoError) {
-			qWarning() << "JSON parse error:" << error.errorString();
-			return;
-		}
-
-		setText(doc.toJson(QJsonDocument::Indented));
+	const auto formatter = d->formatterManager->formatter(plugin->languageInfo());
+	if (!formatter) {
+		return;
 	}
-	else if (langType == "text/html") {
 
+	d->currentFormatter = formatter;
+
+	connect(formatter, &FormatterPlugin::formattingFailed, this, &CodeEditorWidget::onFormattingFailed);
+	connect(formatter, &FormatterPlugin::formattingFinished, this, &CodeEditorWidget::onFormattingFinished);
+
+	d->currentFormatter->formatAsync(toPlainText());
+
+	//if (langType == "application/json") {
+	//	QJsonParseError error;
+	//	QJsonDocument doc = QJsonDocument::fromJson(toPlainText().toUtf8(), &error);
+	//	if (error.error != QJsonParseError::NoError) {
+	//		qWarning() << "JSON parse error:" << error.errorString();
+	//		return;
+	//	}
+
+	//	setText(doc.toJson(QJsonDocument::Indented));
+	//}
+	//else if (langType == "text/html") {
+
+	//}
+}
+
+void CodeEditorWidget::onTextChanged() {
+	if (!d->currentFormatter) {
+		return;
 	}
+
+	disconnect(d->currentFormatter);
+	d->currentFormatter->stop();
+	d->currentFormatter = nullptr;
+}
+
+void CodeEditorWidget::onFormattingFailed(const QString& errorMessage) {
+	if (!d->currentFormatter) {
+		return;
+	}
+
+	disconnect(d->currentFormatter);
+	d->currentFormatter = nullptr;
+	emit formattedFailed(errorMessage);
+}
+
+void CodeEditorWidget::onFormattingFinished(const QString& formattedText) {
+	if (!d->currentFormatter) {
+		return;
+	}
+
+	disconnect(d->currentFormatter);
+	d->currentFormatter = nullptr;
+	QTextCursor cursor = textCursor();
+	int cursorPos = cursor.position();
+	int scrollBarValue = verticalScrollBar()->value();
+
+	setUpdatesEnabled(false);
+	setText(formattedText);
+	setUpdatesEnabled(true);
+
+	cursor.setPosition(qMin(cursorPos, formattedText.length()));
+	setTextCursor(cursor);
+	verticalScrollBar()->setValue(scrollBarValue);
 }
 
 void CodeEditorWidget::onBlockRead(const QStringList& lines) {
@@ -133,10 +189,9 @@ void CodeEditorWidget::onBlockRead(const QStringList& lines) {
 }
 
 void CodeEditorWidget::setText(const QString& text) {
-	clear();
 	QTextCursor cursor = textCursor();
-	cursor.movePosition(QTextCursor::End);
 	cursor.beginEditBlock();
+	cursor.select(QTextCursor::Document);
 	cursor.insertText(text);
 	cursor.endEditBlock();
 }

@@ -20,8 +20,14 @@ public:
 	bool setLanguage(const QString& lang);
 	void formatDocument();
 
+signals:
+	void formattedFailed(const QString& errorMessage);
+
 private slots:
 	void onBlockRead(const QStringList& lines);
+	void onFormattingFailed(const QString& errorMessage);
+	void onFormattingFinished(const QString& formattedText);
+	void onTextChanged();
 
 private:
 	class Private;

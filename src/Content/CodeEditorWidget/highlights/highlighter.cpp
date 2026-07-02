@@ -1,6 +1,6 @@
 #include "Content/CodeEditorWidget/highlights/highlighter.h"
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
-#include "Content/CodeEditorWidget/highlights/plugins/highlighter_plugin.h"
+#include "Content/CodeEditorWidget/highlights/highlighter_plugin.h"
 #include <QRegularExpression>
 #include <map>
 

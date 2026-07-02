@@ -8,6 +8,7 @@ find_package(Qt6
 		OpenGLWidgets
 		Network
 		Xml
+		Concurrent
 )
 
 qt_standard_project_setup()

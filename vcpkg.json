@@ -6,7 +6,8 @@
 			"features": [
 				"opengl",
 				"openssl",
-				"dnslookup"
+				"dnslookup",
+				"concurrent"
 			]
 		},
 		{
@@ -20,7 +21,9 @@
 		},
 		{
 			"name": "openssl",
-			"features": [ "tools" ]
+			"features": [
+				"tools"
+			]
 		}
 	]
 }
