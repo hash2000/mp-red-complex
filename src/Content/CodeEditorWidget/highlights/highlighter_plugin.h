@@ -1,5 +1,4 @@
 #pragma once
-#include <QMap>
 #include <QString>
 #include <QIcon>
 #include <QRegularExpression>
@@ -7,19 +6,12 @@
 
 #include <memory>
 
-enum class HighlighterRuleType;
+struct LanguageInfo;
 
 class HighlightingPlugin {
 public:
 	HighlightingPlugin();
 	virtual ~HighlightingPlugin();
-
-	struct LanguageInfo {
-		QString name;
-		QStringList extensions;
-		QString mimeType;
-		QIcon icon; // для UI
-	};
 
 	struct Rule {
 		QRegularExpression pattern;

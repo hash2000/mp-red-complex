@@ -1,4 +1,5 @@
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
+#include "Content/CodeEditorWidget/language_info.h"
 #include "Content/CodeEditorWidget/highlights/plugins/glsl_plugin.h"
 #include "Content/CodeEditorWidget/highlights/plugins/plane_text_plugin.h"
 #include "Content/CodeEditorWidget/highlights/plugins/markdown_plugin.h"
@@ -27,13 +28,13 @@ HighlightingPluginManager::HighlightingPluginManager()
 HighlightingPluginManager::~HighlightingPluginManager() = default;
 
 void HighlightingPluginManager::loadPlugins(const QString& pluginsDir) {
-	registerPlugin(std::make_unique<GLSLPlugin>());
-	registerPlugin(std::make_unique<PlaneTextPlugin>());
-	registerPlugin(std::make_unique<MarkdownPlugin>());
-	registerPlugin(std::make_unique<BashPlugin>());
-	registerPlugin(std::make_unique<HtmlPlugin>());
-	registerPlugin(std::make_unique<CssPlugin>());
-	registerPlugin(std::make_unique<JsonPlugin>());
+	registerPlugin(std::make_unique<GLSLHighlighterPlugin>());
+	registerPlugin(std::make_unique<PlaneTextHighlighterPlugin>());
+	registerPlugin(std::make_unique<MarkdownHighlighterPlugin>());
+	registerPlugin(std::make_unique<BashHighlighterPlugin>());
+	registerPlugin(std::make_unique<HtmlHighlighterPlugin>());
+	registerPlugin(std::make_unique<CssHighlighterPlugin>());
+	registerPlugin(std::make_unique<JsonHighlighterPlugin>());
 }
 
 void HighlightingPluginManager::registerPlugin(std::unique_ptr<HighlightingPlugin> plugin) {

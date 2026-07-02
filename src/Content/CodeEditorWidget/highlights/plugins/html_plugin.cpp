@@ -1,15 +1,16 @@
 #include "Content/CodeEditorWidget/highlights/plugins/html_plugin.h"
+#include "Content/CodeEditorWidget/language_info.h"
 
 #include <QRegularExpression>
 
-HtmlPlugin::~HtmlPlugin() = default;
-HtmlPlugin::LanguageInfo HtmlPlugin::languageInfo() const {
+HtmlHighlighterPlugin::~HtmlHighlighterPlugin() = default;
+LanguageInfo HtmlHighlighterPlugin::languageInfo() const {
 	return { "HTML", {
 		".html", ".htm", ".xhtml", ".shtml" },
 		"text/html" };
 }
 
-void HtmlPlugin::install() {
+void HtmlHighlighterPlugin::install() {
 	// ==========================================
 	// 1. Комментарии
 	// ==========================================

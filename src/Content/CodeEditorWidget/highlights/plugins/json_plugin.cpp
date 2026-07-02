@@ -1,15 +1,16 @@
 #include "Content/CodeEditorWidget/highlights/plugins/json_plugin.h"
+#include "Content/CodeEditorWidget/language_info.h"
 
 #include <QRegularExpression>
 
-JsonPlugin::~JsonPlugin() = default;
-JsonPlugin::LanguageInfo JsonPlugin::languageInfo() const {
+JsonHighlighterPlugin::~JsonHighlighterPlugin() = default;
+LanguageInfo JsonHighlighterPlugin::languageInfo() const {
 	return { "JSON", {
 		".json", ".jsonc", ".json5", ".geojson", ".har", ".jsonld" },
 		"application/json" };
 }
 
-void JsonPlugin::install() {
+void JsonHighlighterPlugin::install() {
 	// ==========================================
 // 1. Строки (ключи и значения)
 // ==========================================

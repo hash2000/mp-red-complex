@@ -1,16 +1,17 @@
 #include "Content/CodeEditorWidget/highlights/plugins/bash_plugin.h"
+#include "Content/CodeEditorWidget/language_info.h"
 
 #include <QRegularExpression>
 
-BashPlugin::~BashPlugin() = default;
-BashPlugin::LanguageInfo BashPlugin::languageInfo() const {
+BashHighlighterPlugin::~BashHighlighterPlugin() = default;
+LanguageInfo BashHighlighterPlugin::languageInfo() const {
 	return { "Bash", {
 		".sh", ".bash", ".bashrc", ".bash_profile", ".profile" },
 		"text/x-sh",
 		QIcon(":/icons/bash.png") };
 }
 
-void BashPlugin::install() {
+void BashHighlighterPlugin::install() {
 	// ==========================================
 	// Комментарии
 	// ==========================================
@@ -187,6 +188,6 @@ void BashPlugin::install() {
 		arrayFormat, 16 });
 }
 
-QStringList BashPlugin::extractVariables(const QString& code) const {
+QStringList BashHighlighterPlugin::extractVariables(const QString& code) const {
 	return { };
 }

@@ -14,6 +14,7 @@ public:
 	QString windowTitle() const override;
 	QSize windowDefaultSizes() const override { return QSize(800, 600); }
 	QString help() const;
+	void formatDocument();
 
 	bool handleCommand(const std::shared_ptr<Instruction> instruction, CommandContext* context) override;
 

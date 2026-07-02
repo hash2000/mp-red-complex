@@ -1,12 +1,16 @@
 #include "Content/CodeEditorWidget/code_editor_widget.h"
+#include "Content/CodeEditorWidget/language_info.h"
 #include "Content/CodeEditorWidget/highlights/highlighter.h"
 #include "Content/CodeEditorWidget/highlights/plugins/highlighter_plugin.h"
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
+#include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
 #include "Libs/DataStream/file_reader.h"
 #include "Libs/Base/extensions/text_edit_extensions.h"
 
 #include <QThread>
 #include <QFileInfo>
+#include <QJsonParseError>
+#include <QJsonDocument>
 
 class CodeEditorWidget::Private {
 public:
@@ -14,8 +18,8 @@ public:
 	CodeEditorWidget* q;
 
 	Highlighter* highlighter = nullptr;
-	HighlightingPlugin* lastPlugin = nullptr;
 	HighlightingPluginManager* pluginManager;
+	FormatterPluginManager* formatterManager;
 	QString path;
 	QString previusSuffix;
 
@@ -23,10 +27,14 @@ public:
 	void setupStyling();
 };
 
-CodeEditorWidget::CodeEditorWidget(HighlightingPluginManager* pluginManager, QWidget* parent)
+CodeEditorWidget::CodeEditorWidget(
+	HighlightingPluginManager* pluginManager,
+	FormatterPluginManager* formatterManager,
+	QWidget* parent)
 	: QTextEdit(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->pluginManager = pluginManager;
+	d->formatterManager = formatterManager;
 	d->setupUI();
 	d->setupStyling();
 }
@@ -84,6 +92,28 @@ bool CodeEditorWidget::setLanguage(const QString& lang) {
 	}
 
 	return d->highlighter->setLanguage(lang.toLower());
+}
+
+void CodeEditorWidget::formatDocument() {
+	const auto plugin = d->highlighter->plugin();
+	if (!plugin) {
+		return;
+	}
+
+	const auto langType = plugin->languageInfo().mimeType;
+	if (langType == "application/json") {
+		QJsonParseError error;
+		QJsonDocument doc = QJsonDocument::fromJson(toPlainText().toUtf8(), &error);
+		if (error.error != QJsonParseError::NoError) {
+			qWarning() << "JSON parse error:" << error.errorString();
+			return;
+		}
+
+		setText(doc.toJson(QJsonDocument::Indented));
+	}
+	else if (langType == "text/html") {
+
+	}
 }
 
 void CodeEditorWidget::onBlockRead(const QStringList& lines) {

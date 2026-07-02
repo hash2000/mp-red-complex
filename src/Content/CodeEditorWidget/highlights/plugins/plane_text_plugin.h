@@ -1,9 +1,9 @@
 #pragma once
-#include "Content/CodeEditorWidget/highlights/plugins/highlighter_plugin.h"
+#include "Content/CodeEditorWidget/highlights/highlighter_plugin.h"
 
-class PlaneTextPlugin : public HighlightingPlugin {
+class PlaneTextHighlighterPlugin : public HighlightingPlugin {
 public:
-	~PlaneTextPlugin() override;
+	~PlaneTextHighlighterPlugin() override;
 
 	LanguageInfo languageInfo() const override;
 	void install() override;

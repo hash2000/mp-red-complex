@@ -1,7 +1,8 @@
 #include "Content/CodeEditorWidget/highlights/plugins/glsl_plugin.h"
+#include "Content/CodeEditorWidget/language_info.h"
 
-GLSLPlugin::~GLSLPlugin() = default;
-GLSLPlugin::LanguageInfo GLSLPlugin::languageInfo() const {
+GLSLHighlighterPlugin::~GLSLHighlighterPlugin() = default;
+LanguageInfo GLSLHighlighterPlugin::languageInfo() const {
 	return {
 		"GLSL Shader",
 		{ ".vert", ".frag", ".geom", ".tesc", ".tese", ".comp", ".glsl" },
@@ -10,7 +11,7 @@ GLSLPlugin::LanguageInfo GLSLPlugin::languageInfo() const {
 	};
 }
 
-void GLSLPlugin::install() {
+void GLSLHighlighterPlugin::install() {
 	// ==========================================
 	// Ключевые слова GLSL (управляющие конструкции)
 	// ==========================================
@@ -177,7 +178,7 @@ void GLSLPlugin::install() {
 		operatorFormat, 30 });
 }
 
-QStringList GLSLPlugin::extractVariables(const QString& code) const {
+QStringList GLSLHighlighterPlugin::extractVariables(const QString& code) const {
 	// GLSL-специфичный парсинг переменных
 	return { };
 }

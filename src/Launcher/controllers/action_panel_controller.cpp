@@ -76,6 +76,6 @@ void ActionPanelController::showPanel() {
 
 void ActionPanelController::executeCommand(const QString& command) {
 	if (d->controller) {
-		d->controller->executeCommand(command);
+		d->controller->execute(command);
 	}
 }

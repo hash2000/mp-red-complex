@@ -42,6 +42,7 @@
 
 // HighlightingPluginManager
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
+#include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
 
 #include <mutex>
 
@@ -84,6 +85,11 @@ public:
 		, highlightingPluginManager([this] {
 				auto manager = std::make_unique<HighlightingPluginManager>();
 				manager->loadPlugins(resources->Variables.get("Plugins.Path", "").toString());
+				return manager;
+		})
+		, formatterPluginManager([this] {
+				auto manager = std::make_unique<FormatterPluginManager>();
+				manager->loadFormatters(resources->Variables.get("Plugins.Path", "").toString());
 				return manager;
 		})
 
@@ -175,6 +181,7 @@ public:
 	LazyPtr<FetchApiService> fetchApiService;
 
 	LazyPtr<HighlightingPluginManager> highlightingPluginManager;
+	LazyPtr<FormatterPluginManager> formatterPluginManager;
 };
 
 Services::Services(Resources* resources)
@@ -239,6 +246,10 @@ std::unique_ptr<ShadersService> Services::shadersService() const {
 
 HighlightingPluginManager* Services::highlightingPluginManager() const {
 	return d->highlightingPluginManager.get();
+}
+
+FormatterPluginManager* Services::formatterPluginManager() const {
+	return d->formatterPluginManager.get();
 }
 
 CharactersService* Services::charactersService() const {

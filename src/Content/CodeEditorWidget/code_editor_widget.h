@@ -2,11 +2,15 @@
 #include <QTextEdit>
 
 class HighlightingPluginManager;
+class FormatterPluginManager;
 
 class CodeEditorWidget : public QTextEdit {
 	Q_OBJECT
 public:
-	explicit CodeEditorWidget(HighlightingPluginManager* pluginManager, QWidget* parent = nullptr);
+	explicit CodeEditorWidget(
+		HighlightingPluginManager* pluginManager,
+		FormatterPluginManager* formatterManager,
+		QWidget* parent = nullptr);
 	~CodeEditorWidget() override;
 
 	void setPath(const QString& path);
@@ -14,6 +18,7 @@ public:
 
 	void setText(const QString& text);
 	bool setLanguage(const QString& lang);
+	void formatDocument();
 
 private slots:
 	void onBlockRead(const QStringList& lines);

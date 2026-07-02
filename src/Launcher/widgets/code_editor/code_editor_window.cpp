@@ -27,10 +27,11 @@ public:
 	void changeTargetPath(const QString& path);
 
 	// Команды
-	bool handleCreate(const std::shared_ptr<Instruction> instruction, CommandContext* context);
-	bool handleStyle(const std::shared_ptr<Instruction> instruction, CommandContext* context);
-	bool handleLanguageHighlighter(const std::shared_ptr<Instruction> instruction, CommandContext* context);
-	bool handlePlantText(const std::shared_ptr<Instruction> instruction, CommandContext* context);
+	bool applyInstructionCreate(const std::shared_ptr<Instruction> instruction, CommandContext* context);
+	bool applyInstructionStyle(const std::shared_ptr<Instruction> instruction, CommandContext* context);
+	bool applyInstructionLanguageHighlighter(const std::shared_ptr<Instruction> instruction, CommandContext* context);
+	bool applyInstructionPlantText(const std::shared_ptr<Instruction> instruction, CommandContext* context);
+	bool applyInstructionFormatDocument(const std::shared_ptr<Instruction> instruction, CommandContext* context);
 	bool handleStyleWordWrap(const QString& value);
 	bool handleStyleFont(const QString& value);
 };
@@ -82,7 +83,10 @@ void CodeEditorWindow::Private::setupUI(Services* services) {
 	setupButtons();
 	buttonsLayout->addStretch();
 
-	editor = new CodeEditorWidget(services->highlightingPluginManager(), buttonsContainer);
+	editor = new CodeEditorWidget(
+		services->highlightingPluginManager(),
+		services->formatterPluginManager(),
+		buttonsContainer);
 	editor->setHorizontalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAsNeeded);
 	editor->setLineWrapMode(QTextEdit::LineWrapMode::NoWrap);
 	mainLayout->addWidget(editor, 1);
@@ -97,8 +101,8 @@ bool CodeEditorWindow::handleCommand(const std::shared_ptr<Instruction> instruct
 		return false;
 	}
 
-	if (action == "create") return d->handleCreate(instruction, context);
-	else if (action == "style") return d->handleStyle(instruction, context);
+	if (action == "create") return d->applyInstructionCreate(instruction, context);
+	else if (action == "style") return d->applyInstructionStyle(instruction, context);
 
 	return false;
 }
@@ -111,12 +115,8 @@ bool CodeEditorWindow::Private::handleStyleWordWrap(const QString& value) {
 	if (value == "true") {
 		this->editor->setLineWrapMode(QTextEdit::LineWrapMode::WidgetWidth);
 	}
-	else if (value == "false") {
-		this->editor->setLineWrapMode(QTextEdit::LineWrapMode::NoWrap);
-	}
 	else {
-		context->printWarning("word-wrap the parameter can only have the values true|false");
-		return false;
+		this->editor->setLineWrapMode(QTextEdit::LineWrapMode::NoWrap);
 	}
 
 	return true;
@@ -130,16 +130,23 @@ bool CodeEditorWindow::Private::handleStyleFont(const QString& value) {
 	return true;
 }
 
-bool CodeEditorWindow::Private::handleLanguageHighlighter(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
+bool CodeEditorWindow::Private::applyInstructionLanguageHighlighter(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
 	return this->editor->setLanguage(instruction->text("lang", "txt"));
 }
 
-bool CodeEditorWindow::Private::handlePlantText(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
+bool CodeEditorWindow::Private::applyInstructionPlantText(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
 	this->editor->setText(instruction->text("text"));
 	return true;
 }
 
-bool CodeEditorWindow::Private::handleStyle(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
+bool CodeEditorWindow::Private::applyInstructionFormatDocument(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
+	if (instruction->text("format-document") == "true") {
+		this->editor->formatDocument();
+	}
+	return true;
+}
+
+bool CodeEditorWindow::Private::applyInstructionStyle(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
 	if (!this->editor) {
 		return false;
 	}
@@ -150,16 +157,17 @@ bool CodeEditorWindow::Private::handleStyle(const std::shared_ptr<Instruction> i
 	return true;
 }
 
-bool CodeEditorWindow::Private::handleCreate(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
+bool CodeEditorWindow::Private::applyInstructionCreate(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
 	auto services = context->services();
 	this->context = context;
 	const auto path = instruction->text("path");
 	this->setupUI(services);
 	changeTargetPath(path);
 
-	handleStyle(instruction, context);
-	handleLanguageHighlighter(instruction, context);
-	handlePlantText(instruction, context);
+	applyInstructionStyle(instruction, context);
+	applyInstructionLanguageHighlighter(instruction, context);
+	applyInstructionPlantText(instruction, context);
+	applyInstructionFormatDocument(instruction, context);
 
 	return true;
 }
@@ -173,6 +181,10 @@ void CodeEditorWindow::Private::changeTargetPath(const QString& path) {
 
 	editor->setPath(documentPath);
 	q->setWindowTitle(documentPath);
+}
+
+void CodeEditorWindow::formatDocument() {
+	d->editor->formatDocument();
 }
 
 void CodeEditorWindow::onOpenDocumentClick() {

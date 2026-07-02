@@ -1,15 +1,16 @@
 #include "Content/CodeEditorWidget/highlights/plugins/css_plugin.h"
+#include "Content/CodeEditorWidget/language_info.h"
 
 #include <QRegularExpression>
 
-CssPlugin::~CssPlugin() = default;
-CssPlugin::LanguageInfo CssPlugin::languageInfo() const {
+CssHighlighterPlugin::~CssHighlighterPlugin() = default;
+LanguageInfo CssHighlighterPlugin::languageInfo() const {
 	return { "CSS", {
 		".css", ".scss", ".sass", ".less" },
 		"text/css" };
 }
 
-void CssPlugin::install() {
+void CssHighlighterPlugin::install() {
 	// ==========================================
 	// 1. Комментарии
 	// ==========================================

@@ -1,9 +1,9 @@
 #pragma once
-#include "Content/CodeEditorWidget/highlights/plugins/highlighter_plugin.h"
+#include "Content/CodeEditorWidget/highlights/highlighter_plugin.h"
 
-class BashPlugin : public HighlightingPlugin {
+class BashHighlighterPlugin : public HighlightingPlugin {
 public:
-	~BashPlugin() override;
+	~BashHighlighterPlugin() override;
 
 	LanguageInfo languageInfo() const override;
 	void install() override;

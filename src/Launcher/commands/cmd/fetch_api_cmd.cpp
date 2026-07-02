@@ -100,7 +100,7 @@ bool FetchApiCommand::Private::sendRequest(CommandContext* context,
 		[context, showEditor] (int statusCode, const QByteArray& data, const QHttpHeaders& headers) {
 			QString lang = "txt";
 			const auto contentType = QString::fromUtf8(headers.value("Content-Type"));
-			if (contentType == "application/json") {
+			if (contentType.contains("application/json")) {
 				lang = "json";
 				ConsoleJson json(data);
 				if (!json.isValid()) {
@@ -109,6 +109,10 @@ bool FetchApiCommand::Private::sendRequest(CommandContext* context,
 				}
 				context->print(json);
 			}
+			else if (contentType.contains("text/html")) {
+				lang = "html";
+			}
+
 			context->printSuccess(QString("fetch-api %1 %2 bytes")
 				.arg(statusCode)
 				.arg(data.length()));
@@ -116,6 +120,7 @@ bool FetchApiCommand::Private::sendRequest(CommandContext* context,
 				context->applicationController()->executeCommand("window-create", {
 					{ "action", "create" },
 					{ "target", "code-editor" },
+					{ "format-document", "true" },
 					{ "lang", lang },
 					{ "text", QString::fromUtf8(data) },
 					});

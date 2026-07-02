@@ -2,11 +2,7 @@
 #include <QSyntaxHighlighter>
 
 class HighlightingPluginManager;
-
-enum class HighlighterRuleType {
-	Embedded,
-	Global
-};
+class HighlightingPlugin;
 
 class Highlighter : public QSyntaxHighlighter
 {
@@ -16,6 +12,7 @@ public:
 	explicit Highlighter(HighlightingPluginManager* pluginManager, QTextDocument* parent = nullptr);
 	~Highlighter() override;
 
+	const HighlightingPlugin* plugin() const;
 	bool setLanguage(const QString& language);
 
 protected:

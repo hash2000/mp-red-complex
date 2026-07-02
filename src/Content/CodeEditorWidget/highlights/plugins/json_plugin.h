@@ -1,9 +1,9 @@
 #pragma once
-#include "Content/CodeEditorWidget/highlights/plugins/highlighter_plugin.h"
+#include "Content/CodeEditorWidget/highlights/highlighter_plugin.h"
 
-class JsonPlugin : public HighlightingPlugin {
+class JsonHighlighterPlugin : public HighlightingPlugin {
 public:
-	~JsonPlugin() override;
+	~JsonHighlighterPlugin() override;
 	LanguageInfo languageInfo() const override;
 	void install() override;
 };

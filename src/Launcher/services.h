@@ -13,6 +13,7 @@ class TexturesService;
 class ShadersService;
 class MaterialsService;
 class HighlightingPluginManager;
+class FormatterPluginManager;
 class DatabasesService;
 class CharactersService;
 class FetchApiService;
@@ -32,6 +33,7 @@ public:
 	TexturesService* texturesService() const;
 	MaterialsService* materialsService() const;
 	HighlightingPluginManager* highlightingPluginManager() const;
+	FormatterPluginManager* formatterPluginManager() const;
 	DatabasesService* databasesService() const;
 	CharactersService* charactersService() const;
 	FetchApiService* fetchApiService() const;
