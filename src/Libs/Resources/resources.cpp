@@ -13,6 +13,7 @@ void Resources::configure(const Config* config) {
 
 	Variables.set("Resources.Path", _resources_path.absolutePath());
 	Variables.set("Resources.Path.Raw", _resources_path_raw.absolutePath());
+	Variables.set("Tools.Path", _resources_path.filePath("tools"));
 	Variables.set("System.Encoding", config->resources_encoding);
 }
 

@@ -4,13 +4,13 @@
 
 struct LanguageInfo;
 class FormatterPlugin;
+class Resources;
 
 class FormatterPluginManager {
 public:
-	FormatterPluginManager();
+	FormatterPluginManager(const QString& toolsPath);
 	~FormatterPluginManager();
 
-	void loadFormatters(const QString& formattersDir);
 	void registerPlugin(std::unique_ptr<FormatterPlugin> plugin);
 	FormatterPlugin* formatter(const LanguageInfo& lang) const;
 

@@ -88,9 +88,8 @@ public:
 				return manager;
 		})
 		, formatterPluginManager([this] {
-				auto manager = std::make_unique<FormatterPluginManager>();
-				manager->loadFormatters(resources->Variables.get("Plugins.Path", "").toString());
-				return manager;
+				return std::make_unique<FormatterPluginManager>(
+					resources->Variables.get("Tools.Path", "").toString());
 		})
 
 		// Data Providers

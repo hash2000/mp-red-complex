@@ -5,7 +5,7 @@ class FormatterPlugin: public QObject {
 	Q_OBJECT
 public:
 	virtual ~FormatterPlugin() = default;
-	virtual QStringList mimeTypes() const = 0;
+	virtual QString mimeType() const = 0;
 	virtual void formatAsync(const QString& text) = 0;
 	virtual void stop() = 0;
 
