@@ -1,9 +1,9 @@
 #pragma once
-#include "Launcher/commands/command.h"
+#include "Launcher/commands/i_command.h"
 
-class HelpCommand : public CommandAbstraction {
+class HelpCommand : public ICommand {
 public:
-	HelpCommand(QObject* parent = nullptr) : CommandAbstraction(parent) { }
+	HelpCommand(QObject* parent = nullptr) : ICommand(parent) { }
 
 	bool execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) override;
 

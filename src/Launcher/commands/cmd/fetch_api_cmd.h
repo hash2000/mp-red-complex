@@ -1,7 +1,7 @@
 #pragma once
-#include "Launcher/commands/command.h"
+#include "Launcher/commands/i_command.h"
 
-class FetchApiCommand : public CommandAbstraction {
+class FetchApiCommand : public ICommand {
 public:
 	FetchApiCommand(QObject* parent = nullptr);
 	~FetchApiCommand() override;

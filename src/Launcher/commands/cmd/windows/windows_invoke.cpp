@@ -1,29 +1,18 @@
-#include "Launcher/commands/cmd/window_invoke_cmd.h"
-#include "Launcher/commands/command_processor.h"
+#include "Launcher/commands/cmd/windows/windows_invoke.h"
 #include "Launcher/commands/command_context.h"
-#include "Launcher/commands/instruction.h"
 #include "Launcher/controllers.h"
 #include "Launcher/controllers/windows_controller.h"
-#include "Launcher/app_controller.h"
+#include "Launcher/windows_builder.h"
+#include "Launcher/commands/instruction.h"
 
-#include <QStringList>
-
-QString WindowInvokeCommand::help() const {
-	return R"(
-		window-invoke target:window[or active window] cmd:command [parameters that depend on the command being called]
-		Example:
-		window-invoke cmd:style word-wrap:true font:Sans
-)";
-}
-
-
-bool WindowInvokeCommand::execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
+namespace WindowsNs {
+bool handleInvoke(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
 	auto controller = context->controllers()->windowsController();
 	auto services = context->services();
 
 	const auto cmd = instruction->text("cmd");
 	if (cmd.isEmpty()) {
-		context->printError(QString("Need parameter 'cmd'. Usage: %1").arg(help()));
+		context->printError(QString("Need parameter 'cmd'."));
 		return false;
 	}
 
@@ -51,4 +40,5 @@ bool WindowInvokeCommand::execute(const std::shared_ptr<Instruction> instruction
 	}
 
 	return true;
+}
 }

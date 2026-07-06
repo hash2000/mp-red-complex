@@ -1,8 +1,8 @@
 #pragma once
-#include "Launcher/commands/command.h"
+#include "Launcher/commands/i_command.h"
 #include <memory>
 
-class CharactersCommand : public CommandAbstraction {
+class CharactersCommand : public ICommand {
 	Q_OBJECT
 public:
 	CharactersCommand(QObject* parent = nullptr);

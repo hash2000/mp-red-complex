@@ -38,7 +38,7 @@ public:
 
 FetchApiCommand::FetchApiCommand(QObject* parent)
 	: d(std::make_unique<Private>(this))
-	, CommandAbstraction(parent) {
+	, ICommand(parent) {
 }
 
 FetchApiCommand::~FetchApiCommand() = default;

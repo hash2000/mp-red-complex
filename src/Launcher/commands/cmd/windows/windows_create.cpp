@@ -1,15 +1,15 @@
-#include "Launcher/commands/cmd/window_create_cmd.h"
+#include "Launcher/commands/cmd/windows/windows_create.h"
 #include "Launcher/commands/command_context.h"
-#include "Launcher/commands/instruction.h"
-#include "Launcher/controllers/windows_controller.h"
-#include "Launcher/app_controller.h"
 #include "Launcher/controllers.h"
+#include "Launcher/controllers/windows_controller.h"
 #include "Launcher/windows_builder.h"
+#include "Launcher/commands/instruction.h"
 
-#include <QMdiSubWindow>
 #include <QUuid>
 
-bool CreateWindowCommand::execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
+namespace WindowsNs {
+bool handleCreate(const std::shared_ptr<Instruction> instruction,
+	CommandContext* context) {
 	auto app = context->applicationController();
 	auto controller = context->controllers()->windowsController();
 	auto mdiArea = controller->mdiArea();
@@ -17,12 +17,7 @@ bool CreateWindowCommand::execute(const std::shared_ptr<Instruction> instruction
 	const auto target = instruction->text("target");
 	const auto alternateTitle = instruction->text("title");
 
-	if (target.isEmpty()) {
-		context->printError(QString("Need parameter 'target'. Usage: %1").arg(help()));
-		return false;
-	}
-
-	if (id.isEmpty()){
+	if (id.isEmpty()) {
 		id = QUuid::createUuid()
 			.toString(QUuid::StringFormat::WithoutBraces);
 	}
@@ -79,4 +74,5 @@ bool CreateWindowCommand::execute(const std::shared_ptr<Instruction> instruction
 		.arg(id));
 
 	return true;
+}
 }

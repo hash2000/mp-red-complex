@@ -1,20 +1,16 @@
 #include "Launcher/app_controller.h"
 #include "Launcher/mdi_child_window.h"
-#include "Launcher/commands/command.h"
+#include "Launcher/commands/i_command.h"
 #include "Launcher/commands/command_processor.h"
 #include "Launcher/commands/command_context.h"
 #include "Launcher/controllers.h"
 #include "Launcher/services.h"
-#include "Launcher/commands/cmd/windows_close_all_cmd.h"
-#include "Launcher/commands/cmd/windows_list_cmd.h"
-#include "Launcher/commands/cmd/windows_close_cmd.h"
-#include "Launcher/commands/cmd/window_create_cmd.h"
 #include "Launcher/commands/cmd/states_store_cmd.h"
 #include "Launcher/commands/cmd/items_cmd.h"
 #include "Launcher/commands/cmd/users_cmd.h"
-#include "Launcher/commands/cmd/window_invoke_cmd.h"
 #include "Launcher/commands/cmd/fetch_api_cmd.h"
 #include "Launcher/commands/cmd/characters_cmd.h"
+#include "Launcher/commands/cmd/windows.h"
 
 #include <QMdiArea>
 #include <QMdiSubWindow>
@@ -44,15 +40,10 @@ ApplicationController::ApplicationController(Resources* resources, QObject* pare
 	d->commandProcessor = std::make_unique<CommandProcessor>(resources);
 	d->commandContext = std::make_unique<CommandContext>(this, nullptr /*is global context*/);
 
-	// Регистрация встроенных системных команд
-	d->commandProcessor->registerCommand(std::make_unique<ListWindowsCommand>(this));
-	d->commandProcessor->registerCommand(std::make_unique<CloseWindowsCommand>(this));
-	d->commandProcessor->registerCommand(std::make_unique<CloseAllWindowsCommand>(this));
-	d->commandProcessor->registerCommand(std::make_unique<CreateWindowCommand>(this));
+	d->commandProcessor->registerCommand(std::make_unique<WindowsCommand>(this));
 	d->commandProcessor->registerCommand(std::make_unique<StatesStoreCommand>(this));
 	d->commandProcessor->registerCommand(std::make_unique<ItemsCommand>(this));
 	d->commandProcessor->registerCommand(std::make_unique<UsersCommand>(this));
-	d->commandProcessor->registerCommand(std::make_unique<WindowInvokeCommand>(this));
 	d->commandProcessor->registerCommand(std::make_unique<CharactersCommand>(this));
 	d->commandProcessor->registerCommand(std::make_unique<FetchApiCommand>(this));
 

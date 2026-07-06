@@ -29,7 +29,7 @@ public:
 
 CharactersCommand::CharactersCommand(QObject* parent)
 	: d(std::make_unique<Private>(this))
-	, CommandAbstraction(parent) {}
+	, ICommand(parent) {}
 
 CharactersCommand::~CharactersCommand() = default;
 

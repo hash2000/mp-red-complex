@@ -8,10 +8,10 @@
 class CommandContext;
 class Instruction;
 
-class CommandAbstraction : public QObject {
+class ICommand : public QObject {
 public:
-	explicit CommandAbstraction(QObject* parent = nullptr) : QObject(parent) {}
-	virtual ~CommandAbstraction() = default;
+	explicit ICommand(QObject* parent = nullptr) : QObject(parent) {}
+	virtual ~ICommand() = default;
 
 	// Выполнение команды
 	virtual bool execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) = 0;

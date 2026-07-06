@@ -1,11 +1,11 @@
-#include "Launcher/commands/cmd/windows_list_cmd.h"
+#include "Launcher/commands/cmd/windows/windows_list.h"
 #include "Launcher/commands/command_context.h"
-#include "Launcher/commands/instruction.h"
-#include "Launcher/app_controller.h"
 #include "Launcher/controllers.h"
 #include "Launcher/controllers/windows_controller.h"
+#include "Launcher/commands/command_console/console_table.h"
 
-bool ListWindowsCommand::execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
+namespace WindowsNs {
+bool handleList(CommandContext* context) {
 	auto controller = context->controllers()->windowsController();
 	auto entries = controller->windowEntries();
 
@@ -14,11 +14,13 @@ bool ListWindowsCommand::execute(const std::shared_ptr<Instruction> instruction,
 		return true;
 	}
 
-	// Получаем активное окно для маркировки
 	auto activeEntry = controller->activeWindowEntry();
 	QString activeId = activeEntry.second;
 
-	context->print(QString("Open windows (%1):").arg(entries.size()), "system");
+	context->print(QString("Open windows (%1):")
+		.arg(entries.size()), "system");
+
+	ConsoleTable table({ "..", "Id", "Title", "Type", "Status" });
 
 	for (const auto& entry : entries) {
 		MdiChildWindow* window = entry.first.data();
@@ -34,14 +36,17 @@ bool ListWindowsCommand::execute(const std::shared_ptr<Instruction> instruction,
 			title = "<untitled>";
 		}
 
-		QString line = QString("%1[%2] %3 (%4)")
-			.arg(marker)
-			.arg(windowId)
-			.arg(title)
-			.arg(window->windowType());
+		table.addRow({
+			marker,
+			windowId,
+			title,
+			window->windowType(),
+			(windowId == activeId) ? "success" : "info"
+			});
 
-		context->print(line, (windowId == activeId) ? "success" : "info");
+		context->print(table);
 	}
 
 	return true;
+}
 }

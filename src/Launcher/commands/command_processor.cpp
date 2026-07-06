@@ -1,6 +1,6 @@
 #include "Launcher/commands/command_processor.h"
 #include "Launcher/commands/command_context.h"
-#include "Launcher/commands/command.h"
+#include "Launcher/commands/i_command.h"
 #include "Launcher/commands/instruction.h"
 #include "Launcher/controllers/windows_controller.h"
 #include "Launcher/commands/cmd/help_cmd.h"
@@ -22,11 +22,11 @@ public:
 	CommandProcessor* q;
 
 	Resources* resources;
-	std::map<QString, std::unique_ptr<CommandAbstraction>> commands;
+	std::map<QString, std::unique_ptr<ICommand>> commands;
 
 	static std::shared_ptr<Instruction> parseCommandLine(const QString& line, CommandContext* context);
 
-	CommandAbstraction* findCommandUnsafe(const QString& name) const;
+	ICommand* findCommandUnsafe(const QString& name) const;
 	void printElapsedTimeForCommand(const QElapsedTimer& timer, bool succes, CommandContext* context);
 	bool executeInstruction(const std::shared_ptr<Instruction> instruction, CommandContext* context);
 };
@@ -312,7 +312,7 @@ bool CommandProcessor::Private::executeInstruction(const std::shared_ptr<Instruc
 	return success;
 }
 
-void CommandProcessor::registerCommand(std::unique_ptr<CommandAbstraction> command) {
+void CommandProcessor::registerCommand(std::unique_ptr<ICommand> command) {
 	QString name = command->name().toLower();
 	if (d->commands.contains(name)) {
 		qWarning() << "Command already registered:" << name;
@@ -357,12 +357,12 @@ QStringList CommandProcessor::availableCommands() const {
 	return result;
 }
 
-CommandAbstraction* CommandProcessor::findCommand(const QString& name) const {
+ICommand* CommandProcessor::findCommand(const QString& name) const {
 	QString key = name.toLower();
 	return d->findCommandUnsafe(key);
 }
 
-CommandAbstraction* CommandProcessor::Private::findCommandUnsafe(const QString& name) const {
+ICommand* CommandProcessor::Private::findCommandUnsafe(const QString& name) const {
 	auto it = commands.find(name);
 	return (it != commands.end()) ? it->second.get() : nullptr;
 }

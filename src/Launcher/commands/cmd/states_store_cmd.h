@@ -1,10 +1,10 @@
 #pragma once
-#include "Launcher/commands/command.h"
+#include "Launcher/commands/i_command.h"
 
-class StatesStoreCommand : public CommandAbstraction {
+class StatesStoreCommand : public ICommand {
 	Q_OBJECT
 public:
-	StatesStoreCommand(QObject* parent = nullptr) : CommandAbstraction(parent) {}
+	StatesStoreCommand(QObject* parent = nullptr) : ICommand(parent) {}
 
 	bool execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) override;
 

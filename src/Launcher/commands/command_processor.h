@@ -3,7 +3,7 @@
 
 class CommandContext;
 class CommandResult;
-class CommandAbstraction;
+class ICommand;
 class Resources;
 
 class CommandProcessor : public QObject {
@@ -14,7 +14,7 @@ public:
 
 public:
   // Регистрация команды (передача владения)
-  void registerCommand(std::unique_ptr<CommandAbstraction> command);
+  void registerCommand(std::unique_ptr<ICommand> command);
 
   // Выполнение команды по тексту
   bool execute(const QString& commandLine, CommandContext* context);
@@ -26,7 +26,7 @@ public:
   QStringList availableCommands() const;
 
   // Получение команды по имени/алиасу
-	CommandAbstraction* findCommand(const QString& name) const;
+	ICommand* findCommand(const QString& name) const;
 
   // Справка по команде
   QString helpForCommand(const QString& name) const;

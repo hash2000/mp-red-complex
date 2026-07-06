@@ -32,7 +32,7 @@ public:
 
 ItemsCommand::ItemsCommand(QObject* parent)
 	: d(std::make_unique<Private>(this))
-	, CommandAbstraction(parent) {
+	, ICommand(parent) {
 }
 
 ItemsCommand::~ItemsCommand() = default;

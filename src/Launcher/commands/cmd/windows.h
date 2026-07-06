@@ -2,16 +2,20 @@
 #include "Launcher/commands/i_command.h"
 #include <memory>
 
-class UsersCommand : public ICommand {
+class WindowsCommand : public ICommand {
 	Q_OBJECT
 public:
-	UsersCommand(QObject* parent = nullptr);
-	~UsersCommand() override;
+	WindowsCommand(QObject* parent = nullptr);
+	~WindowsCommand() override;
 
 	bool execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) override;
 
-	QString name() const override { return "users"; }
-	QString description() const override { return "Operations with users"; }
+	QString name() const override {
+		return "windows";
+	}
+	QString description() const override {
+		return "Operations with application windows";
+	}
 	QString help() const override;
 
 private:
