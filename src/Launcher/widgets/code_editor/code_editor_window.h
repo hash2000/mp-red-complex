@@ -1,5 +1,4 @@
 #pragma once
-
 #include "Launcher/mdi_child_window.h"
 #include <QObject>
 #include <memory>

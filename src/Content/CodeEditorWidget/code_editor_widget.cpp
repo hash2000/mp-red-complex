@@ -116,20 +116,6 @@ void CodeEditorWidget::formatDocument() {
 	connect(formatter, &FormatterPlugin::formattingFinished, this, &CodeEditorWidget::onFormattingFinished);
 
 	d->currentFormatter->formatAsync(toPlainText());
-
-	//if (langType == "application/json") {
-	//	QJsonParseError error;
-	//	QJsonDocument doc = QJsonDocument::fromJson(toPlainText().toUtf8(), &error);
-	//	if (error.error != QJsonParseError::NoError) {
-	//		qWarning() << "JSON parse error:" << error.errorString();
-	//		return;
-	//	}
-
-	//	setText(doc.toJson(QJsonDocument::Indented));
-	//}
-	//else if (langType == "text/html") {
-
-	//}
 }
 
 void CodeEditorWidget::onTextChanged() {

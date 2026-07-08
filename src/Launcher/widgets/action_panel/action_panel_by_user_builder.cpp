@@ -12,7 +12,7 @@ public:
 	UsersService* usersService;
 
 	void addProfileButton() {
-		QString cmd = QString("window-create target:user-profile id:%1")
+		QString cmd = QString("windows action:create target:user-profile id:%1")
 			.arg(usersService->currentUserId());
 		panel->addButton(ActionButtonConfig("Profile", "👤", "Профиль", cmd, 1));
 	}
@@ -26,19 +26,19 @@ public:
 
 	void addEntitiesButton() {
 		panel->addButton(ActionButtonConfig("Entities", "📚", "Библиотека предметов",
-			"window-create target:item-entities id:item-entities", 2));
+			"windows action:create target:item-entities id:item-entities", 2));
 	}
 
 	void addMapButton() {
 		panel->addButton(ActionButtonConfig("Map", "🗺️", "Карта мира",
-			"window-create target:map id:map", 2));
+			"windows action:create target:map id:map", 2));
 	}
 
 	void addDefaultEditors() {
-		panel->addButton(ActionButtonConfig("TextureEditor", "🎨", "Редактор текстур", "window-create target:texture-editor", 2));
-		panel->addButton(ActionButtonConfig("MapEditor", "🗺️", "Редактор карты", "window-create target:map-editor", 2));
-		panel->addButton(ActionButtonConfig("MaterialEditor", "🔥", "Редактор материалов", "window-create target:material-editor", 2));
-		panel->addButton(ActionButtonConfig("CodeEditor", "🖹", "Редактор кода", "window-create target:code-editor", 2));
+		panel->addButton(ActionButtonConfig("TextureEditor", "🎨", "Редактор текстур", "windows action:create target:texture-editor", 2));
+		panel->addButton(ActionButtonConfig("MapEditor", "🗺️", "Редактор карты", "windows action:create target:map-editor", 2));
+		panel->addButton(ActionButtonConfig("MaterialEditor", "🔥", "Редактор материалов", "windows action:create target:material-editor", 2));
+		panel->addButton(ActionButtonConfig("CodeEditor", "🖹", "Редактор кода", "windows action:create target:code-editor", 2));
 	}
 
 };

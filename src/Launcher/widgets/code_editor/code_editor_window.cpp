@@ -3,7 +3,11 @@
 #include "Launcher/app_controller.h"
 #include "Content/ConsoleModule/command_context.h"
 #include "Content/ConsoleModule/models/instruction.h"
-#include "Launcher/services.h"
+#include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
+#include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
+
+#include "Libs/Engine/services/services_registry.h"
+
 
 #include <QRegularExpression>
 #include <QVBoxLayout>
@@ -15,13 +19,12 @@ public:
 	Private(CodeEditorWindow* parent) : q(parent) {}
 	CodeEditorWindow* q;
 
-	CommandContext* context = nullptr;
 	CodeEditorWidget* editor = nullptr;
 	QWidget* buttonsContainer = nullptr;
 	QVBoxLayout* buttonsLayout = nullptr;
 	QString documentPath;
 
-	void setupUI(Services* services);
+	void setupUI(ServicesRegistry* services);
 	void setupButtons();
 	QToolButton* addButton(const QString& title, const QString& tooltip);
 	void changeTargetPath(const QString& path);
@@ -72,7 +75,7 @@ void CodeEditorWindow::Private::setupButtons() {
 	connect(addButton("💾", "Сохранить"), &QToolButton::clicked, q, &CodeEditorWindow::onSaveDocumentClick);
 }
 
-void CodeEditorWindow::Private::setupUI(Services* services) {
+void CodeEditorWindow::Private::setupUI(ServicesRegistry* services) {
 	buttonsContainer = new QWidget(q);
 	auto mainLayout = new QHBoxLayout(buttonsContainer);
 	mainLayout->setContentsMargins(2, 2, 2, 2);
@@ -83,10 +86,10 @@ void CodeEditorWindow::Private::setupUI(Services* services) {
 	setupButtons();
 	buttonsLayout->addStretch();
 
-	//editor = new CodeEditorWidget(
-	//	services->highlightingPluginManager(),
-	//	services->formatterPluginManager(),
-	//	buttonsContainer);
+	editor = new CodeEditorWidget(
+		services->get<HighlightingPluginManager>(),
+		services->get<FormatterPluginManager>(),
+		buttonsContainer);
 	editor->setHorizontalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAsNeeded);
 	editor->setLineWrapMode(QTextEdit::LineWrapMode::NoWrap);
 	mainLayout->addWidget(editor, 1);
@@ -158,16 +161,15 @@ bool CodeEditorWindow::Private::applyInstructionStyle(const std::shared_ptr<Inst
 }
 
 bool CodeEditorWindow::Private::applyInstructionCreate(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
-	//auto services = context->services();
-	//this->context = context;
-	//const auto path = instruction->text("path");
-	//this->setupUI(services);
-	//changeTargetPath(path);
+	auto services = context->services();
+	const auto path = instruction->text("path");
+	setupUI(services);
+	changeTargetPath(path);
 
-	//applyInstructionStyle(instruction, context);
-	//applyInstructionLanguageHighlighter(instruction, context);
-	//applyInstructionPlantText(instruction, context);
-	//applyInstructionFormatDocument(instruction, context);
+	applyInstructionStyle(instruction, context);
+	applyInstructionLanguageHighlighter(instruction, context);
+	applyInstructionPlantText(instruction, context);
+	applyInstructionFormatDocument(instruction, context);
 
 	return true;
 }

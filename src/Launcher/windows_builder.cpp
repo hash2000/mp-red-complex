@@ -23,13 +23,11 @@ public:
 	}
 
 	WindowsBuilder* q;
-	ApplicationController* appController;
 	std::map<QString, std::function<MdiChildWindow*(const QString&, QWidget*)>> factory;
 };
 
-WindowsBuilder::WindowsBuilder(ApplicationController* appController)
+WindowsBuilder::WindowsBuilder()
 : d(std::make_unique<Private>(this)) {
-	d->appController = appController;
 
 	d->factory.emplace("equipment", [](const QString& id, QWidget* parent) {
 		return new EquipmentWindow(id, parent);
