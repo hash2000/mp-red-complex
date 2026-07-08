@@ -1,5 +1,5 @@
-#include "Launcher/widgets/equipment/equipment_widget.h"
-#include "Launcher/widgets/equipment/equipment_slot_widget.h"
+#include "Launcher/windows/equipment/equipment_widget.h"
+#include "Launcher/windows/equipment/equipment_slot_widget.h"
 #include "Content/InventoriesModule/services/equipment_service.h"
 #include "Content/InventoriesModule/services/inventory_service.h"
 #include "Content/InventoriesModule/services/inventories_service.h"

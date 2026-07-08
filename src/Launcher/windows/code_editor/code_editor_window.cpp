@@ -1,4 +1,4 @@
-#include "Launcher/widgets/code_editor/code_editor_window.h"
+#include "Launcher/windows/code_editor/code_editor_window.h"
 #include "Content/CodeEditorWidget/code_editor_widget.h"
 #include "Launcher/app_controller.h"
 #include "Content/ConsoleModule/command_context.h"

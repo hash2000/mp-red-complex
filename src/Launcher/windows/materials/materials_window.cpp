@@ -1,4 +1,4 @@
-#include "Launcher/widgets/materials/materials_window.h"
+#include "Launcher/windows/materials/materials_window.h"
 #include "Content/MaterialsModule/widgets/material_widget.h"
 #include "Content/MaterialsModule/widgets/material_objects.h"
 #include "Content/MaterialsModule/widgets/material_variables.h"

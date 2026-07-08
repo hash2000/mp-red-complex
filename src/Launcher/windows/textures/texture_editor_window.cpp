@@ -1,4 +1,4 @@
-#include "Launcher/widgets/textures/texture_editor_window.h"
+#include "Launcher/windows/textures/texture_editor_window.h"
 #include "Content/TexturesModule/widgets/texture_editor_widget.h"
 #include "Content/TexturesModule/data_providers/i_images_data_provider.h"
 #include "Content/TexturesModule/services/images_service.h"

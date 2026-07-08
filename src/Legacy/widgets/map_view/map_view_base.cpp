@@ -1,4 +1,4 @@
-#include "Launcher/widgets/map_view/map_view_base.h"
+#include "Launcher/windows/map_view/map_view_base.h"
 
 #include "Content/ShadersModule/services/shaders_service.h"
 

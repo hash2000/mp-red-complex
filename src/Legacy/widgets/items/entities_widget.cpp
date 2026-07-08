@@ -1,5 +1,5 @@
-#include "Launcher/widgets/items/entities_widget.h"
-#include "Launcher/widgets/items/entty_entry_widget.h"
+#include "Launcher/windows/items/entities_widget.h"
+#include "Launcher/windows/items/entty_entry_widget.h"
 #include "Content/InventoriesModule/services/inventories_service.h"
 #include "Content/InventoriesModule/services/items_placement_service.h"
 #include <QScrollArea>

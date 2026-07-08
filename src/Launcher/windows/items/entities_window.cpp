@@ -1,6 +1,6 @@
-#include "Launcher/widgets/items/entities_window.h"
+#include "Launcher/windows/items/entities_window.h"
 #include "Content/InventoriesModule/widgets/entities_widget.h"
-//#include "Launcher/widgets/items/item_create_widget.h"
+//#include "Launcher/windows/items/item_create_widget.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/controllers/windows_controller.h"
 #include "Launcher/mdi_child_window.h"

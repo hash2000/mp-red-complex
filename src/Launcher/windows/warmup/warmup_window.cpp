@@ -1,5 +1,5 @@
-#include "Launcher/widgets/warmup/warmup_window.h"
-#include "Launcher/widgets/warmup/warmup_widget.h"
+#include "Launcher/windows/warmup/warmup_window.h"
+#include "Launcher/windows/warmup/warmup_widget.h"
 #include "Content/ConsoleModule/command_context.h"
 #include <QTimer>
 

@@ -1,5 +1,5 @@
-#include "Launcher/widgets/map_view/map_editor_window.h"
-#include "Launcher/widgets/map_view/map_editor_widget.h"
+#include "Launcher/windows/map_view/map_editor_window.h"
+#include "Launcher/windows/map_view/map_editor_widget.h"
 #include "Launcher/services/time_service/time_service.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/services.h"

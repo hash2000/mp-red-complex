@@ -1,4 +1,4 @@
-#include "Launcher/widgets/action_panel/action_panel_login_builder.h"
+#include "Launcher/windows/action_panel/action_panel_login_builder.h"
 #include "Launcher/controllers/action_panel_controller.h"
 
 ActionPanelLoginBuilder::ActionPanelLoginBuilder(ActionPanelController* panel)

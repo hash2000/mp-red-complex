@@ -1,4 +1,4 @@
-#include "Launcher/widgets/user/user_window.h"
+#include "Launcher/windows/user/user_window.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/services.h"
 #include "Launcher/app_controller.h"

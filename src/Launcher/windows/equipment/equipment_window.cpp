@@ -1,5 +1,5 @@
-#include "Launcher/widgets/equipment/equipment_window.h"
-//#include "Launcher/widgets/equipment/equipment_widget.h"
+#include "Launcher/windows/equipment/equipment_window.h"
+//#include "Launcher/windows/equipment/equipment_widget.h"
 #include "Content/ConsoleModule/command_context.h"
 #include "Content/ConsoleModule/models/instruction.h"
 #include "Launcher/app_controller.h"

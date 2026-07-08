@@ -1,6 +1,6 @@
-#include "Launcher/widgets/map_view/map_editor_widget.h"
-#include "Launcher/widgets/map_view/create_map_dialog.h"
-#include "Launcher/widgets/map_view/apply_map_filter_dialog.h"
+#include "Launcher/windows/map_view/map_editor_widget.h"
+#include "Launcher/windows/map_view/create_map_dialog.h"
+#include "Launcher/windows/map_view/apply_map_filter_dialog.h"
 
 #include "ApplicationLayer/maps/map_service.h"
 #include "Content/TexturesModule/services/tiles_selector_service.h"

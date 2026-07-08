@@ -1,4 +1,4 @@
-#include "Launcher/widgets/map_view/create_map_dialog.h"
+#include "Launcher/windows/map_view/create_map_dialog.h"
 #include <QVBoxLayout>
 #include <QFormLayout>
 #include <QLineEdit>

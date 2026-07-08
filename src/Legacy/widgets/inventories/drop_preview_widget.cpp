@@ -1,4 +1,4 @@
-#include "Launcher/widgets/inventory/drop_preview_widget.h"
+#include "Launcher/windows/inventory/drop_preview_widget.h"
 #include <QPainter>
 
 class DropPreviewWidget::Private {

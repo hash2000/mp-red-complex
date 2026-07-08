@@ -1,4 +1,4 @@
-#include "Launcher/widgets/warmup/warmup_widget.h"
+#include "Launcher/windows/warmup/warmup_widget.h"
 #include <QtOpenGLWidgets/QOpenGLWidget>
 #include <QVBoxLayout>
 #include <memory>

@@ -1,5 +1,5 @@
 #pragma once
-#include "Launcher/widgets/map_view/map_view_base.h"
+#include "Launcher/windows/map_view/map_view_base.h"
 #include <memory>
 
 class QToolBar;
