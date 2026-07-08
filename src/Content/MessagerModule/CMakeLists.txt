@@ -23,8 +23,6 @@ target_link_libraries(RedComplexMessagerModule
 		Qt6::Core
 		Qt6::Gui
 		Qt6::Widgets
-		Qt6::OpenGL
-		Qt6::OpenGLWidgets
 
 		RedComplexBase
 		RedComplexDataStream

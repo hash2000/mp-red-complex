@@ -1,5 +1,4 @@
 #include "Launcher/mdi_child_window.h"
-#include "Launcher/commands/command_context.h"
 #include <QMdiArea>
 
 class MdiChildWindow::Private {

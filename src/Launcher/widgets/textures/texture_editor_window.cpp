@@ -4,9 +4,9 @@
 #include "Content/TexturesModule/services/images_service.h"
 #include "Content/TexturesModule/services/tiles_selector_service.h"
 #include "Launcher/app_controller.h"
-#include "Launcher/commands/instruction.h"
+#include "Content/ConsoleModule/command_context.h"
+#include "Content/ConsoleModule/models/instruction.h"
 #include "Launcher/services.h"
-#include "Launcher/commands/command_context.h"
 
 class TextureEditorWindow::Private {
 public:
@@ -24,12 +24,12 @@ TextureEditorWindow::~TextureEditorWindow() = default;
 bool TextureEditorWindow::handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) {
 	const auto action = cmd->parameters.value("action");
 	if (!action.isNull() && action == "create") {
-		auto services = context->services();
-		auto editorWidget = new TextureEditorWidget(
-			services->imagesService(),
-			services->tilesSelectorService(), this);
+		//auto services = context->services();
+		//auto editorWidget = new TextureEditorWidget(
+		//	services->imagesService(),
+		//	services->tilesSelectorService(), this);
 
-		setWidget(editorWidget);
+		//setWidget(editorWidget);
 
 		return true;
 	}

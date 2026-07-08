@@ -1,6 +1,5 @@
 #include "Launcher/controllers.h"
 #include "Launcher/app_controller.h"
-#include "Launcher/services.h"
 #include "Launcher/controllers/windows_controller.h"
 #include "Launcher/controllers/action_panel_controller.h"
 
@@ -15,7 +14,7 @@ public:
 };
 
 
-Controllers::Controllers(ApplicationController* appController, Services* services)
+Controllers::Controllers(ApplicationController* appController)
 : d(std::make_unique<Private>(this)) {
 	d->windowsController = std::make_unique<WindowsController>();
 	d->actionPanelController = std::make_unique<ActionPanelController>(appController);

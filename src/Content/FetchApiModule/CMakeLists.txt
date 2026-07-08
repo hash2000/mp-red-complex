@@ -19,8 +19,6 @@ target_link_libraries(RedComplexFetchApiModule
 		Qt6::Core
 		Qt6::Gui
 		Qt6::Widgets
-		Qt6::OpenGL
-		Qt6::OpenGLWidgets
 		Qt6::Network
 
 		RedComplexBase

@@ -1,9 +1,9 @@
 #include "Launcher/widgets/code_editor/code_editor_window.h"
 #include "Content/CodeEditorWidget/code_editor_widget.h"
 #include "Launcher/app_controller.h"
+#include "Content/ConsoleModule/command_context.h"
+#include "Content/ConsoleModule/models/instruction.h"
 #include "Launcher/services.h"
-#include "Launcher/commands/command_context.h"
-#include "Launcher/commands/instruction.h"
 
 #include <QRegularExpression>
 #include <QVBoxLayout>
@@ -83,10 +83,10 @@ void CodeEditorWindow::Private::setupUI(Services* services) {
 	setupButtons();
 	buttonsLayout->addStretch();
 
-	editor = new CodeEditorWidget(
-		services->highlightingPluginManager(),
-		services->formatterPluginManager(),
-		buttonsContainer);
+	//editor = new CodeEditorWidget(
+	//	services->highlightingPluginManager(),
+	//	services->formatterPluginManager(),
+	//	buttonsContainer);
 	editor->setHorizontalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAsNeeded);
 	editor->setLineWrapMode(QTextEdit::LineWrapMode::NoWrap);
 	mainLayout->addWidget(editor, 1);
@@ -158,16 +158,16 @@ bool CodeEditorWindow::Private::applyInstructionStyle(const std::shared_ptr<Inst
 }
 
 bool CodeEditorWindow::Private::applyInstructionCreate(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
-	auto services = context->services();
-	this->context = context;
-	const auto path = instruction->text("path");
-	this->setupUI(services);
-	changeTargetPath(path);
+	//auto services = context->services();
+	//this->context = context;
+	//const auto path = instruction->text("path");
+	//this->setupUI(services);
+	//changeTargetPath(path);
 
-	applyInstructionStyle(instruction, context);
-	applyInstructionLanguageHighlighter(instruction, context);
-	applyInstructionPlantText(instruction, context);
-	applyInstructionFormatDocument(instruction, context);
+	//applyInstructionStyle(instruction, context);
+	//applyInstructionLanguageHighlighter(instruction, context);
+	//applyInstructionPlantText(instruction, context);
+	//applyInstructionFormatDocument(instruction, context);
 
 	return true;
 }

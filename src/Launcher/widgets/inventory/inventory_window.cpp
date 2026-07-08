@@ -1,10 +1,10 @@
 #include "Launcher/widgets/inventory/inventory_window.h"
 //#include "Launcher/widgets/inventory/inventory_grid_view.h"
 //#include "Launcher/widgets/inventory/inventory_grid.h"
-#include "Launcher/commands/command_context.h"
-#include "Launcher/commands/instruction.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/services.h"
+#include "Content/ConsoleModule/command_context.h"
+#include "Content/ConsoleModule/models/instruction.h"
 //#include "Content/InventoriesModule/services/inventories_service.h"
 #include "Content/InventoriesModule/models/item_mime_data.h"
 #include <QVBoxLayout>

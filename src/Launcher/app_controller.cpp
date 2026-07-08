@@ -1,81 +1,45 @@
 #include "Launcher/app_controller.h"
-#include "Launcher/mdi_child_window.h"
-#include "Launcher/commands/i_command.h"
-#include "Launcher/commands/command_processor.h"
-#include "Launcher/commands/command_context.h"
+#include "Content/ConsoleModule/i_command.h"
+#include "Content/ConsoleModule/processors/command_processor.h"
+#include "Content/ConsoleModule/command_context.h"
+#include "Launcher/commands/windows.h"
 #include "Launcher/controllers.h"
 #include "Launcher/services.h"
-#include "Launcher/commands/cmd/states_store_cmd.h"
-#include "Launcher/commands/cmd/items_cmd.h"
-#include "Launcher/commands/cmd/users_cmd.h"
-#include "Launcher/commands/cmd/fetch_api_cmd.h"
-#include "Launcher/commands/cmd/characters_cmd.h"
-#include "Launcher/commands/cmd/windows.h"
-
-#include <QMdiArea>
-#include <QMdiSubWindow>
-#include <QTimer>
-#include <QDebug>
-#include <QElapsedTimer>
-#include <QUuid>
-#include <QMetaType>
+#include "Content/CharactersModule/commands/characters_cmd.h"
 
 class ApplicationController::Private {
 public:
-	Private(ApplicationController* parent) : q(parent) { }
+	Private(ApplicationController* parent) : q(parent) {}
 	ApplicationController* q;
 
-	std::unique_ptr<CommandProcessor> commandProcessor;
-	std::unique_ptr<CommandContext> commandContext;
-	Resources* resources;
+	std::unique_ptr<Controllers> controllers;
+	std::unique_ptr<Services> services;
 };
 
 ApplicationController::ApplicationController(Resources* resources, QObject* parent)
-: QObject(parent)
-,	d(std::make_unique<Private>(this)) {
-
-	d->resources = resources;
-
-	// Создание процессора команд
-	d->commandProcessor = std::make_unique<CommandProcessor>(resources);
-	d->commandContext = std::make_unique<CommandContext>(this, nullptr /*is global context*/);
-
-	d->commandProcessor->registerCommand(std::make_unique<WindowsCommand>(this));
-	d->commandProcessor->registerCommand(std::make_unique<StatesStoreCommand>(this));
-	d->commandProcessor->registerCommand(std::make_unique<ItemsCommand>(this));
-	d->commandProcessor->registerCommand(std::make_unique<UsersCommand>(this));
-	d->commandProcessor->registerCommand(std::make_unique<CharactersCommand>(this));
-	d->commandProcessor->registerCommand(std::make_unique<FetchApiCommand>(this));
-
-	d->commandContext->services()->run();
-
-	qInfo() << "ApplicationController initialized with"
-		<< d->commandProcessor->availableCommands().size()
-		<< "available commands";
+	: d(std::make_unique<Private>(this))
+	, CommandController(resources, parent) {
+	d->controllers = std::make_unique<Controllers>(this);
+	d->services = std::make_unique<Services>(resources);
 }
 
-ApplicationController::~ApplicationController() {
-	qInfo() << "ApplicationController destroyed";
+ApplicationController::~ApplicationController() = default;
+
+void ApplicationController::initContext() {
+	auto commands = commandProcessor();
+
+	//commands->registerCommand(std::make_unique<WindowsCommand>(this));
+	//commands->registerCommand(std::make_unique<StatesStoreCommand>(this));
+	//commands->registerCommand(std::make_unique<ItemsCommand>(this));
+	//commands->registerCommand(std::make_unique<UsersCommand>(this));
+	commands->registerCommand(std::make_unique<CharactersCommand>(this));
+	//commands->registerCommand(std::make_unique<FetchApiCommand>(this));
 }
 
-
-CommandProcessor* ApplicationController::commandProcessor() const {
-	return d->commandProcessor.get();
+std::unique_ptr<ServicesRegistry> ApplicationController::createServices() {
+	return d->services->create();
 }
 
-CommandContext* ApplicationController::commandContext() const {
-	return d->commandContext.get();
-}
-
-Resources* ApplicationController::resources() const {
-	return d->resources;
-}
-
-bool ApplicationController::execute(const QString& commandText, QObject* requester) {
-	return d->commandProcessor->execute(commandText, d->commandContext.get());
-}
-
-bool ApplicationController::executeCommand(const QString& commandName, const QMap<QString, QString>& args,
-	QObject* requester) {
-	return d->commandProcessor->executeCommand(commandName, args, d->commandContext.get());
+Controllers* ApplicationController::controllers() const {
+	return d->controllers.get();
 }

@@ -1,35 +1,21 @@
 #pragma once
-#include "Launcher/i_app_commands.h"
-#include <QObject>
-#include <QPointer>
-#include <QMap>
-#include <QPair>
-#include <QList>
+#include "Content/ConsoleModule/command_controller.h"
 #include <memory>
 
-class CommandProcessor;
-class CommandContext;
-class EventBus;
 class Resources;
+class Controllers;
 
-class ApplicationController : public QObject, public IApplicationCommands {
+class ApplicationController : public CommandController {
 Q_OBJECT
 public:
 	ApplicationController(Resources* resources, QObject* parent = nullptr);
 	~ApplicationController();
 
-	CommandProcessor* commandProcessor() const;
-	CommandContext* commandContext() const;
-	Resources* resources() const;
+	std::unique_ptr<ServicesRegistry> createServices() override;
+	Controllers* controllers() const;
 
-	bool execute(const QString& commandText, QObject* requester = nullptr) override;
-
-	bool executeCommand(const QString& commandName, const QMap<QString, QString>& args,
-		QObject* requester = nullptr);
-
-signals:
-	void commandExecuted(const QString& commandName);
-	void commandFailed(const QString& commandName, const QString& errorMessage);
+private:
+	void initContext() override;
 
 private:
 	class Private;

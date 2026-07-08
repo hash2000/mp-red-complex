@@ -1,6 +1,6 @@
 #include "Launcher/widgets/warmup/warmup_window.h"
 #include "Launcher/widgets/warmup/warmup_widget.h"
-#include "Launcher/commands/command_context.h"
+#include "Content/ConsoleModule/command_context.h"
 #include <QTimer>
 
 class WarmupWindow::Private {

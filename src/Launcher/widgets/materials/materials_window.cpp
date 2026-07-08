@@ -2,10 +2,10 @@
 #include "Content/MaterialsModule/widgets/material_widget.h"
 #include "Content/MaterialsModule/widgets/material_objects.h"
 #include "Content/MaterialsModule/widgets/material_variables.h"
+#include "Content/ConsoleModule/command_context.h"
+#include "Content/ConsoleModule/models/instruction.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/services.h"
-#include "Launcher/commands/command_context.h"
-#include "Launcher/commands/instruction.h"
 #include "Launcher/controllers.h"
 
 #include <QHeaderView>
@@ -17,7 +17,7 @@ public:
 	MaterialsWindow* q;
 
 
-	IApplicationCommands* applicationCommands = nullptr;
+	ApplicationController* applicationController = nullptr;
 	MaterialsService* materialsService = nullptr;
 	MaterialWidget* materialWidget = nullptr;
 	QTabWidget* tabWidget = nullptr;
@@ -69,10 +69,10 @@ bool MaterialsWindow::handleCommand(const std::shared_ptr<Instruction> cmd, Comm
 	// Обработка команд (пока пусто, может быть расширено)
 	const auto action = cmd->parameters.value("action");
 	if (!action.isNull() && action == "create") {
-		auto services = context->services();
-		d->materialsService = services->materialsService();
-		d->applicationCommands = context->applicationController();
-		setupUi();
+		//auto services = context->services();
+		//d->materialsService = services->materialsService();
+		//d->applicationController = context->applicationController();
+		//setupUi();
 		return true;
 	}
 
@@ -80,14 +80,11 @@ bool MaterialsWindow::handleCommand(const std::shared_ptr<Instruction> cmd, Comm
 }
 
 void MaterialsWindow::onEditMaterialFile(MaterialObjectTypes type, const QString& path) {
-	if (!d->applicationCommands) {
+	if (!d->applicationController) {
 		return;
 	}
 
-	const auto cmdPath = QString("path:%1").arg(path);
-	const auto cmdId = QString("id:%1").arg(path);
-
-	d->applicationCommands->executeCommand("window-create",
+	d->applicationController->executeCommand("window-create",
 		{
 			{ "target", "code-editor" },
 			{ "path", path },

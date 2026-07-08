@@ -1,7 +1,7 @@
 #include "Launcher/widgets/user/login_window.h"
 #include "Launcher/app_controller.h"
-#include "Launcher/commands/command_context.h"
-#include "Launcher/commands/instruction.h"
+#include "Content/ConsoleModule/command_context.h"
+#include "Content/ConsoleModule/models/instruction.h"
 #include "Launcher/controllers.h"
 #include "Launcher/services.h"
 #include "Launcher/widgets/action_panel/action_panel_by_user_builder.h"
@@ -31,14 +31,14 @@ LoginWindow::~LoginWindow() = default;
 bool LoginWindow::handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) {
 	const auto action = cmd->parameters.value("action");
 	if (!action.isNull() && action == "create") {
-		auto services = context->services();
-		d->usersService = services->usersService();
-		d->loginWidget = new LoginWidget(d->usersService, this);
+		//auto services = context->services();
+		//d->usersService = services->usersService();
+		//d->loginWidget = new LoginWidget(d->usersService, this);
 
-		connect(d->loginWidget, &LoginWidget::loginSuccess, this, &LoginWindow::onLoginSuccess);
-		connect(d->loginWidget, &LoginWidget::registerSuccess, this, &LoginWindow::onRegisterSuccess);
+		//connect(d->loginWidget, &LoginWidget::loginSuccess, this, &LoginWindow::onLoginSuccess);
+		//connect(d->loginWidget, &LoginWidget::registerSuccess, this, &LoginWindow::onRegisterSuccess);
 
-		setWidget(d->loginWidget);
+		//setWidget(d->loginWidget);
 
 		return true;
 	}

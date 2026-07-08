@@ -2,12 +2,12 @@
 #include "Content/InventoriesModule/widgets/entities_widget.h"
 //#include "Launcher/widgets/items/item_create_widget.h"
 #include "Launcher/app_controller.h"
-#include "Launcher/commands/command_context.h"
-#include "Launcher/commands/instruction.h"
 #include "Launcher/controllers/windows_controller.h"
 #include "Launcher/mdi_child_window.h"
 #include "Launcher/services.h"
 #include "Launcher/controllers.h"
+#include "Content/ConsoleModule/models/instruction.h"
+#include "Content/ConsoleModule/command_context.h"
 #include "Content/InventoriesModule/services/items_service.h"
 #include "Content/InventoriesModule/models/item_mime_data.h"
 
@@ -34,25 +34,25 @@ EntitiesWindow::~EntitiesWindow() = default;
 bool EntitiesWindow::handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) {
 	const auto action = cmd->parameters.value("action");
 	if (!action.isNull() && action == "create") {
-		auto services = context->services();
-		d->controller = context->applicationController();
-		d->windowsController = context->controllers()->windowsController();
-		d->itemsService = services->itemsService();
-		d->widget = new EntitiesWidget(d->itemsService, this);
+		//auto services = context->services();
+		//d->controller = context->applicationController();
+		//d->windowsController = context->controllers()->windowsController();
+		//d->itemsService = services->itemsService();
+		//d->widget = new EntitiesWidget(d->itemsService, this);
 
-		for (auto item : d->itemsService->entities()) {
-			if (item->subType == ItemSubType::Root) {
-				continue;
-			}
+		//for (auto item : d->itemsService->entities()) {
+		//	if (item->subType == ItemSubType::Root) {
+		//		continue;
+		//	}
 
-			d->widget->addItemEntity(*item);
-		}
+		//	d->widget->addItemEntity(*item);
+		//}
 
-		setWidget(d->widget);
+		//setWidget(d->widget);
 
-		connect(d->widget, &EntitiesWidget::itemCreateRequested, this, &EntitiesWindow::onItemCreateRequested);
-		connect(d->widget, &EntitiesWidget::inventorySelectionRequested, this, &EntitiesWindow::onInventorySelectionRequested);
-		onInventorySelectionRequested();
+		//connect(d->widget, &EntitiesWidget::itemCreateRequested, this, &EntitiesWindow::onItemCreateRequested);
+		//connect(d->widget, &EntitiesWidget::inventorySelectionRequested, this, &EntitiesWindow::onInventorySelectionRequested);
+		//onInventorySelectionRequested();
 
 		return true;
 	}

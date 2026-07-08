@@ -1,7 +1,7 @@
 #include "Launcher/widgets/equipment/equipment_window.h"
 //#include "Launcher/widgets/equipment/equipment_widget.h"
-#include "Launcher/commands/command_context.h"
-#include "Launcher/commands/instruction.h"
+#include "Content/ConsoleModule/command_context.h"
+#include "Content/ConsoleModule/models/instruction.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/services.h"
 

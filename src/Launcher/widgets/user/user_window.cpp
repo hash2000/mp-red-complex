@@ -2,8 +2,8 @@
 #include "Launcher/app_controller.h"
 #include "Launcher/services.h"
 #include "Launcher/app_controller.h"
-#include "Launcher/commands/command_context.h"
-#include "Launcher/commands/instruction.h"
+#include "Content/ConsoleModule/command_context.h"
+#include "Content/ConsoleModule/models/instruction.h"
 #include "Content/UsersModule/widgets/user_widget.h"
 #include "Content/UsersModule/services/users_service.h"
 //#include "Content/UsersModule/models/character.h"
@@ -47,18 +47,18 @@ UserWindow::~UserWindow() = default;
 bool UserWindow::handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) {
 	const auto action = cmd->parameters.value("action");
 	if (!action.isNull() && action == "create") {
-		auto services = context->services();
-		d->applicationController = context->applicationController();
-		d->usersService = services->usersService();
-		d->imagesService = services->imagesService();
-		d->userWidget = new UserWidget(d->usersService, d->imagesService, this);
+		//auto services = context->services();
+		//d->applicationController = context->applicationController();
+		//d->usersService = services->usersService();
+		//d->imagesService = services->imagesService();
+		//d->userWidget = new UserWidget(d->usersService, d->imagesService, this);
 
-		// Подключаем сигналы
-		connect(d->userWidget, &UserWidget::equipmentRequested, this, &UserWindow::onEquipmentRequested);
-		connect(d->userWidget, &UserWidget::specificationsRequested, this, &UserWindow::onSpecificationsRequested);
-		connect(d->usersService, &UsersService::loggedOut, this, &UserWindow::onUserLoggedOut);
+		//// Подключаем сигналы
+		//connect(d->userWidget, &UserWidget::equipmentRequested, this, &UserWindow::onEquipmentRequested);
+		//connect(d->userWidget, &UserWidget::specificationsRequested, this, &UserWindow::onSpecificationsRequested);
+		//connect(d->usersService, &UsersService::loggedOut, this, &UserWindow::onUserLoggedOut);
 
-		setWidget(d->userWidget);
+		//setWidget(d->userWidget);
 
 		return true;
 	}

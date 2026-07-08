@@ -1,11 +1,11 @@
 #include "Launcher/main_frame.h"
-#include "Launcher/commands/command_console.h"
-#include "Launcher/commands/command_processor.h"
+#include "Content/ConsoleModule/widgets/command_console.h"
+#include "Content/ConsoleModule/processors/command_processor.h"
+#include "Content/ConsoleModule/command_context.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/services.h"
 #include "Launcher/controllers.h"
 #include "Launcher/controllers/windows_controller.h"
-#include "Launcher/commands/command_context.h"
 #include "Launcher/widgets/action_panel/action_panel_login_builder.h"
 #include "Launcher/widgets/action_panel/action_panel_by_user_builder.h"
 #include "Launcher/widgets/action_panel/action_panel_widget.h"
@@ -13,6 +13,7 @@
 #include "Content/UsersModule/models/user_view.h"
 #include "Content/BaseWidgets/mdi_area.h"
 #include "Libs/Resources/resources.h"
+#include "Libs/Engine/services/services_registry.h"
 
 #include <QSplitter>
 #include <QTabWidget>
@@ -33,7 +34,7 @@ public:
 	}
 
 	LauncherMainFrame* q;
-	std::unique_ptr<ApplicationController> controller;
+	std::unique_ptr<ApplicationController> commandController;
 	CommandContext* commandContext;
 	CommandConsole* commandConsole;
 	Resources* resources;
@@ -64,14 +65,17 @@ LauncherMainFrame::LauncherMainFrame(Resources* resources)
 		onToggleCommandConsole(newState);
 		});
 
-	auto userService = d->commandContext->services()->usersService();
-	connect(userService, &UsersService::loggedOut, this, &LauncherMainFrame::onUserLogout);
-	connect(userService, &UsersService::loginSuccess, this, &LauncherMainFrame::onUserLogin);
+	auto userService = d->commandContext->services()->get<UsersService>();
+	if (userService) {
+		connect(userService, &UsersService::loggedOut, this, &LauncherMainFrame::onUserLogout);
+		connect(userService, &UsersService::loginSuccess, this, &LauncherMainFrame::onUserLogin);
+	}
 
 	addAction(toggleAction);
 
-	d->controller->executeCommand("window-create",
+	d->commandController->executeCommand("windows",
 		{
+			{ "action", "create" },
 			{ "target", "warmup" },
 			{ "id", "opengl-warmup" },
 		});
@@ -94,13 +98,14 @@ void LauncherMainFrame::Private::setupMdiArea(LauncherMainFrame* parent) {
 }
 
 void LauncherMainFrame::Private::setupConsole() {
-	controller = std::make_unique<ApplicationController>(resources);
-	commandContext = controller->commandContext();
-	commandConsole = new CommandConsole(controller.get(), commandContext, q);
+	commandController = std::make_unique<ApplicationController>(resources);
+	commandController->init();
+	commandContext = commandController->commandContext();
+	commandConsole = new CommandConsole(commandController.get(), commandContext, q);
 	commandConsole->setWindowFlags(Qt::Dialog | Qt::WindowStaysOnTopHint);
 	q->onToggleCommandConsole(false);
 
-	commandContext->controllers()->windowsController()->setMdiArea(mdiArea);
+	commandController->controllers()->windowsController()->setMdiArea(mdiArea);
 
 	// Кнопка переключения в статусбаре
 	consoleToggleButton = new QToolButton(q->statusBar());
@@ -129,7 +134,7 @@ void LauncherMainFrame::Private::setupView() {
 	horizontalSplitter->addWidget(verticalSplitter);
 
 	// Панель действий
-	actionPanel = new ActionPanelWidget(commandContext->controllers()->actionPanelController(), q);
+	actionPanel = new ActionPanelWidget(commandController->controllers()->actionPanelController(), q);
 	horizontalSplitter->addWidget(actionPanel);
 
 	horizontalSplitter->setStretchFactor(0, 1);
@@ -145,7 +150,7 @@ void LauncherMainFrame::Private::setupView() {
 }
 
 void LauncherMainFrame::Private::setupActionPanel() {
-	ActionPanelLoginBuilder builder(commandContext->controllers()->actionPanelController());
+	ActionPanelLoginBuilder builder(commandController->controllers()->actionPanelController());
 	builder.build();
 }
 
@@ -165,7 +170,7 @@ void LauncherMainFrame::onUserLogout() {
 void LauncherMainFrame::onUserLogin(const UserView& user) {
 	qDebug() << "User login" << user.data->displayName;
 	ActionPanelByUserBuilder builder(
-		d->commandContext->controllers()->actionPanelController(),
-		d->commandContext->services()->usersService());
+		d->commandController->controllers()->actionPanelController(),
+		d->commandContext->services()->get<UsersService>());
 	builder.build();
 }
