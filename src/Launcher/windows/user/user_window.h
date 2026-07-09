@@ -1,5 +1,5 @@
 #pragma once
-#include "Launcher/mdi_child_window.h"
+#include "Libs/Engine/mdi_child_window.h"
 #include <QObject>
 #include <memory>
 
@@ -17,8 +17,6 @@ public:
 	bool handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) override;
 
 private slots:
-	void onEquipmentRequested(const QUuid& characterId);
-	void onSpecificationsRequested(const QUuid& characterId);
 	void onUserLoggedOut();
 
 private:

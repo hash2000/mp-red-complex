@@ -1,9 +1,7 @@
 #include "Content/UsersModule/widgets/user_widget.h"
-//#include "Content/UsersModule/widgets/character_entry_widget.h"
 #include "Content/UsersModule/services/users_service.h"
 #include "Content/UsersModule/models/user_view.h"
 #include "Content/TexturesModule/services/images_service.h"
-#include "Content/TexturesModule/data_providers/i_images_data_provider.h"
 #include "Libs/Graphics/textures/extensions/pixmap_extensions.h"
 
 #include <QLabel>
@@ -33,9 +31,6 @@ public:
 	QVBoxLayout* charactersLayout = nullptr;
 	QWidget* charactersContainer = nullptr;
 	QScrollArea* scrollArea = nullptr;
-
-	// Список виджетов персонажей
-//	std::list<CharacterEntryWidget*> characterWidgets;
 };
 
 UserWidget::UserWidget(UsersService* usersService, ImagesService* ImagesService, QWidget* parent)
@@ -59,23 +54,12 @@ UserWidget::UserWidget(UsersService* usersService, ImagesService* ImagesService,
 
 	setupLayout();
 	loadUserData();
-
-	// Устанавливаем начальную ширину контейнера после загрузки
-	QTimer::singleShot(0, this, [this]() {
-		updateCharactersContainerWidth();
-	});
-
-	// Подключаемся к сигналу выхода
-	connect(d->usersService, &UsersService::loggedOut, this, [this]() {
-		clearCharacters();
-	});
 }
 
 UserWidget::~UserWidget() = default;
 
 void UserWidget::resizeEvent(QResizeEvent* event) {
 	QFrame::resizeEvent(event);
-	updateCharactersContainerWidth();
 }
 
 void UserWidget::setupLayout() {
@@ -173,19 +157,19 @@ void UserWidget::setupLayout() {
 		"}"
 	);
 
-	// Контейнер для персонажей внутри прокрутки
-	d->charactersContainer = new QWidget();
-	d->charactersContainer->setStyleSheet("background-color: #1a202c;");
-	// Контейнер имеет фиксированную ширину (устанавливается в updateCharactersContainerWidth)
-	// и фиксированную высоту по содержимому
-	d->charactersContainer->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-	
-	d->charactersLayout = new QVBoxLayout(d->charactersContainer);
-	d->charactersLayout->setContentsMargins(4, 4, 4, 4);
-	d->charactersLayout->setSpacing(4);
-	d->charactersLayout->setSizeConstraint(QLayout::SetMinAndMaxSize);
+	//// Контейнер для персонажей внутри прокрутки
+	//d->charactersContainer = new QWidget();
+	//d->charactersContainer->setStyleSheet("background-color: #1a202c;");
+	//// Контейнер имеет фиксированную ширину (устанавливается в updateCharactersContainerWidth)
+	//// и фиксированную высоту по содержимому
+	//d->charactersContainer->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+	//
+	//d->charactersLayout = new QVBoxLayout(d->charactersContainer);
+	//d->charactersLayout->setContentsMargins(4, 4, 4, 4);
+	//d->charactersLayout->setSpacing(4);
+	//d->charactersLayout->setSizeConstraint(QLayout::SetMinAndMaxSize);
 
-	d->scrollArea->setWidget(d->charactersContainer);
+	//d->scrollArea->setWidget(d->charactersContainer);
 
 	mainLayout->addWidget(d->scrollArea, 1);
 }
@@ -214,88 +198,4 @@ void UserWidget::loadUserData() {
 	if (!user->data->icon.isNull()) {
 		d->userIconLabel->setPixmap(Extensions::Pixmaps::scale(user->data->icon, 48, -1));
 	}
-
-	// Загружаем персонажей
-	loadCharacters();
-}
-
-void UserWidget::loadCharacters() {
-	//clearCharacters();
-
-	//const auto characterIds = d->usersService->getAllCharacterIds();
-	//if (characterIds.empty()) {
-	//	auto* noCharsLabel = new QLabel("Нет персонажей", d->charactersContainer);
-	//	noCharsLabel->setStyleSheet("color: #718096; padding: 12px; font-size: 12px;");
-	//	noCharsLabel->setAlignment(Qt::AlignCenter);
-	//	d->charactersLayout->addWidget(noCharsLabel);
-	//	return;
-	//}
-
-	//int index = 0;
-	//int totalChars = static_cast<int>(characterIds.size());
-
-	//for (const auto& charId : characterIds) {
-	//	auto* charWidget = new CharacterEntryWidget(
-	//		d->usersService,
-	//		d->ImagesService,
-	//		charId,
-	//		d->charactersContainer);
-
-	//	// Подключаем сигналы кнопок
-	//	connect(charWidget, &CharacterEntryWidget::equipmentClicked,
-	//		this, &UserWidget::equipmentRequested);
-	//	connect(charWidget, &CharacterEntryWidget::specificationsClicked,
-	//		this, &UserWidget::specificationsRequested);
-
-	//	d->characterWidgets.push_back(charWidget);
-	//	d->charactersLayout->addWidget(charWidget);  // Просто добавляем в конец
-
-	//	// Добавляем разделитель после персонажа (кроме последнего)
-	//	if (index < totalChars - 1) {
-	//		auto* separator = new QFrame(d->charactersContainer);
-	//		separator->setFrameShape(QFrame::HLine);
-	//		separator->setStyleSheet(
-	//			"background-color: #2d3748; "
-	//			"border: none; "
-	//			"height: 1px;"
-	//		);
-	//		separator->setMaximumHeight(1);
-	//		separator->setMinimumHeight(1);
-	//		d->charactersLayout->addWidget(separator);
-	//	}
-	//	
-	//	++index;
-	//}
-
-	//// Устанавливаем начальную ширину
-	//updateCharactersContainerWidth();
-}
-
-void UserWidget::updateCharactersContainerWidth() {
-	if (!d->scrollArea || !d->charactersContainer) {
-		return;
-	}
-
-	// Получаем доступную ширину viewport scrollArea
-	int availableWidth = d->scrollArea->viewport()->width();
-
-	// Устанавливаем фиксированную ширину контейнера (растягивается и сужается)
-	d->charactersContainer->setFixedWidth(availableWidth);
-}
-
-void UserWidget::clearCharacters() {
-	//// Удаляем все виджеты персонажей
-	//for (auto* widget : d->characterWidgets) {
-	//	widget->deleteLater();
-	//}
-	//d->characterWidgets.clear();
-
-	//// Удаляем ВСЕ элементы layout (разделители, лейблы)
-	//QLayoutItem* child;
-	//while ((child = d->charactersLayout->takeAt(0)) != nullptr) {
-	//	if (child->widget()) {
-	//		child->widget()->deleteLater();
-	//	}
-	//	delete child;
-	//}
 }

@@ -1,15 +1,10 @@
 #include "Launcher/windows/items/entities_window.h"
 #include "Content/InventoriesModule/widgets/entities_widget.h"
-//#include "Launcher/windows/items/item_create_widget.h"
-#include "Launcher/app_controller.h"
-#include "Launcher/controllers/windows_controller.h"
-#include "Launcher/mdi_child_window.h"
-#include "Launcher/services.h"
-#include "Launcher/controllers.h"
 #include "Content/ConsoleModule/models/instruction.h"
 #include "Content/ConsoleModule/command_context.h"
 #include "Content/InventoriesModule/services/items_service.h"
 #include "Content/InventoriesModule/models/item_mime_data.h"
+#include "Libs/Engine/mdi_child_window.h"
 
 
 class EntitiesWindow::Private {
@@ -19,8 +14,8 @@ public:
 
 	ItemsService* itemsService;
 	EntitiesWidget* widget;
-	ApplicationController* controller = nullptr;
-	WindowsController* windowsController = nullptr;
+	//ApplicationController* controller = nullptr;
+	//WindowsController* windowsController = nullptr;
 };
 
 EntitiesWindow::EntitiesWindow(const QString& id, QWidget* parent)
@@ -93,26 +88,26 @@ void EntitiesWindow::onItemCreateRequested(const QString& itemId, const QString&
 }
 
 void EntitiesWindow::onInventorySelectionRequested() {
-	if (!d->controller || !d->widget || !d->itemsService) {
-		return;
-	}
+	//if (!d->controller || !d->widget || !d->itemsService) {
+	//	return;
+	//}
 
-	// Собираем список всех открытых инвентарей
-	QStringList openInventoryIds;
-	QString lastActiveInventoryId;
+	//// Собираем список всех открытых инвентарей
+	//QStringList openInventoryIds;
+	//QString lastActiveInventoryId;
 
-	const auto windows = d->windowsController->windowEntries();
-	for (auto it = windows.rbegin(); it != windows.rend(); ++it) {
-		const auto window = it->first.data();
-		if (window && window->windowType() == "inventory") {
-			const QString windowId = window->windowId();
-			openInventoryIds.prepend(windowId);
-			if (lastActiveInventoryId.isEmpty()) {
-				lastActiveInventoryId = windowId;
-			}
-		}
-	}
+	//const auto windows = d->windowsController->windowEntries();
+	//for (auto it = windows.rbegin(); it != windows.rend(); ++it) {
+	//	const auto window = it->first.data();
+	//	if (window && window->windowType() == "inventory") {
+	//		const QString windowId = window->windowId();
+	//		openInventoryIds.prepend(windowId);
+	//		if (lastActiveInventoryId.isEmpty()) {
+	//			lastActiveInventoryId = windowId;
+	//		}
+	//	}
+	//}
 
-	// Передаём список доступных инвентарей в виджет
-	d->widget->setAvailableInventories(openInventoryIds, lastActiveInventoryId);
+	//// Передаём список доступных инвентарей в виджет
+	//d->widget->setAvailableInventories(openInventoryIds, lastActiveInventoryId);
 }

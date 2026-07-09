@@ -1,12 +1,10 @@
 #include "Launcher/windows/user/user_window.h"
-#include "Launcher/app_controller.h"
-#include "Launcher/services.h"
-#include "Launcher/app_controller.h"
 #include "Content/ConsoleModule/command_context.h"
 #include "Content/ConsoleModule/models/instruction.h"
 #include "Content/UsersModule/widgets/user_widget.h"
 #include "Content/UsersModule/services/users_service.h"
-//#include "Content/UsersModule/models/character.h"
+#include "Content/TexturesModule/services/images_service.h"
+#include "Libs/Engine/services/services_registry.h"
 
 class UserWindow::Private {
 public:
@@ -16,7 +14,7 @@ public:
 	UsersService* usersService = nullptr;
 	ImagesService* imagesService = nullptr;
 	UserWidget* userWidget = nullptr;
-	ApplicationController* applicationController = nullptr;
+	CommandController* commandController = nullptr;
 
 //	void executeCharCommand(const QString& target, const Character* chr);
 };
@@ -47,41 +45,32 @@ UserWindow::~UserWindow() = default;
 bool UserWindow::handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) {
 	const auto action = cmd->parameters.value("action");
 	if (!action.isNull() && action == "create") {
-		//auto services = context->services();
-		//d->applicationController = context->applicationController();
-		//d->usersService = services->usersService();
-		//d->imagesService = services->imagesService();
-		//d->userWidget = new UserWidget(d->usersService, d->imagesService, this);
+		auto services = context->services();
+		d->usersService = services->get<UsersService>();
+		d->imagesService = services->get<ImagesService>();
 
-		//// Подключаем сигналы
-		//connect(d->userWidget, &UserWidget::equipmentRequested, this, &UserWindow::onEquipmentRequested);
-		//connect(d->userWidget, &UserWidget::specificationsRequested, this, &UserWindow::onSpecificationsRequested);
-		//connect(d->usersService, &UsersService::loggedOut, this, &UserWindow::onUserLoggedOut);
+		if (!d->usersService) {
+			context->printError("Unsupported Users service");
+			return false;
+		}
 
-		//setWidget(d->userWidget);
+		if (!d->imagesService) {
+			context->printError("Unsupported Images service");
+			return false;
+		}
+
+		d->commandController = context->commandController();
+		d->userWidget = new UserWidget(d->usersService, d->imagesService, this);
+
+		// Подключаем сигналы
+		connect(d->usersService, &UsersService::loggedOut, this, &UserWindow::onUserLoggedOut);
+
+		setWidget(d->userWidget);
 
 		return true;
 	}
 
 	return false;
-}
-
-void UserWindow::onEquipmentRequested(const QUuid& characterId) {
-	//const auto chr = d->usersService->getCharacter(characterId);
-	//if (!chr) {
-	//	return;
-	//}
-
-	//d->executeCharCommand("equipment", chr.get());
-}
-
-void UserWindow::onSpecificationsRequested(const QUuid& characterId) {
-	//const auto chr = d->usersService->getCharacter(characterId);
-	//if (!chr) {
-	//	return;
-	//}
-
-	//d->executeCharCommand("character-specifications", chr.get());
 }
 
 void UserWindow::onUserLoggedOut() {

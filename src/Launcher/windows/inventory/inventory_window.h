@@ -1,5 +1,5 @@
 #pragma once
-#include "Launcher/mdi_child_window.h"
+#include "Libs/Engine/mdi_child_window.h"
 #include <QObject>
 
 class InventoryWindow : public MdiChildWindow {

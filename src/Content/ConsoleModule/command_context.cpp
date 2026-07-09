@@ -3,7 +3,6 @@
 #include "Content/ConsoleModule/command_console/console_table.h"
 #include "Content/ConsoleModule/command_console/console_json.h"
 #include "Libs/Engine/services/services_registry.h"
-#include "Libs/Engine/services/i_services_registry_builder.h"
 
 class CommandContext::Private {
 public:

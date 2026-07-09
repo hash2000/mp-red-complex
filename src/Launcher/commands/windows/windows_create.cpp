@@ -6,7 +6,7 @@
 #include "Content/ConsoleModule/models/instruction.h"
 #include "Libs/Engine/services/services_registry.h"
 
-#include "Launcher/mdi_child_window.h"
+#include "Libs/Engine/mdi_child_window.h"
 #include "Launcher/controllers.h"
 #include "Launcher/controllers/windows_controller.h"
 #include "Launcher/windows_builder.h"

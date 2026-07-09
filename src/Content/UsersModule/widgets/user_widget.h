@@ -15,20 +15,14 @@ public:
 	explicit UserWidget(UsersService* usersService, ImagesService* ImagesService, QWidget* parent = nullptr);
 	~UserWidget() override;
 
-signals:
-	void equipmentRequested(const QUuid& characterId);
-	void specificationsRequested(const QUuid& characterId);
-
 protected:
 	void resizeEvent(QResizeEvent* event) override;
 
 private:
 	void setupLayout();
 	void loadUserData();
-	void loadCharacters();
-	void clearCharacters();
-	void updateCharactersContainerWidth();
 
+private:
 	class Private;
 	std::unique_ptr<Private> d;
 };

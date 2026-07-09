@@ -1,6 +1,6 @@
 #pragma once
 #include "Content/InventoriesModule/models/item.h"
-#include "Launcher/mdi_child_window.h"
+#include "Libs/Engine/mdi_child_window.h"
 #include <QObject>
 
 class EntitiesWindow : public MdiChildWindow {
