@@ -171,9 +171,12 @@ public:
 	// История команд
 	QStringList commandHistory;
 	int historyIndex = -1; // -1 = после последней команды
+	int maxBlocks = 1000;
 
 	void appendTable(const QString& message, const QString& styleClass);
 	void appendJson(const QString& message, const QString& styleClass);
+
+	void cleanLatestMessages();
 };
 
 CommandConsole::CommandConsole(CommandController* controller, CommandContext* context, QWidget* parent)
@@ -325,11 +328,29 @@ void CommandConsole::onHistoryDown() {
 	}
 }
 
+void CommandConsole::Private::cleanLatestMessages() {
+	QTextDocument* doc = outputArea->document();
+	int excess = doc->blockCount() - maxBlocks;
+	if (excess > 0) {
+		QTextCursor cursor(doc);
+		cursor.beginEditBlock();
+		cursor.movePosition(QTextCursor::Start);
+
+		for (int i = 0; i < excess; ++i) {
+			cursor.movePosition(QTextCursor::Down, QTextCursor::KeepAnchor);
+		}
+
+		cursor.removeSelectedText();
+		cursor.endEditBlock();
+	}
+}
+
 void CommandConsole::onOutputRequested(const QString& message, const QString& styleClass, const QString& type) {
 	if (type == kCommandPrintStyle_Plane) appendMessage(message, styleClass);
 	else if (type == kCommandPrintStyle_Table) d->appendTable(message, styleClass);
 	else if (type == kCommandPrintStyle_Json) d->appendJson(message, styleClass);
 
+	d->cleanLatestMessages();
 	auto sb = d->outputArea->verticalScrollBar();
 	sb->setValue(sb->maximum());
 }
@@ -359,7 +380,7 @@ void CommandConsole::Private::appendTable(const QString& message, const QString&
 	QTextCursor cursor = outputArea->textCursor();
 	cursor.movePosition(QTextCursor::End);
 
-	QString html = QString("<br><div class=\"%1\">%2</div>")
+	QString html = QString("<div class=\"%1\">%2</div>")
 		.arg(styleClass)
 		.arg(message);
 
@@ -371,7 +392,7 @@ void CommandConsole::Private::appendJson(const QString& message, const QString& 
 	QTextCursor cursor = outputArea->textCursor();
 	cursor.movePosition(QTextCursor::End);
 
-	QString html = QString("<br><div class=\"%1\">%2</div>")
+	QString html = QString("<div class=\"%1\">%2</div>")
 		.arg(styleClass)
 		.arg(message);
 
@@ -384,8 +405,8 @@ void CommandConsole::appendMessage(const QString& message, const QString& styleC
 	safeMessage
 		.replace("\r\n", "\n")
 		.replace('\n', "<br>");
-	safeMessage.replace('\t', "&nbsp;&nbsp;&nbsp;&nbsp;");
-	QString html = QString("<br><div class=\"%1\">%2</div>")
+	safeMessage.replace('\t', "&nbsp;&nbsp;");
+	QString html = QString("<div class=\"%1\"><br/>%2</div>")
 		.arg(styleClass)
 		.arg(safeMessage);
 

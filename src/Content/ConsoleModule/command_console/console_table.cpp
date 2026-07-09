@@ -68,7 +68,7 @@ QString ConsoleTable::escapeHtml(const QString& text) const {
 	return text.toHtmlEscaped()
 		.replace("\r\n", "\n")
 		.replace('\n', "<br>")
-		.replace('\t', "&nbsp;&nbsp;&nbsp;&nbsp;");
+		.replace('\t', "&nbsp;&nbsp;");
 }
 
 QString ConsoleTable::alignmentToCss(Alignment align) const {
