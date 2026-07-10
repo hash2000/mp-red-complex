@@ -4,15 +4,15 @@
 
 class Resources;
 class Controllers;
-class CommandProcessor;
 
 class ApplicationController : public CommandController {
 Q_OBJECT
 public:
-	ApplicationController(Resources* resources, CommandProcessor* commandProcessor, QObject* parent = nullptr);
+	ApplicationController(Resources* resources, QObject* parent = nullptr);
 	~ApplicationController();
 
 	std::unique_ptr<ServicesRegistry> createServices() override;
+	CommandProcessor* commandProcessor() const override;
 	Controllers* controllers() const;
 
 private:

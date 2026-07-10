@@ -1,5 +1,6 @@
 #pragma once
 #include <QTextEdit>
+#include <QWheelEvent>
 
 class HighlightingPluginManager;
 class FormatterPluginManager;
@@ -16,10 +17,12 @@ public:
 	void setHoghlighterByPath(const QString& path);
 	void openFile(const QString& path);
 
-	QString getText() const;
 	void setText(const QString& text);
 	bool setLanguage(const QString& lang);
 	void formatDocument();
+
+protected:
+	void wheelEvent(QWheelEvent* event) override;
 
 signals:
 	void formattedFailed(const QString& errorMessage);

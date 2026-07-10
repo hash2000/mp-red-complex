@@ -35,9 +35,7 @@ public:
 
 	LauncherMainFrame* q;
 	std::unique_ptr<ApplicationController> commandController;
-	std::unique_ptr<CommandProcessor> commandProcessor;
-
-	CommandContext* commandContext;
+	
 	CommandConsole* commandConsole;
 	Resources* resources;
 	MdiArea* mdiArea;
@@ -67,7 +65,7 @@ LauncherMainFrame::LauncherMainFrame(Resources* resources)
 		onToggleCommandConsole(newState);
 		});
 
-	auto userService = d->commandContext->services()->get<UsersService>();
+	auto userService = d->commandController->commandContext()->services()->get<UsersService>();
 	if (userService) {
 		connect(userService, &UsersService::loggedOut, this, &LauncherMainFrame::onUserLogout);
 		connect(userService, &UsersService::loginSuccess, this, &LauncherMainFrame::onUserLogin);
@@ -100,10 +98,8 @@ void LauncherMainFrame::Private::setupMdiArea(LauncherMainFrame* parent) {
 }
 
 void LauncherMainFrame::Private::setupConsole() {
-	commandProcessor = std::make_unique<CommandProcessor>(resources);
-	commandController = std::make_unique<ApplicationController>(resources, commandProcessor.get());
+	commandController = std::make_unique<ApplicationController>(resources);
 	commandController->init();
-	commandContext = commandController->commandContext();
 	commandConsole = new CommandConsole(commandController.get(), q);
 	commandConsole->setWindowFlags(Qt::Dialog | Qt::WindowStaysOnTopHint);
 	q->onToggleCommandConsole(false);
@@ -174,6 +170,6 @@ void LauncherMainFrame::onUserLogin(const UserView& user) {
 	qDebug() << "User login" << user.data->displayName;
 	ActionPanelByUserBuilder builder(
 		d->commandController->controllers()->actionPanelController(),
-		d->commandContext->services()->get<UsersService>());
+		d->commandController->commandContext()->services()->get<UsersService>());
 	builder.build();
 }

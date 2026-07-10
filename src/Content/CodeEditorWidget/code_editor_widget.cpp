@@ -185,12 +185,28 @@ void CodeEditorWidget::setText(const QString& text) {
 	setTextCursor(cursor);
 }
 
-QString CodeEditorWidget::getText() const {
-	
-	QTextCursor cursor = textCursor();
-	cursor.select(QTextCursor::Document);
+void CodeEditorWidget::wheelEvent(QWheelEvent* event) {
+	const bool ctrlPressed = (event->modifiers() & Qt::ControlModifier);
+	if (!ctrlPressed) {
+		QTextEdit::wheelEvent(event);
+		return;
+	}
 
-	QString result = cursor.selectedText();
+	QFont currentFont = font();
+	int currentSize = currentFont.pointSize();
+	const int ZOOM_STEP = 1;
+	if (event->angleDelta().y() > 0) {
+		currentFont.setPointSize(currentSize + ZOOM_STEP);
+	}
+	else if (event->angleDelta().y() < 0) {
+		int newSize = currentSize - ZOOM_STEP;
+		if (newSize < 1) {
+			newSize = 1;
+		}
 
-	return result;
+		currentFont.setPointSize(newSize);
+	}
+
+	setFont(currentFont);
+	event->accept();
 }

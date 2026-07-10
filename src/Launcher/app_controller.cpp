@@ -17,15 +17,15 @@ public:
 	Private(ApplicationController* parent) : q(parent) {}
 	ApplicationController* q;
 
+	std::unique_ptr<CommandProcessor> commandProcessor;
 	std::unique_ptr<Controllers> controllers;
 	std::unique_ptr<Services> services;
 };
 
-ApplicationController::ApplicationController(Resources* resources,
-	CommandProcessor* commandProcessor,
-	QObject* parent)
+ApplicationController::ApplicationController(Resources* resources, QObject* parent)
 	: d(std::make_unique<Private>(this))
-	, CommandController(resources, commandProcessor, parent) {
+	, CommandController(resources, parent) {
+	d->commandProcessor = std::make_unique<CommandProcessor>(resources);
 	d->controllers = std::make_unique<Controllers>(this);
 	d->services = std::make_unique<Services>(resources);
 }
@@ -41,6 +41,10 @@ void ApplicationController::initContext() {
 	commands->registerCommand(std::make_unique<UsersCommand>(this));
 	commands->registerCommand(std::make_unique<CharactersCommand>(this));
 	commands->registerCommand(std::make_unique<FetchApiCommand>(this));
+}
+
+CommandProcessor* ApplicationController::commandProcessor() const {
+	return d->commandProcessor.get();
 }
 
 std::unique_ptr<ServicesRegistry> ApplicationController::createServices() {

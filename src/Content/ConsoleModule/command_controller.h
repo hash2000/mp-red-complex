@@ -12,12 +12,12 @@ class Resources;
 class CommandController : public QObject {
 	Q_OBJECT
 public:
-	CommandController(Resources* resources, CommandProcessor* commandProcessor, QObject* parent = nullptr);
+	CommandController(Resources* resources, QObject* parent = nullptr);
 	~CommandController();
 
 	void init();
 
-	CommandProcessor* commandProcessor() const;
+	virtual CommandProcessor* commandProcessor() const = 0;
 	CommandContext* commandContext() const;
 	Resources* resources() const;
 

@@ -60,7 +60,7 @@ bool handleCreate(const std::shared_ptr<Instruction> instruction,
 	}
 
 	subWndow->setAttribute(Qt::WA_DeleteOnClose, true);
-	subWndow->resize(sizes.width(), sizes.height());
+//	subWndow->resize(sizes.width(), sizes.height());
 	widget->setMdiArea(mdiArea);
 	widget->setupMdiArea();
 	subWndow->show();
