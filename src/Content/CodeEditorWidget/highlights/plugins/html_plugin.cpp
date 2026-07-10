@@ -95,19 +95,6 @@ void HtmlHighlighterPlugin::install() {
 	addRule(Rule{ QRegularExpression(R"(<!\[CDATA\[[\s\S]*?\]\]>)"), cdataFormat, 7 });
 
 	// ==========================================
-	// 9. Строки внутри тегов <script> и <style>
-	// ==========================================
-	QTextCharFormat scriptFormat;
-	scriptFormat.setForeground(QColor("#DCDCAA"));  // желтоватый
-
-	addRule(Rule{ QRegularExpression(R"((?<=<script[^>]*>)[\s\S]*?(?=</script>))"), scriptFormat, 25 });
-
-	QTextCharFormat styleFormat;
-	styleFormat.setForeground(QColor("#C586C0"));  // фиолетовый
-
-	addRule(Rule{ QRegularExpression(R"((?<=<style[^>]*>)[\s\S]*?(?=</style>))"), styleFormat, 25 });
-
-	// ==========================================
 	// 10. Условные комментарии IE
 	// ==========================================
 	QTextCharFormat conditionalFormat;

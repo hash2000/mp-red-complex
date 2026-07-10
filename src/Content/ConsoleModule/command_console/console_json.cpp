@@ -544,7 +544,7 @@ QString ConsoleJson::toHtml(const QString& styleClass) const {
 			.arg(styleClass);
 	}
 
-	QString html = QString("<div class=\"%1\" style=\"background-color: %2; font-family: %3; font-size: %4; padding: 10px; border-radius: 3px; overflow-x: auto; line-height: 1.6;\">")
+	QString html = QString("<div class=\"%1\" style=\"background-color: %2; font-family: %3; font-size: %4; padding: 10px; border-radius: 3px; overflow-x: auto; line-height: 1.6;display: block;\">")
 		.arg(styleClass)
 		.arg(d->style.backgroundColor)
 		.arg(d->style.fontFamily)

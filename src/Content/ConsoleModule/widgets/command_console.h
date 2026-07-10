@@ -9,7 +9,7 @@ class CommandController;
 class CommandConsole : public QWidget {
 	Q_OBJECT
 public:
-	explicit CommandConsole(CommandController* controller, CommandContext* context, QWidget* parent = nullptr);
+	explicit CommandConsole(CommandController* controller, QWidget* parent = nullptr);
 	~CommandConsole() override;
 
 	// Публичный интерфейс для внешнего управления

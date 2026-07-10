@@ -71,8 +71,8 @@ QToolButton* CodeEditorWindow::Private::addButton(const QString& title, const QS
 }
 
 void CodeEditorWindow::Private::setupButtons() {
-	connect(addButton("📥", "Загрузить"), &QToolButton::clicked, q, &CodeEditorWindow::onOpenDocumentClick);
 	connect(addButton("💾", "Сохранить"), &QToolButton::clicked, q, &CodeEditorWindow::onSaveDocumentClick);
+	connect(addButton("📥", "Загрузить"), &QToolButton::clicked, q, &CodeEditorWindow::onOpenDocumentClick);
 }
 
 void CodeEditorWindow::Private::setupUI(ServicesRegistry* services) {
@@ -166,6 +166,10 @@ bool CodeEditorWindow::Private::applyInstructionCreate(const std::shared_ptr<Ins
 	setupUI(services);
 	changeTargetPath(path);
 
+	if (!path.isEmpty()) {
+		editor->openFile(path);
+	}
+
 	applyInstructionStyle(instruction, context);
 	applyInstructionLanguageHighlighter(instruction, context);
 	applyInstructionPlantText(instruction, context);
@@ -180,8 +184,6 @@ void CodeEditorWindow::Private::changeTargetPath(const QString& path) {
 	}
 
 	documentPath = path;
-
-	editor->setPath(documentPath);
 	q->setWindowTitle(documentPath);
 }
 
@@ -191,28 +193,30 @@ void CodeEditorWindow::formatDocument() {
 
 void CodeEditorWindow::onOpenDocumentClick() {
 	const auto res = QFileDialog::getOpenFileName(this,
-		"Выберите файл", "", "All files (*.*)");
+		"Открыть файл", "", "All files (*.*)");
 	if (!res.isEmpty()) {
 		d->changeTargetPath(res);
+		d->editor->openFile(res);
 	}
 }
 
 void CodeEditorWindow::onSaveDocumentClick() {
 	if (d->documentPath.isEmpty()) {
 		const auto res = QFileDialog::getSaveFileName(this,
-			"Выберите файл", "", "All files (*.*)");
+			"Сохранить файл", "", "All files (*.*)");
 		if (res.isEmpty()) {
 			return;
 		}
 		
 		d->changeTargetPath(res);
+		d->editor->setHoghlighterByPath(res);
 	}
 
 	QFile file(d->documentPath);
 	if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
 		return;
 	}
-
+	
 	QString content = d->editor->toPlainText();
 	QTextStream stream(&file);
 	stream.setEncoding(QStringConverter::Utf8);

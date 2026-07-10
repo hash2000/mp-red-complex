@@ -21,9 +21,11 @@ public:
 	std::unique_ptr<Services> services;
 };
 
-ApplicationController::ApplicationController(Resources* resources, QObject* parent)
+ApplicationController::ApplicationController(Resources* resources,
+	CommandProcessor* commandProcessor,
+	QObject* parent)
 	: d(std::make_unique<Private>(this))
-	, CommandController(resources, parent) {
+	, CommandController(resources, commandProcessor, parent) {
 	d->controllers = std::make_unique<Controllers>(this);
 	d->services = std::make_unique<Services>(resources);
 }

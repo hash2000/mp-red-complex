@@ -13,9 +13,10 @@ public:
 		QWidget* parent = nullptr);
 	~CodeEditorWidget() override;
 
-	void setPath(const QString& path);
-	void reloadFile();
+	void setHoghlighterByPath(const QString& path);
+	void openFile(const QString& path);
 
+	QString getText() const;
 	void setText(const QString& text);
 	bool setLanguage(const QString& lang);
 	void formatDocument();

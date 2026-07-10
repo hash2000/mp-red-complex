@@ -8,19 +8,19 @@ public:
 	Private(CommandController* parent) : q(parent) {}
 	CommandController* q;
 
-	std::unique_ptr<CommandProcessor> commandProcessor;
 	std::unique_ptr<CommandContext> commandContext;
+	CommandProcessor* commandProcessor;
 	Resources* resources;
 };
 
-CommandController::CommandController(Resources* resources, QObject* parent)
+CommandController::CommandController(Resources* resources, CommandProcessor* commandProcessor, QObject* parent)
 	: QObject(parent)
 	, d(std::make_unique<Private>(this)) {
 
 	d->resources = resources;
 
 	// Создание процессора команд
-	d->commandProcessor = std::make_unique<CommandProcessor>(resources);
+	d->commandProcessor = commandProcessor;
 	d->commandContext = std::make_unique<CommandContext>(this, nullptr /*is global context*/);
 }
 
@@ -36,7 +36,7 @@ void CommandController::init() {
 }
 
 CommandProcessor* CommandController::commandProcessor() const {
-	return d->commandProcessor.get();
+	return d->commandProcessor;
 }
 
 CommandContext* CommandController::commandContext() const {

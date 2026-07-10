@@ -35,6 +35,8 @@ public:
 
 	LauncherMainFrame* q;
 	std::unique_ptr<ApplicationController> commandController;
+	std::unique_ptr<CommandProcessor> commandProcessor;
+
 	CommandContext* commandContext;
 	CommandConsole* commandConsole;
 	Resources* resources;
@@ -98,10 +100,11 @@ void LauncherMainFrame::Private::setupMdiArea(LauncherMainFrame* parent) {
 }
 
 void LauncherMainFrame::Private::setupConsole() {
-	commandController = std::make_unique<ApplicationController>(resources);
+	commandProcessor = std::make_unique<CommandProcessor>(resources);
+	commandController = std::make_unique<ApplicationController>(resources, commandProcessor.get());
 	commandController->init();
 	commandContext = commandController->commandContext();
-	commandConsole = new CommandConsole(commandController.get(), commandContext, q);
+	commandConsole = new CommandConsole(commandController.get(), q);
 	commandConsole->setWindowFlags(Qt::Dialog | Qt::WindowStaysOnTopHint);
 	q->onToggleCommandConsole(false);
 

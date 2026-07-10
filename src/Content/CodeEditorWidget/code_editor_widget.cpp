@@ -23,7 +23,6 @@ public:
 	HighlightingPluginManager* pluginManager;
 	FormatterPluginManager* formatterManager;
 	FormatterPlugin* currentFormatter = nullptr;
-	QString path;
 	QString previusSuffix;
 
 	void setupUI();
@@ -68,22 +67,22 @@ void CodeEditorWidget::Private::setupStyling() {
 	q->setStyleSheet(styleSheet);
 }
 
-void CodeEditorWidget::setPath(const QString& path) {
-	d->path = path;
-	QFileInfo info(d->path);
+void CodeEditorWidget::setHoghlighterByPath(const QString& path) {
+	QFileInfo info(path);
 	d->highlighter->setLanguage(info.suffix().toLower());
-	reloadFile();	
 }
 
-void CodeEditorWidget::reloadFile() {
+void CodeEditorWidget::openFile(const QString& path) {
+	setHoghlighterByPath(path);
 	QThread* thread = new QThread(this);
 	FileReader* reader = new FileReader();
 	reader->moveToThread(thread);
 
-	connect(thread, &QThread::started, reader, [reader, path = d->path]() {
+	connect(thread, &QThread::started, reader, [reader, path]() {
 		reader->readFileAsync(path);
 	});
 	connect(reader, &FileReader::finished, thread, &QThread::quit);
+	connect(reader, &FileReader::finished, thread, [this]() { d->highlighter->rehighlight(); });
 	connect(thread, &QThread::finished, reader, &QObject::deleteLater);
 	connect(reader, &FileReader::blockRead, this, &CodeEditorWidget::onBlockRead);
 
@@ -156,6 +155,7 @@ void CodeEditorWidget::onFormattingFinished(const QString& formattedText) {
 	cursor.setPosition(qMin(cursorPos, formattedText.length()));
 	setTextCursor(cursor);
 	verticalScrollBar()->setValue(scrollBarValue);
+	d->highlighter->rehighlight();
 }
 
 void CodeEditorWidget::onBlockRead(const QStringList& lines) {
@@ -172,6 +172,7 @@ void CodeEditorWidget::onBlockRead(const QStringList& lines) {
 	}
 
 	cursor.endEditBlock();
+	setTextCursor(cursor);
 }
 
 void CodeEditorWidget::setText(const QString& text) {
@@ -180,5 +181,16 @@ void CodeEditorWidget::setText(const QString& text) {
 	cursor.select(QTextCursor::Document);
 	cursor.insertText(text);
 	cursor.endEditBlock();
+	cursor.movePosition(QTextCursor::Start);
+	setTextCursor(cursor);
 }
 
+QString CodeEditorWidget::getText() const {
+	
+	QTextCursor cursor = textCursor();
+	cursor.select(QTextCursor::Document);
+
+	QString result = cursor.selectedText();
+
+	return result;
+}

@@ -43,8 +43,7 @@ FetchApiCommand::FetchApiCommand(QObject* parent)
 FetchApiCommand::~FetchApiCommand() = default;
 
 QString FetchApiCommand::help() const {
-	return R"(fetch-api
-	action:
+	return R"(fetch-api action:
 	show-ssl
 	[post,get,put,delete,...]
 		location:{location}
@@ -101,12 +100,6 @@ bool FetchApiCommand::Private::sendRequest(CommandContext* context,
 			const auto contentType = QString::fromUtf8(headers.value("Content-Type"));
 			if (contentType.contains("application/json")) {
 				lang = "json";
-				ConsoleJson json(data);
-				if (!json.isValid()) {
-					context->printError(json.getErrorMessage());
-					return;
-				}
-				context->print(json);
 			}
 			else if (contentType.contains("text/html")) {
 				lang = "html";

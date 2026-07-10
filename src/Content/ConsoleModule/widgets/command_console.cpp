@@ -82,6 +82,7 @@ static QString kQTextEditOutputAreaDocumentStyleSheet = R"(
     .json-viewer {
         margin: 4px 0;
         border-left: 3px solid #569cd6;
+				display: block;
     }
     
     .json-viewer .json-node {
@@ -156,7 +157,6 @@ static QString kQTextEditOutputAreaDocumentStyleSheet = R"(
 class CommandConsole::Private {
 public:
 	Private(CommandConsole* parent) :	q(parent) { }
-
 	CommandConsole* q;
 
 	CommandContext* context;
@@ -176,15 +176,16 @@ public:
 	void appendTable(const QString& message, const QString& styleClass);
 	void appendJson(const QString& message, const QString& styleClass);
 
+	void appendOutputHtml(const QString& html);
 	void cleanLatestMessages();
 };
 
-CommandConsole::CommandConsole(CommandController* controller, CommandContext* context, QWidget* parent)
+CommandConsole::CommandConsole(CommandController* controller, QWidget* parent)
 	: d(std::make_unique<Private>(this))
 	, QWidget(parent, Qt::WindowFlags(Qt::Dialog | Qt::WindowStaysOnTopHint))
 {
 	d->controller = controller;
-	d->context = context;
+	d->context = controller->commandContext();
 
 	setupUi();
 	setupOutputStyling();
@@ -376,28 +377,29 @@ QString CommandConsole::getHistoryEntry(int offset) {
 	return d->commandHistory.at(index);
 }
 
-void CommandConsole::Private::appendTable(const QString& message, const QString& styleClass) {
+void CommandConsole::Private::appendOutputHtml(const QString& html) {
 	QTextCursor cursor = outputArea->textCursor();
+	cursor.beginEditBlock();
 	cursor.movePosition(QTextCursor::End);
+	cursor.insertHtml(html);
+	cursor.endEditBlock();
+	outputArea->setTextCursor(cursor);
+}
 
+void CommandConsole::Private::appendTable(const QString& message, const QString& styleClass) {
 	QString html = QString("<div class=\"%1\">%2</div>")
 		.arg(styleClass)
 		.arg(message);
 
-	outputArea->setTextCursor(cursor);
-	outputArea->insertHtml(html);
+	appendOutputHtml(html);
 }
 
 void CommandConsole::Private::appendJson(const QString& message, const QString& styleClass) {
-	QTextCursor cursor = outputArea->textCursor();
-	cursor.movePosition(QTextCursor::End);
-
-	QString html = QString("<div class=\"%1\">%2</div>")
+	QString html = QString("<br/><div class=\"%1\">%2</div>")
 		.arg(styleClass)
 		.arg(message);
 
-	outputArea->setTextCursor(cursor);
-	outputArea->insertHtml(html);
+	appendOutputHtml(html);
 }
 
 void CommandConsole::appendMessage(const QString& message, const QString& styleClass) {
@@ -410,10 +412,7 @@ void CommandConsole::appendMessage(const QString& message, const QString& styleC
 		.arg(styleClass)
 		.arg(safeMessage);
 
-	QTextCursor cursor = d->outputArea->textCursor();
-	cursor.movePosition(QTextCursor::End);
-	d->outputArea->setTextCursor(cursor);
-	d->outputArea->insertHtml(html);
+	d->appendOutputHtml(html);
 }
 
 void CommandConsole::showConsole() {
