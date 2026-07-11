@@ -159,14 +159,18 @@ public:
 	Private(CommandConsole* parent) :	q(parent) { }
 	CommandConsole* q;
 
-	CommandContext* context;
-	CommandController* controller;
+	CommandContext* context = nullptr;
+	CommandController* controller = nullptr;
 
 	// UI элементы
-	QTextEdit* outputArea;
-	QTextEdit* inputLine;
-	QVBoxLayout* layout;
-	QSplitter* splitter;
+	QTextEdit* outputArea = nullptr;
+	QTextEdit* inputLine = nullptr;
+	QVBoxLayout* layout = nullptr;
+	QSplitter* splitter = nullptr;
+	QVBoxLayout* buttonsLayout = nullptr;
+	QWidget* buttonsContainer = nullptr;
+	QHBoxLayout* mainLayout = nullptr;
+	QWidget* consoleWidget = nullptr;
 
 	// История команд
 	QStringList commandHistory;
@@ -178,6 +182,19 @@ public:
 
 	void appendOutputHtml(const QString& html);
 	void cleanLatestMessages();
+
+	QToolButton* addButton(const QString& title, const QString& tooltip);
+	void setupButtons();
+	void setupUi();
+	QWidget* setupConsoleUI(QWidget* parent);
+	void addToHistory(const QString& command);
+	QString getHistoryEntry(int offset);
+	void executeCommand(const QString& command);
+	void focusInput();
+	void submitCommend();
+
+	// Стилизация вывода
+	void setupOutputStyling();
 };
 
 CommandConsole::CommandConsole(CommandController* controller, QWidget* parent)
@@ -187,8 +204,8 @@ CommandConsole::CommandConsole(CommandController* controller, QWidget* parent)
 	d->controller = controller;
 	d->context = controller->commandContext();
 
-	setupUi();
-	setupOutputStyling();
+	d->setupUi();
+	d->setupOutputStyling();
 
 	// Подключение сигналов контекста
 	connect(d->context, &CommandContext::outputRequested, this, &CommandConsole::onOutputRequested);
@@ -199,47 +216,95 @@ CommandConsole::CommandConsole(CommandController* controller, QWidget* parent)
 
 CommandConsole::~CommandConsole() = default;
 
-void CommandConsole::setupUi() {
+void CommandConsole::Private::setupButtons() {
+	connect(addButton("⎚", "Очистить консоль"), &QToolButton::clicked, q, &CommandConsole::onOutputClear);
+	//connect(addButton("📥", "Загрузить"), &QToolButton::clicked, q, &CodeEditorWindow::onOpenDocumentClick);
+}
+
+QToolButton* CommandConsole::Private::addButton(const QString& title, const QString& tooltip) {
+	auto btn = new QToolButton(buttonsContainer);
+	buttonsLayout->insertWidget(buttonsLayout->count() - 1, btn);
+	btn->setText(title);
+	btn->setToolTip(tooltip);
+	btn->setToolButtonStyle(Qt::ToolButtonTextOnly);
+	btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+	return btn;
+}
+
+QWidget* CommandConsole::Private::setupConsoleUI(QWidget* parent) {
 	using namespace Extensions;
-	setWindowTitle("Command Console");
-	resize(600, 250);
 
 	// Область вывода
-	d->outputArea = new QTextEdit(this);
-	d->outputArea->setReadOnly(true);
-	d->outputArea->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-	d->outputArea->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
-	TextEdit::setTabDistance(d->outputArea, 2);
+	outputArea = new QTextEdit(parent);
+	outputArea->setReadOnly(true);
+	outputArea->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+	outputArea->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+	TextEdit::setTabDistance(outputArea, 2);
 
 	// Поле ввода
-	d->inputLine = new QTextEdit(this);
-	d->inputLine->setPlaceholderText("Enter command...");
-	d->inputLine->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
-	d->inputLine->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-	TextEdit::setTabDistance(d->inputLine, 2);
+	inputLine = new QTextEdit(parent);
+	inputLine->setPlaceholderText("Enter command...");
+	inputLine->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+	inputLine->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+	TextEdit::setTabDistance(inputLine, 2);
 
 	// Создаем сплиттер
-	d->splitter = new QSplitter(Qt::Vertical, this);
-	d->splitter->addWidget(d->outputArea);
-	d->splitter->addWidget(d->inputLine);
-	d->splitter->setStretchFactor(1, 0);
-	d->splitter->setCollapsible(1, false);
-
-	// Устанавливаем начальные размеры (outputArea - 70%, inputLine - 30%)
-	d->splitter->setSizes({ static_cast<int>(height() * 0.8), static_cast<int>(height() * 0.2) });
+	splitter = new QSplitter(Qt::Vertical, parent);
+	splitter->addWidget(outputArea);
+	splitter->addWidget(inputLine);
+	splitter->setStretchFactor(0, 1);
+	splitter->setStretchFactor(1, 0);
+	splitter->setCollapsible(0, false);
+	splitter->setCollapsible(1, false);
 
 	// Или можно задать минимальные размеры
-	d->outputArea->setMinimumHeight(100);
-	d->inputLine->setMinimumHeight(50);
+	outputArea->setMinimumHeight(100);
+	inputLine->setMinimumHeight(50);
 
 	// Макет для размещения сплиттера
-	d->layout = new QVBoxLayout(this);
-	d->layout->setContentsMargins(4, 4, 4, 4);
-	d->layout->setSpacing(4);
-	d->layout->addWidget(d->splitter);
+	layout = new QVBoxLayout(parent);
+	layout->setContentsMargins(4, 4, 4, 4);
+	layout->setSpacing(4);
+	layout->addWidget(splitter);
 
 	// Горячие клавиши истории
-	d->inputLine->installEventFilter(this);
+	inputLine->installEventFilter(parent);
+
+	return splitter;
+}
+
+void CommandConsole::Private::setupUi() {
+	q->setWindowTitle("Command Console");
+	q->resize(600, 250);
+
+	mainLayout = new QHBoxLayout(q);
+	mainLayout->setContentsMargins(4, 4, 4, 4);
+	mainLayout->setSpacing(4);
+	consoleWidget = new QWidget(q);
+	consoleWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+	QVBoxLayout* consoleLayout = new QVBoxLayout(consoleWidget);
+	consoleLayout->setContentsMargins(0, 0, 0, 0);
+	consoleLayout->setSpacing(0);
+
+	auto console = setupConsoleUI(consoleWidget);
+	consoleLayout->addWidget(console);
+
+	// === Правая часть: кнопки ===
+	buttonsContainer = new QWidget(q);
+	buttonsContainer->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+
+	buttonsLayout = new QVBoxLayout(buttonsContainer);
+	buttonsLayout->setContentsMargins(0, 0, 0, 0);
+	buttonsLayout->setSpacing(4);
+	buttonsLayout->addStretch();
+	setupButtons();
+	buttonsLayout->addStretch();
+
+	mainLayout->addWidget(consoleWidget, 1);
+	mainLayout->addWidget(buttonsContainer, 0);
+
+	// Горячие клавиши истории
+	inputLine->installEventFilter(q);
 }
 
 bool CommandConsole::eventFilter(QObject* obj, QEvent* event) {
@@ -247,32 +312,32 @@ bool CommandConsole::eventFilter(QObject* obj, QEvent* event) {
 		QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
 
 		if (keyEvent->key() == Qt::Key_Return && keyEvent->modifiers() == Qt::ShiftModifier) {
-			submitCommend();
+			d->submitCommend();
 			return true;
 		}
 	}
 	return QWidget::eventFilter(obj, event);
 }
 
-void CommandConsole::setupOutputStyling() {
-	d->outputArea->setStyleSheet(kQTextEditOutputAreaStyle);
-	d->outputArea->document()->setDefaultStyleSheet(kQTextEditOutputAreaDocumentStyleSheet);
+void CommandConsole::Private::setupOutputStyling() {
+	outputArea->setStyleSheet(kQTextEditOutputAreaStyle);
+	outputArea->document()->setDefaultStyleSheet(kQTextEditOutputAreaDocumentStyleSheet);
 }
 
-void CommandConsole::submitCommend() {
-	QString command = d->inputLine->document()->toPlainText();
+void CommandConsole::Private::submitCommend() {
+	QString command = inputLine->document()->toPlainText();
 	if (command.isEmpty()) {
 		return;
 	}
 
 	addToHistory(command);
-	d->inputLine->clear();
-	d->historyIndex = -1; // сброс позиции в истории
+	inputLine->clear();
+	historyIndex = -1; // сброс позиции в истории
 
 	executeCommand(command);
 }
 
-void CommandConsole::executeCommand(const QString& command) {
+void CommandConsole::Private::executeCommand(const QString& command) {
 	// Отображение команды в выводе
 	QString timestamp = QDateTime::currentDateTime()
 		.toString("HH:mm:ss");
@@ -285,17 +350,17 @@ void CommandConsole::executeCommand(const QString& command) {
 		.arg(timestamp)
 		.arg(safeCommand);
 
-	QTextCursor cursor = d->outputArea->textCursor();
+	QTextCursor cursor = outputArea->textCursor();
 	cursor.movePosition(QTextCursor::End);
-	d->outputArea->setTextCursor(cursor);
-	d->outputArea->insertHtml(html);
+	outputArea->setTextCursor(cursor);
+	outputArea->insertHtml(html);
 
 	// Выполнение
-	if (d->controller && d->controller->commandProcessor()) {
-		d->controller->commandProcessor()->execute(command, d->context);
+	if (controller && controller->commandProcessor()) {
+		controller->commandProcessor()->execute(command, context);
 	}
 	else {
-		appendMessage("Error: Command processor not available", "error");
+		q->appendMessage("Error: Command processor not available", "error");
 	}
 }
 
@@ -311,7 +376,7 @@ void CommandConsole::onHistoryUp() {
 		--d->historyIndex;
 	}
 
-	d->inputLine->setText(getHistoryEntry(0));
+	d->inputLine->setText(d->getHistoryEntry(0));
 }
 
 void CommandConsole::onHistoryDown() {
@@ -325,7 +390,7 @@ void CommandConsole::onHistoryDown() {
 	}
 	else {
 		++d->historyIndex;
-		d->inputLine->setText(getHistoryEntry(0));
+		d->inputLine->setText(d->getHistoryEntry(0));
 	}
 }
 
@@ -337,7 +402,7 @@ void CommandConsole::Private::cleanLatestMessages() {
 		cursor.beginEditBlock();
 		cursor.movePosition(QTextCursor::Start);
 
-		for (int i = 0; i < excess; ++i) {
+		for (int i = 0; i < excess; i++) {
 			cursor.movePosition(QTextCursor::Down, QTextCursor::KeepAnchor);
 		}
 
@@ -356,25 +421,25 @@ void CommandConsole::onOutputRequested(const QString& message, const QString& st
 	sb->setValue(sb->maximum());
 }
 
-void CommandConsole::addToHistory(const QString& command) {
+void CommandConsole::Private::addToHistory(const QString& command) {
 	// Не добавлять дубликаты подряд
-	if (!d->commandHistory.isEmpty() && d->commandHistory.last() == command) {
+	if (!commandHistory.isEmpty() && commandHistory.last() == command) {
 		return;
 	}
 
-	d->commandHistory.append(command);
+	commandHistory.append(command);
 	// Ограничение размера истории
-	if (d->commandHistory.size() > 100) {
-		d->commandHistory.removeFirst();
+	if (commandHistory.size() > 100) {
+		commandHistory.removeFirst();
 	}
 }
 
-QString CommandConsole::getHistoryEntry(int offset) {
-	int index = d->historyIndex + offset;
-	if (index < 0 || index >= d->commandHistory.size()) {
+QString CommandConsole::Private::getHistoryEntry(int offset) {
+	int index = historyIndex + offset;
+	if (index < 0 || index >= commandHistory.size()) {
 		return QString();
 	}
-	return d->commandHistory.at(index);
+	return commandHistory.at(index);
 }
 
 void CommandConsole::Private::appendOutputHtml(const QString& html) {
@@ -419,7 +484,7 @@ void CommandConsole::showConsole() {
 	show();
 	raise();
 	activateWindow();
-	focusInput();
+	d->focusInput();
 }
 
 void CommandConsole::hideConsole() {
@@ -432,7 +497,7 @@ bool CommandConsole::isVisible() const {
 
 void CommandConsole::showEvent(QShowEvent* event) {
 	QWidget::showEvent(event);
-	focusInput();
+	d->focusInput();
 }
 
 void CommandConsole::hideEvent(QHideEvent* event) {
@@ -443,7 +508,11 @@ void CommandConsole::hideEvent(QHideEvent* event) {
 	}
 }
 
-void CommandConsole::focusInput() {
-	d->inputLine->setFocus();
-	d->inputLine->selectAll();
+void CommandConsole::Private::focusInput() {
+	inputLine->setFocus();
+	inputLine->selectAll();
+}
+
+void CommandConsole::onOutputClear() {
+	d->outputArea->clear();
 }

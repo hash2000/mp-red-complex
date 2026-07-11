@@ -29,17 +29,7 @@ private slots:
 	void onHistoryUp();
 	void onHistoryDown();
 	void onOutputRequested(const QString& message, const QString& styleClass, const QString& type);
-
-private:
-	void setupUi();
-	void addToHistory(const QString& command);
-	QString getHistoryEntry(int offset);
-	void executeCommand(const QString& command);
-	void focusInput();
-	void submitCommend();
-
-	// Стилизация вывода
-	void setupOutputStyling();
+	void onOutputClear();
 
 private:
 	class Private;
