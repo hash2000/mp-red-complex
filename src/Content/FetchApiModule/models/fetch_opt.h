@@ -7,8 +7,10 @@ enum class FetchApiActions {
 	Undefined,
 	Get,
 	Post,
-	Delete,
 	Put,
+	Delete,
+	Patch,
+	Head,
 };
 
 enum class FetchApiSslPolicy {

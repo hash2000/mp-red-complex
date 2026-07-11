@@ -66,7 +66,6 @@ void MaterialsWindow::setupUi() {
 }
 
 bool MaterialsWindow::handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) {
-	// Обработка команд (пока пусто, может быть расширено)
 	const auto action = cmd->parameters.value("action");
 	if (!action.isNull() && action == "create") {
 		//auto services = context->services();
@@ -84,8 +83,9 @@ void MaterialsWindow::onEditMaterialFile(MaterialObjectTypes type, const QString
 		return;
 	}
 
-	d->applicationController->executeCommand("window-create",
+	d->applicationController->executeCommand("windows",
 		{
+			{ "action", "crerate" },
 			{ "target", "code-editor" },
 			{ "path", path },
 			{ "id", path }

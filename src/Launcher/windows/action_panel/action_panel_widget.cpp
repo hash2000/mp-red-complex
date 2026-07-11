@@ -43,7 +43,7 @@ ActionPanelWidget::~ActionPanelWidget() = default;
 void ActionPanelWidget::setupLayout() {
 	// Основной layout - горизонтальный, чтобы разделить кнопки и переключатель
 	d->mainLayout = new QHBoxLayout(this);
-	d->mainLayout->setContentsMargins(0, 40, 0, 40);
+	d->mainLayout->setContentsMargins(5, 40, 0, 40);
 	d->mainLayout->setSpacing(2);
 
 	// Контейнер для кнопок действий (левая часть)
@@ -121,8 +121,6 @@ void ActionPanelWidget::setupLayout() {
 
 QPushButton* ActionPanelWidget::createToolButton(const ActionButtonConfig& config) {
 	auto* button = new QPushButton(config.iconName, this);
-
-	button->setFixedSize(QSize(ItemsStyles::ICON_SIZE, ItemsStyles::ICON_SIZE));
 	button->setToolTip(config.toolTip);
 	button->setFixedSize(ItemsStyles::ICON_SIZE, ItemsStyles::ICON_SIZE);
 	button->setProperty("actionId", config.id);
@@ -220,7 +218,7 @@ void ActionPanelWidget::setPanelVisible(bool visible) {
 	
 	// Скрываем/показываем контейнер кнопок и меняем ширину панели
 	if (visible) {
-		int panelWidth = ItemsStyles::ICON_SIZE + 20;
+		int panelWidth = ItemsStyles::ICON_SIZE + 25;
 		setMinimumWidth(panelWidth);
 		setMaximumWidth(panelWidth);
 		d->buttonsContainer->setVisible(true);

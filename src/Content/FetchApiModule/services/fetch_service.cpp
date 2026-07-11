@@ -39,12 +39,20 @@ bool FetchApiService::fetchRequest(
 		reply = d->networkManager->post(options, request.body);
 		break;
 	}
+	case FetchApiActions::Put: {
+		reply = d->networkManager->sendCustomRequest(options, "PUT", request.body);
+		break;
+	}
 	case FetchApiActions::Delete: {
 		reply = d->networkManager->sendCustomRequest(options, "DELETE", request.body);
 		break;
 	}
-	case FetchApiActions::Put: {
-		reply = d->networkManager->sendCustomRequest(options, "PUT", request.body);
+	case FetchApiActions::Patch: {
+		reply = d->networkManager->sendCustomRequest(options, "PATCH", request.body);
+		break;
+	}
+	case FetchApiActions::Head: {
+		reply = d->networkManager->sendCustomRequest(options, "HEAD", request.body);
 		break;
 	}
 	default:
