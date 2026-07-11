@@ -128,6 +128,7 @@ std::shared_ptr<Instruction> CommandProcessor::Private::parseCommandLine(const Q
 			}
 
 			instruction->parameters.insert(paramName, QVariant::fromValue(value));
+			instruction->parametersMimeTypes.insert(paramName, "text/plane");
 			continue;
 		}
 
@@ -152,6 +153,7 @@ std::shared_ptr<Instruction> CommandProcessor::Private::parseCommandLine(const Q
 				}
 
 				instruction->parameters.insert(paramName, QVariant::fromValue(doc));
+				instruction->parametersMimeTypes.insert(paramName, "application/json");
 				continue;
 			}
 
@@ -170,6 +172,7 @@ std::shared_ptr<Instruction> CommandProcessor::Private::parseCommandLine(const Q
 				}
 
 				instruction->parameters.insert(paramName, QVariant::fromValue(doc));
+				instruction->parametersMimeTypes.insert(paramName, "application/xml");
 				continue;
 			}
 
@@ -193,6 +196,7 @@ std::shared_ptr<Instruction> CommandProcessor::Private::parseCommandLine(const Q
 				}
 
 				instruction->parameters.insert(paramName, QVariant::fromValue(iniMap));
+				instruction->parametersMimeTypes.insert(paramName, "text/x-ini");
 				continue;
 			}
 
@@ -204,6 +208,7 @@ std::shared_ptr<Instruction> CommandProcessor::Private::parseCommandLine(const Q
 				pos = (endPos < 0) ? len : endPos + 7;
 
 				instruction->parameters.insert(paramName, content);
+				instruction->parametersMimeTypes.insert(paramName, "text/plane");
 				continue;
 			}
 		}
@@ -234,6 +239,7 @@ std::shared_ptr<Instruction> CommandProcessor::Private::parseCommandLine(const Q
 			}
 
 			instruction->parameters.insert(paramName, QVariant::fromValue(value));
+			instruction->parametersMimeTypes.insert(paramName, "text/plane");
 		}
 	}
 

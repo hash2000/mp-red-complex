@@ -2,6 +2,10 @@
 #include <QJsonDocument>
 #include <QDomDocument>
 
+QString Instruction::mimetype(const QString& name) const {
+	return parametersMimeTypes.value(name);
+}
+
 bool Instruction::hasParameter(const QString& name) const {
 	return parameters.contains(name);
 }

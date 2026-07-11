@@ -12,6 +12,9 @@ class Instruction {
 public:
 	QString command;
 	QMap<QString, QVariant> parameters;
+	QMap<QString, QString> parametersMimeTypes;
+
+	QString mimetype(const QString& name) const;
 
 	bool hasParameter(const QString& name) const;
 

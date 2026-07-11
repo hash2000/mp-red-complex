@@ -11,6 +11,7 @@
 #include "Content/FetchApiModule/commands/fetch_api_cmd.h"
 #include "Content/UsersModule/commands/users_cmd.h"
 #include "Content/InventoriesModule/commands/items_cmd.h"
+#include "Content/ConsoleModule/commands/echo_cmd.h"
 
 class ApplicationController::Private {
 public:
@@ -36,6 +37,7 @@ void ApplicationController::initContext() {
 	auto commands = commandProcessor();
 
 	commands->registerCommand(std::make_unique<HelpCommand>(this));
+	commands->registerCommand(std::make_unique<EchoCommand>(this));
 	commands->registerCommand(std::make_unique<WindowsCommand>(controllers(), this));
 	commands->registerCommand(std::make_unique<ItemsCommand>(this));
 	commands->registerCommand(std::make_unique<UsersCommand>(this));
