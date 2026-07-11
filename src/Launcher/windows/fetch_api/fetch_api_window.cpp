@@ -1,6 +1,7 @@
 #include "Launcher/windows/fetch_api/fetch_api_window.h"
-#include "Content/FetchApiModule/widgets/fetch_api_widget.h"
 #include "Launcher/app_controller.h"
+#include "Content/FetchApiModule/widgets/fetch_api_widget.h"
+#include "Content/FetchApiModule/services/fetch_service.h"
 #include "Content/ConsoleModule/command_context.h"
 #include "Content/ConsoleModule/models/instruction.h"
 
@@ -43,7 +44,9 @@ bool FetchApiWindow::Private::applyInstructionCreate(const std::shared_ptr<Instr
 		widget->deleteLater();
 	}
 
-	widget = new FetchApiWidget(q);
+	widget = new FetchApiWidget(
+		context->services()->get<FetchApiService>(),
+		q);
 	q->setWidget(widget);
 	return true;
 }

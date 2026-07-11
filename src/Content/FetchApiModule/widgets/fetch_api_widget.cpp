@@ -1,4 +1,6 @@
 #include "Content/FetchApiModule/widgets/fetch_api_widget.h"
+#include "Content/FetchApiModule/services/fetch_service.h"
+#include "Content/BaseWidgets/key_value/key_value_editor_widget.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QComboBox>
@@ -16,12 +18,25 @@ public:
 	Private(FetchApiWidget* parent) : q(parent) {}
 	FetchApiWidget* q;
 
+	FetchApiService* fetchApiService = nullptr;
+	QLineEdit* requestUrlEdit = nullptr;
+	QComboBox* requestMethodCombo = nullptr;
+	QPlainTextEdit* requestBodyEdit = nullptr;
+	KeyValueEditorWidget* requestHeaders = nullptr;
+	KeyValueEditorWidget* requestParams = nullptr;
+	QWidget* requestAuth = nullptr;
+
+	QPlainTextEdit* responseBodyEdit = nullptr;
+	KeyValueEditorWidget* responseCoocies = nullptr;
+	KeyValueEditorWidget* responseHeaders = nullptr;
+
 	void setupUI();
 };
 
-FetchApiWidget::FetchApiWidget(QWidget* parent)
+FetchApiWidget::FetchApiWidget(FetchApiService* fetchApiService, QWidget* parent)
 	: d(std::make_unique<Private>(this))
 	, QWidget(parent) {
+	d->fetchApiService = fetchApiService;
 	d->setupUI();
 }
 
@@ -37,15 +52,15 @@ void FetchApiWidget::Private::setupUI() {
 	QHBoxLayout* topBarLayout = new QHBoxLayout();
 
 	// Выпадающий список методов
-	QComboBox* methodCombo = new QComboBox();
-	methodCombo->addItems({ "GET", "POST", "PUT", "DELETE", "PATCH", "HEAD" });
-	methodCombo->setMinimumWidth(110);
-	methodCombo->setStyleSheet("QComboBox { padding: 5px; font-weight: bold; }");
+	requestMethodCombo = new QComboBox();
+	requestMethodCombo->addItems({ "GET", "POST", "PUT", "DELETE", "PATCH", "HEAD" });
+	requestMethodCombo->setMinimumWidth(110);
+	requestMethodCombo->setStyleSheet("QComboBox { padding: 5px; font-weight: bold; }");
 
 	// Поле ввода URL
-	QLineEdit* urlEdit = new QLineEdit();
-	urlEdit->setPlaceholderText("Введите URL запроса (например, https://api.example.com/v1/users)");
-	urlEdit->setStyleSheet("QLineEdit { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }");
+	requestUrlEdit = new QLineEdit();
+	requestUrlEdit->setPlaceholderText("Введите URL запроса (например, https://api.example.com/v1/users)");
+	requestUrlEdit->setStyleSheet("QLineEdit { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }");
 
 	// Кнопка Send 
 	QPushButton* sendBtn = new QPushButton("Send");
@@ -58,18 +73,18 @@ void FetchApiWidget::Private::setupUI() {
 		  border: 1px solid #4a5568;
 		  border-radius: 3px;
 		  font-size: 12px;
-		
+		}
 		QPushButton:hover {
 		  background-color: #4a5568;
 		  border: 1px solid #718096;
-		
+		}
 		QPushButton:pressed {
 		  background-color: #1a202c;
 		})"
 	);
 
-	topBarLayout->addWidget(methodCombo);
-	topBarLayout->addWidget(urlEdit, 1);
+	topBarLayout->addWidget(requestMethodCombo);
+	topBarLayout->addWidget(requestUrlEdit, 1);
 	topBarLayout->addWidget(sendBtn);
 
 	// Разделитель (Request и Response)
@@ -83,17 +98,23 @@ void FetchApiWidget::Private::setupUI() {
 	QTabWidget* reqTabs = new QTabWidget();
 
 	// Вкладка Body
-	QPlainTextEdit* bodyEdit = new QPlainTextEdit();
-	bodyEdit->setPlaceholderText("{\n  \"key\": \"value\"\n}");
+	requestBodyEdit = new QPlainTextEdit();
+	requestBodyEdit->setPlaceholderText("{\n  \"key\": \"value\"\n}");
 	QFont monoFont("Consolas", 11); // Моноширинный шрифт для кода
-	if (!monoFont.exactMatch()) monoFont = QFont("Courier New", 11);
-	bodyEdit->setFont(monoFont);
-	bodyEdit->setStyleSheet("QPlainTextEdit { background-color: #2D2D2D; color: #F8F8F2; border: 1px solid #444; }");
+	if (!monoFont.exactMatch()) {
+		monoFont = QFont("Courier New", 11);
+	}
+	requestBodyEdit->setFont(monoFont);
+	requestBodyEdit->setStyleSheet("QPlainTextEdit { background-color: #2D2D2D; color: #F8F8F2; border: 1px solid #444; }");
 
-	reqTabs->addTab(bodyEdit, "Body");
-	reqTabs->addTab(new QWidget(), "Headers");
-	reqTabs->addTab(new QWidget(), "Params");
-	reqTabs->addTab(new QWidget(), "Auth");
+	requestHeaders = new KeyValueEditorWidget();
+	requestParams = new KeyValueEditorWidget();
+	requestAuth = new QWidget();
+
+	reqTabs->addTab(requestBodyEdit, "Body");
+	reqTabs->addTab(requestHeaders, "Headers");
+	reqTabs->addTab(requestParams, "Params");
+	reqTabs->addTab(requestAuth, "Auth");
 
 	reqLayout->addWidget(reqTabs);
 
@@ -118,16 +139,18 @@ void FetchApiWidget::Private::setupUI() {
 	// Вкладки ответа
 	QTabWidget* respTabs = new QTabWidget();
 
-	QPlainTextEdit* respBodyEdit = new QPlainTextEdit();
-	respBodyEdit->setReadOnly(true);
-	respBodyEdit->setFont(monoFont);
-	respBodyEdit->setPlaceholderText("Ответ сервера появится здесь...");
-	respBodyEdit->setStyleSheet("QPlainTextEdit { background-color: #2D2D2D; color: #F8F8F2; border: 1px solid #444; }"); // Темная тема для ответа
+	responseBodyEdit = new QPlainTextEdit();
+	responseBodyEdit->setReadOnly(true);
+	responseBodyEdit->setFont(monoFont);
+	responseBodyEdit->setPlaceholderText("Ответ сервера появится здесь...");
+	responseBodyEdit->setStyleSheet("QPlainTextEdit { background-color: #2D2D2D; color: #F8F8F2; border: 1px solid #444; }"); // Темная тема для ответа
 
-	respTabs->addTab(respBodyEdit, "Body");
-	respTabs->addTab(new QWidget(), "Cookies");
-	respTabs->addTab(new QWidget(), "Headers");
-	respTabs->addTab(new QWidget(), "Test Results");
+	responseCoocies = new KeyValueEditorWidget();
+	responseHeaders = new KeyValueEditorWidget();
+
+	respTabs->addTab(responseBodyEdit, "Body");
+	respTabs->addTab(responseCoocies, "Cookies");
+	respTabs->addTab(responseHeaders, "Headers");
 
 	respLayout->addLayout(statusLayout);
 	respLayout->addWidget(respTabs);
@@ -142,4 +165,8 @@ void FetchApiWidget::Private::setupUI() {
 
 	mainLayout->addLayout(topBarLayout);
 	mainLayout->addWidget(splitter, 1);
+}
+
+void FetchApiWidget::onSendClicked() {
+	//d->requestHeaders
 }
