@@ -44,9 +44,7 @@ bool FetchApiWindow::Private::applyInstructionCreate(const std::shared_ptr<Instr
 		widget->deleteLater();
 	}
 
-	widget = new FetchApiWidget(
-		context->services()->get<FetchApiService>(),
-		q);
+	widget = new FetchApiWidget(context, q);
 	q->setWidget(widget);
 	return true;
 }

@@ -27,34 +27,13 @@ bool FetchApiService::fetchRequest(
 	QNetworkReply* reply = nullptr;
 	QNetworkRequest options = request.request;
 
-	switch (request.action) {
-	case FetchApiActions::Get: {
-		reply = d->networkManager->get(options);
-		break;
-	}
-	case FetchApiActions::Post: {
-		if (request.body.isNull()) {
-			return false;
-		}
-		reply = d->networkManager->post(options, request.body);
-		break;
-	}
-	case FetchApiActions::Put: {
-		reply = d->networkManager->sendCustomRequest(options, "PUT", request.body);
-		break;
-	}
-	case FetchApiActions::Delete: {
-		reply = d->networkManager->sendCustomRequest(options, "DELETE", request.body);
-		break;
-	}
-	case FetchApiActions::Patch: {
-		reply = d->networkManager->sendCustomRequest(options, "PATCH", request.body);
-		break;
-	}
-	case FetchApiActions::Head: {
-		reply = d->networkManager->sendCustomRequest(options, "HEAD", request.body);
-		break;
-	}
+	switch (request.method) {
+	case FetchApiMethod::Get: reply = d->networkManager->get(options, request.body); break; 
+	case FetchApiMethod::Post: reply = d->networkManager->post(options, request.body); break;
+	case FetchApiMethod::Put: reply = d->networkManager->sendCustomRequest(options, "PUT", request.body); break; 
+	case FetchApiMethod::Delete: reply = d->networkManager->sendCustomRequest(options, "DELETE", request.body); break; 
+	case FetchApiMethod::Patch: reply = d->networkManager->sendCustomRequest(options, "PATCH", request.body); break;
+	case FetchApiMethod::Head: reply = d->networkManager->sendCustomRequest(options, "HEAD", request.body); break; 
 	default:
 	return false;
 	}

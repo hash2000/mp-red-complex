@@ -5,6 +5,7 @@
 #include <QTableWidget>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QToolButton>
 #include <QHeaderView>
 #include <QRegularExpression>
 #include <QStackedWidget>
@@ -20,25 +21,25 @@ public:
 	QStackedWidget* stackedWidget;
 	QTableWidget* table;
 	QPlainTextEdit* textEdit;
-	QPushButton* btnToggleAll;
-	QPushButton* btnConvert;
-	QPushButton* btnRemoveRow;
-	QPushButton* btnAddRow;
+	QToolButton* btnToggleAll;
+	QToolButton* btnConvert;
+	QToolButton* btnRemoveRow;
+	QToolButton* btnAddRow;
 
 	void setupUi();
 	void addRow(const QString& param = "", const QString& value = "",
 		const QString& desc = "", bool isEnabled = true);
 	void removeSelectedRow();
+
+	QToolButton* addToolButton(const QString& title, const QString& tooltip);
 };
-
-
 
 KeyValueEditorWidget::KeyValueEditorWidget(QWidget* parent)
 	: d(std::make_unique<Private>(this))
 	, QWidget(parent) {
 	d->setupUi();
 	// Добавляем 3 пустые строки для начала
-	for (int i = 0; i < 3; i++) {
+	for (int i = 0; i < 2; i++) {
 		d->addRow();
 	}
 }
@@ -64,51 +65,78 @@ void KeyValueEditorWidget::onToggleAll() {
 
 void KeyValueEditorWidget::onConvert() {
 	if (d->stackedWidget->currentIndex() == 0) {
-		// Режим: Таблица -> Текст
 		QString text;
-		for (int i = 0; i < d->table->rowCount(); i++) {
-			QString param = d->table->item(i, 0)->text();
+		for (int i = 0; i < d->table->rowCount(); ++i) {
+			QString param = d->table->item(i, 0)->text().trimmed();
 			QString value = d->table->item(i, 1)->text();
-			QString desc = d->table->item(i, 2)->text();
+			QString desc = d->table->item(i, 2)->text().trimmed();
 			bool isEnabled = d->table->item(i, 3)->checkState() == Qt::Checked;
 
-			text += QString("<parameter>%1</parameter><value>%2</value>"
-				"<description>%3</description><option>%4</option>\n")
-				.arg(param, value, desc, isEnabled ? "вкл" : "выкл");
+			// Пропускаем полностью пустые строки
+			if (param.isEmpty() && value.trimmed().isEmpty()) {
+				continue;
+			}
+
+			// Формируем строку: [// ]key: value [<p>desc</p>]
+			QString line = (isEnabled ? "" : "// ");
+			line += param + ": " + value;
+			if (!desc.isEmpty()) {
+				line += " <p>" + desc + "</p>";
+			}
+			text += line + "\n";
 		}
 		d->textEdit->setPlainText(text);
-		d->stackedWidget->setCurrentIndex(1); // Переключаем на текст
-		d->btnConvert->setText("Преобразовать в таблицу");
+		d->stackedWidget->setCurrentIndex(1);
+		d->btnConvert->setText("⌗");
 	}
 	else {
+		// ==========================================
 		// Режим: Текст -> Таблица
+		// ==========================================
 		QString text = d->textEdit->toPlainText();
 
-		// Регулярное выражение для парсинга нашего формата
-		QRegularExpression re("<parameter>(.*?)</parameter>\\s*"
-			"<value>(.*?)</value>\\s*"
-			"<description>(.*?)</description>\\s*"
-			"<option>(.*?)</option>");
+		// Регулярное выражение с поддержкой многострочности (MultilineOption)
+		// Группа 1: (//\s*)?      - опциональный комментарий и пробелы
+		// Группа 2: ([^:\n]*?)    - имя параметра (все символы до первого ':', не включая перенос строки)
+		// Группа 3: (.*?)         - значение (все до <p> или конца строки)
+		// Группа 4: (.*?)         - описание внутри <p>...</p> (опционально)
+		QRegularExpression re(
+			"^(//\\s*)?([^:\\n]*?)\\s*:\\s*(.*?)(?:\\s*<p>(.*?)</p>)?\\s*$",
+			QRegularExpression::MultilineOption
+		);
 
 		QRegularExpressionMatchIterator it = re.globalMatch(text);
-
 		d->table->setRowCount(0); // Очищаем таблицу
 
 		while (it.hasNext()) {
 			QRegularExpressionMatch match = it.next();
-			QString param = match.captured(1);
-			QString value = match.captured(2);
-			QString desc = match.captured(3);
-			bool isEnabled = (match.captured(4).trimmed() == "вкл");
+
+			QString param = match.captured(2).trimmed();
+			QString value = match.captured(3).trimmed();
+			QString desc = match.captured(4).trimmed();
+
+			// Если есть группа 1 ("//"), значит параметр выключен
+			bool isEnabled = match.captured(1).isEmpty();
 
 			d->addRow(param, value, desc, isEnabled);
 		}
 
 		// Добавляем одну пустую строку в конец для удобства
-		d->addRow();
+		if (d->table->rowCount() == 0) {
+			d->addRow();
+		}
+		else {
+			// Проверяем, пустая ли последняя строка, если нет - добавляем новую
+			bool lastRowEmpty =
+				d->table->item(d->table->rowCount() - 1, 0)->text().isEmpty() &&
+				d->table->item(d->table->rowCount() - 1, 1)->text().isEmpty();
+			if (!lastRowEmpty) {
+				d->addRow();
+			}
+		}
 
-		d->stackedWidget->setCurrentIndex(0); // Переключаем на таблицу
-		d->btnConvert->setText("Преобразовать в текст");
+		d->stackedWidget->setCurrentIndex(0);
+		d->btnConvert->setText("🖹");
 	}
 }
 
@@ -118,6 +146,15 @@ void KeyValueEditorWidget::onAddRow() {
 
 void KeyValueEditorWidget::onRemoveSelectedRow() {
 	d->removeSelectedRow();
+}
+
+QToolButton* KeyValueEditorWidget::Private::addToolButton(const QString& title, const QString& tooltip) {
+	auto btn = new QToolButton(q);
+	btn->setText(title);
+	btn->setToolTip(tooltip);
+	btn->setToolButtonStyle(Qt::ToolButtonTextOnly);
+	btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+	return btn;
 }
 
 void KeyValueEditorWidget::Private::setupUi() {
@@ -130,28 +167,8 @@ void KeyValueEditorWidget::Private::setupUi() {
 	// 1. Таблица
 	table = new QTableWidget(0, 4);
 	table->setHorizontalHeaderLabels({ "Имя", "Значение", "Описание", "Вкл/Выкл" });
-	table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
-	table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
-	table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
-	table->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
-	table->verticalHeader()->setVisible(false); // Скрываем номера строк
+	table->verticalHeader()->setVisible(true);
 	table->setSelectionBehavior(QAbstractItemView::SelectRows);
-	table->setStyleSheet(R"(
-		QTableWidget {
-		  background-color: #2d3748;
-		  color: #4a5568;
-		  border: 1px solid #4a5568;
-		  border-radius: 3px;
-		  font-size: 12px;
-		}
-		QTableWidget::item {
-			padding: 2px;
-			color: #4a5568;
-		}
-		QTableWidget::item:selected {
-			background-color: #4a5568;
-		}
-	)");
 
 	// 2. Текстовый редактор
 	textEdit = new QPlainTextEdit();
@@ -160,7 +177,6 @@ void KeyValueEditorWidget::Private::setupUi() {
 		monoFont = QFont("Courier New", 11);
 	}
 	textEdit->setFont(monoFont);
-	textEdit->setStyleSheet("QPlainTextEdit { background-color: #2d2d2d; color: #f8f8f2; border: 1px solid #ccc; }");
 
 	stackedWidget->addWidget(table);
 	stackedWidget->addWidget(textEdit);
@@ -169,42 +185,19 @@ void KeyValueEditorWidget::Private::setupUi() {
 	QVBoxLayout* btnLayout = new QVBoxLayout();
 	btnLayout->setSpacing(10);
 
-	btnToggleAll = new QPushButton("Вкл/Выкл все");
-	btnConvert = new QPushButton("Преобразовать в текст");
-	btnRemoveRow = new QPushButton("- Удалить строку");
-	btnAddRow = new QPushButton("+ Добавить строку");
-
-	// Стили для кнопок
-	QString btnStyle = R"(
-		QPushButton {
-		  background-color: #2d3748;
-		  color: #e2e8f0;
-		  border: 1px solid #4a5568;
-		  border-radius: 3px;
-		  font-size: 12px;
-		}
-
-		QPushButton:hover {
-		  background-color: #4a5568;
-		  border: 1px solid #718096;
-		}		
-		QPushButton:pressed {
-		  background-color: #1a202c;
-		})";
-
-	btnToggleAll->setStyleSheet(btnStyle);
-	btnRemoveRow->setStyleSheet(btnStyle);
-	btnAddRow->setStyleSheet(btnStyle);
-	btnConvert->setStyleSheet(btnStyle);
+	btnToggleAll = addToolButton("☒", "Вкл/Выкл все параметры");
+	btnConvert = addToolButton("🖹", "Строковый/Табличный вид");
+	btnRemoveRow = addToolButton("-", "Удалить параметр");
+	btnAddRow = addToolButton("+", "Добавить параметр");
 
 	btnLayout->addWidget(btnToggleAll);
 	btnLayout->addWidget(btnConvert);
-	btnLayout->addStretch(); // Отталкиваем кнопку добавления вниз (опционально)
+	btnLayout->addStretch();
 	btnLayout->addWidget(btnAddRow);
 	btnLayout->addWidget(btnRemoveRow);
 
 	// Сборка главного layout
-	mainLayout->addWidget(stackedWidget, 1); // 1 - коэффициент растяжения
+	mainLayout->addWidget(stackedWidget, 1);
 	mainLayout->addLayout(btnLayout);
 
 	// Подключение сигналов
@@ -239,4 +232,25 @@ void KeyValueEditorWidget::Private::removeSelectedRow() {
 
 	table->removeRow(selection.row());
 	selectionModel->clear();
+}
+
+std::vector<KeyValueEditorWidget::Parameter> KeyValueEditorWidget::parameters() const {
+	const auto count = d->table->rowCount();
+	std::vector<KeyValueEditorWidget::Parameter> result;
+	result.resize(count);
+	for (int i = 0; i < count; i++) {
+		auto& param = result[i];
+		param.name = d->table->item(i, 0)->text();
+		param.value = d->table->item(i, 1)->text();
+		param.description = d->table->item(i, 2)->text();
+		param.isEnabled = d->table->item(i, 3)->checkState() != Qt::Unchecked;
+	}
+	return std::move(result);
+}
+
+void KeyValueEditorWidget::setParameters(const std::vector<KeyValueEditorWidget::Parameter>& params) {
+	d->table->setRowCount(0);
+	for (const auto& it : params) {
+		d->addRow(it.name, it.value, it.description, it.isEnabled);
+	}
 }

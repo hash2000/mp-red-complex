@@ -2,12 +2,12 @@
 #include <QWidget>
 #include <memory>
 
-class FetchApiService;
+class CommandContext;
 
 class FetchApiWidget : public QWidget {
 	Q_OBJECT
 public:
-	FetchApiWidget(FetchApiService* fetchApiService, QWidget* parent = nullptr);
+	FetchApiWidget(CommandContext* commandContext, QWidget* parent = nullptr);
 	~FetchApiWidget() override;
 
 private slots:

@@ -13,6 +13,7 @@ public:
 	void registerPlugin(std::unique_ptr<HighlightingPlugin> plugin);
 	HighlightingPlugin* pluginForFile(const QString& filename) const;
 	HighlightingPlugin* pluginForLanguage(const QString& name) const;
+	HighlightingPlugin* pluginForContentType(const QString& name) const;
 	QList<HighlightingPlugin*> allPlugins() const;
 
 private:

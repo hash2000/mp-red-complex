@@ -55,6 +55,12 @@ bool Highlighter::setLanguage(const QString& language) {
 	return d->plugin != nullptr;
 }
 
+bool Highlighter::setContentType(const QString& type) {
+	d->plugin = d->pluginManager->pluginForContentType(type);
+	rehighlight();
+	return d->plugin != nullptr;
+}
+
 void Highlighter::highlightBlock(const QString& text) {
 	if (!d->plugin) {
 		return;

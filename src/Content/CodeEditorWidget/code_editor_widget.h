@@ -18,6 +18,8 @@ public:
 	void openFile(const QString& path);
 
 	void setText(const QString& text);
+
+	bool setContentType(const QString& type);
 	bool setLanguage(const QString& lang);
 	void formatDocument();
 

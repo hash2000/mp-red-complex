@@ -33,6 +33,7 @@ public:
 	bool applyInstructionCreate(const std::shared_ptr<Instruction> instruction, CommandContext* context);
 	bool applyInstructionStyle(const std::shared_ptr<Instruction> instruction, CommandContext* context);
 	bool applyInstructionLanguageHighlighter(const std::shared_ptr<Instruction> instruction, CommandContext* context);
+	bool applyInstructionContentTypeHighlighter(const std::shared_ptr<Instruction> instruction, CommandContext* context);
 	bool applyInstructionPlantText(const std::shared_ptr<Instruction> instruction, CommandContext* context);
 	bool applyInstructionFormatDocument(const std::shared_ptr<Instruction> instruction, CommandContext* context);
 	bool handleStyleWordWrap(const QString& value);
@@ -133,6 +134,10 @@ bool CodeEditorWindow::Private::handleStyleFont(const QString& value) {
 	return true;
 }
 
+bool CodeEditorWindow::Private::applyInstructionContentTypeHighlighter(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
+	return this->editor->setContentType(instruction->text("content-type", "text/plane"));
+}
+
 bool CodeEditorWindow::Private::applyInstructionLanguageHighlighter(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
 	return this->editor->setLanguage(instruction->text("lang", "txt"));
 }
@@ -172,6 +177,7 @@ bool CodeEditorWindow::Private::applyInstructionCreate(const std::shared_ptr<Ins
 
 	applyInstructionStyle(instruction, context);
 	applyInstructionLanguageHighlighter(instruction, context);
+	applyInstructionContentTypeHighlighter(instruction, context);
 	applyInstructionPlantText(instruction, context);
 	applyInstructionFormatDocument(instruction, context);
 

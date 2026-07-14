@@ -14,6 +14,7 @@ public:
 
 	const HighlightingPlugin* plugin() const;
 	bool setLanguage(const QString& language);
+	bool setContentType(const QString& type);
 
 protected:
 	void highlightBlock(const QString& text) override;

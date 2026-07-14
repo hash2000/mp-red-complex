@@ -24,7 +24,7 @@ public:
 	FetchApiCommand* q;
 
 	bool sendRequest(CommandContext* context,
-		const QString& action,
+		const QString& method,
 		const QString& location,
 		const QString& headers,
 		const QByteArray& body,
@@ -51,7 +51,7 @@ QString FetchApiCommand::help() const {
 }
 
 bool FetchApiCommand::Private::sendRequest(CommandContext* context,
-	const QString& action,
+	const QString& method,
 	const QString& location,
 	const QString& headers,
 	const QByteArray& body,
@@ -66,22 +66,15 @@ bool FetchApiCommand::Private::sendRequest(CommandContext* context,
 	}
 
 	FetchApiOpt opt;
-
-	opt.action = FetchApiActions::Undefined;
-	if (action == "get") opt.action = FetchApiActions::Get;
-	else if (action == "post") opt.action = FetchApiActions::Post;
-	else if (action == "put") opt.action = FetchApiActions::Put;
-	else if (action == "delete") opt.action = FetchApiActions::Delete;
-	else {
+	auto optMethord = From<FetchApiMethod>::from(method);
+	if (!optMethord) {
 		context->printError(QString("fetch-api. Unknown action. %1")
-			.arg(action));
+			.arg(method));
 		return false;
 	}
 
-	if (opt.action != FetchApiActions::Get && !body.isEmpty()) {
-		opt.body = body;
-	}
-
+	opt.method = optMethord.value();
+	opt.body = body;
 	opt.request = QNetworkRequest(location);
 
 	const auto headersParsed = headers.split(";", Qt::SkipEmptyParts);
@@ -96,15 +89,7 @@ bool FetchApiCommand::Private::sendRequest(CommandContext* context,
 
 	fetchService->fetchRequest(opt,
 		[context, showEditor] (int statusCode, const QByteArray& data, const QHttpHeaders& headers) {
-			QString lang = "txt";
-			const auto contentType = QString::fromUtf8(headers.value("Content-Type"));
-			if (contentType.contains("application/json")) {
-				lang = "json";
-			}
-			else if (contentType.contains("text/html")) {
-				lang = "html";
-			}
-
+			QString contentType = QString::fromUtf8(headers.value("Content-Type"));
 			context->printSuccess(QString("fetch-api %1 %2 bytes")
 				.arg(statusCode)
 				.arg(data.length()));
@@ -113,7 +98,7 @@ bool FetchApiCommand::Private::sendRequest(CommandContext* context,
 					{ "action", "create" },
 					{ "target", "code-editor" },
 					{ "format-document", "true" },
-					{ "lang", lang },
+					{ "content-type", contentType },
 					{ "text", QString::fromUtf8(data) },
 					});
 			}

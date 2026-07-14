@@ -98,6 +98,14 @@ bool CodeEditorWidget::setLanguage(const QString& lang) {
 	return d->highlighter->setLanguage(lang.toLower());
 }
 
+bool CodeEditorWidget::setContentType(const QString& type) {
+	if (type.isEmpty()) {
+		return false;
+	}
+
+	return d->highlighter->setContentType(type.toLower());
+}
+
 void CodeEditorWidget::formatDocument() {
 	const auto plugin = d->highlighter->plugin();
 	if (!plugin) {
