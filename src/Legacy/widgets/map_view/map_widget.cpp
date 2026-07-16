@@ -1,4 +1,4 @@
-#include "Launcher/widgets/map_view/map_widget.h"
+#include "Launcher/windows/map_view/map_widget.h"
 #include "Launcher/services/time_service/time_events.h"
 
 MapWidget::MapWidget(ShadersService* shadersService, TilesSelectorService* tilesSelectorService, QWidget* parent)

@@ -1,8 +1,8 @@
 #include "Content/CodeEditorWidget/highlights/plugins/plane_text_plugin.h"
+#include "Content/CodeEditorWidget/language_info.h"
 
-PlaneTextPlugin::~PlaneTextPlugin() = default;
-
-PlaneTextPlugin::LanguageInfo PlaneTextPlugin::languageInfo() const {
+PlaneTextHighlighterPlugin::~PlaneTextHighlighterPlugin() = default;
+LanguageInfo PlaneTextHighlighterPlugin::languageInfo() const {
 	return {
 		"Text File",
 		{ ".txt" },
@@ -11,7 +11,7 @@ PlaneTextPlugin::LanguageInfo PlaneTextPlugin::languageInfo() const {
 	};
 }
 
-void PlaneTextPlugin::install()  {
+void PlaneTextHighlighterPlugin::install()  {
 	QTextCharFormat numberFormat;
 	numberFormat.setForeground(QColor("#B5CEA8"));
 	addRule(Rule{ QRegularExpression("\\b[0-9]+\\b"), numberFormat, 100 });
@@ -22,7 +22,7 @@ void PlaneTextPlugin::install()  {
 	addRule(Rule{ QRegularExpression("\"[^\"]*\""), stringFormat });
 }
 
-QStringList PlaneTextPlugin::extractVariables(const QString& code) const {
+QStringList PlaneTextHighlighterPlugin::extractVariables(const QString& code) const {
 	// GLSL-специфичный парсинг переменных
 	return { };
 }

@@ -1,9 +1,10 @@
 #include "Content/CodeEditorWidget/highlights/plugins/markdown_plugin.h"
+#include "Content/CodeEditorWidget/language_info.h"
+
 #include <QRegularExpression>
 
-MarkdownPlugin::~MarkdownPlugin() = default;
-
-MarkdownPlugin::LanguageInfo MarkdownPlugin::languageInfo() const {
+MarkdownHighlighterPlugin::~MarkdownHighlighterPlugin() = default;
+LanguageInfo MarkdownHighlighterPlugin::languageInfo() const {
 	return {
 		"Markdown",
 		{ ".md" },
@@ -12,7 +13,7 @@ MarkdownPlugin::LanguageInfo MarkdownPlugin::languageInfo() const {
 	};
 }
 
-void MarkdownPlugin::install()  {
+void MarkdownHighlighterPlugin::install()  {
 	// ==========================================
 	// Заголовки (Headers)
 	// ==========================================

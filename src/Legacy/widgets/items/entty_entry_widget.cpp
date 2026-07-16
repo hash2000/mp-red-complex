@@ -1,6 +1,6 @@
-#include "Launcher/widgets/items/entty_entry_widget.h"
+#include "Launcher/windows/items/entty_entry_widget.h"
 #include "Launcher/styles/items_styles.h"
-#include "Launcher/widgets/items/entity_item_tooltip.h"
+#include "Launcher/windows/items/entity_item_tooltip.h"
 #include <QApplication>
 #include <QScrollArea>
 #include <QVBoxLayout>

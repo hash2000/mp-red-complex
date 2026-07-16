@@ -1,7 +1,10 @@
 #include "Launcher/services.h"
-#include "Launcher/services/time_service/time_service.h"
-#include "Launcher/services/world_service/world_service.h"
+#include "Libs/Engine/services/i_services_factory.h"
+#include "Libs/Engine/services/services_registry.h"
 #include "Libs/Resources/resources.h"
+
+// FetchApiModule
+#include "Content/FetchApiModule/services/fetch_service.h"
 
 // ShadersModule
 #include "Content/ShadersModule/data_providers/shaders_data_provider_impl.h"
@@ -39,52 +42,17 @@
 
 // HighlightingPluginManager
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
+#include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
 
 #include <mutex>
 
-class Services::Private {
+namespace {
+class ServicesFactory : public ServicesRegistry, public IServicesFactory {
 public:
-	template<typename T>
-	class LazyPtr {
-		std::unique_ptr<T> _ptr;
-		std::once_flag _flag;
-		std::function<std::unique_ptr<T>()> _factory;
-
-	public:
-		explicit LazyPtr(std::function<std::unique_ptr<T>()> factory)
-			: _factory(std::move(factory)) {
-		}
-
-		T* get() {
-			std::call_once(_flag, [this] {
-				_ptr = _factory();
-				});
-			return _ptr.get();
-		}
-
-		T* operator->() {
-			return get();
-		}
-
-		T& operator*() {
-			return *get();
-		}
-
-		bool isInitialized() const noexcept {
-			return static_cast<bool>(_ptr);
-		}
-	};
-public:
-	Private(Services* parent)
-		: q(parent)
-
-		, highlightingPluginManager([this] {
-				auto manager = std::make_unique<HighlightingPluginManager>();
-				manager->loadPlugins(resources->Variables.get("Plugins.Path", "").toString());
-				return manager;
-		})
-
+	~ServicesFactory() = default;
+	ServicesFactory(Resources* res)
 		// Data Providers
+		: resources(res)
 		, databaseSettingsDataProvider([this] { return std::make_unique<DatabaseSettingsDataProviderJsonImpl>(resources); })
 		, itemsDataProvider([this] { return std::make_unique<ItemsDataProviderDb>(databasesService.get()); })
 		, entitiesDataProvider([this] { return std::make_unique<EntitiesDataProviderDb>(databasesService.get()); })
@@ -97,55 +65,16 @@ public:
 
 		// Services
 		, databasesService([this] {
-				return std::make_unique<DatabasesService>(
-					resources,
-					databaseSettingsDataProvider.get());
-			})
-		, timeService([] { return std::make_unique<TimeService>(); })
-		, worldService([] { return std::make_unique<WorldService>(); })
-		, itemsService([this] {
-				return std::make_unique<ItemsService>(
-					imagesService.get(),
-					entitiesDataProvider.get(),
-					itemsDataProvider.get());
-			})
-		, usersService([this] {
-				return std::make_unique<UsersService>(
-					usersDataProvider.get(),
-					imagesService.get());
-			})
-		, imagesService([this] {
-				return std::make_unique<ImagesService>(
-					imagesDataProvider.get());
-			})
-		, tilesSelectorService([this] {
-				return std::make_unique<TilesSelectorService>(
-					tileGroupsDataProvider.get());
-			})
-		, texturesService([this] {
-				return std::make_unique<TexturesService>(
-					imagesService.get());
-			})
-		, materialsService([this] {
-				return std::make_unique<MaterialsService>(
-					materialsDataProvider.get());
-			})
-		, charactersService([this] {
-				return std::make_unique<CharactersService>(
-					characterDataProvider.get(),
-					usersService.get(),
-					imagesService.get());
-			})		
-	{
-	}
+			return std::make_unique<DatabasesService>(
+				resources,
+				databaseSettingsDataProvider.get());
+		})
+	{}
 
-	Services* q;
+private:
 	Resources* resources;
 
-public:
-	LazyPtr<TimeService> timeService;
-	LazyPtr<WorldService> worldService;
-
+private:
 	// Data Providers (остаются для обратной совместимости и writer'ов)
 	LazyPtr<DatabaseSettingsDataProviderJsonImpl> databaseSettingsDataProvider;
 	LazyPtr<IItemsDataProvider> itemsDataProvider;
@@ -159,15 +88,80 @@ public:
 
 	// Services
 	LazyPtr<DatabasesService> databasesService;
-	LazyPtr<ItemsService> itemsService;
-	LazyPtr<UsersService> usersService;
-	LazyPtr<ImagesService> imagesService;
-	LazyPtr<TilesSelectorService> tilesSelectorService;
-	LazyPtr<TexturesService> texturesService;
-	LazyPtr<MaterialsService> materialsService;
-	LazyPtr<CharactersService> charactersService;
 
-	LazyPtr<HighlightingPluginManager> highlightingPluginManager;
+public:
+	void registerServices() {
+
+		registerFactory<ItemsService>([this] {
+			return std::make_unique<ItemsService>(
+				this->get<ImagesService>(),
+				entitiesDataProvider.get(),
+				itemsDataProvider.get());
+		});
+
+		registerFactory<UsersService>([this] {
+			return std::make_unique<UsersService>(
+				usersDataProvider.get(),
+				this->get<ImagesService>());
+		});
+
+		registerFactory<ImagesService>([this] {
+			return std::make_unique<ImagesService>(
+				imagesDataProvider.get());
+		});
+
+		registerFactory<TilesSelectorService>([this] {
+			return std::make_unique<TilesSelectorService>(
+				tileGroupsDataProvider.get());
+		});
+
+		registerFactory<TexturesService>([this] {
+			return std::make_unique<TexturesService>(
+				this->get<ImagesService>());
+		});
+
+		registerFactory<MaterialsService>([this] {
+			return std::make_unique<MaterialsService>(
+				materialsDataProvider.get());
+		});
+
+		registerFactory<CharactersService>([this] {
+			return std::make_unique<CharactersService>(
+				characterDataProvider.get(),
+				this->get<UsersService>(),
+				this->get<ImagesService>());
+		});
+
+		registerFactory<CharactersService>([this] {
+			return std::make_unique<CharactersService>(
+				characterDataProvider.get(),
+				this->get<UsersService>(),
+				this->get<ImagesService>());
+		});
+
+		registerFactory<FetchApiService>([this]() {
+			return std::make_unique<FetchApiService>();
+		});
+
+		registerFactory<HighlightingPluginManager>([this] {
+			auto manager = std::make_unique<HighlightingPluginManager>();
+			manager->loadPlugins(resources->Variables.get("Plugins.Path", "").toString());
+			return manager;
+		});
+
+		registerFactory<FormatterPluginManager>([this] {
+			return std::make_unique<FormatterPluginManager>(
+				resources->Variables.get("Tools.Path", "").toString());
+		});
+	}
+};
+}
+
+class Services::Private {
+public:
+	Private(Services* parent) : q(parent) {}
+	Services* q;
+	Resources* resources;
 };
 
 Services::Services(Resources* resources)
@@ -177,63 +171,9 @@ Services::Services(Resources* resources)
 
 Services::~Services() = default;
 
-void Services::run() {
-	timeService()->start();
+std::unique_ptr<ServicesRegistry> Services::create() {
+	auto factory = std::make_unique<ServicesFactory>(d->resources);
+	factory->registerServices();
+	return factory;
 }
 
-void Services::postLoadEvent() {
-	emit load();
-}
-
-void Services::postSaveEvent() {
-	emit save();
-}
-
-DatabasesService* Services::databasesService() const {
-	return d->databasesService.get();
-}
-
-TimeService* Services::timeService() const {
-	return d->timeService.get();
-}
-
-WorldService* Services::worldService() const {
-	return d->worldService.get();
-}
-
-ItemsService* Services::itemsService() const {
-	return d->itemsService.get();
-}
-
-UsersService* Services::usersService() const {
-	return d->usersService.get();
-}
-
-ImagesService* Services::imagesService() const {
-	return d->imagesService.get();
-}
-
-TilesSelectorService* Services::tilesSelectorService() const {
-	return d->tilesSelectorService.get();
-}
-
-TexturesService* Services::texturesService() const {
-	return d->texturesService.get();
-}
-
-MaterialsService* Services::materialsService() const {
-	return d->materialsService.get();
-}
-
-std::unique_ptr<ShadersService> Services::shadersService() const {
-	return std::move(std::make_unique<ShadersService>(
-		d->shadersDataProvider.get()));
-}
-
-HighlightingPluginManager* Services::highlightingPluginManager() const {
-	return d->highlightingPluginManager.get();
-}
-
-CharactersService* Services::charactersService() const {
-	return d->charactersService.get();
-}

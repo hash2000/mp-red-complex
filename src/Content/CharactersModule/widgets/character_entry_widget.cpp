@@ -105,21 +105,21 @@ void CharacterEntryWidget::setupLayout() {
 	d->equipmentButton->setFixedSize(24, 24);
 	d->equipmentButton->setCursor(Qt::PointingHandCursor);
 	d->equipmentButton->setToolTip("Экипировка");
-	d->equipmentButton->setStyleSheet(
-		"QPushButton { "
-		"  background-color: #2d3748; "
-		"  color: #e2e8f0; "
-		"  border: 1px solid #4a5568; "
-		"  border-radius: 3px; "
-		"  font-size: 12px; "
-		"}"
-		"QPushButton:hover { "
-		"  background-color: #4a5568; "
-		"  border: 1px solid #718096; "
-		"}"
-		"QPushButton:pressed { "
-		"  background-color: #1a202c; "
-		"}"
+	d->equipmentButton->setStyleSheet(R"(
+		QPushButton {
+		  background-color: #2d3748;
+		  color: #e2e8f0;
+		  border: 1px solid #4a5568;
+		  border-radius: 3px;
+		  font-size: 12px;
+		
+		QPushButton:hover {
+		  background-color: #4a5568;
+		  border: 1px solid #718096;
+		
+		QPushButton:pressed {
+		  background-color: #1a202c;
+		})"
 	);
 	connect(d->equipmentButton, &QPushButton::clicked, this, [this]() {
 		emit equipmentClicked(d->characterId);

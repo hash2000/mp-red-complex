@@ -1,4 +1,4 @@
-#include "Launcher/widgets/equipment/equipment_slot_widget.h"
+#include "Launcher/windows/equipment/equipment_slot_widget.h"
 #include "Launcher/dragndrop/drag_event_builder.h"
 #include "Launcher/styles/items_styles.h"
 #include "Content/InventoriesModule/services/equipment_service.h"

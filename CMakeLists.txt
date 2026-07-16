@@ -6,6 +6,9 @@ project(RedComplex LANGUAGES CXX)
 include("cmake/compile.cmake")
 include("cmake/modules.cmake")
 
+string(REGEX MATCH "^[^-]+" RedComplex_TARGET_ARCHITECTURE "${VCPKG_TARGET_TRIPLET}" )
+
+
 include_directories(
 	${RedComplex_SOURCE_DIR}/src
 	${RedComplex_SOURCE_DIR}/tests

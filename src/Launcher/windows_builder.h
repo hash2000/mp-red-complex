@@ -3,12 +3,11 @@
 #include <QWidget>
 #include <memory>
 
-class ApplicationController;
 class MdiChildWindow;
 
 class WindowsBuilder {
 public:
-	WindowsBuilder(ApplicationController* appController);
+	WindowsBuilder();
 	~WindowsBuilder();
 
 	MdiChildWindow* build(const QString& name, const QString& id, QWidget* parent);

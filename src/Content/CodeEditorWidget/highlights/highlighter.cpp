@@ -1,6 +1,6 @@
 #include "Content/CodeEditorWidget/highlights/highlighter.h"
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
-#include "Content/CodeEditorWidget/highlights/plugins/highlighter_plugin.h"
+#include "Content/CodeEditorWidget/highlights/highlighter_plugin.h"
 #include <QRegularExpression>
 #include <map>
 
@@ -45,9 +45,20 @@ Highlighter::Highlighter(HighlightingPluginManager* pluginManager, QTextDocument
 
 Highlighter::~Highlighter() = default;
 
-void Highlighter::setLanguage(const QString& language) {
+const HighlightingPlugin* Highlighter::plugin() const {
+	return d->plugin;
+}
+
+bool Highlighter::setLanguage(const QString& language) {
 	d->plugin = d->pluginManager->pluginForLanguage(language);
 	rehighlight();
+	return d->plugin != nullptr;
+}
+
+bool Highlighter::setContentType(const QString& type) {
+	d->plugin = d->pluginManager->pluginForContentType(type);
+	rehighlight();
+	return d->plugin != nullptr;
 }
 
 void Highlighter::highlightBlock(const QString& text) {

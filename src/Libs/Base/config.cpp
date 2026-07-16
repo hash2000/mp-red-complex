@@ -32,6 +32,7 @@ void Config::setupPath()
 {
 	const auto configPath = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
 	config_path = QDir(configPath);
+	qDebug() << "Config path is:" << configPath;
 
 	if (!QDir().mkpath(configPath)) {
 		throw ConfigException(QString("Con't create config directiry [%1]")

@@ -1,4 +1,4 @@
-#include "Launcher/widgets/items/entity_item_tooltip.h"
+#include "Launcher/windows/items/entity_item_tooltip.h"
 #include "Launcher/styles/items_styles.h"
 #include <QLabel>
 #include <QVBoxLayout>

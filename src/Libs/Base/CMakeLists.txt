@@ -6,7 +6,7 @@ set(Base-Sources
 
 file(GLOB_RECURSE SRCS ${Base-Sources}/*.cpp)
 
-add_library(RedComplexBase
+qt_add_library(RedComplexBase STATIC
 	${SRCS}
 )
 

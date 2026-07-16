@@ -1,5 +1,5 @@
-#include "Launcher/widgets/inventory/inventory_grid_view.h"
-#include "Launcher/widgets/inventory/inventory_grid.h"
+#include "Launcher/windows/inventory/inventory_grid_view.h"
+#include "Launcher/windows/inventory/inventory_grid.h"
 #include "Content/InventoriesModule/services/inventories_service.h"
 
 class InventoryGridView::Private {

@@ -1,142 +1,58 @@
 #include "Launcher/app_controller.h"
-#include "Launcher/mdi_child_window.h"
-#include "Launcher/commands/command.h"
-#include "Launcher/commands/command_processor.h"
-#include "Launcher/commands/command_context.h"
+#include "Content/ConsoleModule/i_command.h"
+#include "Content/ConsoleModule/processors/command_processor.h"
+#include "Content/ConsoleModule/command_context.h"
 #include "Launcher/controllers.h"
 #include "Launcher/services.h"
-#include "Launcher/commands/cmd/windows_close_all_cmd.h"
-#include "Launcher/commands/cmd/windows_list_cmd.h"
-#include "Launcher/commands/cmd/windows_close_cmd.h"
-#include "Launcher/commands/cmd/window_create_cmd.h"
-#include "Launcher/commands/cmd/states_store_cmd.h"
-#include "Launcher/commands/cmd/items_cmd.h"
-#include "Launcher/commands/cmd/users_cmd.h"
-#include "Launcher/commands/cmd/window_invoke_cmd.h"
-#include "Launcher/commands/cmd/characters_cmd.h"
 
-#include <QMdiArea>
-#include <QMdiSubWindow>
-#include <QTimer>
-#include <QDebug>
-#include <QElapsedTimer>
-#include <QUuid>
-#include <QMetaType>
+#include "Launcher/commands/windows_cmd.h"
+#include "Content/CharactersModule/commands/characters_cmd.h"
+#include "Content/ConsoleModule/commands/help_cmd.h"
+#include "Content/FetchApiModule/commands/fetch_api_cmd.h"
+#include "Content/UsersModule/commands/users_cmd.h"
+#include "Content/InventoriesModule/commands/items_cmd.h"
+#include "Content/ConsoleModule/commands/echo_cmd.h"
 
 class ApplicationController::Private {
 public:
-	Private(ApplicationController* parent) : q(parent) { }
+	Private(ApplicationController* parent) : q(parent) {}
 	ApplicationController* q;
 
 	std::unique_ptr<CommandProcessor> commandProcessor;
-	std::unique_ptr<CommandContext> commandContext;
-	Resources* resources;
+	std::unique_ptr<Controllers> controllers;
+	std::unique_ptr<Services> services;
 };
 
 ApplicationController::ApplicationController(Resources* resources, QObject* parent)
-: QObject(parent)
-,	d(std::make_unique<Private>(this)) {
-
-	d->resources = resources;
-
-	// Создание процессора команд
+	: d(std::make_unique<Private>(this))
+	, CommandController(resources, parent) {
 	d->commandProcessor = std::make_unique<CommandProcessor>(resources);
-	d->commandContext = std::make_unique<CommandContext>(this, nullptr /*is global context*/);
-
-	// Регистрация встроенных системных команд
-	d->commandProcessor->registerCommand(std::make_unique<ListWindowsCommand>(this));
-	d->commandProcessor->registerCommand(std::make_unique<CloseWindowsCommand>(this));
-	d->commandProcessor->registerCommand(std::make_unique<CloseAllWindowsCommand>(this));
-	d->commandProcessor->registerCommand(std::make_unique<CreateWindowCommand>(this));
-	d->commandProcessor->registerCommand(std::make_unique<StatesStoreCommand>(this));
-	d->commandProcessor->registerCommand(std::make_unique<ItemsCommand>(this));
-	d->commandProcessor->registerCommand(std::make_unique<UsersCommand>(this));
-	d->commandProcessor->registerCommand(std::make_unique<WindowInvokeCommand>(this));
-	d->commandProcessor->registerCommand(std::make_unique<CharactersCommand>(this));
-
-	d->commandContext->services()->run();
-
-	qInfo() << "ApplicationController initialized with"
-		<< d->commandProcessor->availableCommands().size()
-		<< "available commands";
+	d->controllers = std::make_unique<Controllers>(this);
+	d->services = std::make_unique<Services>(resources);
 }
 
-ApplicationController::~ApplicationController() {
-	qInfo() << "ApplicationController destroyed";
-}
+ApplicationController::~ApplicationController() = default;
 
+void ApplicationController::initContext() {
+	auto commands = commandProcessor();
+
+	commands->registerCommand(std::make_unique<HelpCommand>(this));
+	commands->registerCommand(std::make_unique<EchoCommand>(this));
+	commands->registerCommand(std::make_unique<WindowsCommand>(controllers(), this));
+	commands->registerCommand(std::make_unique<ItemsCommand>(this));
+	commands->registerCommand(std::make_unique<UsersCommand>(this));
+	commands->registerCommand(std::make_unique<CharactersCommand>(this));
+	commands->registerCommand(std::make_unique<FetchApiCommand>(this));
+}
 
 CommandProcessor* ApplicationController::commandProcessor() const {
 	return d->commandProcessor.get();
 }
 
-CommandContext* ApplicationController::commandContext() const {
-	return d->commandContext.get();
+std::unique_ptr<ServicesRegistry> ApplicationController::createServices() {
+	return d->services->create();
 }
 
-Resources* ApplicationController::resources() const {
-	return d->resources;
-}
-
-bool ApplicationController::executeCommand(const QString& commandText, QObject* requester) {
-	Q_UNUSED(requester); // Может использоваться для аудита/логгирования
-
-	if (!d->commandProcessor || commandText.trimmed().isEmpty()) {
-		return false;
-	}
-
-	QElapsedTimer timer;
-	timer.start();
-
-	bool success = d->commandProcessor->execute(commandText, d->commandContext.get());
-
-	qint64 elapsed = timer.elapsed();
-	QString cmdName = commandText.split(' ', Qt::SkipEmptyParts).value(0);
-
-	if (success) {
-		emit commandExecuted(cmdName, elapsed);
-	}
-	else {
-		emit commandFailed(cmdName, "Execution failed or command not found");
-	}
-
-	return success;
-}
-
-bool ApplicationController::executeCommandByName(const QString& commandName,
-	const QStringList& args,
-	QObject* requester) {
-	Q_UNUSED(requester);
-
-	if (!d->commandProcessor) {
-		return false;
-	}
-
-	auto command = d->commandProcessor->findCommand(commandName);
-	if (!command) {
-		emit commandFailed(commandName, "Command not found");
-		return false;
-	}
-
-	QElapsedTimer timer;
-	timer.start();
-
-	bool success = false;
-	try {
-		success = command->execute(d->commandContext.get(), args);
-	}
-	catch (const std::exception& e) {
-		emit commandFailed(commandName, QString::fromUtf8(e.what()));
-		return false;
-	}
-
-	qint64 elapsed = timer.elapsed();
-	if (success) {
-		emit commandExecuted(commandName, elapsed);
-	}
-	else {
-		emit commandFailed(commandName, "Command execution returned false");
-	}
-
-	return success;
+Controllers* ApplicationController::controllers() const {
+	return d->controllers.get();
 }

@@ -1,15 +1,13 @@
 #pragma once
 #include <memory>
 
-class Services;
 class ApplicationController;
 class WindowsController;
-class InventoriesController;
 class ActionPanelController;
 
 class Controllers {
 public:
-	Controllers(ApplicationController* appController, Services* services);
+	Controllers(ApplicationController* appController);
 	~Controllers();
 
 	WindowsController* windowsController() const;
