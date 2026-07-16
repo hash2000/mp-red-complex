@@ -30,6 +30,7 @@ public:
 	void addRow(const QString& param = "", const QString& value = "",
 		const QString& desc = "", bool isEnabled = true);
 	void removeSelectedRow();
+	void setTableReadOnly(bool set = true);
 
 	QToolButton* addToolButton(const QString& title, const QString& tooltip);
 };
@@ -38,10 +39,6 @@ KeyValueEditorWidget::KeyValueEditorWidget(QWidget* parent)
 	: d(std::make_unique<Private>(this))
 	, QWidget(parent) {
 	d->setupUi();
-	// Добавляем 3 пустые строки для начала
-	for (int i = 0; i < 2; i++) {
-		d->addRow();
-	}
 }
 
 KeyValueEditorWidget::~KeyValueEditorWidget() = default;
@@ -172,9 +169,9 @@ void KeyValueEditorWidget::Private::setupUi() {
 
 	// 2. Текстовый редактор
 	textEdit = new QPlainTextEdit();
-	QFont monoFont("Consolas", 11);
+	QFont monoFont("Consolas", 8);
 	if (!monoFont.exactMatch()) {
-		monoFont = QFont("Courier New", 11);
+		monoFont = QFont("Courier New", 8);
 	}
 	textEdit->setFont(monoFont);
 
@@ -234,6 +231,25 @@ void KeyValueEditorWidget::Private::removeSelectedRow() {
 	selectionModel->clear();
 }
 
+std::map<QString, QString> KeyValueEditorWidget::parametersMap(bool enabledOnly) const {
+	const auto count = d->table->rowCount();
+	std::map<QString, QString> result;
+	for (int i = 0; i < count; i++) {
+		const auto name = d->table->item(i, 0)->text();
+		const auto value = d->table->item(i, 1)->text();
+		const auto isEnabled = d->table->item(i, 3)->checkState() != Qt::Unchecked;
+		const bool skipByNameOrValue = name.isEmpty() || value.isEmpty();
+		const bool skipByEnabled = enabledOnly && !isEnabled;
+		if (skipByNameOrValue || skipByEnabled) {
+			continue;
+		}
+
+		result.emplace(name, value);
+	}
+
+	return std::move(result);
+}
+
 std::vector<KeyValueEditorWidget::Parameter> KeyValueEditorWidget::parameters() const {
 	const auto count = d->table->rowCount();
 	std::vector<KeyValueEditorWidget::Parameter> result;
@@ -250,7 +266,62 @@ std::vector<KeyValueEditorWidget::Parameter> KeyValueEditorWidget::parameters() 
 
 void KeyValueEditorWidget::setParameters(const std::vector<KeyValueEditorWidget::Parameter>& params) {
 	d->table->setRowCount(0);
+	applyParameters(params);
+}
+
+void KeyValueEditorWidget::applyParameters(const std::vector<KeyValueEditorWidget::Parameter>& params) {
 	for (const auto& it : params) {
 		d->addRow(it.name, it.value, it.description, it.isEnabled);
+	}
+}
+
+void KeyValueEditorWidget::setReadonly(bool set) {
+	d->btnToggleAll->setDisabled(set);
+	d->btnRemoveRow->setDisabled(set);
+	d->btnAddRow->setDisabled(set);
+	d->textEdit->setReadOnly(set);
+	d->setTableReadOnly(set);
+}
+
+void KeyValueEditorWidget::Private::setTableReadOnly(bool set) {
+	if (set) {
+		// Запрещаем редактирование через UI (двойной клик, клавиши)
+		table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+
+		// Для всех элементов устанавливаем read-only флаги
+		for (int i = 0; i < table->rowCount(); ++i) {
+			for (int j = 0; j < table->columnCount(); ++j) {
+				QTableWidgetItem* item = table->item(i, j);
+				if (item) {
+					// Qt::ItemIsSelectable - позволяет выделять для копирования
+					// Qt::ItemIsEnabled - отображает элемент нормально
+					// БЕЗ Qt::ItemIsEditable - запрещает редактирование
+					// БЕЗ Qt::ItemIsUserCheckable - запрещает клики по чекбоксу
+					item->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
+				}
+			}
+		}
+	}
+	else {
+		// Восстанавливаем возможность редактирования
+		table->setEditTriggers(QAbstractItemView::DoubleClicked |
+			QAbstractItemView::EditKeyPressed |
+			QAbstractItemView::AnyKeyPressed);
+
+		for (int i = 0; i < table->rowCount(); ++i) {
+			for (int j = 0; j < table->columnCount(); ++j) {
+				QTableWidgetItem* item = table->item(i, j);
+				if (item) {
+					if (j == 3) { // Колонка чекбоксов
+						// Возвращаем возможность кликать по чекбоксу
+						item->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled);
+					}
+					else {
+						// Возвращаем возможность редактирования
+						item->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsEditable);
+					}
+				}
+			}
+		}
 	}
 }

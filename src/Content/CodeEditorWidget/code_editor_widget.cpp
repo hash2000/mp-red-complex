@@ -103,7 +103,14 @@ bool CodeEditorWidget::setContentType(const QString& type) {
 		return false;
 	}
 
-	return d->highlighter->setContentType(type.toLower());
+	const auto contents = type.split(";", Qt::SkipEmptyParts);
+	for (const auto tp : contents) {
+		if (d->highlighter->setContentType(tp.toLower().trimmed())) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 void CodeEditorWidget::formatDocument() {

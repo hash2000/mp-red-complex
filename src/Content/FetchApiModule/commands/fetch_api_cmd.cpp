@@ -65,27 +65,14 @@ bool FetchApiCommand::Private::sendRequest(CommandContext* context,
 		return false;
 	}
 
-	FetchApiOpt opt;
-	auto optMethord = From<FetchApiMethod>::from(method);
-	if (!optMethord) {
+	FetchApiOpt opt(location, std::map<QString, QString>(), headers);
+
+	if (!opt.setMethod(method)) {
 		context->printError(QString("fetch-api. Unknown action. %1")
 			.arg(method));
 		return false;
 	}
-
-	opt.method = optMethord.value();
-	opt.body = body;
-	opt.request = QNetworkRequest(location);
-
-	const auto headersParsed = headers.split(";", Qt::SkipEmptyParts);
-	for (const auto hdr : headersParsed) {
-		const auto kv = hdr.split(":", Qt::SkipEmptyParts);
-		if (kv.isEmpty() || kv.count() != 2) {
-			continue;
-		}
-
-		opt.request.setRawHeader(kv[0].toUtf8(), kv[1].toUtf8());
-	}
+	opt.setBody(body);
 
 	fetchService->fetchRequest(opt,
 		[context, showEditor] (int statusCode, const QByteArray& data, const QHttpHeaders& headers) {

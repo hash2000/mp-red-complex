@@ -5,7 +5,9 @@
 #include "Content/ConsoleModule/command_context.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
 #include "Content/FetchApiModule/models/fetch_opt.h"
+
 #include "Libs/Engine/services/services_registry.h"
+#include "Libs/Base/extensions/text_edit_extensions.h"
 
 #include "Content/CodeEditorWidget/code_editor_widget.h"
 #include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
@@ -27,6 +29,7 @@
 #include <QUrl>
 #include <QUrlQuery>
 #include <QNetworkRequest>
+#include <QJsonDocument>
 
 class FetchApiWidget::Private {
 public:
@@ -48,12 +51,13 @@ public:
 	QElapsedTimer requestTimer;
 
 	CodeEditorWidget* responseBodyEdit = nullptr;
-	KeyValueEditorWidget* responseCoocies = nullptr;
 	KeyValueEditorWidget* responseHeaders = nullptr;
+	KeyValueEditorWidget* responseCoocies = nullptr;
 
 	void setupUI();
 	void setStatus(int statusCode, const QString& message);
-	QString formatBytes(qint64 bytes);
+	QString formatBytes(qint64 bytes) const;
+	void setResponseHeaders(const QHttpHeaders& headers);
 
 	void fetchSuccess(int statusCode, const QByteArray& data, const QHttpHeaders& headers);
 	void fetchError(int errorCode, const QString& errorString, const QHttpHeaders& headers);
@@ -136,6 +140,8 @@ void FetchApiWidget::Private::setupUI() {
 	}
 	requestBodyEdit->setFont(monoFont);
 	requestBodyEdit->setStyleSheet("QPlainTextEdit { background-color: #2D2D2D; color: #F8F8F2; border: 1px solid #444; }");
+	Extensions::TextEdit::setTabDistance(requestBodyEdit, 2);
+
 
 	requestHeaders = new KeyValueEditorWidget();
 	requestParams = new KeyValueEditorWidget();
@@ -187,11 +193,14 @@ void FetchApiWidget::Private::setupUI() {
 	responseBodyEdit->setStyleSheet("QPlainTextEdit { background-color: #2D2D2D; color: #F8F8F2; border: 1px solid #444; }"); // Темная тема для ответа
 
 	responseCoocies = new KeyValueEditorWidget();
+	responseCoocies->setReadonly(true);
+
 	responseHeaders = new KeyValueEditorWidget();
+	responseHeaders->setReadonly(true);
 
 	respTabs->addTab(responseBodyEdit, "Body");
-	respTabs->addTab(responseCoocies, "Cookies");
 	respTabs->addTab(responseHeaders, "Headers");
+	respTabs->addTab(responseCoocies, "Cookies");
 
 	respLayout->addLayout(statusLayout);
 	respLayout->addWidget(respTabs);
@@ -209,52 +218,21 @@ void FetchApiWidget::Private::setupUI() {
 }
 
 void FetchApiWidget::onSendClicked() {
-	FetchApiOpt opt;
-
-	const auto method = From<FetchApiMethod>::from(d->requestMethodCombo->currentText().toLower());
-	if (!method) {
-		return;
-	}
-
-	const auto headers = d->requestHeaders->parameters();
-	for (const auto header : headers) {
-		if (!header.isEnabled || header.name.isEmpty() || header.value.isEmpty()) {
-			continue;
-		}
-		opt.request.setRawHeader(header.name.toUtf8(), header.value.toUtf8());
-	}
-
-	auto parseWebUrl = [](const QString& input) {
-		QString str = input.trimmed();
-		if (!str.contains("://")) {
-			str.prepend("https://");
-		}
-		return QUrl::fromUserInput(str);
-	};
-
-	QUrl url = parseWebUrl(d->requestUrlEdit->text());
-	QUrlQuery query(url);
-
-	const auto queries = d->requestParams->parameters();
-	for (const auto& item : queries) {
-		if (!item.isEnabled || item.name.isEmpty() || item.value.isEmpty()) {
-			continue;
-		}
-		query.addQueryItem(item.name.toUtf8(), item.value.toUtf8());
-	}
-
-	url.setQuery(query);
-	qDebug() << url.toEncoded();
-
-	opt.request = QNetworkRequest(QString::fromUtf8(url.toEncoded()));
-	opt.body = d->requestBodyEdit->toPlainText().toUtf8();
-	opt.method = method.value();
-
 	d->requestTimer.start();
 	d->requestProgressBar->setValue(0);
 	d->timeLabel->setText("Time: ... ms");
 	d->sizeLabel->setText("Size: ... KB");
 	d->responseBodyEdit->clear();
+
+	FetchApiOpt opt(
+		d->requestUrlEdit->text(),
+		d->requestParams->parametersMap(),
+		d->requestHeaders->parametersMap());
+	if (!opt.setMethod(d->requestMethodCombo->currentText().toLower())) {
+		return;
+	}
+
+	opt.setBody(d->requestBodyEdit->toPlainText().toUtf8());
 
 	d->fetchApiService->fetchRequest(opt,
 		[this](int statusCode, const QByteArray& data, const QHttpHeaders& headers) { d->fetchSuccess(statusCode, data, headers);	},
@@ -276,6 +254,7 @@ void FetchApiWidget::Private::fetchSuccess(int statusCode, const QByteArray& dat
 	timeLabel->setText(QString("Time: %1 ms").arg(elapsedMs));
 	sizeLabel->setText(QString("Size: %1").arg(formatBytes(data.size())));
 
+	setResponseHeaders(headers);
 	setStatus(statusCode, "OK");
 }
 
@@ -290,6 +269,7 @@ void FetchApiWidget::Private::fetchError(int errorCode, const QString& errorStri
 	qint64 elapsedMs = requestTimer.elapsed();
 	timeLabel->setText(QString("Time: %1 ms").arg(elapsedMs));
 
+	setResponseHeaders(headers);
 	setStatus(errorCode, errorString);
 }
 
@@ -326,8 +306,21 @@ void FetchApiWidget::Private::setStatus(int statusCode, const QString& message) 
 		.arg(message));
 }
 
-QString FetchApiWidget::Private::formatBytes(qint64 bytes) {
+QString FetchApiWidget::Private::formatBytes(qint64 bytes) const {
 	if (bytes < 1024) return QString("%1 B").arg(bytes);
 	if (bytes < 1024 * 1024) return QString("%1 KB").arg(bytes / 1024.0, 0, 'f', 1);
 	return QString("%1 MB").arg(bytes / (1024.0 * 1024.0), 0, 'f', 2);
+}
+
+void FetchApiWidget::Private::setResponseHeaders(const QHttpHeaders& headers) {
+	std::vector<KeyValueEditorWidget::Parameter> parameters;
+	for (qsizetype i = 0; i < headers.size(); ++i) {
+		KeyValueEditorWidget::Parameter parameter;
+		parameter.name = headers.nameAt(i);
+		parameter.value = QString::fromUtf8(headers.valueAt(i));
+
+		parameters.push_back(parameter);
+	}
+
+	responseHeaders->setParameters(parameters);
 }

@@ -25,27 +25,17 @@ bool FetchApiService::fetchRequest(
 	ErrorCallback onError,
 	ProgressCallback onProgress) {
 	QNetworkReply* reply = nullptr;
-	QNetworkRequest options = request.request;
+	auto options = request.request();
 
-	switch (request.method) {
-	case FetchApiMethod::Get: reply = d->networkManager->get(options, request.body); break; 
-	case FetchApiMethod::Post: reply = d->networkManager->post(options, request.body); break;
-	case FetchApiMethod::Put: reply = d->networkManager->sendCustomRequest(options, "PUT", request.body); break; 
-	case FetchApiMethod::Delete: reply = d->networkManager->sendCustomRequest(options, "DELETE", request.body); break; 
-	case FetchApiMethod::Patch: reply = d->networkManager->sendCustomRequest(options, "PATCH", request.body); break;
-	case FetchApiMethod::Head: reply = d->networkManager->sendCustomRequest(options, "HEAD", request.body); break; 
+	switch (request.method()) {
+	case FetchApiMethod::Get: reply = d->networkManager->get(*options, request.body()); break;
+	case FetchApiMethod::Post: reply = d->networkManager->post(*options, request.body()); break;
+	case FetchApiMethod::Put: reply = d->networkManager->sendCustomRequest(*options, "PUT", request.body()); break;
+	case FetchApiMethod::Delete: reply = d->networkManager->sendCustomRequest(*options, "DELETE", request.body()); break;
+	case FetchApiMethod::Patch: reply = d->networkManager->sendCustomRequest(*options, "PATCH", request.body()); break;
+	case FetchApiMethod::Head: reply = d->networkManager->sendCustomRequest(*options, "HEAD", request.body()); break;
 	default:
 	return false;
-	}
-
-	if (request.sslPolicy == FetchApiSslPolicy::IgnoreErrors) {
-		reply->ignoreSslErrors();
-	}
-	else if (request.sslPolicy == FetchApiSslPolicy::Strict) {
-		options.setSslConfiguration(QSslConfiguration::defaultConfiguration());
-	}
-	else if (request.sslPolicy == FetchApiSslPolicy::TrustCustomCa) {
-
 	}
 
 	connect(reply, &QNetworkReply::finished, this, [reply, onSuccess, onError, onProgress]() {
