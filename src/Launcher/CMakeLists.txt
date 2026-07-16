@@ -6,7 +6,7 @@ set(Launcher-Sources
 
 file(GLOB_RECURSE SRCS ${Launcher-Sources}/*.cpp)
 
-add_executable(Launcher
+qt_add_executable(Launcher
 	${SRCS}
 )
 

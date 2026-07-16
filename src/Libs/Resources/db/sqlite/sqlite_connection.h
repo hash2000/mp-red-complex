@@ -4,18 +4,17 @@
 #include <QVariant>
 #include <memory>
 
-class Resources;
 class SQLiteReader;
 typedef struct sqlite3 sqlite3;
 
 class SQLiteConnection : public QObject {
 	Q_OBJECT
 public:
-	SQLiteConnection(Resources* resources, QObject* parent = nullptr);
+	SQLiteConnection(QObject* parent = nullptr);
 	~SQLiteConnection();
 
 	// Открытие/закрытие соединения
-	bool open(const QString& name);
+	bool open(const QString& connectionString);
 	void close();
 	bool isOpen() const;
 

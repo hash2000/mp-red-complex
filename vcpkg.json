@@ -17,7 +17,13 @@
 			"name": "entt"
 		},
 		{
-			"name": "sqlite3"
+			"name": "libsodium"
+		},
+		{
+			"name": "sqlcipher",
+			"features": [
+				"json1"
+			]
 		},
 		{
 			"name": "openssl",

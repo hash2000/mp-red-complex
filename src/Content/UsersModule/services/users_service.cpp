@@ -1,20 +1,27 @@
 #include "Content/UsersModule/services/users_service.h"
 #include "Content/UsersModule/data_providers/users/i_users_data_provider.h"
 #include "Content/UsersModule/models/user_view.h"
+#include "Content/UsersModule/context/current_user_context.h"
 #include "Content/TexturesModule/services/images_service.h"
 #include "Content/TexturesModule/data_providers/i_images_data_provider.h"
 
 #include <QCryptographicHash>
 #include <QUuid>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QCryptographicHash>
+//#include <sodium.h>
 
 class UsersService::Private {
 public:
 	Private(UsersService* parent) : q(parent) { }
 	UsersService* q;
 
+	std::unique_ptr<CurrentUserContext> currentUserContext;
 	IUsersDataProvider* usersDataProvider = nullptr;
 	ImagesService* imagesService = nullptr;
-	std::shared_ptr<UserView> currentUser;
+	Resources* resources;
 
 	/// Создать хэш пароля
 	static QString hashPassword(const QString& password) {
@@ -29,13 +36,16 @@ public:
 };
 
 UsersService::UsersService(
+	Resources* resources,
 	IUsersDataProvider* usersDataProvider,
 	ImagesService* imagesService,
 	QObject* parent)
 	: QObject(parent)
 	, d(std::make_unique<Private>(this)) {
+	d->resources = resources;
 	d->usersDataProvider = usersDataProvider;
 	d->imagesService = imagesService;
+	d->currentUserContext = std::make_unique<CurrentUserContext>(resources);
 }
 
 UsersService::~UsersService() = default;
@@ -46,33 +56,39 @@ std::optional<QString> UsersService::login(const QString& login, const QString& 
 	}
 
 	const auto loginHash = Private::hashLogin(login);
-	auto user = d->loadUser(loginHash);
-	if (!user) {
-		qWarning() << "User not found" << login;
-		return std::nullopt;
-	}
 
-	QString passwordHash = Private::hashPassword(password);
+	//d->currentUserContext->setCurrentUser(loginHash, );
 
-	if (user->data->passwordHash != passwordHash) {
-		return std::nullopt;
-	}
+	//auto user = d->loadUser(loginHash);
+	//if (!user) {
+	//	qWarning() << "User not found" << login;
+	//	return std::nullopt;
+	//}
 
-	// Успешный вход
-	d->currentUser = user;
+	//QString passwordHash = Private::hashPassword(password);
 
-	emit loginSuccess(*user);
+	//if (user->data->passwordHash != passwordHash) {
+	//	return std::nullopt;
+	//}
 
-	return user->data->loginHash;
+	//// Успешный вход
+	//d->currentUser = user;
+
+	//emit loginSuccess(*user);
+
+	//return user->data->loginHash;
+
+//	d->resources->Variables.set("Users.CurrentUser.Identity.Name", "guest");
+	return std::nullopt;
 }
 
 void UsersService::logout() {
-	d->currentUser.reset();
+	//d->currentUser.reset();
 	emit loggedOut();
 }
 
 bool UsersService::isAuthenticated() const {
-	return (bool)d->currentUser;
+	return false;// (bool)d->currentUser;
 }
 
 std::shared_ptr<UserView> UsersService::Private::loadUser(const QString& id) {
@@ -101,33 +117,6 @@ std::shared_ptr<UserView> UsersService::Private::loadUser(const QString& id) {
 	return view;
 }
 
-std::shared_ptr<UserView> UsersService::currentUser() const {
-	return d->currentUser;
-}
-
-QString UsersService::currentUserId() const {
-	if (!d->currentUser) {
-		return QString();
-	}
-
-	return d->currentUser->data->loginHash;
-}
-
-std::optional<QString> UsersService::registerUser(const QString& login, const QString& password, const QString& displayName) {
-	const auto loginHash = Private::hashLogin(login);
-	auto containsUser = d->usersDataProvider->containsUser(loginHash);
-	if (containsUser) {
-		return std::nullopt;
-	}
-
-	auto user = std::make_shared<UserData>();
-	user->loginHash = loginHash;
-	user->passwordHash = Private::hashPassword(password);
-	user->displayName = displayName.isEmpty() ? login : displayName;
-
-	if (!d->usersDataProvider->saveUser(user)) {
-		return std::nullopt;
-	}
-
-	return user->loginHash;
+CurrentUserContext* UsersService::currentUserContext() {
+	return d->currentUserContext.get();
 }

@@ -101,6 +101,7 @@ public:
 
 		registerFactory<UsersService>([this] {
 			return std::make_unique<UsersService>(
+				resources,
 				usersDataProvider.get(),
 				this->get<ImagesService>());
 		});

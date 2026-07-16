@@ -43,10 +43,10 @@ bool LoginWindow::handleCommand(const std::shared_ptr<Instruction> cmd, CommandC
 }
 
 void LoginWindow::onLoginSuccess() {
-	auto userOpt = d->usersService->currentUser();
-	if (userOpt) {
-		close();
-	}
+	//auto userOpt = d->usersService->currentUser();
+	//if (userOpt) {
+	//	close();
+	//}
 }
 
 void LoginWindow::onRegisterSuccess() {

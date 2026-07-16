@@ -175,27 +175,27 @@ void UserWidget::setupLayout() {
 }
 
 void UserWidget::loadUserData() {
-	d->currentUser = d->usersService->currentUser();
-	if (!d->currentUser) {
-		d->displayNameLabel->setText("Не авторизован");
-		d->userIdLabel->setText("N/A");
-		return;
-	}
+	//d->currentUser = d->usersService->currentUser();
+	//if (!d->currentUser) {
+	//	d->displayNameLabel->setText("Не авторизован");
+	//	d->userIdLabel->setText("N/A");
+	//	return;
+	//}
 
-	const auto user = d->currentUser.get();
+	//const auto user = d->currentUser.get();
 
-	// DisplayName
-	d->displayNameLabel->setText(user->data->displayName.isEmpty() ? "Пользователь" : user->data->displayName);
+	//// DisplayName
+	//d->displayNameLabel->setText(user->data->displayName.isEmpty() ? "Пользователь" : user->data->displayName);
 
-	// ID (показываем сокращённую версию)
-	QString shortId = user->data->loginHash;
-	if (shortId.length() > 12) {
-		shortId = shortId.left(12) + "...";
-	}
-	d->userIdLabel->setText(shortId);
+	//// ID (показываем сокращённую версию)
+	//QString shortId = user->data->loginHash;
+	//if (shortId.length() > 12) {
+	//	shortId = shortId.left(12) + "...";
+	//}
+	//d->userIdLabel->setText(shortId);
 
-	// Иконка пользователя
-	if (!user->data->icon.isNull()) {
-		d->userIconLabel->setPixmap(Extensions::Pixmaps::scale(user->data->icon, 48, -1));
-	}
+	//// Иконка пользователя
+	//if (!user->data->icon.isNull()) {
+	//	d->userIconLabel->setPixmap(Extensions::Pixmaps::scale(user->data->icon, 48, -1));
+	//}
 }

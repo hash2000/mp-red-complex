@@ -44,14 +44,15 @@ void CharactersService::Private::loadContent(std::shared_ptr<Character> chr) {
 
 bool CharactersService::Private::checkPermissions(const QString& userId) {
 
-	const auto user = usersService->currentUser();
+	//const auto user = usersService->currentUser();
 
-	if (userId != user->data->loginHash && !user->permissionsFlags.charactersView) {
-		qWarning() << "Access denied";
-		return false;
-	}
+	//if (userId != user->data->loginHash && !user->permissionsFlags.charactersView) {
+	//	qWarning() << "Access denied";
+	//	return false;
+	//}
 
-	return true;
+	//return true;
+	return false;
 }
 
 std::shared_ptr<Character> CharactersService::character(const QUuid& characterId) const {

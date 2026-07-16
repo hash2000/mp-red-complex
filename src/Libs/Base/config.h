@@ -28,10 +28,7 @@ public:
 	const QString organization_name;
 	QDir cwd;
 	QDir config_path;
-	QString app_session;
 	QString resources_path;
-	QString resources_path_raw;
-	QString resources_encoding;
 };
 
 class Configurable {

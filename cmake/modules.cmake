@@ -18,7 +18,9 @@ find_package(ZLIB REQUIRED)
 
 find_package(EnTT CONFIG REQUIRED)
 
-find_package(SQLite3 REQUIRED)
+find_package(sqlcipher CONFIG REQUIRED)
 
 find_package(OpenSSL REQUIRED)
+
+find_package(unofficial-sodium CONFIG REQUIRED)
 

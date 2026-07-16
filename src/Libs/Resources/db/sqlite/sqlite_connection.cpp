@@ -1,6 +1,5 @@
 #include "Libs/Resources/db/sqlite/sqlite_connection.h"
 #include "Libs/Resources/db/sqlite/sqlite_reader.h"
-#include "Libs/Resources/resources.h"
 
 #include <sqlite3.h>
 
@@ -9,40 +8,22 @@ public:
 	Private(SQLiteConnection* parent) : q(parent) {}
 	SQLiteConnection* q;
 
-	Resources* resources;
 	sqlite3* db = nullptr;
 	QString dbPath;
 	bool isOpen = false;
 };
 
-SQLiteConnection::SQLiteConnection(Resources* resources, QObject* parent)
+SQLiteConnection::SQLiteConnection(QObject* parent)
 	: QObject(parent)
 	, d(std::make_unique<Private>(this)) {
-	d->resources = resources;
 }
 
 SQLiteConnection::~SQLiteConnection() {
 	close();
 }
 
-bool SQLiteConnection::open(const QString& name) {
-	const auto path = d->resources->Variables.get("Resources.Path", "").toString();
-	if (path.isNull()) {
-		qCritical() << "Resources.Path is not set.";
-		return false;
-	}
+bool SQLiteConnection::open(const QString& connectionString) {
 
-	QDir dir(path);
-	const auto dbName = name + ".db";
-	d->dbPath = dir.filePath("data/" + dbName);
-
-	QFileInfo fileInfo(d->dbPath);
-	if (!fileInfo.absoluteDir().exists()) {
-		if (!QDir().mkpath(fileInfo.absolutePath())) {
-			qCritical() << "Failed to create directory:" << fileInfo.absolutePath();
-			return false;
-		}
-	}
 
 	int rc = sqlite3_open_v2(
 		d->dbPath.toUtf8().constData(),

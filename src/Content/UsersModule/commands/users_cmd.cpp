@@ -73,11 +73,11 @@ bool UsersCommand::Private::login(CommandContext* context, const QString& login,
 		return false;
 	}
 
-	auto user = usersService->currentUser();
+	//auto user = usersService->currentUser();
 
-	printUsersFullInfo(context, { user });
+	//printUsersFullInfo(context, { user });
 
-	context->printSuccess("User login");
+	//context->printSuccess("User login");
 	return true;
 }
 

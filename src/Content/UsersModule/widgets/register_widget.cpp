@@ -228,17 +228,17 @@ void RegisterWidget::onRegisterClicked() {
 		return;
 	}
 
-	auto result = d->usersService->registerUser(login, password, nickname);
-	if (result.has_value()) {
-		d->resultLogin = login;
-		d->resultPassword = password;
-		accept();
-		emit registerSuccess();
-	}
-	else {
-		d->errorLabel->setText("Ошибка регистрации.");
-		d->errorLabel->show();
-	}
+	//auto result = d->usersService->registerUser(login, password, nickname);
+	//if (result.has_value()) {
+	//	d->resultLogin = login;
+	//	d->resultPassword = password;
+	//	accept();
+	//	emit registerSuccess();
+	//}
+	//else {
+	//	d->errorLabel->setText("Ошибка регистрации.");
+	//	d->errorLabel->show();
+	//}
 }
 
 void RegisterWidget::onCancelClicked() {

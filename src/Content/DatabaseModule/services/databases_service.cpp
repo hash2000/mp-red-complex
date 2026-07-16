@@ -3,6 +3,7 @@
 #include "Libs/Resources/db/sqlite/sqlite_connection.h"
 #include "Libs/Resources/db/sqlite/sqlite_wal_manager.h"
 #include "Libs/Resources/db/sqlite/migration_manager.h"
+#include "Libs/Resources/resources.h"
 
 #include "Content/DatabaseModule/migrations/game_migrations.h"
 #include "Content/DatabaseModule/migrations/users_migrations.h"
@@ -77,6 +78,25 @@ void DatabasesService::shutdown() {
 
 SQLiteConnection* DatabasesService::connection(const QString& name) {
 	const auto identName = name.toLower();
+	const auto path = d->resources->Variables.get("Resources.Path", "").toString();
+
+	if (path.isNull()) {
+		qCritical() << "Resources.Path is not set.";
+		return nullptr;
+	}
+
+	QDir dir(path);
+	const auto dbName = identName + ".db";
+	const auto dbPath = dir.filePath("data/" + dbName);
+
+	QFileInfo fileInfo(dbPath);
+	if (!fileInfo.absoluteDir().exists()) {
+		if (!QDir().mkpath(fileInfo.absolutePath())) {
+			qCritical() << "Failed to create directory:" << fileInfo.absolutePath();
+			return nullptr;
+		}
+	}
+
 	const auto& db = d->entries.find(identName);
 	if (db != d->entries.end()) {
 		return db->second.connection.get();
@@ -89,7 +109,7 @@ SQLiteConnection* DatabasesService::connection(const QString& name) {
 	}
 
 	Private::DatabaseEntry entry;
-	entry.connection = std::make_unique<SQLiteConnection>(d->resources);
+	entry.connection = std::make_unique<SQLiteConnection>();
 	if (!entry.connection->open(identName)) {
 		qCritical() << "Failed to open database:" << name;
 		return nullptr;
