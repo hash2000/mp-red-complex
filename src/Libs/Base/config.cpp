@@ -47,6 +47,8 @@ void Config::loadSettings() {
 
 	QSettings settings(configFilePath, QSettings::Format::IniFormat);
 	resources_path = settings.value("resources/path").toString();
+	resources_formatter_executable = settings.value("resources/formatter-executable").toString();
+	resources_formatters_path = settings.value("resources/formatters-path").toString();
 
 }
 

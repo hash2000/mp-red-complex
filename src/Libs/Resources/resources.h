@@ -39,6 +39,5 @@ private:
 
 private:
 	QDir _resources_path;
-	QDir _resources_path_raw;
 	std::list<std::unique_ptr<DataStreamContainer>> _resources;
 };

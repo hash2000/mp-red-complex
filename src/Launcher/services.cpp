@@ -145,14 +145,12 @@ public:
 		});
 
 		registerFactory<HighlightingPluginManager>([this] {
-			auto manager = std::make_unique<HighlightingPluginManager>();
-			manager->loadPlugins(resources->Variables.get("Plugins.Path", "").toString());
-			return manager;
+			return std::make_unique<HighlightingPluginManager>();
 		});
 
 		registerFactory<FormatterPluginManager>([this] {
 			return std::make_unique<FormatterPluginManager>(
-				resources->Variables.get("Tools.Path", "").toString());
+				resources);
 		});
 	}
 };

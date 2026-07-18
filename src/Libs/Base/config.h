@@ -29,6 +29,8 @@ public:
 	QDir cwd;
 	QDir config_path;
 	QString resources_path;
+	QString resources_formatter_executable;
+	QString resources_formatters_path;
 };
 
 class Configurable {

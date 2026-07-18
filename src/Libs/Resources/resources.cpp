@@ -9,12 +9,9 @@ Resources::Resources() {
 
 void Resources::configure(const Config* config) {
 	_resources_path = QDir(config->resources_path);
-	_resources_path_raw = QDir(config->resources_path_raw);
-
 	Variables.set("Resources.Path", _resources_path.absolutePath());
-	Variables.set("Resources.Path.Raw", _resources_path_raw.absolutePath());
-	Variables.set("Tools.Path", _resources_path.filePath("tools"));
-	Variables.set("System.Encoding", config->resources_encoding);
+	Variables.set("Resources.Tools.Formatters.Path", QDir(config->resources_formatters_path).absolutePath());
+	Variables.set("Resources.Tools.Formatter.Executable", QDir(config->resources_formatter_executable).absolutePath());
 }
 
 void Resources::load() {
@@ -65,8 +62,8 @@ void Resources::loadDatResources() {
 }
 
 void Resources::loadRawResources() {
-	qDebug() << "Resources::loadRawResources from" << _resources_path_raw.absolutePath();
-	const auto entries = _resources_path_raw.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
+	qDebug() << "Resources::loadRawResources from" << _resources_path.absolutePath();
+	const auto entries = _resources_path.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
 	for(const auto &entry: entries) {
 		const auto path = entry.absoluteFilePath();
 		const auto fileName = entry.fileName();

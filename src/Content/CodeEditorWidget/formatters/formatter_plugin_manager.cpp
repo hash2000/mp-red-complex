@@ -13,44 +13,39 @@ public:
 	Private(FormatterPluginManager* parent) : q(parent) {}
 	FormatterPluginManager* q;
 
-	QString prettierPath;
 	std::vector<std::unique_ptr<FormatterPlugin>> plugins;
 	std::map<QString, FormatterPlugin*> typesToPlugin;
 };
 
-FormatterPluginManager::FormatterPluginManager(const QString& toolsPath)
+FormatterPluginManager::FormatterPluginManager(Resources* resources)
 	: d(std::make_unique<Private>(this)) {
-	auto toolsDir = QDir(toolsPath);
-#ifdef Q_OS_WIN
-	d->prettierPath = toolsDir.filePath("bin/node/prettier.cmd");
-#else
-	d->prettierPath = toolsDir.filePath("bin/node/prettier");
-#endif
+	const auto executablePath = resources->Variables.get("Resources.Tools.Formatter.Executable", "").toString();
+	const auto formattersPath = QDir(resources->Variables.get("Resources.Tools.Formatters.Path", "").toString());
 
-	registerPlugin(std::make_unique<ExternalCliFormatterPlugin>("text/css", d->prettierPath, QMap<QString, QString>
+	registerPlugin(std::make_unique<ExternalCliFormatterPlugin>("text/css", executablePath, QMap<QString, QString>
 		{
 			{ "--parser", "css" },
-			{	"--stdin-filepath", toolsDir.filePath("formatters/css/unsaved.css") },
+			{	"--stdin-filepath", formattersPath.filePath("formatters/css/unsaved.css") },
 		}));
-	registerPlugin(std::make_unique<ExternalCliFormatterPlugin>("text/html", d->prettierPath, QMap<QString, QString>
+	registerPlugin(std::make_unique<ExternalCliFormatterPlugin>("text/html", executablePath, QMap<QString, QString>
 		{
 			{ "--parser", "html" },
-			{ "--stdin-filepath", toolsDir.filePath("formatters/html/unsaved.html") },
+			{ "--stdin-filepath", formattersPath.filePath("formatters/html/unsaved.html") },
 		}));
-	registerPlugin(std::make_unique<ExternalCliFormatterPlugin>("application/json", d->prettierPath, QMap<QString, QString>
+	registerPlugin(std::make_unique<ExternalCliFormatterPlugin>("application/json", executablePath, QMap<QString, QString>
 		{
 			{ "--parser", "json" },
-			{ "--stdin-filepath", toolsDir.filePath("formatters/json/unsaved.json") },
+			{ "--stdin-filepath", formattersPath.filePath("formatters/json/unsaved.json") },
 		}));
-	registerPlugin(std::make_unique<ExternalCliFormatterPlugin>("application/javascript", d->prettierPath, QMap<QString, QString>
+	registerPlugin(std::make_unique<ExternalCliFormatterPlugin>("application/javascript", executablePath, QMap<QString, QString>
 		{
 			{ "--parser", "js" },
-			{ "--stdin-filepath", toolsDir.filePath("formatters/js/unsaved.js") },
+			{ "--stdin-filepath", formattersPath.filePath("formatters/js/unsaved.js") },
 		}));
-	registerPlugin(std::make_unique<ExternalCliFormatterPlugin>("text/markdown", d->prettierPath, QMap<QString, QString>
+	registerPlugin(std::make_unique<ExternalCliFormatterPlugin>("text/markdown", executablePath, QMap<QString, QString>
 		{
 			{ "--parser", "md" },
-			{ "--stdin-filepath", toolsDir.filePath("formatters/markdown/unsaved.md") },
+			{ "--stdin-filepath", formattersPath.filePath("formatters/markdown/unsaved.md") },
 		}));
 }
 
