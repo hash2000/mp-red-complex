@@ -17,9 +17,10 @@ public:
 
 	void printUser(ConsoleTable& table, const std::shared_ptr<UserView> user);
 	void printUsersFullInfo(CommandContext* context, const std::list<std::shared_ptr<UserView>>& users);
-	bool login(CommandContext* context, const QString& login, const QString& password);
+	bool login(CommandContext* context, const QString& username, const QString& password);
 	bool logout(CommandContext* context);
-	bool registerUser(CommandContext* context, const QString& login, const QString& password);
+	bool registerUser(CommandContext* context, const QString& username, const QString& password);
+	bool restoreAccount(CommandContext* context, const QString& seed, const QString& password);
 };
 
 
@@ -34,8 +35,9 @@ UsersCommand::~UsersCommand() = default;
 QString UsersCommand::help() const {
 	return R"(users action:
 	logout
-	login login:{login} password:{password}
-	register: login:{login} password:{password}
+	login username:{login} password:{password}
+	register: username:{login} password:{password}
+	restore: seed:{list of seed phrase, all words are separated by a space} password:{new password}
 	)";
 }
 
@@ -65,21 +67,17 @@ void UsersCommand::Private::printUsersFullInfo(CommandContext* context, const st
 	context->print(table);
 }
 
-bool UsersCommand::Private::login(CommandContext* context, const QString& login, const QString& password) {
+bool UsersCommand::Private::login(CommandContext* context, const QString& username, const QString& password) {
 	auto services = context->services();
 	auto usersService = services->get<UsersService>();
 
-	auto loginResult = usersService->login(login, password);
+	auto loginResult = usersService->login(username, password);
 	if (!loginResult) {
 		context->printError("User login failed");
 		return false;
 	}
 
-	//auto user = usersService->currentUser();
-
-	//printUsersFullInfo(context, { user });
-
-	//context->printSuccess("User login");
+	context->printSuccess("User login");
 	return true;
 }
 
@@ -97,20 +95,33 @@ bool UsersCommand::Private::logout(CommandContext* context) {
 	return true;
 }
 
-bool UsersCommand::Private::registerUser(CommandContext* context, const QString& login, const QString& password) {
+bool UsersCommand::Private::registerUser(CommandContext* context, const QString& username, const QString& password) {
 	auto services = context->services();
 	auto registryService = services->get<UsersRegistryService>();
 
 	QStringList seedPhrase;
-	if (!registryService->registerUser(login, password, seedPhrase)) {
+	if (!registryService->registerUser(username, password, seedPhrase)) {
 		context->printError(QString("Can't register user %1")
-			.arg(login));
+			.arg(username));
 		return false;
 	}
 
 	context->printSuccess(QString("User registered. %1. Seed phrase: [%2]")
-		.arg(login)
+		.arg(username)
 		.arg(seedPhrase.join(" ")));
+	return true;
+}
+
+bool UsersCommand::Private::restoreAccount(CommandContext* context, const QString& seed, const QString& password) {
+	auto services = context->services();
+	auto registryService = services->get<UsersRegistryService>();
+	const auto wordList = seed.split(" ", Qt::SkipEmptyParts);
+	if (wordList.size() != 12 || wordList.size() != 24) {
+		context->printError("Seed prase is wrong.");
+		return false;
+	}
+
+	context->printSuccess("User restored.");
 	return true;
 }
 
@@ -122,11 +133,14 @@ bool UsersCommand::execute(const std::shared_ptr<Instruction> instruction, Comma
 	}
 
 	if (action == "login") return d->login(context,
-		instruction->text("login"),
+		instruction->text("username"),
 		instruction->text("password"));
 	else if (action == "logout") return d->logout(context);
 	else if (action == "register") return d->registerUser(context,
-		instruction->text("login"),
+		instruction->text("username"),
+		instruction->text("password"));
+	else if (action == "restore") return d->restoreAccount(context,
+		instruction->text("seed"),
 		instruction->text("password"));
 
 	return true;

@@ -31,7 +31,7 @@ public:
 
 	struct DatabaseAlias {
 		QString path;
-		bool encrypted;
+		bool encrypted = false;
 	};
 
 	std::unique_ptr<SecureBuffer> encryptionKey; // Ключ для SQLCipher (32 байта)
@@ -150,7 +150,7 @@ SQLiteConnection* DatabasesService::connection(const QString& name) {
 
 	if (dbAlies.encrypted) {
 		connectionString += QString("token=%1;")
-			.arg(d->encryptionKey->toQByteArray().toHex());
+			.arg(d->encryptionKey->toHex());
 	}
 
 	if (!entry.connection->open(connectionString)) {
@@ -190,17 +190,16 @@ void DatabasesService::setEncryptionKey(const QByteArray& data) {
 		return;
 	}
 
-	if (!d->encryptionKey.get()) {
+	if (!d->encryptionKey) {
 		d->encryptionKey = std::make_unique<SecureBuffer>(data.size());
 	}
-	else {
-		d->encryptionKey->clear();
-	}
 
-	if (!d->encryptionKey->data()) {
-		return;
-	}
-
-	std::memcpy(d->encryptionKey->data(), data.constData(), data.size());
+	d->encryptionKey->setData(data);
 	return;
+}
+
+void DatabasesService::cleadEncryptionKey() {
+
+	shutdown();
+	d->encryptionKey->clear();
 }

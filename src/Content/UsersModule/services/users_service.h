@@ -7,8 +7,10 @@
 
 class ImagesService;
 class IUsersDataProvider;
+class IUsersRegistryDataProvider;
 class UserView;
 class Resources;
+class DatabasesService;
 
 /// Сервис управления пользователями
 class UsersService : public QObject {
@@ -16,14 +18,16 @@ class UsersService : public QObject {
 public:
 	explicit UsersService(
 		Resources* resources,
+		DatabasesService* databasesService,
 		IUsersDataProvider* usersDataProvider,
+		IUsersRegistryDataProvider* usersRegistryDataProvider,
 		ImagesService* imagesService,
 		QObject* parent = nullptr);
 
 	~UsersService() override;
 
-	std::optional<QString> login(
-		const QString& login,
+	bool login(
+		const QString& username,
 		const QString& password);
 
 	void logout();

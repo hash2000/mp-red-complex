@@ -1,14 +1,14 @@
 #pragma once
-#include "Content/UsersModule/data_providers/register_user/i_register_user_data_provider.h"
+#include "Content/UsersModule/data_providers/users_registry/i_users_registry_data_provider.h"
 #include <QString>
 #include <memory>
 
 class DatabasesService;
 
-class RegisterUserDataProviderDb : public IRegisterUserDataProvider {
+class UsersRegistryDataProviderDb : public IUsersRegistryDataProvider {
 public:
-	RegisterUserDataProviderDb(DatabasesService* databasesService);
-	~RegisterUserDataProviderDb() override;
+	UsersRegistryDataProviderDb(DatabasesService* databasesService);
+	~UsersRegistryDataProviderDb() override;
 
 	bool addUser(const QString& userHash, const QString& username) override;
 	QString getUserHashByUsername(const QString& username) const override;

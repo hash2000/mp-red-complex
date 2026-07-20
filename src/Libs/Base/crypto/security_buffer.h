@@ -4,21 +4,32 @@
 
 class SecureBuffer {
 public:
-	explicit SecureBuffer(int size);
+	// Выделяем защищённую память заданного размера
+	explicit SecureBuffer(size_t size);
 	~SecureBuffer();
 
-	// Запрещаем копирование (чтобы ключ не размножался в памяти)
+	// ЗАПРЕЩАЕМ копирование, чтобы ключи не размножались в памяти
 	SecureBuffer(const SecureBuffer&) = delete;
-	SecureBuffer(SecureBuffer&& other) noexcept;
 	SecureBuffer& operator=(const SecureBuffer&) = delete;
+
+	// РАЗРЕШАЕМ перемещение (move semantics)
+	SecureBuffer(SecureBuffer&& other) noexcept;
+	SecureBuffer& operator=(SecureBuffer&& other) noexcept;
 
 	unsigned char* data();
 	const unsigned char* data() const;
-	int size() const;
+	size_t size() const;
+	bool isEmpty() const;
 
+	// Безопасно затирает содержимое, но не освобождает память (буфер можно переиспользовать)
 	void clear();
 
-	QByteArray toQByteArray() const;
+	// Копирует данные в буфер, предварительно затерев старое содержимое
+	void setData(const unsigned char* newData, size_t newSize);
+	void setData(const QByteArray& data);
+
+	// Более безопасная альтернатива: сразу получаем HEX-строку для PRAGMA key
+	QByteArray toHex() const;
 
 private:
 	class Private;

@@ -3,9 +3,9 @@
 #include <set>
 #include <memory>
 
-class IRegisterUserDataProvider {
+class IUsersRegistryDataProvider {
 public:
-	virtual ~IRegisterUserDataProvider() = default;
+	virtual ~IUsersRegistryDataProvider() = default;
 
 	virtual bool addUser(const QString& userHash, const QString& username) = 0;
 	virtual QString getUserHashByUsername(const QString& username) const = 0;

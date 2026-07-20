@@ -24,7 +24,7 @@ public:
 	void configure(const Config* config) override;
 	bool load();
 	bool loadProfile(const QString& userHash = QString());
-	std::optional<QDir> createProfilePath(const QString& userHash);
+	std::optional<QDir> createProfilePath(const QString& userHash, bool checkOnly = false);
 
 	QString defaultUseerName() const;
 

@@ -192,15 +192,15 @@ void LoginWidget::onLoginClicked() {
 		return;
 	}
 
-	auto result = d->usersService->login(login, password);
-	if (result.has_value()) {
-		d->errorLabel->hide();
-		emit loginSuccess();
-	}
-	else {
-		d->errorLabel->setText("Неверный логин или пароль");
-		d->errorLabel->show();
-	}
+	//auto result = d->usersService->login(login, password);
+	//if (result.has_value()) {
+	//	d->errorLabel->hide();
+	//	emit loginSuccess();
+	//}
+	//else {
+	//	d->errorLabel->setText("Неверный логин или пароль");
+	//	d->errorLabel->show();
+	//}
 }
 
 void LoginWidget::onRegisterClicked() {

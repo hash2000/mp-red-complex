@@ -174,7 +174,7 @@ bool Resources::loadProfile(const QString& userHash) {
 	return true;
 }
 
-std::optional<QDir> Resources::createProfilePath(const QString& userHash) {
+std::optional<QDir> Resources::createProfilePath(const QString& userHash, bool checkOnly) {
 	auto users_path = Directories.get(DirectoryPath::UsersPath);
 	if (!users_path) {
 		qCritical() << "Users.Path is not set.";
@@ -188,9 +188,17 @@ std::optional<QDir> Resources::createProfilePath(const QString& userHash) {
 	}
 
 	QDir user_base_path = users_path.value().filePath(userHash);
-	if (!QDir().mkpath(user_base_path.absolutePath())) {
-		qCritical() << "Can't create user profile path.";
-		return std::nullopt;
+	if (checkOnly) {
+		if (!QDir().exists(user_base_path.absolutePath())) {
+			qCritical() << "Can't search user profile path.";
+			return std::nullopt;
+		}
+	}
+	else {
+		if (!QDir().mkpath(user_base_path.absolutePath())) {
+			qCritical() << "Can't create user profile path.";
+			return std::nullopt;
+		}
 	}
 
 	return user_base_path;

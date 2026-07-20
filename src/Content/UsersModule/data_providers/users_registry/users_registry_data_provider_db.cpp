@@ -1,4 +1,4 @@
-#include "Content/UsersModule/data_providers/register_user/register_user_data_provider_db.h"
+#include "Content/UsersModule/data_providers/users_registry/users_registry_data_provider_db.h"
 #include "Content/DatabaseModule/services/databases_service.h"
 #include "Libs/Resources/db/sqlite/sqlite_connection.h"
 #include "Libs/Resources/db/sqlite/sqlite_reader.h"
@@ -25,22 +25,22 @@ static QString kSql_usersSelect = R"(
 
 }
 
-class RegisterUserDataProviderDb::Private {
+class UsersRegistryDataProviderDb::Private {
 public:
-	Private(RegisterUserDataProviderDb* parent) : q(parent) {}
-	RegisterUserDataProviderDb* q;
+	Private(UsersRegistryDataProviderDb* parent) : q(parent) {}
+	UsersRegistryDataProviderDb* q;
 
 	DatabasesService* databasesService;
 };
 
-RegisterUserDataProviderDb::RegisterUserDataProviderDb(DatabasesService* databasesService)
+UsersRegistryDataProviderDb::UsersRegistryDataProviderDb(DatabasesService* databasesService)
 	: d(std::make_unique<Private>(this)) {
 	d->databasesService = databasesService;
 }
 
-RegisterUserDataProviderDb::~RegisterUserDataProviderDb() = default;
+UsersRegistryDataProviderDb::~UsersRegistryDataProviderDb() = default;
 
-bool RegisterUserDataProviderDb::addUser(const QString& userHash, const QString& username) {
+bool UsersRegistryDataProviderDb::addUser(const QString& userHash, const QString& username) {
 	auto conn = d->databasesService->connection("accounts");
 	if (!conn) {
 		return false;
@@ -62,7 +62,7 @@ bool RegisterUserDataProviderDb::addUser(const QString& userHash, const QString&
 	return true;
 }
 
-QString RegisterUserDataProviderDb::getUserHashByUsername(const QString& username) const {
+QString UsersRegistryDataProviderDb::getUserHashByUsername(const QString& username) const {
 	auto conn = d->databasesService->connection("accounts");
 	if (!conn) {
 		return { };
@@ -81,7 +81,7 @@ QString RegisterUserDataProviderDb::getUserHashByUsername(const QString& usernam
 	return hash;
 }
 
-bool RegisterUserDataProviderDb::updateLastLogin(const QString& userHash) {
+bool UsersRegistryDataProviderDb::updateLastLogin(const QString& userHash) {
 	auto conn = d->databasesService->connection("accounts");
 	if (!conn) {
 		return false;
@@ -101,7 +101,7 @@ bool RegisterUserDataProviderDb::updateLastLogin(const QString& userHash) {
 	return true;
 }
 
-bool RegisterUserDataProviderDb::removeUser(const QString& userHash) {
+bool UsersRegistryDataProviderDb::removeUser(const QString& userHash) {
 	auto conn = d->databasesService->connection("accounts");
 	if (!conn) {
 		return false;
@@ -120,7 +120,7 @@ bool RegisterUserDataProviderDb::removeUser(const QString& userHash) {
 	return true;
 }
 
-QStringList RegisterUserDataProviderDb::listUsernames() const {
+QStringList UsersRegistryDataProviderDb::listUsernames() const {
 	auto conn = d->databasesService->connection("accounts");
 	if (!conn) {
 		return { };

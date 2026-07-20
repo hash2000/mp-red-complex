@@ -3,7 +3,7 @@
 #include <memory>
 
 class Resources;
-class IRegisterUserDataProvider;
+class IUsersRegistryDataProvider;
 class CurrentUserService;
 
 class UsersRegistryService : public QObject {
@@ -11,12 +11,13 @@ class UsersRegistryService : public QObject {
 public:
 	explicit UsersRegistryService(
 		Resources* resources,
-		IRegisterUserDataProvider* registerUserDataProvider,
+		IUsersRegistryDataProvider* usersRegistryDataProvider,
 		QObject* parent = nullptr);
 
 	~UsersRegistryService() override;
 
 	bool registerUser(const QString& username, const QString& password, QStringList& outSeedPhrase);
+	bool restoreFromSeed(const QStringList& seedPhrase, const QString& newPassword);
 
 private:
 	class Private;

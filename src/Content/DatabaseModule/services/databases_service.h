@@ -15,6 +15,7 @@ public:
 	~DatabasesService();
 
 	void setEncryptionKey(const QByteArray& data);
+	void cleadEncryptionKey();
 
 	SQLiteConnection* connection(const QString& name);
 	void reloadAliases();
