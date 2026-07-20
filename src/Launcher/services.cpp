@@ -38,7 +38,9 @@
 
 // UsersModule
 #include "Content/UsersModule/services/users_service.h"
+#include "Content/UsersModule/services/users_registry_service.h"
 #include "Content/UsersModule/data_providers/users/users_data_provider_db.h"
+#include "Content/UsersModule/data_providers/register_user/register_user_data_provider_db.h"
 
 // HighlightingPluginManager
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
@@ -59,6 +61,7 @@ public:
 		, imagesDataProvider([this] {	return std::make_unique<ImagesDataProviderJsonImpl>(resources);	})
 		, tileGroupsDataProvider([this] {	return std::make_unique<TileGroupsDataProviderJsonImpl>(resources);	})
 		, usersDataProvider([this] {	return std::make_unique<UsersDataProviderDb>(databasesService.get());	})
+		, registerUserDataProvider([this] {	return std::make_unique<RegisterUserDataProviderDb>(databasesService.get()); })
 		, characterDataProvider([this] {	return std::make_unique<CharacterDataProviderDb>(databasesService.get());	})
 		, shadersDataProvider([this] { return std::make_unique<ShadersDataProviderLocalImpl>(resources); })
 		, materialsDataProvider([this] { return std::make_unique<MaterialsDataProviderJsonImpl>(resources); })
@@ -80,6 +83,7 @@ private:
 	LazyPtr<IItemsDataProvider> itemsDataProvider;
 	LazyPtr<IEntitiesDataProvider> entitiesDataProvider;
 	LazyPtr<IUsersDataProvider> usersDataProvider;
+	LazyPtr<IRegisterUserDataProvider> registerUserDataProvider;
 	LazyPtr<ICharacterDataProvider> characterDataProvider;
 	LazyPtr<IImagesDataProvider> imagesDataProvider;
 	LazyPtr<ITileGroupsDataProvider> tileGroupsDataProvider;
@@ -104,6 +108,13 @@ public:
 				resources,
 				usersDataProvider.get(),
 				this->get<ImagesService>());
+		});
+
+		registerFactory<UsersRegistryService>([this] {
+			return std::make_unique<UsersRegistryService>(
+				resources,
+				registerUserDataProvider.get(),
+				this->get<UsersService>());
 		});
 
 		registerFactory<ImagesService>([this] {

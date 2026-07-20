@@ -8,24 +8,35 @@ Resources::Resources() {
 }
 
 void Resources::configure(const Config* config) {
-	_resources_path = QDir(config->resources_path);
-	Variables.set("Resources.Path", _resources_path.absolutePath());
-	Variables.set("Resources.Tools.Formatters.Path", QDir(config->resources_formatters_path).absolutePath());
-	Variables.set("Resources.Tools.Formatter.Executable", QDir(config->resources_formatter_executable).absolutePath());
+	const auto resources_path = QDir(config->resources_path);
+	_defaultsVariables.set("Resources.Path", resources_path.absolutePath());
+	_defaultsVariables.set("Resources.Tools.Formatters.Path", QDir(config->resources_formatters_path).absolutePath());
+	_defaultsVariables.set("Resources.Tools.Formatter.Executable", QDir(config->resources_formatter_executable).absolutePath());
+	_defaultsDirectories.set(DirectoryPath::ResourcesPath, resources_path);
 }
 
-void Resources::load() {
-	loadDatResources();
+bool Resources::load() {
+	//loadDatResources();
 	loadRawResources();
+	return false;
+}
+
+QString Resources::defaultUseerName() const {
+	return "Deafult";
 }
 
 void Resources::loadDatFile(const QString& fileName) {
-
 	ScopedTimer watch(QString("Load %1 file.").arg(fileName));
+	auto resources_path = _defaultsDirectories.get(DirectoryPath::ResourcesPath);
+	if (!resources_path) {
+		qCritical() << "Resources.Path is not set.";
+		return;
+	}
 
-	QFileInfo file(_resources_path.filePath(fileName));
+	QFileInfo file(resources_path.value().filePath(fileName));
 	if(!file.exists()) {
 		qWarning() << file.absoluteFilePath() << "not found";
+		return;
 	}
 
 	for(const auto& res : _resources) {
@@ -48,8 +59,14 @@ void Resources::loadDatFile(const QString& fileName) {
 }
 
 void Resources::loadDatResources() {
-	qDebug() << "Resources::loadDatResources from" << _resources_path.absolutePath();
-	const auto entries = _resources_path.entryInfoList(QDir::Files);
+	auto resources_path = _defaultsDirectories.get(DirectoryPath::ResourcesPath);
+	if (!resources_path) {
+		qCritical() << "Resources.Path is not set.";
+		return;
+	}
+
+	qDebug() << "Resources::loadDatResources from" << resources_path.value().absolutePath();
+	const auto entries = resources_path.value().entryInfoList(QDir::Files);
 
 	for(const auto &entry: entries) {
 		const auto fileName = entry.fileName();
@@ -62,8 +79,14 @@ void Resources::loadDatResources() {
 }
 
 void Resources::loadRawResources() {
-	qDebug() << "Resources::loadRawResources from" << _resources_path.absolutePath();
-	const auto entries = _resources_path.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
+	auto resources_path = _defaultsDirectories.get(DirectoryPath::ResourcesPath);
+	if (!resources_path) {
+		qCritical() << "Resources.Path is not set.";
+		return;
+	}
+
+	qDebug() << "Resources::loadRawResources from" << resources_path.value().absolutePath();
+	const auto entries = resources_path.value().entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
 	for(const auto &entry: entries) {
 		const auto path = entry.absoluteFilePath();
 		const auto fileName = entry.fileName();
@@ -98,12 +121,77 @@ auto Resources::getStream(const QString &container, const QString &path) const
 
 auto Resources::getWriteStream(const QString& container, const QString& path) const
 	-> std::optional<std::shared_ptr<DataWriteStream>> {
-	const auto dataPath = QString("")
-		.arg(_resources_path.absolutePath())
-		.arg(container)
-		.arg(path);
-	auto stream = std::make_shared<DataWriteStreamFile>(dataPath);
+	//const auto dataPath = QString("")
+	//	.arg(_resources_path.absolutePath())
+	//	.arg(container)
+	//	.arg(path);
+	auto stream = std::make_shared<DataWriteStreamFile>("");
 
 
 	return stream;
+}
+
+bool Resources::loadDefaults() {
+	Directories.apply(_defaultsDirectories);
+	Variables.apply(_defaultsVariables);
+
+	auto resources_path = _defaultsDirectories.get(DirectoryPath::ResourcesPath);
+	if (!resources_path) {
+		qCritical() << "Resources.Path is not set.";
+		return false;
+	}
+
+	Directories.set(DirectoryPath::AssetsPath, resources_path.value().filePath("assets"));
+	Directories.set(DirectoryPath::DataPath, resources_path.value().filePath("data"));
+	Directories.set(DirectoryPath::RecoveryWordsFile, resources_path.value().filePath("data/recovery/english.txt"));
+	Directories.set(DirectoryPath::DatabasesConfigFile, resources_path.value().filePath("data/databases.json"));
+	Directories.set(DirectoryPath::UsersPath, resources_path.value().filePath("users"));
+	Directories.set(DirectoryPath::AccountsDbFile, resources_path.value().filePath("data/accounts.db"));
+	return true;
+}
+
+bool Resources::loadProfile(const QString& userHash) {
+
+	Directories.clear();
+	Variables.clear();
+
+	if (!loadDefaults()) {
+		return false;
+	}
+
+	auto user_base_pathOpt = createProfilePath(userHash);
+	if (!user_base_pathOpt) {
+		return false;
+	}
+
+	auto user_base_path = user_base_pathOpt.value();
+	Directories.set(DirectoryPath::CurrentUserPath, user_base_path);
+	Directories.set(DirectoryPath::AutchFile, user_base_path.filePath("auth.enc"));
+	Directories.set(DirectoryPath::UsersDbFile, user_base_path.filePath("users.db"));
+	Directories.set(DirectoryPath::GameDbFile, user_base_path.filePath("game.db"));
+	Directories.set(DirectoryPath::MessangerDbFile, user_base_path.filePath("messanger.db"));
+
+	return true;
+}
+
+std::optional<QDir> Resources::createProfilePath(const QString& userHash) {
+	auto users_path = Directories.get(DirectoryPath::UsersPath);
+	if (!users_path) {
+		qCritical() << "Users.Path is not set.";
+		return std::nullopt;
+	}
+
+	auto user = userHash;
+	if (user.isEmpty()) {
+		qCritical() << "User hash is empty.";
+		return std::nullopt;
+	}
+
+	QDir user_base_path = users_path.value().filePath(userHash);
+	if (!QDir().mkpath(user_base_path.absolutePath())) {
+		qCritical() << "Can't create user profile path.";
+		return std::nullopt;
+	}
+
+	return user_base_path;
 }

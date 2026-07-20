@@ -1,7 +1,6 @@
 #include "Content/UsersModule/data_providers/users/users_data_provider_db.h"
 #include "Content/DatabaseModule/services/databases_service.h"
 #include "Content/UsersModule/models/user.h"
-#include "Libs/Resources/db/sqlite/migration_manager.h"
 #include "Libs/Resources/db/sqlite/sqlite_connection.h"
 #include "Libs/Resources/db/sqlite/sqlite_reader.h"
 #include <QUuid>

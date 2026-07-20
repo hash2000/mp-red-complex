@@ -5,7 +5,6 @@
 
 class LoginWindow : public MdiChildWindow {
 	Q_OBJECT
-
 public:
 	explicit LoginWindow(const QString& id, QWidget* parent = nullptr);
 	~LoginWindow() override;

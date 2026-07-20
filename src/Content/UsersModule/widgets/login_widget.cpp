@@ -204,13 +204,13 @@ void LoginWidget::onLoginClicked() {
 }
 
 void LoginWidget::onRegisterClicked() {
-	RegisterWidget registerDialog(d->usersService, this);
-	if (registerDialog.exec() == QDialog::Accepted) {
-		// Заполняем поля входа новыми учётными данными
-		d->loginEdit->setText(registerDialog.login());
-		d->passwordEdit->setText(registerDialog.password());
-		
-		// Автоматически выполняем вход
-		onLoginClicked();
-	}
+	//RegisterWidget registerDialog(d->usersService, this);
+	//if (registerDialog.exec() == QDialog::Accepted) {
+	//	// Заполняем поля входа новыми учётными данными
+	//	d->loginEdit->setText(registerDialog.login());
+	//	d->passwordEdit->setText(registerDialog.password());
+	//	
+	//	// Автоматически выполняем вход
+	//	onLoginClicked();
+	//}
 }

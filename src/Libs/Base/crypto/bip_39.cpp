@@ -1,4 +1,4 @@
-#include "Content/UsersModule/crypto/bip_39.h"
+#include "Libs/Base/crypto/bip_39.h"
 #include "Libs/Resources/resources.h"
 
 #include <QByteArray>
@@ -40,15 +40,36 @@ Bip39::Bip39(Resources* resources)
 Bip39::~Bip39() = default;
 
 bool Bip39::Private::loadWordlist() {
-	QFile file(":/bip39/english.txt");
+	auto recoveryFile = resources->Directories.get(DirectoryPath::RecoveryWordsFile);
+	if (!recoveryFile) {
+		throw std::invalid_argument("Recovery file is not set.");
+	}
+
+	QFile file(recoveryFile.value().absolutePath());
 	if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
 		return false;
 	}
+
 	QTextStream in(&file);
 	while (!in.atEnd()) {
-		QString word = in.readLine().trimmed();
-		if (!word.isEmpty()) {
-			wordlist.append(word);
+		QString line = in.readLine().trimmed();
+		if (line.isEmpty()) {
+			continue;
+		}
+
+		// Ищем двоеточие, отделяющее метаданные от слов
+		int colonPos = line.indexOf(':');
+		if (colonPos < 0) {
+			continue;
+		}
+
+		// Берем часть после двоеточия: "abandon,ability,able,about,above"
+		QString wordsPart = line.mid(colonPos + 1);
+
+		// Разделяем слова по запятым и добавляем в список
+		const QStringList words = wordsPart.split(',', Qt::SkipEmptyParts);
+		for (const QString& word : words) {
+			wordlist.append(word.trimmed());
 		}
 	}
 
@@ -62,28 +83,41 @@ QStringList Bip39::generateMnemonic(int strengthBits) {
 
 	int entropyBytes = strengthBits / 8;
 	std::vector<uint8_t> entropy(entropyBytes);
-
 	randombytes_buf(entropy.data(), entropy.size());
 
+	// SHA-256 от энтропии
 	QByteArray entropyBA = QByteArray::fromRawData(
 		reinterpret_cast<const char*>(entropy.data()), entropy.size());
 	QByteArray hash = QCryptographicHash::hash(entropyBA, QCryptographicHash::Sha256);
 
-	std::vector<uint8_t> data = entropy;
-	data.push_back(static_cast<uint8_t>(hash[0]));
+	// Checksum: для 128 бит энтропии = 4 бита, для 256 бит = 8 бит
+	int checksumBits = strengthBits / 32;  // 4 или 8
 
-	QStringList words;
-	int bits = 0;
-	uint32_t accumulator = 0;
+	// Собираем все биты в один поток: энтропия + checksum
+	// Используем вектор битов для точности
+	std::vector<bool> bits;
+	bits.reserve(strengthBits + checksumBits);
 
-	for (uint8_t byte : data) {
-		accumulator = (accumulator << 8) | byte;
-		bits += 8;
-		while (bits >= 11) {
-			bits -= 11;
-			int index = (accumulator >> bits) & 0x7FF;
-			words.append(d->wordlist.at(index));
+	// Добавляем биты энтропии
+	for (int i = 0; i < entropyBytes; ++i) {
+		for (int bit = 7; bit >= 0; --bit) {
+			bits.push_back((entropy[i] >> bit) & 1);
 		}
+	}
+
+	// Добавляем биты checksum (старшие биты hash[0])
+	for (int i = 0; i < checksumBits; ++i) {
+		bits.push_back((hash[0] >> (7 - i)) & 1);
+	}
+
+	// Разбиваем на 11-битные индексы
+	QStringList words;
+	for (size_t i = 0; i < bits.size(); i += 11) {
+		int index = 0;
+		for (int j = 0; j < 11; ++j) {
+			index = (index << 1) | (bits[i + j] ? 1 : 0);
+		}
+		words.append(d->wordlist.at(index));
 	}
 
 	sodium_memzero(entropy.data(), entropy.size());
@@ -95,6 +129,7 @@ std::vector<uint8_t> Bip39::validateAndGetEntropy(const QStringList& words) cons
 		throw std::invalid_argument("Mnemonic must have 12 or 24 words");
 	}
 
+	// Преобразуем слова в индексы
 	std::vector<int> indices;
 	indices.reserve(words.size());
 	for (const QString& w : words) {
@@ -105,27 +140,43 @@ std::vector<uint8_t> Bip39::validateAndGetEntropy(const QStringList& words) cons
 		indices.push_back(idx);
 	}
 
-	std::vector<uint8_t> data;
-	int bits = 0;
-	uint32_t accumulator = 0;
+	// Собираем все биты из 11-битных индексов
+	std::vector<bool> bits;
+	bits.reserve(words.size() * 11);
 	for (int idx : indices) {
-		accumulator = (accumulator << 11) | idx;
-		bits += 11;
-		while (bits >= 8) {
-			bits -= 8;
-			data.push_back(static_cast<uint8_t>((accumulator >> bits) & 0xFF));
+		for (int bit = 10; bit >= 0; --bit) {
+			bits.push_back((idx >> bit) & 1);
 		}
 	}
 
-	int entropyBytes = data.size() - 1;
-	std::vector<uint8_t> entropy(data.begin(), data.begin() + entropyBytes);
+	// Определяем размер энтропии и checksum
+	int totalBits = bits.size();  // 132 для 12 слов, 264 для 24 слов
+	int checksumBits = totalBits / 33;  // 4 для 12 слов, 8 для 24 слов
+	int entropyBits = totalBits - checksumBits;
+	int entropyBytes = entropyBits / 8;
 
+	// Извлекаем энтропию
+	std::vector<uint8_t> entropy(entropyBytes, 0);
+	for (int i = 0; i < entropyBits; ++i) {
+		if (bits[i]) {
+			entropy[i / 8] |= (1 << (7 - (i % 8)));
+		}
+	}
+
+	// Извлекаем checksum
+	uint8_t actualChecksum = 0;
+	for (int i = 0; i < checksumBits; ++i) {
+		if (bits[entropyBits + i]) {
+			actualChecksum |= (1 << (checksumBits - 1 - i));
+		}
+	}
+
+	// Вычисляем ожидаемый checksum
 	QByteArray entropyBA = QByteArray::fromRawData(
 		reinterpret_cast<const char*>(entropy.data()), entropy.size());
 	QByteArray hash = QCryptographicHash::hash(entropyBA, QCryptographicHash::Sha256);
 
-	uint8_t expectedChecksum = (hash[0] >> 4) & 0x0F;
-	uint8_t actualChecksum = data.back() >> 4;
+	uint8_t expectedChecksum = (hash[0] >> (8 - checksumBits)) & ((1 << checksumBits) - 1);
 
 	if (expectedChecksum != actualChecksum) {
 		throw std::runtime_error("Invalid mnemonic checksum");

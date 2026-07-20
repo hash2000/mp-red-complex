@@ -7,6 +7,7 @@
 #include "Libs/Engine/services/services_registry.h"
 
 #include "Content/UsersModule/services/users_service.h"
+#include "Content/UsersModule/services/users_registry_service.h"
 #include "Content/UsersModule/models/user_view.h"
 
 class UsersCommand::Private {
@@ -18,7 +19,7 @@ public:
 	void printUsersFullInfo(CommandContext* context, const std::list<std::shared_ptr<UserView>>& users);
 	bool login(CommandContext* context, const QString& login, const QString& password);
 	bool logout(CommandContext* context);
-	bool registerInTarget(CommandContext* context, const QString& login, const QString& target);
+	bool registerUser(CommandContext* context, const QString& login, const QString& password);
 };
 
 
@@ -34,6 +35,7 @@ QString UsersCommand::help() const {
 	return R"(users action:
 	logout
 	login login:{login} password:{password}
+	register: login:{login} password:{password}
 	)";
 }
 
@@ -95,14 +97,21 @@ bool UsersCommand::Private::logout(CommandContext* context) {
 	return true;
 }
 
-bool UsersCommand::Private::registerInTarget(CommandContext* context, const QString& login, const QString& target) {
+bool UsersCommand::Private::registerUser(CommandContext* context, const QString& login, const QString& password) {
 	auto services = context->services();
-	auto usersService = services->get<UsersService>();
+	auto registryService = services->get<UsersRegistryService>();
 
-	if (!usersService->isAuthenticated()) {
-		context->printError("User is not authorized");
+	QStringList seedPhrase;
+	if (!registryService->registerUser(login, password, seedPhrase)) {
+		context->printError(QString("Can't register user %1")
+			.arg(login));
 		return false;
 	}
+
+	context->printSuccess(QString("User registered. %1. Seed phrase: [%2]")
+		.arg(login)
+		.arg(seedPhrase.join(" ")));
+	return true;
 }
 
 bool UsersCommand::execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
@@ -116,6 +125,9 @@ bool UsersCommand::execute(const std::shared_ptr<Instruction> instruction, Comma
 		instruction->text("login"),
 		instruction->text("password"));
 	else if (action == "logout") return d->logout(context);
+	else if (action == "register") return d->registerUser(context,
+		instruction->text("login"),
+		instruction->text("password"));
 
 	return true;
 }

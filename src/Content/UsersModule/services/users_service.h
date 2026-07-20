@@ -8,7 +8,6 @@
 class ImagesService;
 class IUsersDataProvider;
 class UserView;
-class CurrentUserContext;
 class Resources;
 
 /// Сервис управления пользователями
@@ -30,8 +29,6 @@ public:
 	void logout();
 
 	bool isAuthenticated() const;
-
-	CurrentUserContext* currentUserContext();
 
 signals:
 	void loginSuccess(const UserView& user);

@@ -2,7 +2,6 @@
 #include <QObject>
 #include <memory>
 
-class MigrationManager;
 class SQLiteConnection;
 class Resources;
 class IDatabaseSettingsDataProvider;
@@ -10,10 +9,15 @@ class IDatabaseSettingsDataProvider;
 class DatabasesService : public QObject {
 	Q_OBJECT
 public:
-	DatabasesService(Resources* resources, IDatabaseSettingsDataProvider* settingsDataProvider, QObject* parent = nullptr);
+	DatabasesService(Resources* resources,
+		IDatabaseSettingsDataProvider* settingsDataProvider,
+		QObject* parent = nullptr);
 	~DatabasesService();
 
+	void setEncryptionKey(const QByteArray& data);
+
 	SQLiteConnection* connection(const QString& name);
+	void reloadAliases();
 
 private:
 	void shutdown();

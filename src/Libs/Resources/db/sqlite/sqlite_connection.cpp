@@ -2,6 +2,14 @@
 #include "Libs/Resources/db/sqlite/sqlite_reader.h"
 
 #include <sqlite3.h>
+#include <optional>
+
+namespace {
+struct ConnectionProperties {
+	QString path;
+	QString key;
+};
+}
 
 class SQLiteConnection::Private {
 public:
@@ -11,6 +19,8 @@ public:
 	sqlite3* db = nullptr;
 	QString dbPath;
 	bool isOpen = false;
+
+	static std::optional<ConnectionProperties> parseConnectionString(const QString& connectionString);
 };
 
 SQLiteConnection::SQLiteConnection(QObject* parent)
@@ -23,7 +33,13 @@ SQLiteConnection::~SQLiteConnection() {
 }
 
 bool SQLiteConnection::open(const QString& connectionString) {
+	const auto connectionOptions = Private::parseConnectionString(connectionString);
+	if (!connectionOptions) {
+		qWarning() << "Bad connection string.";
+		return false;
+	}
 
+	d->dbPath = connectionOptions.value().path;
 
 	int rc = sqlite3_open_v2(
 		d->dbPath.toUtf8().constData(),
@@ -51,6 +67,15 @@ bool SQLiteConnection::open(const QString& connectionString) {
 	execute("PRAGMA busy_timeout=5000");
 	execute("PRAGMA foreign_keys=ON");
 
+	if (!connectionOptions.value().key.isEmpty()) {
+		auto setupDbKeyResult = execute(QString("PRAGMA fPRAGMA key = x'%1'")
+			.arg(connectionOptions.value().key));
+		if (!setupDbKeyResult) {
+			qWarning() << "Bad Database key.";
+			return false;
+		}
+	}
+
 	d->isOpen = true;
 	qInfo() << "Database opened:" << d->dbPath;
 
@@ -72,6 +97,7 @@ void SQLiteConnection::close() {
 	d->isOpen = false;
 
 	qInfo() << "Database closed:" << d->dbPath;
+	d->dbPath.clear();
 }
 
 bool SQLiteConnection::isOpen() const {
@@ -145,4 +171,33 @@ void SQLiteConnection::setPragma(const QString& pragma, const QString& value) {
 
 sqlite3* SQLiteConnection::handle() const {
 	return d->db;
+}
+
+std::optional<ConnectionProperties> SQLiteConnection::Private::parseConnectionString(const QString& connectionString) {
+	if (connectionString.isEmpty()) {
+		return std::nullopt;
+	}
+
+	ConnectionProperties result;
+	const auto connectionOptions = connectionString.split(";", Qt::SkipEmptyParts);
+	for (const auto option : connectionOptions) {
+		const auto kv = option.split("=", Qt::SkipEmptyParts);
+		if (kv.count() != 2) {
+			continue;
+		}
+
+		const auto paramName = kv[0].toLower();
+		if (paramName == "file") {
+			result.path = kv[1].toLower();
+		}
+		else if (paramName == "token") {
+			result.key = kv[1].toLower();
+		}
+	}
+
+	if (result.path.isEmpty()) {
+		return std::nullopt;
+	}
+
+	return result;
 }

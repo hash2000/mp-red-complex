@@ -2,7 +2,7 @@
 #include <QDialog>
 #include <memory>
 
-class UsersService;
+class UsersRegistryService;
 class QLineEdit;
 class QPushButton;
 class QLabel;
@@ -11,7 +11,7 @@ class QLabel;
 class RegisterWidget : public QDialog {
 	Q_OBJECT
 public:
-	explicit RegisterWidget(UsersService* usersService, QWidget* parent = nullptr);
+	explicit RegisterWidget(UsersRegistryService* usersRegistryService, QWidget* parent = nullptr);
 	~RegisterWidget() override;
 
 	/// Получить введённый логин
