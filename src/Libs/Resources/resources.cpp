@@ -145,7 +145,6 @@ bool Resources::loadDefaults() {
 	Directories.set(DirectoryPath::DataPath, resources_path.value().filePath("data"));
 	Directories.set(DirectoryPath::RecoveryWordsFile, resources_path.value().filePath("data/recovery/english.txt"));
 	Directories.set(DirectoryPath::DatabasesConfigFile, resources_path.value().filePath("data/databases.json"));
-	Directories.set(DirectoryPath::UsersPath, resources_path.value().filePath("users"));
 	Directories.set(DirectoryPath::AccountsDbFile, resources_path.value().filePath("data/accounts.db"));
 	return true;
 }
@@ -167,9 +166,10 @@ bool Resources::loadProfile(const QString& userHash) {
 	auto user_base_path = user_base_pathOpt.value();
 	Directories.set(DirectoryPath::CurrentUserPath, user_base_path);
 	Directories.set(DirectoryPath::AutchFile, user_base_path.filePath("auth.enc"));
-	Directories.set(DirectoryPath::UsersDbFile, user_base_path.filePath("users.db"));
-	Directories.set(DirectoryPath::GameDbFile, user_base_path.filePath("game.db"));
-	Directories.set(DirectoryPath::MessangerDbFile, user_base_path.filePath("messanger.db"));
+	Directories.set(DirectoryPath::MessangerDbFile, user_base_path.filePath("data/messanger.db"));
+	Directories.set(DirectoryPath::FetchApiDbFile, user_base_path.filePath("data/fetch_api.db"));
+	Directories.set(DirectoryPath::GameDbFile, user_base_path.filePath("data/game.db"));
+	Directories.set(DirectoryPath::MessangerDbFile, user_base_path.filePath("data/messanger.db"));
 
 	return true;
 }
@@ -195,7 +195,8 @@ std::optional<QDir> Resources::createProfilePath(const QString& userHash, bool c
 		}
 	}
 	else {
-		if (!QDir().mkpath(user_base_path.absolutePath())) {
+		if (!QDir().mkpath(user_base_path.absolutePath()) ||
+			!QDir().mkpath(user_base_path.filePath("data"))) {
 			qCritical() << "Can't create user profile path.";
 			return std::nullopt;
 		}

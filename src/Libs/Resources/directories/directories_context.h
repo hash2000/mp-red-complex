@@ -16,7 +16,7 @@ enum class DirectoryPath {
 
 	// --- Databases ----
 	AccountsDbFile,
-	UsersDbFile,
+	FetchApiDbFile,
 	GameDbFile,
 	MessangerDbFile,
 };

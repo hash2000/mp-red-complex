@@ -1,5 +1,4 @@
 #include "Content/UsersModule/services/users_service.h"
-#include "Content/UsersModule/data_providers/users/i_users_data_provider.h"
 #include "Content/UsersModule/data_providers/users_registry/i_users_registry_data_provider.h"
 #include "Content/UsersModule/models/user_view.h"
 #include "Content/DatabaseModule/services/databases_service.h"
@@ -21,12 +20,12 @@ public:
 	Private(UsersService* parent) : q(parent) { }
 	UsersService* q;
 
-	IUsersDataProvider* usersDataProvider = nullptr;
 	IUsersRegistryDataProvider* usersRegistryDataProvider = nullptr;
 	ImagesService* imagesService = nullptr;
 	DatabasesService* databasesService = nullptr;
 	Resources* resources;
 	QString currentUserHash;
+	QByteArray encryptedSeed;
 
 	// Читаем зашифрованную seed-фразу из файла
 	static bool loadEncryptedSeed(
@@ -39,14 +38,12 @@ public:
 UsersService::UsersService(
 	Resources* resources,
 	DatabasesService* databasesService,
-	IUsersDataProvider* usersDataProvider,
 	IUsersRegistryDataProvider* usersRegistryDataProvider,
 	ImagesService* imagesService,
 	QObject* parent)
 	: QObject(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->resources = resources;
-	d->usersDataProvider = usersDataProvider;
 	d->usersRegistryDataProvider = usersRegistryDataProvider;
 	d->databasesService = databasesService;
 	d->imagesService = imagesService;
@@ -120,6 +117,7 @@ bool UsersService::login(const QString& username, const QString& password) {
 		// 8. Устанавливаем контекст пользователя
 		d->currentUserHash = userHash;
 		d->databasesService->setEncryptionKey(dbKey);
+		d->encryptedSeed = encryptedSeed;
 
 		// 9. Очищаем чувствительные данные
 		sodium_memzero(masterSeed.data(), masterSeed.size());
@@ -137,6 +135,7 @@ bool UsersService::login(const QString& username, const QString& password) {
 }
 
 void UsersService::logout() {
+	d->encryptedSeed.clear();
 	d->currentUserHash.clear();
 	d->databasesService->cleadEncryptionKey();
 
@@ -172,4 +171,12 @@ bool UsersService::Private::loadEncryptedSeed(
 	outEncryptedSeed = fileData.mid(saltSize);
 
 	return true;
+}
+
+QString UsersService::currentUserHash() {
+	return d->currentUserHash;
+}
+
+QByteArray UsersService::currentUserEncryptedSeed() {
+	return d->encryptedSeed;
 }

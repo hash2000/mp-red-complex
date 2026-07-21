@@ -8,8 +8,8 @@
 #include "Libs/Base/crypto/security_buffer.h"
 
 #include "Content/DatabaseModule/migrations/game_migrations.h"
-#include "Content/DatabaseModule/migrations/users_migrations.h"
 #include "Content/DatabaseModule/migrations/accounts_migrations.h"
+#include "Content/DatabaseModule/migrations/fetch_api_migrations.h"
 
 #include <QApplication>
 #include <QDir>
@@ -54,8 +54,8 @@ DatabasesService::DatabasesService(Resources* resources,
 
 	d->migrations = {
 		{ "game", [](MigrationManager* manager) { GameMigrations::build(manager); } },
-		{ "users", [](MigrationManager* manager) { UsersMigrations::build(manager); } },
 		{ "accounts", [](MigrationManager* manager) { AccountsMigrations::build(manager); } },
+		{ "fetch_api", [](MigrationManager* manager) { FetchApiMigrations::build(manager); } },
 	};
 
 	reloadAliases();
@@ -74,8 +74,8 @@ void DatabasesService::onApplicationShutdown() {
 void DatabasesService::reloadAliases() {
 	d->aliases.clear();
 	d->appendAlias(DirectoryPath::AccountsDbFile, "accounts", false);
-	d->appendAlias(DirectoryPath::UsersDbFile, "users", true);
 	d->appendAlias(DirectoryPath::GameDbFile, "game", true);
+	d->appendAlias(DirectoryPath::FetchApiDbFile, "fetch_api", true);
 	d->appendAlias(DirectoryPath::MessangerDbFile, "messanger", true);
 }
 

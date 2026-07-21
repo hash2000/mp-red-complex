@@ -6,7 +6,6 @@
 #include <list>
 
 class ImagesService;
-class IUsersDataProvider;
 class IUsersRegistryDataProvider;
 class UserView;
 class Resources;
@@ -19,7 +18,6 @@ public:
 	explicit UsersService(
 		Resources* resources,
 		DatabasesService* databasesService,
-		IUsersDataProvider* usersDataProvider,
 		IUsersRegistryDataProvider* usersRegistryDataProvider,
 		ImagesService* imagesService,
 		QObject* parent = nullptr);
@@ -33,6 +31,9 @@ public:
 	void logout();
 
 	bool isAuthenticated() const;
+
+	QString currentUserHash();
+	QByteArray currentUserEncryptedSeed();
 
 signals:
 	void loginSuccess(const UserView& user);
