@@ -10,5 +10,5 @@ public:
 	std::optional<int> parentId;
 	QString name;
 
-	std::list<FetchTree> children;
+	std::optional<std::list<FetchTree>> children;
 };

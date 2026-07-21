@@ -11,7 +11,7 @@ CREATE TABLE "queries_tree" (
 	"id" INTEGER NOT null PRIMARY KEY AUTOINCREMENT,
 	"parent_id" INTEGER,
 	"name" TEXT NOT NULL,
-	CONSTRAINT "FK_queries_tree_parent_id" FOREIGN KEY ("parent_id") REFERENCES "queries_tree"("id")
+	CONSTRAINT FK_queries_tree_parent_id FOREIGN KEY (parent_id) REFERENCES queries_tree(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE "queries" (
@@ -24,6 +24,9 @@ CREATE TABLE "queries" (
 	CONSTRAINT "PK_queries" PRIMARY KEY (queries_tree_id),
 	CONSTRAINT "FK_queries_queries_tree" FOREIGN KEY ("queries_tree_id") REFERENCES "queries_tree"("id")
 );
+
+CREATE INDEX IF NOT EXISTS IX_queries_tree_parent_id ON queries_tree(parent_id);
+
 		)");
 	},
 		[](SQLiteConnection& db) -> bool {
