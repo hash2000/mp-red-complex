@@ -75,7 +75,7 @@ void DatabasesService::reloadAliases() {
 	d->aliases.clear();
 	d->appendAlias(DirectoryPath::AccountsDbFile, "accounts", false);
 	d->appendAlias(DirectoryPath::GameDbFile, "game", true);
-	d->appendAlias(DirectoryPath::FetchApiDbFile, "fetch_api", true);
+	d->appendAlias(DirectoryPath::FetchApiDbFile, "fetch_api", false);
 	d->appendAlias(DirectoryPath::MessangerDbFile, "messanger", true);
 }
 
