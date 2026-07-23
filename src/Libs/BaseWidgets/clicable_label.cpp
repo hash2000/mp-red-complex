@@ -1,4 +1,4 @@
-#include "Content/BaseWidgets/clicable_label.h"
+#include "Libs/BaseWidgets/clicable_label.h"
 #include <QMouseEvent>
 
 void ClickableLabel::mousePressEvent(QMouseEvent* event) {

@@ -85,7 +85,7 @@ void DatabasesService::Private::appendAlias(DirectoryPath path, const QString& a
 		 return;
 	 }
 
-	 auto &it = aliases[alias];
+	 auto &it = aliases[alias.toLower()];
 	 it.path = dir.value().absolutePath();
 	 it.encrypted = encrypted;
 }
@@ -94,18 +94,11 @@ void DatabasesService::shutdown() {
 	for (auto& entry : d->entries) {
 		auto& db = entry.second;
 
-		if (db.initialized) {
-			// Останавливаем авто-checkpoint
-			db.walManager->stopAutoCheckpoint();
-
-			// Финальный checkpoint
-			db.walManager->checkpoint(SQLiteWalManager::TRUNCATE);
-
-			// Оптимизация
-			db.connection->execute("PRAGMA optimize");
-
-			// Закрываем соединение
-			db.connection.reset();
+		if (db.initialized) {			
+			db.walManager->stopAutoCheckpoint(); // Останавливаем авто-checkpoint
+			db.walManager->checkpoint(SQLiteWalManager::TRUNCATE); // Финальный checkpoint
+			db.connection->execute("PRAGMA optimize");// Оптимизация
+			db.connection.reset(); // Закрываем соединение
 		}
 	}
 
@@ -115,7 +108,7 @@ void DatabasesService::shutdown() {
 
 SQLiteConnection* DatabasesService::connection(const QString& name) {
 	const auto identName = name.toLower();
-	const auto dbPathIt = d->aliases.find(name);
+	const auto dbPathIt = d->aliases.find(identName);
 
 	if (dbPathIt == d->aliases.end()) {
 		qCritical() << "Undefined database alias:" << name;

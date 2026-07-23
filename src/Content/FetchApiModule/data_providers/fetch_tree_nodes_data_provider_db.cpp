@@ -7,20 +7,20 @@
 
 namespace {
 static QString kSql_treeNodesSelect = R"(
-SELECT
-	id,
-	parent_id,
-	name,
-	CASE
-			WHEN EXISTS (
-				SELECT 1
-				FROM queries_tree AS child
-				WHERE child.parent_id = t.id
-			)
-			THEN 1
-			ELSE 0
-		END AS has_children
-FROM queries_tree AS t;
+	select
+		tree_id id,
+		parent_id,
+		name,
+		case
+				when exists (
+					select 1
+					from queries_tree as child
+					where child.parent_id = t.tree_id
+				)
+				then 1
+				else 0
+			end as has_children
+	from queries_tree as t;
 )";
 static QString kSql_treeNodesDelete = R"(
 	delete from queries_tree where id = :id
@@ -31,6 +31,23 @@ static QString kSql_treeNodesUpdate = R"(
 		name = :name
 		from queries_tree
 			where id = :id
+)";
+static QString kSql_treeNodeInsert = R"(
+	insert into queries_tree (parent_id, name) values(:parent_id, :name);
+)";
+static QString kSql_treeNodesSerach = R"(
+	with cte as (
+		select qt.tree_id id, qt.parent_id, qt.name, 1 IsFound, 0 IsExpanded
+		from queries_tree qt
+			where :search_text is not null and qt.name like concat('%', :search_text, '%')
+		
+		union all
+	
+		select p.tree_id id, p.parent_id, p.name, 0 IsFound, 1 IsExpanded
+		from queries_tree p
+			join cte c on c.parent_id = p.tree_id 
+	)
+	select * from cte
 )";
 }
 
@@ -49,8 +66,8 @@ FetchTreeNodesDataProviderDb::FetchTreeNodesDataProviderDb(DatabasesService* dat
 
 FetchTreeNodesDataProviderDb::~FetchTreeNodesDataProviderDb() = default;
 
-std::list<FetchTree> FetchTreeNodesDataProviderDb::treeNodes(std::optional<int> parentId) {
-	std::list<FetchTree> result;
+LazyTreeNodeList FetchTreeNodesDataProviderDb::treeNodes(std::optional<int> parentId) const {
+	LazyTreeNodeList result;
 	auto conn = d->databasesService->connection("fetch_api");
 	if (!conn) {
 		return result;
@@ -70,18 +87,51 @@ std::list<FetchTree> FetchTreeNodesDataProviderDb::treeNodes(std::optional<int> 
 	}
 
 	while (reader->next()) {
-		FetchTree item;
-		item.id = reader->value("id").toInt();
-		item.name = reader->value("name").toString();
+		const auto item = std::make_shared<FetchTree>();
+		item->setId(reader->value("id").toInt());
+		item->setName(reader->value("name").toString());
 		auto parentId = reader->value("parent_id");
 		if (!parentId.isNull()) {
-			item.parentId = parentId.toInt();
+			item->setParentId(parentId.toInt());
 		}
 
 		if (reader->value("has_children").toInt() > 0) {
-			// добавляю пустой список, для ленивой загрузки дочерних узлов
-			// если std::nullopt, это охначает - дочерних узлов нет
-			item.children = std::list<FetchTree>();
+			item->setChildren(LazyTreeNodeList());
+		}
+
+		result.push_back(item);
+	}
+
+	return result;
+}
+
+LazyTreeNodeList FetchTreeNodesDataProviderDb::searchTreeNodes(const QString& text) const {
+
+	LazyTreeNodeList result;
+	auto conn = d->databasesService->connection("fetch_api");
+	if (!conn) {
+		return result;
+	}
+
+	auto reader = conn->executeQuery(kSql_treeNodesSerach);
+	if (!reader) {
+		qCritical() << "FetchTreeNodesDataProviderDb::tsearchTeeNodes. Query error:" << conn->lastError();
+		return result;
+	}
+
+	reader->bindValue(":search_text", text);
+
+	while (reader->next()) {
+		const auto item = std::make_shared<FetchTree>();
+		item->setId(reader->value("id").toInt());
+		item->setName(reader->value("name").toString());
+		auto parentId = reader->value("parent_id");
+		if (!parentId.isNull()) {
+			item->setParentId(parentId.toInt());
+		}
+
+		if (reader->value("has_children").toInt() > 0) {
+			item->setChildren(LazyTreeNodeList());
 		}
 
 		result.push_back(item);
@@ -110,7 +160,7 @@ bool FetchTreeNodesDataProviderDb::deleteTreeNode(int id) {
 	return true;
 }
 
-bool FetchTreeNodesDataProviderDb::updateTreeNode(const FetchTree& node) {
+bool FetchTreeNodesDataProviderDb::updateTreeNode(const LazyTreeNodePtr& node) {
 	auto conn = d->databasesService->connection("fetch_api");
 	if (!conn) {
 		return false;
@@ -120,15 +170,37 @@ bool FetchTreeNodesDataProviderDb::updateTreeNode(const FetchTree& node) {
 		return false;
 	}
 
-	updateItem->bindValue(":parent_id", node.parentId ? QVariant(node.parentId.value()) : QVariant());
-	updateItem->bindValue(":name", node.name);
-	updateItem->bindValue(":id", node.id);
+	updateItem->bindValue(":parent_id", node->parentId() ? QVariant(node->parentId().value()) : QVariant());
+	updateItem->bindValue(":name", node->name());
+	updateItem->bindValue(":id", node->id());
 
 	if (!updateItem->exec()) {
-		qWarning() << "Error update path id" << node.id;
+		qWarning() << "Error update path id" << node->id();
 		return false;
 	}
 
+	return true;
+}
+
+bool FetchTreeNodesDataProviderDb::addNode(const LazyTreeNodePtr& node) {
+	auto conn = d->databasesService->connection("fetch_api");
+	if (!conn) {
+		return false;
+	}
+	auto insertItem = conn->prepare(kSql_treeNodeInsert);
+	if (!insertItem) {
+		return false;
+	}
+
+	insertItem->bindValue(":parent_id", node->parentId() ? QVariant(node->parentId().value()) : QVariant());
+	insertItem->bindValue(":name", node->name());
+
+	if (!insertItem->exec()) {
+		qWarning() << "Error insert path id" << node->id();
+		return false;
+	}
+
+	node->setId(insertItem->lastInsert());
 	return true;
 }
 

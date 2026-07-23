@@ -1,17 +1,20 @@
 #pragma once
+#include "Libs/BaseWidgets/tree_view/lazy_load/i_lazy_tree_data_provider.h"
 #include <QString>
 
 #include <optional>
-#include <list>
+#include <vector>
 
 class FetchTree;
-class FetchQuery;
 
 class IFetchTreeNodesDataProvider {
 public:
 	virtual ~IFetchTreeNodesDataProvider() = default;
 
-	virtual std::list<FetchTree> treeNodes(std::optional<int> parentId) = 0;
+	virtual LazyTreeNodeList treeNodes(std::optional<int> parentId) const = 0;
+	virtual LazyTreeNodeList searchTreeNodes(const QString& text) const = 0;
+
+	virtual bool addNode(const LazyTreeNodePtr& node) = 0;
 	virtual bool deleteTreeNode(int id) = 0;
-	virtual bool updateTreeNode(const FetchTree& node) = 0;
+	virtual bool updateTreeNode(const LazyTreeNodePtr& node) = 0;
 };

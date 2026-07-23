@@ -116,7 +116,9 @@ bool UsersService::login(const QString& username, const QString& password) {
 
 		// 8. Устанавливаем контекст пользователя
 		d->currentUserHash = userHash;
+		d->resources->loadProfile(userHash);
 		d->databasesService->setEncryptionKey(dbKey);
+		d->databasesService->reloadAliases();
 		d->encryptedSeed = encryptedSeed;
 
 		// 9. Очищаем чувствительные данные
@@ -137,7 +139,9 @@ bool UsersService::login(const QString& username, const QString& password) {
 void UsersService::logout() {
 	d->encryptedSeed.clear();
 	d->currentUserHash.clear();
+	d->resources->loadProfile();
 	d->databasesService->cleadEncryptionKey();
+	d->databasesService->reloadAliases();
 
 	emit loggedOut();
 }

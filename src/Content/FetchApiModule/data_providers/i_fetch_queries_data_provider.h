@@ -2,9 +2,7 @@
 #include <QString>
 
 #include <optional>
-#include <list>
 
-class FetchTree;
 class FetchQuery;
 
 class IFetchQueriesDataProvider {

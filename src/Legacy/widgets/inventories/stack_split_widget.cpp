@@ -5,7 +5,7 @@
 #include "Launcher/styles/items_styles.h"
 #include "Content/InventoriesModule/models/inventory_item_handler.h"
 #include "Content/InventoriesModule/models/item_mime_data.h"
-#include "Content/BaseWidgets/clicable_label.h"
+#include "Libs/BaseWidgets/clicable_label.h"
 #include <QSlider>
 #include <QLineEdit>
 #include <QIntValidator>

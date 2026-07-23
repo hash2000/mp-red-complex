@@ -11,7 +11,7 @@
 #include "Launcher/windows/action_panel/action_panel_widget.h"
 #include "Content/UsersModule/services/users_service.h"
 #include "Content/UsersModule/models/user_view.h"
-#include "Content/BaseWidgets/mdi_area.h"
+#include "Libs/BaseWidgets/mdi_area.h"
 #include "Libs/Resources/resources.h"
 #include "Libs/Engine/services/services_registry.h"
 

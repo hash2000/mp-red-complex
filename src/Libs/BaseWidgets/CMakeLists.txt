@@ -1,7 +1,7 @@
 message(STATUS "> Build BaseWidgets")
 
 set(BaseWidgets-Sources
-	${RedComplex_SOURCE_DIR}/src/Content/BaseWidgets
+	${RedComplex_SOURCE_DIR}/src/Libs/BaseWidgets
 )
 
 file(GLOB_RECURSE SRCS ${BaseWidgets-Sources}/*.cpp)

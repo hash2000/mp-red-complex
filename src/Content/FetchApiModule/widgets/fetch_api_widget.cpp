@@ -1,6 +1,5 @@
 #include "Content/FetchApiModule/widgets/fetch_api_widget.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
-#include "Content/BaseWidgets/key_value/key_value_editor_widget.h"
 
 #include "Content/ConsoleModule/command_context.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
@@ -8,6 +7,7 @@
 
 #include "Libs/Engine/services/services_registry.h"
 #include "Libs/Base/extensions/text_edit_extensions.h"
+#include "Libs/BaseWidgets/key_value/key_value_editor_widget.h"
 
 #include "Content/CodeEditorWidget/code_editor_widget.h"
 #include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"

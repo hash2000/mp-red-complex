@@ -1,4 +1,4 @@
-#include "Content/BaseWidgets/properties/properties_list_widget.h"
+#include "Libs/BaseWidgets/properties/properties_list_widget.h"
 #include <QCheckBox>
 #include <QSpinBox>
 #include <QDoubleSpinBox>

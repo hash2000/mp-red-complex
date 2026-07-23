@@ -1,4 +1,4 @@
-#include "Content/BaseWidgets/key_value/key_value_editor_widget.h"
+#include "Libs/BaseWidgets/key_value/key_value_editor_widget.h"
 
 #include <QHBoxLayout>
 #include <QVBoxLayout>

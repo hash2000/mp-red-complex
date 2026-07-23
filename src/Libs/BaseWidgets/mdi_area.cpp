@@ -1,4 +1,4 @@
-#include "Content/BaseWidgets/mdi_area.h"
+#include "Libs/BaseWidgets/mdi_area.h"
 #include <QMdiSubWindow>
 #include <QWidget>
 #include <QScrollBar>

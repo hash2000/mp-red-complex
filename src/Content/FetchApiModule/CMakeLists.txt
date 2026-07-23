@@ -22,9 +22,9 @@ target_link_libraries(RedComplexFetchApiModule
 		Qt6::Network
 
 		RedComplexBase
+		RedComplexBaseWidgets
 		RedComplexDataStream
 		RedComplexResources
-		RedComplexBaseWidgets
 )
 
 qt_import_plugins(RedComplexFetchApiModule
