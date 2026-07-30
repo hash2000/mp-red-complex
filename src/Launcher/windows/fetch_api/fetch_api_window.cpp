@@ -10,6 +10,7 @@
 #include "Libs/Engine/services/services_registry.h"
 
 #include <QRegularExpression>
+#include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QToolButton>
 #include <QFileDialog>
@@ -19,7 +20,7 @@ public:
 	Private(FetchApiWindow* parent) : q(parent) {}
 	FetchApiWindow* q;
 
-	QVBoxLayout* mainLayout = nullptr;
+	QWidget* mainContainer = nullptr;
 	FetchApiWidget* widget = nullptr;
 	FetchQueriesTreeWidget* tree = nullptr;
 
@@ -45,30 +46,34 @@ QString FetchApiWindow::windowTitle() const {
 }
 
 bool FetchApiWindow::Private::applyInstructionCreate(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
-	if (mainLayout) {
-		mainLayout->deleteLater();
-	}
-
 	auto services = context->services();
 
-	mainLayout = new QVBoxLayout(q);
+	if (mainContainer) {
+		mainContainer->deleteLater();
+	}
 
-	auto toolButton = new QToolButton(q);
-	mainLayout->addWidget(toolButton);
-	toolButton->setFixedWidth(32);
+	mainContainer = new QWidget(q);
+
+	auto mainLayout = new QHBoxLayout(mainContainer);
+	auto buttonsLayout = new QVBoxLayout();
+	buttonsLayout->setSpacing(3);
+
+	auto toolButton = new QToolButton(mainContainer);
 	toolButton->setText("▾");
 	toolButton->setToolButtonStyle(Qt::ToolButtonTextOnly);
 	toolButton->setToolTip("Показать сохранённый запросы");
-
-	mainLayout->addWidget(toolButton, 0, Qt::AlignTop | Qt::AlignLeft);
-	mainLayout->addStretch(1);
+	buttonsLayout->addWidget(toolButton);
 
 	tree = new FetchQueriesTreeWidget(services->get<FetchStoreService>());
 	tree->setWindowFlags(Qt::Popup | Qt::FramelessWindowHint);
 	tree->setStyleSheet("border: 1px solid #cccccc; border-radius: 5px;");
 
-	widget = new FetchApiWidget(context, q);
-	q->setWidget(widget);
+	widget = new FetchApiWidget(context, mainContainer);
+
+	buttonsLayout->addStretch(1);
+	mainLayout->addWidget(widget, 1);
+	mainLayout->addLayout(buttonsLayout);
+	q->setWidget(mainContainer);
 
 	connect(toolButton, &QToolButton::clicked, q, [this, toolButton]() {
 		showToolWidget(toolButton);
@@ -83,10 +88,10 @@ void FetchApiWindow::Private::showToolWidget(QToolButton* button) {
 		return;
 	}
 
-	QPoint buttonBottomLeft = button->mapToGlobal(QPoint(0, button->height()));
-
 	auto size = widget->size();
 	size.setWidth(qMax(size.width() / 4, 300));
+
+	QPoint buttonBottomLeft = button->mapToGlobal(QPoint(-size.width(), button->height()));
 
 	tree->resize(size);
 	tree->move(buttonBottomLeft);

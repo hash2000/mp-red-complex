@@ -120,10 +120,10 @@ void LauncherMainFrame::Private::setupConsole() {
 void LauncherMainFrame::Private::setupView() {
 
 	// Горизонтальный сплиттер для основной области и панели действий
-	auto* horizontalSplitter = new QSplitter(Qt::Horizontal);
+	auto horizontalSplitter = new QSplitter(Qt::Horizontal);
 
 	// Вертикальный сплиттер для MDI и консоли
-	auto* verticalSplitter = new QSplitter(Qt::Vertical);
+	auto verticalSplitter = new QSplitter(Qt::Vertical);
 	verticalSplitter->addWidget(mdiArea);
 	verticalSplitter->addWidget(commandConsole);
 	verticalSplitter->setStretchFactor(0, 1);
@@ -144,7 +144,6 @@ void LauncherMainFrame::Private::setupView() {
 
 	q->setCentralWidget(horizontalSplitter);
 
-	// Добавляем кнопку Login
 	setupActionPanel();
 }
 
