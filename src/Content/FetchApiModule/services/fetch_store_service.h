@@ -18,10 +18,10 @@ public:
 	~FetchStoreService() override;
 
 	LazyTreeNodePtr createTreeNode() override;
-	LazyTreeNodeList treeNodes(const LazyTreeNodePtr& parentNode) const override;
+	LazyTreeNodeList treeNodes(const QVariant& parentId) const override;
 	LazyTreeNodeList searchTreeNodes(const QString& text) const override;
 	bool addTreeNode(const LazyTreeNodePtr& node) override;
-	bool deleteTreeNode(const LazyTreeNodePtr& node) override;
+	bool deleteTreeNode(const QVariant& id) override;
 	bool updateTreeNode(const LazyTreeNodePtr& node) override;
 
 private:

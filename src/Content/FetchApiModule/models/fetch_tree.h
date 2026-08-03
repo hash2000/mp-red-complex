@@ -1,31 +1,30 @@
 #pragma once
 #include "Libs/BaseWidgets/tree_view/lazy_load/i_lazy_tree_data_provider.h"
-#include <QString>
 
-#include <optional>
-#include <vector>
+#include <memory>
 
 class FetchTree : public ILazyTreeNode {
 public:
-	~FetchTree() override = default;
+	FetchTree();
+	~FetchTree() override;
 
-	void setId(int i) override { _id = i; }
-	int id() const override { return _id; }
-	void setParentId(std::optional<int> pId) override { _parentId = pId; }
-	std::optional<int> parentId() const override { return _parentId; }
-	void setName(const QString& n) override { _name = n; }
-	QString name() const override { return _name; }
-	std::optional<std::vector<std::shared_ptr<ILazyTreeNode>>> children() const override { return _children; }
-	void setChildren(const std::vector<std::shared_ptr<ILazyTreeNode>>& ch) { _children = ch; }
-	void clearChildren() { _children = std::nullopt; }
-	void setExpanded(bool value) override { _expanded = value; }
-	bool expanded() const { return _expanded; }
+	void setId(QVariant i) override;
+	QVariant id() const override;
+	void setParentId(QVariant pId) override;
+	QVariant parentId() const override;
+	void setName(const QString& n) override;
+	QString name() const override;
+	void setChildren(const LazyTreeNodeList& ch) override;
+	void clearChildren() override;
+	void setExpanded(bool value) override;
+	bool expanded() const override;
+
+	bool equals(const LazyTreeNodePtr& node) const override;
+
+	void appendChild(const LazyTreeNodePtr& ch);
+	std::optional<LazyTreeNodeList> children() const;
 
 private:
-	int _id;
-	std::optional<int> _parentId;
-	QString _name;
-	bool _expanded;
-
-	std::optional<std::vector<std::shared_ptr<ILazyTreeNode>>> _children;
+	class Private;
+	std::unique_ptr<Private> d;
 };

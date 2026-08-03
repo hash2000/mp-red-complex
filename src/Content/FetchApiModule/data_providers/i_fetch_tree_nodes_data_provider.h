@@ -11,10 +11,10 @@ class IFetchTreeNodesDataProvider {
 public:
 	virtual ~IFetchTreeNodesDataProvider() = default;
 
-	virtual LazyTreeNodeList treeNodes(std::optional<int> parentId) const = 0;
+	virtual LazyTreeNodeList treeNodes(const QVariant& parentId) const = 0;
 	virtual LazyTreeNodeList searchTreeNodes(const QString& text) const = 0;
 
 	virtual bool addNode(const LazyTreeNodePtr& node) = 0;
-	virtual bool deleteTreeNode(int id) = 0;
+	virtual bool deleteTreeNode(const QVariant& id) = 0;
 	virtual bool updateTreeNode(const LazyTreeNodePtr& node) = 0;
 };

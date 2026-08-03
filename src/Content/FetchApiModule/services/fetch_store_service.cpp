@@ -5,6 +5,8 @@
 #include "Content/FetchApiModule/models/fetch_query.h"
 #include "Content/FetchApiModule/models/fetch_tree.h"
 
+#include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_builder.h"
+
 #include <optional>
 
 class FetchStoreService::Private {
@@ -38,20 +40,22 @@ LazyTreeNodePtr FetchStoreService::createTreeNode() {
 	return std::make_shared<FetchTree>();
 }
 
-LazyTreeNodeList FetchStoreService::treeNodes(const LazyTreeNodePtr& parentNode) const {
-	return d->treeNodesDataProvider->treeNodes(parentNode ? std::optional<int>(parentNode->id()) : std::nullopt);
+LazyTreeNodeList FetchStoreService::treeNodes(const QVariant& parentId) const {
+	return d->treeNodesDataProvider->treeNodes(parentId);
 }
 
 LazyTreeNodeList FetchStoreService::searchTreeNodes(const QString& text) const {
-	return d->treeNodesDataProvider->searchTreeNodes(text);
+	LazyTreeNodeList searchResult = d->treeNodesDataProvider->searchTreeNodes(text);
+	LazyTreeNodeList result = LazyTreeBuilder::buildFromFlat(searchResult);
+	return result;
 }
 
 bool FetchStoreService::addTreeNode(const LazyTreeNodePtr& node) {
 	return d->treeNodesDataProvider->addNode(node);
 }
 
-bool FetchStoreService::deleteTreeNode(const LazyTreeNodePtr& node) {
-	return d->treeNodesDataProvider->deleteTreeNode(node->id());
+bool FetchStoreService::deleteTreeNode(const QVariant& id) {
+	return d->treeNodesDataProvider->deleteTreeNode(id);
 }
 
 bool FetchStoreService::updateTreeNode(const LazyTreeNodePtr& node) {

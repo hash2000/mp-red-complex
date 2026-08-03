@@ -9,11 +9,11 @@ public:
 	FetchTreeNodesDataProviderDb(DatabasesService* databasesService);
 	~FetchTreeNodesDataProviderDb() override;
 
-	LazyTreeNodeList treeNodes(std::optional<int> parentId) const override;
+	LazyTreeNodeList treeNodes(const QVariant& parentId) const override;
 	LazyTreeNodeList searchTreeNodes(const QString& text) const override;
 
 	bool addNode(const LazyTreeNodePtr& node) override;
-	bool deleteTreeNode(int id) override;
+	bool deleteTreeNode(const QVariant& id) override;
 	bool updateTreeNode(const LazyTreeNodePtr& node) override;
 
 private:

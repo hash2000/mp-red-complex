@@ -19,35 +19,77 @@ static QString kSql_treeNodesSelect = R"(
 				)
 				then 1
 				else 0
-			end as has_children
-	from queries_tree as t;
+			end as has_children,
+		0 expanded
+	from queries_tree as t
 )";
 static QString kSql_treeNodesDelete = R"(
-	delete from queries_tree where id = :id
+	delete from queries_tree where tree_id = :id
 )";
 static QString kSql_treeNodesUpdate = R"(
-	update set
-		parent_id = :parent_id
-		name = :name
-		from queries_tree
-			where id = :id
+update set
+	parent_id = :parent_id
+	name = :name
+	from queries_tree
+		where tree_id = :id
 )";
 static QString kSql_treeNodeInsert = R"(
 	insert into queries_tree (parent_id, name) values(:parent_id, :name);
 )";
 static QString kSql_treeNodesSerach = R"(
-	with cte as (
-		select qt.tree_id id, qt.parent_id, qt.name, 1 IsFound, 0 IsExpanded
-		from queries_tree qt
-			where :search_text is not null and qt.name like concat('%', :search_text, '%')
-		
-		union all
-	
-		select p.tree_id id, p.parent_id, p.name, 0 IsFound, 1 IsExpanded
-		from queries_tree p
-			join cte c on c.parent_id = p.tree_id 
-	)
-	select * from cte
+with recursive
+found as (
+    select
+        qt.tree_id as id,
+        qt.parent_id,
+        qt.name,
+        case
+            when exists (
+                select 1
+                from queries_tree as child
+                where child.parent_id = qt.tree_id
+            )
+            then 1
+            else 0
+        end as has_children
+    from queries_tree qt
+    where qt.name like '%' || :search_text || '%'
+),
+raw as (
+    -- найденные узлы: изначально считаем их закрытыми
+    select
+        id,
+        parent_id,
+        name,
+        has_children,
+        0 as expanded
+    from found
+    union all
+    -- идем вверх к корню: эти узлы уже должны быть раскрыты
+    select
+        p.tree_id as id,
+        p.parent_id,
+        p.name,
+        1 as has_children,
+        1 as expanded
+    from queries_tree p
+    join raw c on c.parent_id = p.tree_id
+),
+cte as (
+    select
+        id,
+        parent_id,
+        name,
+        max(has_children) as has_children,
+        max(expanded) as expanded
+    from raw
+    group by
+        id,
+        parent_id,
+        name
+)
+select *
+from cte
 )";
 }
 
@@ -66,7 +108,7 @@ FetchTreeNodesDataProviderDb::FetchTreeNodesDataProviderDb(DatabasesService* dat
 
 FetchTreeNodesDataProviderDb::~FetchTreeNodesDataProviderDb() = default;
 
-LazyTreeNodeList FetchTreeNodesDataProviderDb::treeNodes(std::optional<int> parentId) const {
+LazyTreeNodeList FetchTreeNodesDataProviderDb::treeNodes(const QVariant& parentId) const {
 	LazyTreeNodeList result;
 	auto conn = d->databasesService->connection("fetch_api");
 	if (!conn) {
@@ -74,12 +116,13 @@ LazyTreeNodeList FetchTreeNodesDataProviderDb::treeNodes(std::optional<int> pare
 	}
 
 	QString where;
-	if (!parentId) where = "is null";
-	else where = QString("= %1").arg(parentId.value());
-
-	auto reader = conn->executeQuery(QString("%1\nwhere t.parent_id %2")
+	if (parentId.isNull()) where = "is null";
+	else where = QString("= %1").arg(parentId.toInt());
+	auto query = QString("%1\nwhere parent_id %2")
 		.arg(kSql_treeNodesSelect)
-		.arg(where));
+		.arg(where);
+
+	auto reader = conn->executeQuery(query);
 
 	if (!reader) {
 		qCritical() << "FetchTreeNodesDataProviderDb::treeNodes. Query error:" << conn->lastError();
@@ -88,11 +131,11 @@ LazyTreeNodeList FetchTreeNodesDataProviderDb::treeNodes(std::optional<int> pare
 
 	while (reader->next()) {
 		const auto item = std::make_shared<FetchTree>();
-		item->setId(reader->value("id").toInt());
+		item->setId(reader->value("id"));
 		item->setName(reader->value("name").toString());
 		auto parentId = reader->value("parent_id");
 		if (!parentId.isNull()) {
-			item->setParentId(parentId.toInt());
+			item->setParentId(parentId);
 		}
 
 		if (reader->value("has_children").toInt() > 0) {
@@ -123,14 +166,15 @@ LazyTreeNodeList FetchTreeNodesDataProviderDb::searchTreeNodes(const QString& te
 
 	while (reader->next()) {
 		const auto item = std::make_shared<FetchTree>();
-		item->setId(reader->value("id").toInt());
+		item->setId(reader->value("id"));
 		item->setName(reader->value("name").toString());
+		item->setExpanded(reader->value("expanded").toInt() != 0);
 		auto parentId = reader->value("parent_id");
 		if (!parentId.isNull()) {
-			item->setParentId(parentId.toInt());
+			item->setParentId(parentId);
 		}
 
-		if (reader->value("has_children").toInt() > 0) {
+		if (reader->value("has_children").toInt() != 0) {
 			item->setChildren(LazyTreeNodeList());
 		}
 
@@ -140,7 +184,7 @@ LazyTreeNodeList FetchTreeNodesDataProviderDb::searchTreeNodes(const QString& te
 	return result;
 }
 
-bool FetchTreeNodesDataProviderDb::deleteTreeNode(int id) {
+bool FetchTreeNodesDataProviderDb::deleteTreeNode(const QVariant& id) {
 	auto conn = d->databasesService->connection("fetch_api");
 	if (!conn) {
 		return false;
@@ -170,7 +214,7 @@ bool FetchTreeNodesDataProviderDb::updateTreeNode(const LazyTreeNodePtr& node) {
 		return false;
 	}
 
-	updateItem->bindValue(":parent_id", node->parentId() ? QVariant(node->parentId().value()) : QVariant());
+	updateItem->bindValue(":parent_id", node->parentId());
 	updateItem->bindValue(":name", node->name());
 	updateItem->bindValue(":id", node->id());
 
@@ -192,7 +236,7 @@ bool FetchTreeNodesDataProviderDb::addNode(const LazyTreeNodePtr& node) {
 		return false;
 	}
 
-	insertItem->bindValue(":parent_id", node->parentId() ? QVariant(node->parentId().value()) : QVariant());
+	insertItem->bindValue(":parent_id", node->parentId());
 	insertItem->bindValue(":name", node->name());
 
 	if (!insertItem->exec()) {
@@ -200,7 +244,7 @@ bool FetchTreeNodesDataProviderDb::addNode(const LazyTreeNodePtr& node) {
 		return false;
 	}
 
-	node->setId(insertItem->lastInsert());
+	node->setId(QVariant::fromValue((int)insertItem->lastInsert()));
 	return true;
 }
 

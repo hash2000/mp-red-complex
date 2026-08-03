@@ -1,7 +1,6 @@
 #pragma once
+#include "Libs/BaseWidgets/tree_view/lazy_load/i_lazy_tree_data_provider.h"
 #include <QWidget>
-
-class ILazyNodesDataProvider;
 
 class LazyTreeViewWidget : public QWidget {
 	Q_OBJECT
@@ -14,8 +13,14 @@ private slots:
 	void performSearch();
 	void onAddNode();
 	void onDeleteNode();
+	void onShowSearch();
 	void onBackToNormalView();
 	void showContextMenu(const QPoint& pos);
+	void onTreeViewExpanded(const QModelIndex& index);
+	void onTreeViewItemActivated(const QModelIndex& index);
+
+signals:
+	void activateNode(const LazyTreeNodePtr& node);
 
 private:
 	class Private;
