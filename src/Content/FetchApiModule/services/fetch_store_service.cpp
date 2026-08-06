@@ -55,10 +55,10 @@ bool FetchStoreService::addTreeNode(const LazyTreeNodePtr& node) {
 }
 
 bool FetchStoreService::deleteTreeNode(const QVariant& id) {
-	return d->treeNodesDataProvider->deleteTreeNode(id);
+	return d->treeNodesDataProvider->deleteNode(id);
 }
 
 bool FetchStoreService::updateTreeNode(const LazyTreeNodePtr& node) {
-	return d->treeNodesDataProvider->updateTreeNode(node);
+	return d->treeNodesDataProvider->updateNode(node);
 }
 

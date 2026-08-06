@@ -20,8 +20,6 @@ public:
 	virtual void setExpanded(bool value) = 0;
 	virtual bool expanded() const = 0;
 
-	virtual bool equals(const LazyTreeNodePtr& node) const = 0;
-
 	virtual void appendChild(const LazyTreeNodePtr& ch) = 0;
 	virtual void setChildren(const LazyTreeNodeList& ch) = 0;
 	virtual void clearChildren() = 0;

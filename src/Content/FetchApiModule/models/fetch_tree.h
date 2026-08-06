@@ -19,8 +19,6 @@ public:
 	void setExpanded(bool value) override;
 	bool expanded() const override;
 
-	bool equals(const LazyTreeNodePtr& node) const override;
-
 	void appendChild(const LazyTreeNodePtr& ch);
 	std::optional<LazyTreeNodeList> children() const;
 

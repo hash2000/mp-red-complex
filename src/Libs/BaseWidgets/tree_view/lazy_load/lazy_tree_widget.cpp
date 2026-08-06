@@ -13,6 +13,8 @@
 
 namespace {
 constexpr int TreeNodeRawData = Qt::UserRole + 1;
+constexpr int TreeNodeId = Qt::UserRole + 2;
+constexpr int TreeNodeIsTemporary = Qt::UserRole + 3;
 }
 
 class LazyTreeViewWidget::Private {
@@ -47,12 +49,12 @@ public:
 	void setupToolbar();
 	void loadTreeData();
 	void loadSearchResults(const QString& searchText);
-	void buildSubTree(QTreeView* treeView, QStandardItem* parentItem, const LazyTreeNodeList& nodes);
+	void buildSubTree(QTreeView* treeView, QStandardItem* parentItem, const LazyTreeNodeList& nodes, bool isTemporary);
 	void addDummyNode(QStandardItem* parentItem);
 	void removeDummyNode(QStandardItem* parentItem);
 	bool hasDummyNode(QStandardItem* item) const;
 	void expandAndSelectInNormalTree(const LazyTreeNodePtr &node);
-	QStandardItem* findNode(QStandardItem* parent, const LazyTreeNodePtr& node) const;
+	QStandardItem* findNode(QStandardItem* parent, const QVariant& id) const;
 };
 
 LazyTreeViewWidget::LazyTreeViewWidget(ILazyNodesDataProvider* provider, QWidget* parent)
@@ -74,21 +76,22 @@ LazyTreeViewWidget::LazyTreeViewWidget(ILazyNodesDataProvider* provider, QWidget
 	d->normalTreeView->setContextMenuPolicy(Qt::CustomContextMenu);
 	connect(d->normalTreeView, &QWidget::customContextMenuRequested, this, &LazyTreeViewWidget::showContextMenu);
 	connect(d->normalTreeView, &QTreeView::expanded, this, &LazyTreeViewWidget::onTreeViewExpanded);
+	connect(d->normalTreeView, &QTreeView::activated, this, &LazyTreeViewWidget::onNodeActivated);
+	connect(d->normalTreeView->selectionModel(), &QItemSelectionModel::currentChanged, this, &LazyTreeViewWidget::onSelectionChanged);
 
 	// Настройка дерева поиска
 	d->searchTreeView->setModel(d->searchModel);
 	d->searchTreeView->setItemDelegate(d->searchDelegate);
 	d->searchTreeView->setHeaderHidden(true);
 	connect(d->searchTreeView, &QTreeView::expanded, this, &LazyTreeViewWidget::onTreeViewExpanded);
+	connect(d->searchTreeView, &QTreeView::activated, this, &LazyTreeViewWidget::onNodeActivated);
+	connect(d->searchTreeView->selectionModel(), &QItemSelectionModel::currentChanged, this, &LazyTreeViewWidget::onSelectionChanged);
 
 	// Таймер для debounce поиска (300 мс)
 	d->searchTimer = new QTimer(this);
 	d->searchTimer->setSingleShot(true);
 	connect(d->searchTimer, &QTimer::timeout, this, &LazyTreeViewWidget::performSearch);
 	connect(d->searchLineEdit, &QLineEdit::textChanged, this, &LazyTreeViewWidget::onSearchTextChanged);
-
-	connect(d->normalTreeView, &QTreeView::activated, this, &LazyTreeViewWidget::onTreeViewItemActivated);
-	connect(d->searchTreeView, &QTreeView::activated, this, &LazyTreeViewWidget::onTreeViewItemActivated);
 
 	d->loadTreeData();
 }
@@ -147,7 +150,7 @@ void LazyTreeViewWidget::Private::setupToolbar() {
 	btnShowSearch->setToolButtonStyle(Qt::ToolButtonIconOnly);
 	connect(btnShowSearch, &QToolButton::clicked, q, &LazyTreeViewWidget::onShowSearch);
 
-	btnBack->setText("⬅️");
+	btnBack->setText("🔙");
 	btnBack->setToolTip("Вернуться к обычному виду");
 	btnBack->setToolButtonStyle(Qt::ToolButtonIconOnly);
 	btnBack->hide(); // Скрыта по умолчанию
@@ -265,6 +268,31 @@ void LazyTreeViewWidget::onDeleteNode() {
 	}
 }
 
+void LazyTreeViewWidget::onSelectionChanged() {
+	QTreeView* treeView = qobject_cast<QTreeView*>(sender()->parent());
+	if (!treeView) {
+		return;
+	}
+
+	QModelIndex currentIndex = treeView->currentIndex();
+	if (!currentIndex.isValid()) {
+		return;
+	}
+
+	QStandardItemModel* model = qobject_cast<QStandardItemModel*>(treeView->model());
+	if (!model) {
+		return;
+	}
+
+	QStandardItem* item = model->itemFromIndex(currentIndex);
+	if (!item) {
+		return;
+	}
+
+	QVariant nodeId = item->data(TreeNodeRawData);
+	emit nodeSelectionChanged(nodeId);
+}
+
 void LazyTreeViewWidget::onShowSearch() {
 	d->isSearchMode = true;
 	d->btnBack->show();
@@ -303,7 +331,33 @@ void LazyTreeViewWidget::showContextMenu(const QPoint& pos) {
 	menu.exec(d->normalTreeView->viewport()->mapToGlobal(pos));
 }
 
-void LazyTreeViewWidget::onTreeViewItemActivated(const QModelIndex& index) {
+bool LazyTreeViewWidget::updateNode(const QVariant& nodeId, const LazyTreeNodePtr& nodeData) {
+	auto rootItem = d->normalModel->invisibleRootItem();
+	auto item = d->findNode(rootItem, nodeId);
+	if (!item) {
+		return false;
+	}
+
+	auto oldNodeData = item->data(TreeNodeRawData).value<LazyTreeNodePtr>();
+	if (!nodeData) {
+		return false;
+	}
+
+	if (!d->provider->updateTreeNode(nodeData)) {
+		return false;
+	}
+
+	item->setData(QVariant::fromValue(nodeData), TreeNodeRawData);
+	item->setText(nodeData->name());
+
+	return true;
+}
+
+void LazyTreeViewWidget::refreshAll() {
+	d->loadTreeData();
+}
+
+void LazyTreeViewWidget::onNodeActivated(const QModelIndex& index) {
 	if (!index.isValid()) {
 		return;
 	}
@@ -320,13 +374,18 @@ void LazyTreeViewWidget::onTreeViewItemActivated(const QModelIndex& index) {
 		return;
 	}
 
-	auto nodeData = item->data(TreeNodeRawData).value<LazyTreeNodePtr>();
-	if (!nodeData) {
-		// exception
+	// Пропускаем временные узлы (они редактируются через встроенный редактор)
+	if (item->data(TreeNodeIsTemporary).toBool()) {
 		return;
 	}
 
-	emit activateNode(nodeData);
+	auto nodeData = item->data(TreeNodeRawData).value<LazyTreeNodePtr>();
+	if (!nodeData) {
+		return;
+	}
+
+	// Эмитим сигнал о запросе редактирования
+	emit nodeEditRequested(nodeData);
 }
 
 void LazyTreeViewWidget::onTreeViewExpanded(const QModelIndex& index) {
@@ -354,10 +413,8 @@ void LazyTreeViewWidget::onTreeViewExpanded(const QModelIndex& index) {
 		return;
 	}
 
-	// Получаем ID родительского узла
 	auto nodeData = item->data(TreeNodeRawData).value<LazyTreeNodePtr>();
 	if (!nodeData) {
-		// exception
 		return;
 	}
 
@@ -366,38 +423,47 @@ void LazyTreeViewWidget::onTreeViewExpanded(const QModelIndex& index) {
 	// Загружаем реальных детей
 	auto nodes = d->provider->treeNodes(nodeData->id());
 	if (!nodes.empty()) {
-		d->buildSubTree(treeView, item, nodes);
+		d->buildSubTree(treeView, item, nodes, false);
 	}
 }
 
 void LazyTreeViewWidget::Private::loadTreeData() {
+	searchModel->clear();
 	normalModel->clear();
 	auto roots = provider->treeNodes(QVariant());
 	auto rootItem = normalModel->invisibleRootItem();
-	buildSubTree(normalTreeView, rootItem, roots);
+	buildSubTree(normalTreeView, rootItem, roots, false);
 }
 
 void LazyTreeViewWidget::Private::loadSearchResults(const QString& searchText) {
 	searchModel->clear();
 	auto results = provider->searchTreeNodes(searchText);
 	auto rootNode = searchModel->invisibleRootItem();
-	buildSubTree(searchTreeView, rootNode, results);
+	buildSubTree(searchTreeView, rootNode, results, false);
 }
 
-void LazyTreeViewWidget::Private::buildSubTree(QTreeView* treeView, QStandardItem* parentItem, const LazyTreeNodeList& nodes) {
+void LazyTreeViewWidget::Private::buildSubTree(QTreeView* treeView, QStandardItem* parentItem, const LazyTreeNodeList& nodes, bool isTemporary) {
 	for (const auto& nodeData : nodes) {
 		auto item = new QStandardItem(nodeData->name());
 		const auto& children = nodeData->children();
 
+		Qt::ItemFlags flags = Qt::ItemIsEnabled | Qt::ItemIsSelectable;
+		if (isTemporary) {
+			flags |= Qt::ItemIsEditable;
+		}
+
 		// Сохраняем ID узла в UserRole для быстрого доступа
 		item->setData(QVariant::fromValue(nodeData), TreeNodeRawData);
+		item->setData(nodeData->id(), TreeNodeId);
+		item->setData(isTemporary, TreeNodeIsTemporary);
+		item->setFlags(flags);
 
 		parentItem->appendRow(item);
 
 		if (children.has_value()) {
 			if (!children->empty()) {
 				// Дети уже загружены провайдером
-				buildSubTree(treeView, item, *children);
+				buildSubTree(treeView, item, *children, false);
 
 				auto model = qobject_cast<QStandardItemModel*>(treeView->model());
 				auto index = model->indexFromItem(item);
@@ -440,7 +506,7 @@ bool LazyTreeViewWidget::Private::hasDummyNode(QStandardItem* item) const {
 
 void LazyTreeViewWidget::Private::expandAndSelectInNormalTree(const LazyTreeNodePtr& node) {
 	auto rootNode = normalModel->invisibleRootItem();
-	auto found = findNode(rootNode, node);
+	auto found = findNode(rootNode, node->id());
 	if (!found) {
 		return;
 	}
@@ -452,23 +518,24 @@ void LazyTreeViewWidget::Private::expandAndSelectInNormalTree(const LazyTreeNode
 	normalTreeView->setFocus();
 }
 
-QStandardItem* LazyTreeViewWidget::Private::findNode(QStandardItem* parent, const LazyTreeNodePtr& node) const {
-	for (int i = 0; i < parent->rowCount(); ++i) {
+QStandardItem* LazyTreeViewWidget::Private::findNode(QStandardItem* parent, const QVariant& id) const {
+	for (int i = 0; i < parent->rowCount(); i++) {
 		auto child = parent->child(i);
 		auto childNodeData = child->data(TreeNodeRawData).value<LazyTreeNodePtr>();
 		if (!childNodeData) {
 			return nullptr;
 		}
 
-		if (childNodeData->equals(node)) {
+		if (childNodeData->id() == id) {
 			return child;
 		}
 
 		// Рекурсивный поиск
-		QStandardItem* found = findNode(child, childNodeData);
-		if (found) return found;
+		QStandardItem* found = findNode(child, id);
+		if (found) {
+			return found;
+		}
 	}
 
 	return nullptr;
 }
-

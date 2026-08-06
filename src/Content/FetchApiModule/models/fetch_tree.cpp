@@ -73,11 +73,3 @@ bool FetchTree::expanded() const {
 std::optional<LazyTreeNodeList> FetchTree::children() const {
 	return d->children;
 }
-
-bool FetchTree::equals(const LazyTreeNodePtr& node) const {
-	if (!node) {
-		return false;
-	}
-
-	return d->id == node->id();
-}

@@ -13,8 +13,8 @@ public:
 	LazyTreeNodeList searchTreeNodes(const QString& text) const override;
 
 	bool addNode(const LazyTreeNodePtr& node) override;
-	bool deleteTreeNode(const QVariant& id) override;
-	bool updateTreeNode(const LazyTreeNodePtr& node) override;
+	bool deleteNode(const QVariant& id) override;
+	bool updateNode(const LazyTreeNodePtr& node) override;
 
 private:
 	class Private;

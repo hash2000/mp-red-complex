@@ -15,6 +15,6 @@ public:
 	virtual LazyTreeNodeList searchTreeNodes(const QString& text) const = 0;
 
 	virtual bool addNode(const LazyTreeNodePtr& node) = 0;
-	virtual bool deleteTreeNode(const QVariant& id) = 0;
-	virtual bool updateTreeNode(const LazyTreeNodePtr& node) = 0;
+	virtual bool deleteNode(const QVariant& id) = 0;
+	virtual bool updateNode(const LazyTreeNodePtr& node) = 0;
 };

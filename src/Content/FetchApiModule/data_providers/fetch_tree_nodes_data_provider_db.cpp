@@ -184,7 +184,7 @@ LazyTreeNodeList FetchTreeNodesDataProviderDb::searchTreeNodes(const QString& te
 	return result;
 }
 
-bool FetchTreeNodesDataProviderDb::deleteTreeNode(const QVariant& id) {
+bool FetchTreeNodesDataProviderDb::deleteNode(const QVariant& id) {
 	auto conn = d->databasesService->connection("fetch_api");
 	if (!conn) {
 		return false;
@@ -204,7 +204,7 @@ bool FetchTreeNodesDataProviderDb::deleteTreeNode(const QVariant& id) {
 	return true;
 }
 
-bool FetchTreeNodesDataProviderDb::updateTreeNode(const LazyTreeNodePtr& node) {
+bool FetchTreeNodesDataProviderDb::updateNode(const LazyTreeNodePtr& node) {
 	auto conn = d->databasesService->connection("fetch_api");
 	if (!conn) {
 		return false;
