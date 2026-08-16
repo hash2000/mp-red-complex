@@ -8,14 +8,14 @@
 namespace {
 static QString kSql_treeNodesSelect = R"(
 	select
-		tree_id id,
+		id,
 		parent_id,
 		name,
 		case
 				when exists (
 					select 1
 					from queries_tree as child
-					where child.parent_id = t.tree_id
+					where child.parent_id = t.id
 				)
 				then 1
 				else 0
@@ -24,14 +24,14 @@ static QString kSql_treeNodesSelect = R"(
 	from queries_tree as t
 )";
 static QString kSql_treeNodesDelete = R"(
-	delete from queries_tree where tree_id = :id
+	delete from queries_tree where id = :id
 )";
 static QString kSql_treeNodesUpdate = R"(
 update set
 	parent_id = :parent_id
 	name = :name
 	from queries_tree
-		where tree_id = :id
+		where id = :id
 )";
 static QString kSql_treeNodeInsert = R"(
 	insert into queries_tree (parent_id, name) values(:parent_id, :name);
@@ -40,14 +40,14 @@ static QString kSql_treeNodesSerach = R"(
 with recursive
 found as (
     select
-        qt.tree_id as id,
+        qt.id as id,
         qt.parent_id,
         qt.name,
         case
             when exists (
                 select 1
                 from queries_tree as child
-                where child.parent_id = qt.tree_id
+                where child.parent_id = qt.id
             )
             then 1
             else 0
@@ -67,13 +67,13 @@ raw as (
     union all
     -- идем вверх к корню: эти узлы уже должны быть раскрыты
     select
-        p.tree_id as id,
+        p.id,
         p.parent_id,
         p.name,
         1 as has_children,
         1 as expanded
     from queries_tree p
-    join raw c on c.parent_id = p.tree_id
+    join raw c on c.parent_id = p.id
 ),
 cte as (
     select

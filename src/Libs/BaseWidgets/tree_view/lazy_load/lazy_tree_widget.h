@@ -3,6 +3,8 @@
 
 #include <QWidget>
 
+class QStandardItem;
+
 class LazyTreeViewWidget : public QWidget {
 	Q_OBJECT
 public:
@@ -23,6 +25,7 @@ private slots:
 	void onTreeViewExpanded(const QModelIndex& index);
 	void onNodeActivated(const QModelIndex& index);
 	void onSelectionChanged();
+	void onItemChanged(QStandardItem* item);
 
 signals:
 	void nodeEditRequested(const LazyTreeNodePtr& node);

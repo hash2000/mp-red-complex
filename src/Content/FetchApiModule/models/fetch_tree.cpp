@@ -1,11 +1,12 @@
 #include "Content/FetchApiModule/models/fetch_tree.h"
+#include <optional>
 
 class FetchTree::Private {
 public:
 	Private(FetchTree* parent) : q(parent) {}
 	FetchTree* q;
 
-	int id;
+	std::optional<int> id;
 	QVariant parentId;
 	QString name;
 	QString path;
@@ -20,14 +21,23 @@ FetchTree::FetchTree()
 	: d(std::make_unique<Private>(this)) {
 
 }
+
 FetchTree::~FetchTree() = default;
 
 void FetchTree::setId(QVariant i) {
-	d->id = i.toInt();
+	if (i.isValid()) {
+		d->id = i.toInt();
+	}
+	else {
+		d->id = std::nullopt;
+	}
 }
 
 QVariant FetchTree::id() const {
-	return QVariant::fromValue(d->id);
+	if (d->id.has_value()) {
+		return QVariant::fromValue(d->id);
+	}
+	return QVariant();
 }
 
 void FetchTree::setParentId(QVariant pId) {

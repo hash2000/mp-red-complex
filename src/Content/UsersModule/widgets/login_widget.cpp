@@ -17,7 +17,7 @@ public:
 	}
 
 	LoginWidget* q;
-	UsersService* usersService;
+	UsersService* usersService = nullptr;
 
 	QLineEdit* loginEdit = nullptr;
 	QLineEdit* passwordEdit = nullptr;

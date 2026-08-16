@@ -44,6 +44,7 @@ public:
 	HighlightDelegate* searchDelegate;
 
 	bool isSearchMode = false;
+	bool isAddingNode = false;
 
 	void setupUI();
 	void setupToolbar();
@@ -54,8 +55,15 @@ public:
 	void removeDummyNode(QStandardItem* parentItem);
 	bool hasDummyNode(QStandardItem* item) const;
 	void expandAndSelectInNormalTree(const LazyTreeNodePtr &node);
+	void preareRootItemModel(QStandardItemModel* model);
 	QStandardItem* findNode(QStandardItem* parent, const QVariant& id) const;
 };
+
+void LazyTreeViewWidget::Private::preareRootItemModel(QStandardItemModel* model) {
+	auto newNodeNormalRootData = provider->createTreeNode();
+	auto normalRootItem = model->invisibleRootItem();
+	normalRootItem->setData(QVariant::fromValue(newNodeNormalRootData), TreeNodeRawData);
+}
 
 LazyTreeViewWidget::LazyTreeViewWidget(ILazyNodesDataProvider* provider, QWidget* parent)
 	: d(std::make_unique<Private>(this)) {
@@ -86,6 +94,8 @@ LazyTreeViewWidget::LazyTreeViewWidget(ILazyNodesDataProvider* provider, QWidget
 	connect(d->searchTreeView, &QTreeView::expanded, this, &LazyTreeViewWidget::onTreeViewExpanded);
 	connect(d->searchTreeView, &QTreeView::activated, this, &LazyTreeViewWidget::onNodeActivated);
 	connect(d->searchTreeView->selectionModel(), &QItemSelectionModel::currentChanged, this, &LazyTreeViewWidget::onSelectionChanged);
+
+	connect(d->normalModel, &QStandardItemModel::itemChanged, this, &LazyTreeViewWidget::onItemChanged);
 
 	// Таймер для debounce поиска (300 мс)
 	d->searchTimer = new QTimer(this);
@@ -184,7 +194,7 @@ void LazyTreeViewWidget::performSearch() {
 }
 
 void LazyTreeViewWidget::onAddNode() {
-	QModelIndex currentIndex = d->normalTreeView->currentIndex();
+	auto currentIndex = d->normalTreeView->currentIndex();
 	QStandardItem* parentItem = nullptr;
 
 	if (currentIndex.isValid()) {
@@ -204,7 +214,8 @@ void LazyTreeViewWidget::onAddNode() {
 	newNode->setParentId(parentNodeData->id());
 	newNode->setName(""); // Пустое имя для редактирования
 
-	auto* newItem = new QStandardItem("");
+	auto newItem = new QStandardItem("");
+	newItem->setData(true, TreeNodeIsTemporary);
 	newItem->setData(QVariant::fromValue(newNode), TreeNodeRawData);
 	newItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsEditable);
 
@@ -212,35 +223,8 @@ void LazyTreeViewWidget::onAddNode() {
 
 	QModelIndex newIndex = d->normalModel->indexFromItem(newItem);
 	d->normalTreeView->setCurrentIndex(newIndex);
+	d->isAddingNode = true;
 	d->normalTreeView->edit(newIndex);
-
-	// Подключаемся к сигналу завершения редактирования
-	connect(d->normalModel, &QStandardItemModel::itemChanged, this, [this, newItem](QStandardItem* item) {
-		if (item != newItem) {
-			return;
-		}
-
-		QString newName = item->text().trimmed();
-		auto nodeData = item->data(TreeNodeRawData).value<LazyTreeNodePtr>();
-
-		if (newName.isEmpty()) {
-			// Отмена создания - удаляем узел
-			item->parent()->removeRow(item->row());
-		}
-		else {
-			// Сохраняем через провайдер
-			nodeData->setName(newName);
-			bool success = d->provider->addTreeNode(nodeData);
-
-			if (!success) {
-				// Ошибка сохранения - удаляем узел
-				item->parent()->removeRow(item->row());
-			}
-		}
-
-		// Отключаемся после обработки
-		disconnect(d->normalModel, &QStandardItemModel::itemChanged, this, nullptr);
-	});
 }
 
 void LazyTreeViewWidget::onDeleteNode() {
@@ -266,6 +250,57 @@ void LazyTreeViewWidget::onDeleteNode() {
 			}
 		}
 	}
+}
+
+void LazyTreeViewWidget::onItemChanged(QStandardItem* item) {
+	auto isTemporary = item->data(TreeNodeIsTemporary).toBool();
+	if (!isTemporary) {
+		return;
+	}
+
+	if (!d->isAddingNode) {
+		return;
+	}
+
+	auto nodeData = item->data(TreeNodeRawData).value<LazyTreeNodePtr>();
+	auto newName = item->text().trimmed();
+
+	auto removeUneditable = [&]() {
+		auto parent = item->parent();
+		if (parent) {
+			parent->removeRow(item->row());
+		}
+		else {
+			d->normalModel->removeRow(item->row());
+		}
+	};
+
+	auto makeItemPermanent = [&]() {
+		// Убираем флаг редактирования
+		Qt::ItemFlags flags = item->flags();
+		flags &= ~Qt::ItemIsEditable;
+		item->setFlags(flags);
+		item->setData(false, TreeNodeIsTemporary);
+	};
+
+	if (newName.isEmpty()) {
+		// Отмена создания - удаляем узел
+		removeUneditable();
+	}
+	else {
+		// Сохраняем через провайдер
+		nodeData->setName(newName);
+		bool success = d->provider->addTreeNode(nodeData);
+		if (!success) {
+			// Ошибка сохранения - удаляем узел
+			removeUneditable();
+		}
+		else {
+			makeItemPermanent();
+		}
+	}
+
+	d->isAddingNode = false;
 }
 
 void LazyTreeViewWidget::onSelectionChanged() {
@@ -432,6 +467,8 @@ void LazyTreeViewWidget::Private::loadTreeData() {
 	normalModel->clear();
 	auto roots = provider->treeNodes(QVariant());
 	auto rootItem = normalModel->invisibleRootItem();
+	preareRootItemModel(searchModel);
+	preareRootItemModel(normalModel);
 	buildSubTree(normalTreeView, rootItem, roots, false);
 }
 
@@ -439,6 +476,7 @@ void LazyTreeViewWidget::Private::loadSearchResults(const QString& searchText) {
 	searchModel->clear();
 	auto results = provider->searchTreeNodes(searchText);
 	auto rootNode = searchModel->invisibleRootItem();
+	preareRootItemModel(searchModel);
 	buildSubTree(searchTreeView, rootNode, results, false);
 }
 
@@ -452,7 +490,6 @@ void LazyTreeViewWidget::Private::buildSubTree(QTreeView* treeView, QStandardIte
 			flags |= Qt::ItemIsEditable;
 		}
 
-		// Сохраняем ID узла в UserRole для быстрого доступа
 		item->setData(QVariant::fromValue(nodeData), TreeNodeRawData);
 		item->setData(nodeData->id(), TreeNodeId);
 		item->setData(isTemporary, TreeNodeIsTemporary);
