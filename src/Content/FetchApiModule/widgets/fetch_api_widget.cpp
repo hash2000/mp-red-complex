@@ -314,7 +314,7 @@ QString FetchApiWidget::Private::formatBytes(qint64 bytes) const {
 
 void FetchApiWidget::Private::setResponseHeaders(const QHttpHeaders& headers) {
 	std::vector<KeyValueEditorWidget::Parameter> parameters;
-	for (qsizetype i = 0; i < headers.size(); ++i) {
+	for (qsizetype i = 0; i < headers.size(); i++) {
 		KeyValueEditorWidget::Parameter parameter;
 		parameter.name = headers.nameAt(i);
 		parameter.value = QString::fromUtf8(headers.valueAt(i));

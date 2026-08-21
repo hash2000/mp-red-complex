@@ -97,7 +97,7 @@ void EntitiesWindow::onInventorySelectionRequested() {
 	//QString lastActiveInventoryId;
 
 	//const auto windows = d->windowsController->windowEntries();
-	//for (auto it = windows.rbegin(); it != windows.rend(); ++it) {
+	//for (auto it = windows.rbegin(); it != windows.rend(); it++) {
 	//	const auto window = it->first.data();
 	//	if (window && window->windowType() == "inventory") {
 	//		const QString windowId = window->windowId();

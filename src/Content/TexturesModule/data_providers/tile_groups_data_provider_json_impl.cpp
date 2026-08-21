@@ -107,7 +107,7 @@ bool TileGroupsDataProviderJsonImpl::saveGroup(const QString& texturePath, const
 
 	// Ищем группу с таким же ID для обновления
 	bool found = false;
-	for (int i = 0; i < existingGroups.size(); ++i) {
+	for (int i = 0; i < existingGroups.size(); i++) {
 		if (existingGroups[i].id == group.id) {
 			existingGroups[i] = group;
 			found = true;
@@ -186,7 +186,7 @@ bool TileGroupsDataProviderJsonImpl::deleteGroup(const QUuid& groupId, const Til
 	// Ищем группу с таким ID
 	QJsonArray groupsArray = root["groups"].toArray();
 	bool found = false;
-	for (int i = 0; i < groupsArray.size(); ++i) {
+	for (int i = 0; i < groupsArray.size(); i++) {
 		const QJsonObject groupObj = groupsArray[i].toObject();
 		const QString existingId = groupObj["id"].toString();
 		if (existingId == groupId.toString()) {

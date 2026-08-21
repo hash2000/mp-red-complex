@@ -63,7 +63,7 @@ void KeyValueEditorWidget::onToggleAll() {
 void KeyValueEditorWidget::onConvert() {
 	if (d->stackedWidget->currentIndex() == 0) {
 		QString text;
-		for (int i = 0; i < d->table->rowCount(); ++i) {
+		for (int i = 0; i < d->table->rowCount(); i++) {
 			QString param = d->table->item(i, 0)->text().trimmed();
 			QString value = d->table->item(i, 1)->text();
 			QString desc = d->table->item(i, 2)->text().trimmed();
@@ -289,7 +289,7 @@ void KeyValueEditorWidget::Private::setTableReadOnly(bool set) {
 		table->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
 		// Для всех элементов устанавливаем read-only флаги
-		for (int i = 0; i < table->rowCount(); ++i) {
+		for (int i = 0; i < table->rowCount(); i++) {
 			for (int j = 0; j < table->columnCount(); ++j) {
 				QTableWidgetItem* item = table->item(i, j);
 				if (item) {
@@ -308,7 +308,7 @@ void KeyValueEditorWidget::Private::setTableReadOnly(bool set) {
 			QAbstractItemView::EditKeyPressed |
 			QAbstractItemView::AnyKeyPressed);
 
-		for (int i = 0; i < table->rowCount(); ++i) {
+		for (int i = 0; i < table->rowCount(); i++) {
 			for (int j = 0; j < table->columnCount(); ++j) {
 				QTableWidgetItem* item = table->item(i, j);
 				if (item) {

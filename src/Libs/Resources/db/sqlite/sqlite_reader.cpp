@@ -210,7 +210,7 @@ void SQLiteReader::bindValues(const std::initializer_list<std::pair<QString, QVa
 }
 
 void SQLiteReader::bindValuesList(const QVariantList& values) {
-	for (int i = 0; i < values.size(); ++i) {
+	for (int i = 0; i < values.size(); i++) {
 		bindValue(i, values[i]);
 	}
 }
@@ -267,7 +267,7 @@ void SQLiteReader::Private::cacheColumnNames() {
 	int count = sqlite3_column_count(stmt);
 	columnNames.reserve(count);
 
-	for (int i = 0; i < count; ++i) {
+	for (int i = 0; i < count; i++) {
 		const char* name = sqlite3_column_name(stmt, i);
 		columnNames.append(name ? QString::fromUtf8(name) : QString());
 	}
@@ -309,7 +309,7 @@ int SQLiteReader::Private::findColumn(const QString& name) const {
 	int index = columnNames.indexOf(name);
 	if (index == -1) {
 		// Поиск без учета регистра
-		for (int i = 0; i < columnNames.size(); ++i) {
+		for (int i = 0; i < columnNames.size(); i++) {
 			if (columnNames[i].compare(name, Qt::CaseInsensitive) == 0) {
 				return i;
 			}

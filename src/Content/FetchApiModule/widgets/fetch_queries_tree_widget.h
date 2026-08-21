@@ -6,7 +6,7 @@
 
 class ILazyNodesDataProvider;
 
-class FetchQueriesTreeWidget : public LazyTreeViewWidget {
+class FetchQueriesTreeWidget : public LazyTreeWidget {
 	Q_OBJECT
 public:
 	explicit FetchQueriesTreeWidget(ILazyNodesDataProvider* provider, QWidget* parent = nullptr);

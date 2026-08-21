@@ -5,11 +5,11 @@
 
 class QStandardItem;
 
-class LazyTreeViewWidget : public QWidget {
+class LazyTreeWidget : public QWidget {
 	Q_OBJECT
 public:
-	explicit LazyTreeViewWidget(ILazyNodesDataProvider* provider, QWidget* parent = nullptr);
-	~LazyTreeViewWidget() override;
+	explicit LazyTreeWidget(ILazyNodesDataProvider* provider, QWidget* parent = nullptr);
+	~LazyTreeWidget() override;
 
 	bool updateNode(const QVariant& nodeId, const LazyTreeNodePtr& nodeData);
 	void refreshAll(); // Полное обновление дерева
@@ -22,15 +22,12 @@ private slots:
 	void onShowSearch();
 	void onBackToNormalView();
 	void showContextMenu(const QPoint& pos);
-	void onTreeViewExpanded(const QModelIndex& index);
-	void onNodeActivated(const QModelIndex& index);
-	void onSelectionChanged();
 	void onItemChanged(QStandardItem* item);
 
 signals:
 	void nodeEditRequested(const LazyTreeNodePtr& node);
 	void nodeActivated(const QVariant& nodeId);
-	void nodeSelectionChanged(const QVariant& nodeId);
+	void nodeSelectionChanged(const LazyTreeNodePtr& node);
 
 private:
 	class Private;

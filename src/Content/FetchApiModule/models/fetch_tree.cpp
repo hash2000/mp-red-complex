@@ -35,7 +35,7 @@ void FetchTree::setId(QVariant i) {
 
 QVariant FetchTree::id() const {
 	if (d->id.has_value()) {
-		return QVariant::fromValue(d->id);
+		return QVariant::fromValue(d->id.value());
 	}
 	return QVariant();
 }

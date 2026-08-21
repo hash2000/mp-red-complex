@@ -11,7 +11,7 @@ public:
 
 FetchQueriesTreeWidget::FetchQueriesTreeWidget(ILazyNodesDataProvider* provider, QWidget* parent)
 	: d(std::make_unique<Private>(this))
-	, LazyTreeViewWidget(provider, parent) {
+	, LazyTreeWidget(provider, parent) {
 
 }
 

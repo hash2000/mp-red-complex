@@ -123,7 +123,6 @@ LazyTreeNodeList FetchTreeNodesDataProviderDb::treeNodes(const QVariant& parentI
 		.arg(where);
 
 	auto reader = conn->executeQuery(query);
-
 	if (!reader) {
 		qCritical() << "FetchTreeNodesDataProviderDb::treeNodes. Query error:" << conn->lastError();
 		return result;

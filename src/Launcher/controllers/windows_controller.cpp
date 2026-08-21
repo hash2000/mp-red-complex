@@ -125,7 +125,7 @@ MdiChildWindow* WindowsController::findWindowById(const QString& windowId) const
 
 QList<MdiChildWindow*> WindowsController::allWindows() const {
 	QList<MdiChildWindow*> result;
-	for (auto it = d->windowRegistry.constBegin(); it != d->windowRegistry.constEnd(); ++it) {
+	for (auto it = d->windowRegistry.constBegin(); it != d->windowRegistry.constEnd(); it++) {
 		if (auto window = it.value().data()) {
 			result.append(window);
 		}
@@ -161,7 +161,7 @@ void WindowsController::onSubWindowDestroyed(QObject* obj) {
 	MdiChildWindow* windowToUnregister = nullptr;
 	
 	// Проверяем, является ли obj зарегистрированным окном
-	for (auto it = d->windowToId.constBegin(); it != d->windowToId.constEnd(); ++it) {
+	for (auto it = d->windowToId.constBegin(); it != d->windowToId.constEnd(); it++) {
 		if (it.key() == obj) {
 			qDebug() << "Found window by pointer match:" << it.key();
 			windowToUnregister = it.key();
@@ -179,7 +179,7 @@ void WindowsController::onSubWindowDestroyed(QObject* obj) {
 	
 	// Если не нашли, проверяем, является ли obj виджетом внутри QMdiSubWindow
 	if (!windowToUnregister) {
-		for (auto it = d->windowToId.constBegin(); it != d->windowToId.constEnd(); ++it) {
+		for (auto it = d->windowToId.constBegin(); it != d->windowToId.constEnd(); it++) {
 			auto window = it.key();
 			if (auto subWindow = qobject_cast<QMdiSubWindow*>(window)) {
 				if (subWindow->widget() == obj) {
@@ -197,7 +197,7 @@ void WindowsController::onSubWindowDestroyed(QObject* obj) {
 	else {
 		qDebug() << "Window not found in registry, obj:" << obj;
 		// Выведем все окна в реестре для отладки
-		for (auto it = d->windowToId.constBegin(); it != d->windowToId.constEnd(); ++it) {
+		for (auto it = d->windowToId.constBegin(); it != d->windowToId.constEnd(); it++) {
 			auto window = it.key();
 			qDebug() << "Registered window:" << window << "id:" << it.value() 
 					 << "parent:" << window->parent() 
@@ -210,7 +210,7 @@ QList<QPair<QPointer<MdiChildWindow>, QString>> WindowsController::windowEntries
 	QList<QPair<QPointer<MdiChildWindow>, QString>> result;
 	result.reserve(d->windowToId.size());
 
-	for (auto it = d->windowToId.constBegin(); it != d->windowToId.constEnd(); ++it) {
+	for (auto it = d->windowToId.constBegin(); it != d->windowToId.constEnd(); it++) {
 		MdiChildWindow* rawPtr = it.key();
 		const QString& windowId = it.value();
 

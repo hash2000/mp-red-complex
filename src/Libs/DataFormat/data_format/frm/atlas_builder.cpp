@@ -42,7 +42,7 @@ void AtlasBuilder::build(const std::vector<Proto::Frame> &src, const Proto::Pall
 
   QPainter painter(&_atlas);
 
-  for (int i = 0; i < _frames.size(); ++i) {
+  for (int i = 0; i < _frames.size(); i++) {
     const auto& f = _frames[i];
     const auto& e = _entries[i];
 

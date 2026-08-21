@@ -99,14 +99,14 @@ QStringList Bip39::generateMnemonic(int strengthBits) {
 	bits.reserve(strengthBits + checksumBits);
 
 	// Добавляем биты энтропии
-	for (int i = 0; i < entropyBytes; ++i) {
+	for (int i = 0; i < entropyBytes; i++) {
 		for (int bit = 7; bit >= 0; --bit) {
 			bits.push_back((entropy[i] >> bit) & 1);
 		}
 	}
 
 	// Добавляем биты checksum (старшие биты hash[0])
-	for (int i = 0; i < checksumBits; ++i) {
+	for (int i = 0; i < checksumBits; i++) {
 		bits.push_back((hash[0] >> (7 - i)) & 1);
 	}
 
@@ -157,7 +157,7 @@ std::vector<uint8_t> Bip39::validateAndGetEntropy(const QStringList& words) cons
 
 	// Извлекаем энтропию
 	std::vector<uint8_t> entropy(entropyBytes, 0);
-	for (int i = 0; i < entropyBits; ++i) {
+	for (int i = 0; i < entropyBits; i++) {
 		if (bits[i]) {
 			entropy[i / 8] |= (1 << (7 - (i % 8)));
 		}
@@ -165,7 +165,7 @@ std::vector<uint8_t> Bip39::validateAndGetEntropy(const QStringList& words) cons
 
 	// Извлекаем checksum
 	uint8_t actualChecksum = 0;
-	for (int i = 0; i < checksumBits; ++i) {
+	for (int i = 0; i < checksumBits; i++) {
 		if (bits[entropyBits + i]) {
 			actualChecksum |= (1 << (checksumBits - 1 - i));
 		}
@@ -224,7 +224,7 @@ QByteArray Bip39::Private::pbkdf2_hmac_sha512(const QByteArray& password,
 		QByteArray t = u;
 
 		// U2 ... Uc
-		for (int i = 1; i < iterations; ++i) {
+		for (int i = 1; i < iterations; i++) {
 			QMessageAuthenticationCode hmacIter(QCryptographicHash::Sha512);
 			hmacIter.setKey(password);
 			hmacIter.addData(u);
