@@ -4,6 +4,7 @@
 #include <QString>
 #include <QVariant>
 
+
 class ILazyNodesDataProvider {
 public:
 	virtual ~ILazyNodesDataProvider() = default;

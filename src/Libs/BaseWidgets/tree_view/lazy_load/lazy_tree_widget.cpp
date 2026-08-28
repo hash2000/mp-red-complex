@@ -1,6 +1,7 @@
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_widget.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_highlight_delegate.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_view.h"
+#include "Libs/BaseWidgets/tree_view/lazy_load/i_lazy_tree_data_provider.h"
 
 #include <QVBoxLayout>
 #include <QStandardItemModel>
@@ -16,7 +17,6 @@ class LazyTreeWidget::Private {
 public:
 	Private(LazyTreeWidget* parent) : q(parent) {}
 	LazyTreeWidget* q;
-
 
 	ILazyNodesDataProvider* provider;
 
@@ -152,6 +152,11 @@ void LazyTreeWidget::Private::setupToolbar() {
 	connect(btnBack, &QToolButton::clicked, q, &LazyTreeWidget::onBackToNormalView);
 }
 
+void LazyTreeWidget::setActionHandler(ILazyTreeNodeActionHandler* actionHandler) {
+	d->normalTreeView->setActionHandler(actionHandler);
+	d->searchTreeView->setActionHandler(actionHandler);
+}
+
 void LazyTreeWidget::onSearchTextChanged(const QString& text) {
 	d->searchTimer->start(300); // Debounce 300ms
 }
@@ -179,37 +184,10 @@ void LazyTreeWidget::performSearch() {
 }
 
 void LazyTreeWidget::onAddNode() {
-	//auto currentIndex = d->normalTreeView->currentIndex();
-	//QStandardItem* parentItem = nullptr;
-
-	//if (currentIndex.isValid()) {
-	//	parentItem = d->normalModel->itemFromIndex(currentIndex);
-	//}
-	//else {
-	//	parentItem = d->normalModel->invisibleRootItem();
-	//}
-
-	//// Создаем временный узел
-	//auto newNode = d->provider->createTreeNode();
-	//auto parentNodeData = parentItem->data(TreeNodeRawData).value<LazyTreeNodePtr>();
-	//if (!parentNodeData) {
-	//	return;
-	//}
-
-	//newNode->setParentId(parentNodeData->id());
-	//newNode->setName(""); // Пустое имя для редактирования
-
-	//auto newItem = new QStandardItem("");
-	//newItem->setData(true, TreeNodeIsTemporary);
-	//newItem->setData(QVariant::fromValue(newNode), TreeNodeRawData);
-	//newItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsEditable);
-
-	//parentItem->appendRow(newItem);
-
-	//QModelIndex newIndex = d->normalModel->indexFromItem(newItem);
-	//d->normalTreeView->setCurrentIndex(newIndex);
-	//d->isAddingNode = true;
-	//d->normalTreeView->edit(newIndex);
+	auto index = d->normalTreeView->currentIndex();
+	auto item = d->normalTreeView->itemFromIndex(index);
+	auto newNode = d->provider->createTreeNode();
+	d->normalTreeView->addNodeAndStartEdit(item, newNode);
 }
 
 void LazyTreeWidget::onDeleteNode() {

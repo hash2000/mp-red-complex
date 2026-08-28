@@ -1,14 +1,10 @@
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_view.h"
+#include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_node_roles.h"
+#include "Libs/BaseWidgets/tree_view/lazy_load/i_lazy_tree_node_action_handler.h"
 
 #include <QMouseEvent>
 #include <QStandardItemModel>
 #include <QVariant>
-
-namespace {
-constexpr int RoleNodeRawData = Qt::UserRole + 1;
-constexpr int RoleNodeId = Qt::UserRole + 2;
-constexpr int RoleNodeIsDummy = Qt::UserRole + 3;
-}
 
 class LazyTreeView::Private {
 public:
@@ -16,11 +12,16 @@ public:
 	LazyTreeView* q;
 
 	QStandardItemModel* model;
+	ILazyTreeNodeActionHandler* actionHandler = nullptr;
 
 	void buildSubTree(QStandardItem* parentItem, const LazyTreeNodeList& nodes);
 	void addDummyNode(QStandardItem* parentItem);
 	bool isDummyNode(QStandardItem* item) const;
+	bool isTemporaryNode(QStandardItem* item) const;
 	void preareRootItemModel(QStandardItemModel* model);
+	void finalizeTemporaryNode(QStandardItem* item);
+	void removeTemporaryNode(QStandardItem* item);
+	void checkCurrentItemAndRemoveIfTemporary();
 };
 
 LazyTreeView::LazyTreeView(QWidget* parent)
@@ -33,16 +34,21 @@ LazyTreeView::LazyTreeView(QWidget* parent)
 	connect(this, &QTreeView::expanded, this, &LazyTreeView::onExpanded);
 	connect(this, &QTreeView::activated, this, &LazyTreeView::onNodeActivated);
 	connect(selectionModel(), &QItemSelectionModel::currentChanged, this, &LazyTreeView::onSelectionChanged);
+	connect(d->model, &QStandardItemModel::itemChanged, this, &LazyTreeView::onItemChanged);
 }
 
 LazyTreeView::~LazyTreeView() = default;
+
+void LazyTreeView::setActionHandler(ILazyTreeNodeActionHandler* actionHandler) {
+	d->actionHandler = actionHandler;
+}
 
 void LazyTreeView::mousePressEvent(QMouseEvent* event) {
 	if (event->button() == Qt::LeftButton) {
 		QModelIndex index = indexAt(event->pos());
 		if (!index.isValid()) {
-			clearSelection();
 			setCurrentIndex(QModelIndex());
+			clearSelection();
 			emit emptyAreaClicked();
 			emit selectionChanged(LazyTreeNodePtr());
 			return;
@@ -62,8 +68,8 @@ void LazyTreeView::Private::buildSubTree(QStandardItem* parentItem, const LazyTr
 	for (const auto& nodeData : nodes) {
 		auto item = new QStandardItem(nodeData->name());
 		const auto& children = nodeData->children();
-		item->setData(nodeData->id(), RoleNodeId);
-		item->setData(QVariant::fromValue(nodeData), RoleNodeRawData);
+		item->setData(nodeData->id(), LazyTreeNodeRole::Id);
+		item->setData(QVariant::fromValue(nodeData), LazyTreeNodeRole::RawData);
 		item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable); // Не редактируется по умолчанию
 
 		parentItem->appendRow(item);
@@ -80,14 +86,18 @@ void LazyTreeView::Private::buildSubTree(QStandardItem* parentItem, const LazyTr
 }
 
 void LazyTreeView::Private::addDummyNode(QStandardItem* parentItem) {
-	auto* dummy = new QStandardItem("Loading..."); // Можно оставить пустым ""
-	dummy->setData(true, RoleNodeIsDummy);
+	auto dummy = new QStandardItem("Loading..."); // Можно оставить пустым ""
+	dummy->setData(true, LazyTreeNodeRole::IsDummy);
 	dummy->setFlags(Qt::NoItemFlags); // Неактивный, не кликабельный
 	parentItem->appendRow(dummy);
 }
 
 bool LazyTreeView::Private::isDummyNode(QStandardItem* item) const {
-	return item && item->data(RoleNodeIsDummy).toBool();
+	return item && item->data(LazyTreeNodeRole::IsDummy).toBool();
+}
+
+bool LazyTreeView::Private::isTemporaryNode(QStandardItem* item) const {
+	return item && item->data(LazyTreeNodeRole::IsTemp).toBool();
 }
 
 void LazyTreeView::onExpanded(const QModelIndex& index) {
@@ -98,7 +108,7 @@ void LazyTreeView::onExpanded(const QModelIndex& index) {
 
 	// Если это первый раз и там dummy-узел
 	if (item->rowCount() == 1 && d->isDummyNode(item->child(0))) {
-		QVariant parentId = item->data(RoleNodeId);
+		QVariant parentId = item->data(LazyTreeNodeRole::Id);
 		item->removeRow(0);
 		emit requestFetchChildren(parentId);
 	}
@@ -126,7 +136,7 @@ QStandardItem* LazyTreeView::findNode(const QVariant& id) const {
 	while (!stack.isEmpty()) {
 		auto current = stack.takeFirst();
 
-		if (current->data(RoleNodeId) == id) {
+		if (current->data(LazyTreeNodeRole::Id) == id) {
 			return current;
 		}
 
@@ -138,12 +148,133 @@ QStandardItem* LazyTreeView::findNode(const QVariant& id) const {
 	return nullptr;
 }
 
-LazyTreeNodePtr LazyTreeView::nodeFromItem(const QStandardItem* item) const {
-	if (!item) {
-		return LazyTreeNodePtr();
+QStandardItem* LazyTreeView::itemFromIndex(const QModelIndex& index) const {
+	return d->model->itemFromIndex(index);
+}
+
+void LazyTreeView::removeSelectedNode() {
+	QModelIndex currentIndex = this->currentIndex();
+	if (!currentIndex.isValid()) {
+		return;
 	}
 
-	return item->data(RoleNodeRawData).value<LazyTreeNodePtr>();
+	QStandardItem* item = d->model->itemFromIndex(currentIndex);
+	if (!item || d->isTemporaryNode(item)) {
+		return;
+	}
+
+	if (!d->actionHandler) {
+	//	showError("Обработчик действий не установлен");
+		return;
+	}
+
+	auto result = d->actionHandler->removeNode(item);
+	if (result.success) {
+		auto nodeId = item->data(LazyTreeNodeRole::Id);
+		auto parent = item->parent();
+		auto node = item->data(LazyTreeNodeRole::RawData).value<LazyTreeNodePtr>();
+
+		if (parent) {
+			parent->removeRow(item->row());
+		}
+		else {
+			d->model->removeRow(item->row());
+		}
+
+		emit nodeRemoved(node);
+	}
+	else {
+		// showError(result.errorMessage);
+	}
+}
+
+void LazyTreeView::addNodeAndStartEdit(QStandardItem* parentItem, LazyTreeNodePtr newNode) {
+	if (!parentItem) {
+		parentItem = d->model->invisibleRootItem();
+	}
+	else if (d->isTemporaryNode(parentItem)) {
+		return;
+	}
+
+	auto item = new QStandardItem("");
+	item->setData(QVariant(), LazyTreeNodeRole::Id);
+	item->setData(QVariant::fromValue(newNode), LazyTreeNodeRole::RawData);
+	item->setData(true, LazyTreeNodeRole::IsTemp);
+	item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsEditable);
+
+	parentItem->appendRow(item);
+
+	QModelIndex index = d->model->indexFromItem(item);
+
+	if (parentItem != d->model->invisibleRootItem()) {
+		setExpanded(d->model->indexFromItem(parentItem), true);
+	}
+
+	setCurrentIndex(index);
+	edit(index);
+}
+
+void LazyTreeView::onItemChanged(QStandardItem* item) {
+
+	auto nodeData = item->data(LazyTreeNodeRole::RawData).value<LazyTreeNodePtr>();
+
+	if (!d->isTemporaryNode(item)) {
+		// Это переименование постоянного узла
+		if (d->actionHandler) {
+			auto newName = item->text().trimmed();
+			if (newName.isEmpty()) {
+				// Откатываем изменение
+				item->setText(nodeData->name());
+				//showError("Имя не может быть пустым");
+				return;
+			}
+
+			auto result = d->actionHandler->renameNode(item, newName);
+			if (result.success) {
+				nodeData->setName(newName);
+				emit nodeRenamed(nodeData, newName);
+			}
+			else {
+				// Откатываем изменение
+				item->setText(nodeData->name());
+				//showError(result.errorMessage);
+			}
+		}
+
+		return;
+	}
+
+	// Обработка временного узла (создание)
+	QString newName = item->text().trimmed();
+	if (newName.isEmpty()) {
+		d->removeTemporaryNode(item);
+		return;
+	}
+
+	auto newNode = item->data(LazyTreeNodeRole::RawData).value<LazyTreeNodePtr>();
+	newNode->setName(newName);
+
+	if (!d->actionHandler) {
+		//showError("Обработчик действий не установлен");
+		d->removeTemporaryNode(item);
+		return;
+	}
+
+	QStandardItem* parentItem = item->parent();
+	if (!parentItem) {
+		parentItem = d->model->invisibleRootItem();
+	}
+
+	auto result = d->actionHandler->addNode(parentItem, newNode);
+
+	if (result.success) {
+		d->finalizeTemporaryNode(item);
+		emit nodeAdded(newNode);
+	}
+	else {
+		//showError(result.errorMessage);
+		d->removeTemporaryNode(item);
+	}
 }
 
 void LazyTreeView::expandAndSelectNode(const QVariant& id) {
@@ -177,27 +308,83 @@ void LazyTreeView::onNodeActivated(const QModelIndex& index) {
 		return;
 	}
 
-	auto node = item->data(RoleNodeRawData).value<LazyTreeNodePtr>();
+	auto node = item->data(LazyTreeNodeRole::RawData).value<LazyTreeNodePtr>();
 	emit nodeActivated(node, item->text());
 }
 
 void LazyTreeView::onSelectionChanged(const QModelIndex& current, const QModelIndex& previous) {
 	Q_UNUSED(previous);
-	if (current.isValid()) {
-		QStandardItem* item = d->model->itemFromIndex(current);
-		if (item && !d->isDummyNode(item)) {
-			auto node = item->data(RoleNodeRawData).value<LazyTreeNodePtr>();
-			emit selectionChanged(node);
-			return;
-		}
+
+	if (previous.isValid()) {
+		auto previusItem = d->model->itemFromIndex(previous);
+		d->removeTemporaryNode(previusItem);
 	}
 
-	// root node
-	emit selectionChanged(LazyTreeNodePtr());
+	if (!current.isValid()) {
+
+		emit selectionChanged(LazyTreeNodePtr());
+		return;
+	}
+
+	auto item = d->model->itemFromIndex(current);
+	auto isDummy = d->isDummyNode(item);
+	auto isTemp = d->isTemporaryNode(item);
+
+	if (item && !isDummy && !isTemp) {
+		auto node = item->data(LazyTreeNodeRole::RawData).value<LazyTreeNodePtr>();
+		emit selectionChanged(node);
+		return;
+	}
+
+	d->removeTemporaryNode(item);
 }
 
 void LazyTreeView::Private::preareRootItemModel(QStandardItemModel* model) {
 	auto normalRootItem = model->invisibleRootItem();
-	normalRootItem->setData(QVariant(), RoleNodeId);
-	normalRootItem->setData(false, RoleNodeIsDummy);
+	normalRootItem->setData(QVariant(), LazyTreeNodeRole::Id);
+	normalRootItem->setData(false, LazyTreeNodeRole::IsDummy);
+}
+
+void LazyTreeView::Private::finalizeTemporaryNode(QStandardItem* item) {
+	item->setData(false, LazyTreeNodeRole::IsTemp);
+
+	Qt::ItemFlags flags = item->flags();
+	flags &= ~Qt::ItemIsEditable;
+	item->setFlags(flags);
+
+	auto newNode = item->data(LazyTreeNodeRole::RawData).value<LazyTreeNodePtr>();
+	item->setData(newNode->id(), LazyTreeNodeRole::Id);
+	item->setData(false, LazyTreeNodeRole::IsTemp);
+}
+
+void LazyTreeView::Private::removeTemporaryNode(QStandardItem* item) {
+	if (!item) {
+		return;
+	}
+
+	if (!isTemporaryNode(item)) {
+		return;
+	}
+
+	auto parent = item->parent();
+	if (parent) {
+		parent->removeRow(item->row());
+	}
+	else {
+		model->removeRow(item->row());
+	}
+}
+
+void LazyTreeView::Private::checkCurrentItemAndRemoveIfTemporary() {
+	QModelIndex currentIndex = q->currentIndex();
+	if (!currentIndex.isValid()) {
+		return;
+	}
+
+	QStandardItem* item = model->itemFromIndex(currentIndex);
+	if (!item) {
+		return;
+	}
+
+	removeTemporaryNode(item);
 }
