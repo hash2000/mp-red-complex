@@ -132,6 +132,7 @@ LazyTreeNodeList FetchTreeNodesDataProviderDb::treeNodes(const QVariant& parentI
 		const auto item = std::make_shared<FetchTree>();
 		item->setId(reader->value("id"));
 		item->setName(reader->value("name").toString());
+		item->setExpanded(reader->value("expanded").toInt() != 0);
 		auto parentId = reader->value("parent_id");
 		if (!parentId.isNull()) {
 			item->setParentId(parentId);

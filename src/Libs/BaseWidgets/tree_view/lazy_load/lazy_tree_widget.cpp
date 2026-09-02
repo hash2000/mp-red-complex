@@ -42,8 +42,6 @@ public:
 	void setupToolbar();
 	void loadTreeData();
 	void loadSearchResults(const QString& searchText);
-	void buildSubTree(QTreeView* treeView, QStandardItem* parentItem, const LazyTreeNodeList& nodes, bool isTemporary);
-	void expandAndSelectInNormalTree(const LazyTreeNodePtr &node);
 };
 
 LazyTreeWidget::LazyTreeWidget(ILazyNodesDataProvider* provider, QWidget* parent)
@@ -191,79 +189,13 @@ void LazyTreeWidget::onAddNode() {
 }
 
 void LazyTreeWidget::onDeleteNode() {
-	//QModelIndex currentIndex = d->normalTreeView->currentIndex();
-	//if (!currentIndex.isValid()) {
-	//	return;
-	//}
+	if (d->isSearchMode) {
+		return;
+	}
 
-	//QStandardItem* item = d->normalModel->itemFromIndex(currentIndex);
-	//auto nodeData = item->data(TreeNodeRawData).value<LazyTreeNodePtr>();
-	//if (!nodeData) {
-	//	return;
-	//}
-
-	//if (QMessageBox::question(this, "Удаление", "Удалить узел?") == QMessageBox::Yes) {
-	//	if (d->provider->deleteTreeNode(nodeData->id())) {
-	//		QStandardItem* parent = item->parent();
-	//		if (parent) {
-	//			parent->removeRow(item->row());
-	//		}
-	//		else {
-	//			d->normalModel->removeRow(item->row());
-	//		}
-	//	}
-	//}
-}
-
-void LazyTreeWidget::onItemChanged(QStandardItem* item) {
-	//auto isTemporary = item->data(TreeNodeIsTemporary).toBool();
-	//if (!isTemporary) {
-	//	return;
-	//}
-
-	//if (!d->isAddingNode) {
-	//	return;
-	//}
-
-	//auto nodeData = item->data(TreeNodeRawData).value<LazyTreeNodePtr>();
-	//auto newName = item->text().trimmed();
-
-	//auto removeUneditable = [&]() {
-	//	auto parent = item->parent();
-	//	if (parent) {
-	//		parent->removeRow(item->row());
-	//	}
-	//	else {
-	//		d->normalModel->removeRow(item->row());
-	//	}
-	//};
-
-	//auto makeItemPermanent = [&]() {
-	//	// Убираем флаг редактирования
-	//	Qt::ItemFlags flags = item->flags();
-	//	flags &= ~Qt::ItemIsEditable;
-	//	item->setFlags(flags);
-	//	item->setData(false, TreeNodeIsTemporary);
-	//};
-
-	//if (newName.isEmpty()) {
-	//	// Отмена создания - удаляем узел
-	//	removeUneditable();
-	//}
-	//else {
-	//	// Сохраняем через провайдер
-	//	nodeData->setName(newName);
-	//	bool success = d->provider->addTreeNode(nodeData);
-	//	if (!success) {
-	//		// Ошибка сохранения - удаляем узел
-	//		removeUneditable();
-	//	}
-	//	else {
-	//		makeItemPermanent();
-	//	}
-	//}
-
-	//d->isAddingNode = false;
+	if (QMessageBox::question(this, "Удаление", "Удалить узел?") == QMessageBox::Yes) {
+		d->normalTreeView->removeSelectedNode();
+	}
 }
 
 void LazyTreeWidget::onShowSearch() {
@@ -276,25 +208,22 @@ void LazyTreeWidget::onShowSearch() {
 }
 
 void LazyTreeWidget::onBackToNormalView() {
-	//// Запоминаем выбранный ID в поиске, если он есть
-	//LazyTreeNodePtr selected;
-	//if (d->isSearchMode) {
-	//	QModelIndex searchIndex = d->searchTreeView->currentIndex();
-	//	if (searchIndex.isValid()) {
-	//		selected = d->searchModel->data(searchIndex, TreeNodeRawData).value<LazyTreeNodePtr>();
-	//	}
-	//}
+	// Запоминаем выбранный ID в поиске, если он есть
+	QVariant selected;
+	if (d->isSearchMode) {
+		selected = d->searchTreeView->selectedNodeId();
+	}
 
-	//d->isSearchMode = false;
-	//d->btnBack->hide();
-	//d->btnShowSearch->show();
-	//d->btnAdd->show();
-	//d->btnDelete->show();
-	//d->stackedViews->setCurrentWidget(d->normalTreeView);
+	d->isSearchMode = false;
+	d->btnBack->hide();
+	d->btnShowSearch->show();
+	d->btnAdd->show();
+	d->btnDelete->show();
+	d->stackedViews->setCurrentWidget(d->normalTreeView);
 
-	//if (selected) {
-	//	d->expandAndSelectInNormalTree(selected);
-	//}
+	if (selected.isValid()) {
+		d->normalTreeView->expandAndSelectNode(selected);
+	}
 }
 
 void LazyTreeWidget::showContextMenu(const QPoint& pos) {
@@ -330,69 +259,12 @@ void LazyTreeWidget::refreshAll() {
 	d->loadTreeData();
 }
 
+void LazyTreeWidget::Private::loadSearchResults(const QString& searchText) {
+	auto results = provider->searchTreeNodes(searchText);
+	searchTreeView->setNodes(results);
+}
+
 void LazyTreeWidget::Private::loadTreeData() {
 	auto roots = provider->treeNodes(QVariant());
 	normalTreeView->setNodes(roots);
 }
-
-void LazyTreeWidget::Private::loadSearchResults(const QString& searchText) {
-	//searchModel->clear();
-	//auto results = provider->searchTreeNodes(searchText);
-	//auto rootNode = searchModel->invisibleRootItem();
-	//preareRootItemModel(searchModel);
-	//buildSubTree(searchTreeView, rootNode, results, false);
-}
-
-void LazyTreeWidget::Private::buildSubTree(QTreeView* treeView, QStandardItem* parentItem, const LazyTreeNodeList& nodes, bool isTemporary) {
-	//for (const auto& nodeData : nodes) {
-	//	auto item = new QStandardItem(nodeData->name());
-	//	const auto& children = nodeData->children();
-
-	//	Qt::ItemFlags flags = Qt::ItemIsEnabled | Qt::ItemIsSelectable;
-	//	if (isTemporary) {
-	//		flags |= Qt::ItemIsEditable;
-	//	}
-
-	//	item->setData(QVariant::fromValue(nodeData), TreeNodeRawData);
-	//	item->setData(nodeData->id(), TreeNodeId);
-	//	item->setData(isTemporary, TreeNodeIsTemporary);
-	//	item->setFlags(flags);
-
-	//	parentItem->appendRow(item);
-
-	//	if (children.has_value()) {
-	//		if (!children->empty()) {
-	//			// Дети уже загружены провайдером
-	//			buildSubTree(treeView, item, *children, false);
-
-	//			auto model = qobject_cast<QStandardItemModel*>(treeView->model());
-	//			auto index = model->indexFromItem(item);
-	//			if (!index.isValid()) {
-	//				continue;
-	//			}
-
-	//			treeView->setExpanded(index, nodeData->expanded());
-	//		}
-	//		else {
-	//			// Дети есть (hasChildren=true), но не загружены
-	//			// Добавляем dummy-узел
-	//			addDummyNode(item);
-	//		}
-	//	}
-	//}
-}
-
-void LazyTreeWidget::Private::expandAndSelectInNormalTree(const LazyTreeNodePtr& node) {
-	//auto rootNode = normalModel->invisibleRootItem();
-	//auto found = findNode(rootNode, node->id());
-	//if (!found) {
-	//	return;
-	//}
-
-	//auto index = normalModel->indexFromItem(found);
-	//normalTreeView->setCurrentIndex(index);
-	//normalTreeView->scrollTo(index, QAbstractItemView::PositionAtCenter);
-	//normalTreeView->setExpanded(index, true);
-	//normalTreeView->setFocus();
-}
-

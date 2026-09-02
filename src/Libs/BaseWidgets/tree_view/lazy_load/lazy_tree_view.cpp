@@ -77,6 +77,9 @@ void LazyTreeView::Private::buildSubTree(QStandardItem* parentItem, const LazyTr
 		if (children.has_value()) {
 			if (!children->empty()) {
 				buildSubTree(item, *children);
+				if (nodeData->expanded()) {
+					q->expand(item->index());
+				}
 			}
 			else {
 				addDummyNode(item);
@@ -169,6 +172,7 @@ void LazyTreeView::removeSelectedNode() {
 	}
 
 	auto result = d->actionHandler->removeNode(item);
+
 	if (result.success) {
 		auto nodeId = item->data(LazyTreeNodeRole::Id);
 		auto parent = item->parent();
@@ -186,6 +190,38 @@ void LazyTreeView::removeSelectedNode() {
 	else {
 		// showError(result.errorMessage);
 	}
+}
+
+LazyTreeNodePtr LazyTreeView::selectedNode() const {
+	QModelIndex currentIndex = this->currentIndex();
+	if (!currentIndex.isValid()) {
+		return LazyTreeNodePtr();
+	}
+
+	QStandardItem* item = d->model->itemFromIndex(currentIndex);
+	if (!item || d->isTemporaryNode(item)) {
+		return LazyTreeNodePtr();
+	}
+
+	auto node = item->data(LazyTreeNodeRole::RawData).value<LazyTreeNodePtr>();
+
+	return node;
+}
+
+QVariant LazyTreeView::selectedNodeId() const {
+	QModelIndex currentIndex = this->currentIndex();
+	if (!currentIndex.isValid()) {
+		return QVariant();
+	}
+
+	QStandardItem* item = d->model->itemFromIndex(currentIndex);
+	if (!item || d->isTemporaryNode(item)) {
+		return QVariant();
+	}
+
+	auto nodeId = item->data(LazyTreeNodeRole::Id);
+
+	return nodeId;
 }
 
 void LazyTreeView::addNodeAndStartEdit(QStandardItem* parentItem, LazyTreeNodePtr newNode) {
@@ -337,6 +373,7 @@ void LazyTreeView::onSelectionChanged(const QModelIndex& current, const QModelIn
 	}
 
 	d->removeTemporaryNode(item);
+	emit selectionChanged(LazyTreeNodePtr());
 }
 
 void LazyTreeView::Private::preareRootItemModel(QStandardItemModel* model) {

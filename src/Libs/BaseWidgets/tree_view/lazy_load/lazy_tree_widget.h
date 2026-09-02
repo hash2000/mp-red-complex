@@ -25,7 +25,6 @@ private slots:
 	void onShowSearch();
 	void onBackToNormalView();
 	void showContextMenu(const QPoint& pos);
-	void onItemChanged(QStandardItem* item);
 
 signals:
 	void nodeEditRequested(const LazyTreeNodePtr& node);

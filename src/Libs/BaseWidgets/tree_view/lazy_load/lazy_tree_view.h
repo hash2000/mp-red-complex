@@ -37,6 +37,12 @@ public:
 	// Удаление выбранного узла
 	void removeSelectedNode();
 
+	// Вернуть описатель выбранного узла
+	LazyTreeNodePtr selectedNode() const;
+
+	// Вернуть идентификатор выбранного узла
+	QVariant selectedNodeId() const;
+
 signals:
 	// Запрос данных: виджет-владелец должен загрузить детей и вызвать appendChildren
 	void requestFetchChildren(const QVariant& parentId);
