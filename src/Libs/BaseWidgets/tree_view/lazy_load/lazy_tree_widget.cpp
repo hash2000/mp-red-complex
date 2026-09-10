@@ -233,28 +233,6 @@ void LazyTreeWidget::showContextMenu(const QPoint& pos) {
 	menu.exec(d->normalTreeView->viewport()->mapToGlobal(pos));
 }
 
-bool LazyTreeWidget::updateNode(const QVariant& nodeId, const LazyTreeNodePtr& nodeData) {
-	//auto rootItem = d->normalModel->invisibleRootItem();
-	//auto item = d->findNode(rootItem, nodeId);
-	//if (!item) {
-	//	return false;
-	//}
-
-	//auto oldNodeData = item->data(TreeNodeRawData).value<LazyTreeNodePtr>();
-	//if (!nodeData) {
-	//	return false;
-	//}
-
-	//if (!d->provider->updateTreeNode(nodeData)) {
-	//	return false;
-	//}
-
-	//item->setData(QVariant::fromValue(nodeData), TreeNodeRawData);
-	//item->setText(nodeData->name());
-
-	return true;
-}
-
 void LazyTreeWidget::refreshAll() {
 	d->loadTreeData();
 }

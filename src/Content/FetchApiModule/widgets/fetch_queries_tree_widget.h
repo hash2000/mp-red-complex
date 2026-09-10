@@ -12,6 +12,8 @@ public:
 	explicit FetchQueriesTreeWidget(ILazyNodesDataProvider* provider, QWidget* parent = nullptr);
 	~FetchQueriesTreeWidget() override;
 
+private slots:
+	void onNodeActivated(const LazyTreeNodePtr& node);
 
 private:
 	class Private;

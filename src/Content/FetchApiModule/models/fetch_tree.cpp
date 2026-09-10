@@ -83,3 +83,11 @@ bool FetchTree::expanded() const {
 std::optional<LazyTreeNodeList> FetchTree::children() const {
 	return d->children;
 }
+
+QVariantMap FetchTree::properties() const {
+	return QVariantMap();
+}
+
+bool FetchTree::setProperty(const QString& name, const QVariant& value) {
+	return false;
+}

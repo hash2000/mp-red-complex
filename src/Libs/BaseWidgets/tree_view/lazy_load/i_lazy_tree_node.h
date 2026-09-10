@@ -24,4 +24,7 @@ public:
 	virtual void setChildren(const LazyTreeNodeList& ch) = 0;
 	virtual void clearChildren() = 0;
 	virtual std::optional<LazyTreeNodeList> children() const = 0;
+
+	virtual QVariantMap properties() const = 0;
+	virtual bool setProperty(const QString& name, const QVariant& value) = 0;
 };

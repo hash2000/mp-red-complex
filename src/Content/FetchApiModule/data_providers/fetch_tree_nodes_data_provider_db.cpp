@@ -11,30 +11,32 @@ static QString kSql_treeNodesSelect = R"(
 		id,
 		parent_id,
 		name,
+		data,
 		case
 				when exists (
 					select 1
-					from queries_tree as child
+					from queries as child
 					where child.parent_id = t.id
 				)
 				then 1
 				else 0
 			end as has_children,
 		0 expanded
-	from queries_tree as t
+	from queries as t
 )";
 static QString kSql_treeNodesDelete = R"(
-	delete from queries_tree where id = :id
+	delete from queries where id = :id
 )";
 static QString kSql_treeNodesUpdate = R"(
 update set
-	parent_id = :parent_id
-	name = :name
-	from queries_tree
+	parent_id = :parent_id,
+	name = :name,
+	data = :data
+	from queries
 		where id = :id
 )";
 static QString kSql_treeNodeInsert = R"(
-	insert into queries_tree (parent_id, name) values(:parent_id, :name);
+	insert into queries (parent_id, name, data) values(:parent_id, :name, :data);
 )";
 static QString kSql_treeNodesSerach = R"(
 with recursive
@@ -46,13 +48,13 @@ found as (
         case
             when exists (
                 select 1
-                from queries_tree as child
+                from queries as child
                 where child.parent_id = qt.id
             )
             then 1
             else 0
         end as has_children
-    from queries_tree qt
+    from queries qt
     where qt.name like '%' || :search_text || '%'
 ),
 raw as (
@@ -72,7 +74,7 @@ raw as (
         p.name,
         1 as has_children,
         1 as expanded
-    from queries_tree p
+    from queries p
     join raw c on c.parent_id = p.id
 ),
 cte as (
@@ -88,8 +90,15 @@ cte as (
         parent_id,
         name
 )
-select *
+select
+	q.id,
+	q.parent_id,
+	q.name,
+	q.data, 
+	cte.has_children,
+	cte.expanded
 from cte
+join queries q on q.id = cte.id
 )";
 }
 
@@ -217,6 +226,7 @@ bool FetchTreeNodesDataProviderDb::updateNode(const LazyTreeNodePtr& node) {
 	updateItem->bindValue(":parent_id", node->parentId());
 	updateItem->bindValue(":name", node->name());
 	updateItem->bindValue(":id", node->id());
+	updateItem->bindValue(":data", "{}");
 
 	if (!updateItem->exec()) {
 		qWarning() << "Error update path id" << node->id();
@@ -238,6 +248,7 @@ bool FetchTreeNodesDataProviderDb::addNode(const LazyTreeNodePtr& node) {
 
 	insertItem->bindValue(":parent_id", node->parentId());
 	insertItem->bindValue(":name", node->name());
+	insertItem->bindValue(":data", "{}");
 
 	if (!insertItem->exec()) {
 		qWarning() << "Error insert path id" << node->id();

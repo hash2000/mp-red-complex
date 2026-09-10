@@ -22,6 +22,10 @@ public:
 	void appendChild(const LazyTreeNodePtr& ch);
 	std::optional<LazyTreeNodeList> children() const;
 
+	QVariantMap properties() const override;
+	bool setProperty(const QString& name, const QVariant& value) override;
+
+
 private:
 	class Private;
 	std::unique_ptr<Private> d;

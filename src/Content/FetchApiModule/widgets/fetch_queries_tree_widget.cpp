@@ -16,6 +16,12 @@ FetchQueriesTreeWidget::FetchQueriesTreeWidget(ILazyNodesDataProvider* provider,
 	: d(std::make_unique<Private>(this, provider))
 	, LazyTreeWidget(provider, parent) {
 	setActionHandler(d->actionHandler.get());
+
+	connect(this, &LazyTreeWidget::nodeEditRequested, this, &FetchQueriesTreeWidget::onNodeActivated);
 }
 
 FetchQueriesTreeWidget::~FetchQueriesTreeWidget() = default;
+
+void FetchQueriesTreeWidget::onNodeActivated(const LazyTreeNodePtr& node) {
+
+}

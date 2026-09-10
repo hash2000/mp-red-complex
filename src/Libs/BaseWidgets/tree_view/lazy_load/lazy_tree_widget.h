@@ -28,7 +28,6 @@ private slots:
 
 signals:
 	void nodeEditRequested(const LazyTreeNodePtr& node);
-	void nodeActivated(const QVariant& nodeId);
 	void nodeSelectionChanged(const LazyTreeNodePtr& node);
 
 private:
