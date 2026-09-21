@@ -7,7 +7,7 @@ void build(MigrationManager* migrator) {
 	migrator->addMigration(1, "Initialized database",
 		[](SQLiteConnection& db) -> bool {
 		return db.execute(R"(
-CREATE TABLE "queries_tree" (
+CREATE TABLE "queries" (
 	"id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
 	"parent_id" INTEGER,
 	"name" TEXT NOT NULL,
