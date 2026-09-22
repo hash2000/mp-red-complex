@@ -11,6 +11,7 @@ public:
 	Private(LazyTreeView* parent) : q(parent) {}
 	LazyTreeView* q;
 
+	QString lastCommittedText;
 	QStandardItemModel* model;
 	ILazyTreeNodeActionHandler* actionHandler = nullptr;
 
@@ -30,6 +31,7 @@ LazyTreeView::LazyTreeView(QWidget* parent)
 	setModel(d->model);
 	setHeaderHidden(true);
 	setUniformRowHeights(true); // Оптимизация для больших деревьев
+	setIndentation(10);
 
 	connect(this, &QTreeView::expanded, this, &LazyTreeView::onExpanded);
 	connect(this, &QTreeView::activated, this, &LazyTreeView::onNodeActivated);
@@ -176,7 +178,8 @@ void LazyTreeView::removeSelectedNode() {
 	if (result.success) {
 		auto nodeId = item->data(LazyTreeNodeRole::Id);
 		auto parent = item->parent();
-		auto node = item->data(LazyTreeNodeRole::RawData).value<LazyTreeNodePtr>();
+		auto node = item->data(LazyTreeNodeRole::RawData)
+			.value<LazyTreeNodePtr>();
 
 		if (parent) {
 			parent->removeRow(item->row());
@@ -203,9 +206,8 @@ LazyTreeNodePtr LazyTreeView::selectedNode() const {
 		return LazyTreeNodePtr();
 	}
 
-	auto node = item->data(LazyTreeNodeRole::RawData).value<LazyTreeNodePtr>();
-
-	return node;
+	return item->data(LazyTreeNodeRole::RawData)
+		.value<LazyTreeNodePtr>();
 }
 
 QVariant LazyTreeView::selectedNodeId() const {
@@ -219,9 +221,29 @@ QVariant LazyTreeView::selectedNodeId() const {
 		return QVariant();
 	}
 
-	auto nodeId = item->data(LazyTreeNodeRole::Id);
+	return item->data(LazyTreeNodeRole::Id);
+}
 
-	return nodeId;
+void LazyTreeView::startEdit(const QModelIndex& index) {
+	if (!index.isValid()) {
+		return;
+	}
+
+	d->model->blockSignals(true);
+
+	auto item = itemFromIndex(index);
+
+	Qt::ItemFlags flags = item->flags();
+	flags |= Qt::ItemIsEditable;
+	item->setFlags(flags);
+
+	d->model->blockSignals(false);
+
+	edit(index);
+}
+
+void LazyTreeView::startEditSelectedNode() {
+	startEdit(currentIndex());
 }
 
 void LazyTreeView::addNodeAndStartEdit(QStandardItem* parentItem, LazyTreeNodePtr newNode) {
@@ -242,6 +264,7 @@ void LazyTreeView::addNodeAndStartEdit(QStandardItem* parentItem, LazyTreeNodePt
 
 	auto index = d->model->indexFromItem(item);
 
+	d->lastCommittedText = QString();
 	setExpanded(d->model->indexFromItem(parentItem), true);
 	setCurrentIndex(index);
 	edit(index);
@@ -250,18 +273,7 @@ void LazyTreeView::addNodeAndStartEdit(QStandardItem* parentItem, LazyTreeNodePt
 void LazyTreeView::onSelectionChanged(const QModelIndex& current, const QModelIndex& previous) {
 	Q_UNUSED(previous);
 
-	// create temporary node in addNodeAndStartEdit
-	// * setCurrentIndex
-	// * change selection, (previus node = nullptr, current node is temp)
-	if (!previous.isValid()) {
-		return;
-	}
-
-	auto previusItem = d->model->itemFromIndex(previous);
-	d->removeTemporaryNode(previusItem);
-
 	if (!current.isValid()) {
-		emit selectionChanged(LazyTreeNodePtr());
 		return;
 	}
 
@@ -279,65 +291,77 @@ void LazyTreeView::onSelectionChanged(const QModelIndex& current, const QModelIn
 }
 
 void LazyTreeView::onItemChanged(QStandardItem* item) {
-	auto nodeData = item->data(LazyTreeNodeRole::RawData).value<LazyTreeNodePtr>();
+	QString currentText = item->text();
+	if (currentText == d->lastCommittedText) {
+		return;
+	}
 
-	if (!d->isTemporaryNode(item)) {
-		// Это переименование постоянного узла
-		if (d->actionHandler) {
-			auto newName = item->text().trimmed();
-			if (newName.isEmpty()) {
-				// Откатываем изменение
-				item->setText(nodeData->name());
-				//showError("Имя не может быть пустым");
-				return;
-			}
+	d->lastCommittedText = currentText;
 
+	if (item->data(LazyTreeNodeRole::IsTemp).toBool()) {
+		QString newName = currentText.trimmed();
+
+		if (newName.isEmpty()) {
+			d->removeTemporaryNode(item);
+			return;
+		}
+
+		auto newNode = item->data(LazyTreeNodeRole::RawData).value<LazyTreeNodePtr>();
+		newNode->setName(newName);
+
+		if (!d->actionHandler) {
+			// showError("Обработчик действий не установлен");
+			d->removeTemporaryNode(item);
+			return;
+		}
+
+		QStandardItem* parentItem = item->parent();
+		if (!parentItem) {
+			parentItem = d->model->invisibleRootItem();
+		}
+
+		auto result = d->actionHandler->addNode(parentItem, newNode);
+
+		if (result.success) {
+			d->finalizeTemporaryNode(item);
+			emit nodeAdded(newNode);
+		}
+		else {
+			// showError(result.errorMessage);
+			d->removeTemporaryNode(item);
+		}
+
+	}
+	else if (d->actionHandler) {
+		QString newName = currentText.trimmed();
+		if (newName.isEmpty()) {
+			auto nodeData = item->data(LazyTreeNodeRole::RawData).value<LazyTreeNodePtr>();
+			d->model->blockSignals(true);
+			item->setText(nodeData->name());
+			d->lastCommittedText = nodeData->name();
+			d->model->blockSignals(false);
+			// showError("Имя не может быть пустым");
+		}
+		else {
 			auto result = d->actionHandler->renameNode(item, newName);
 			if (result.success) {
+				auto nodeData = item->data(LazyTreeNodeRole::RawData).value<LazyTreeNodePtr>();
 				nodeData->setName(newName);
 				emit nodeRenamed(nodeData, newName);
 			}
 			else {
 				// Откатываем изменение
+				auto nodeData = item->data(LazyTreeNodeRole::RawData).value<LazyTreeNodePtr>();
+				d->model->blockSignals(true);
 				item->setText(nodeData->name());
+				d->lastCommittedText = nodeData->name();
+				d->model->blockSignals(false);
 				//showError(result.errorMessage);
 			}
 		}
-
-		return;
 	}
 
-	// Обработка временного узла (создание)
-	QString newName = item->text().trimmed();
-	if (newName.isEmpty()) {
-		d->removeTemporaryNode(item);
-		return;
-	}
-
-	auto newNode = item->data(LazyTreeNodeRole::RawData).value<LazyTreeNodePtr>();
-	newNode->setName(newName);
-
-	if (!d->actionHandler) {
-		//showError("Обработчик действий не установлен");
-		d->removeTemporaryNode(item);
-		return;
-	}
-
-	QStandardItem* parentItem = item->parent();
-	if (!parentItem) {
-		parentItem = d->model->invisibleRootItem();
-	}
-
-	auto result = d->actionHandler->addNode(parentItem, newNode);
-
-	if (result.success) {
-		d->finalizeTemporaryNode(item);
-		emit nodeAdded(newNode);
-	}
-	else {
-		//showError(result.errorMessage);
-		d->removeTemporaryNode(item);
-	}
+	d->finalizeTemporaryNode(item);
 }
 
 void LazyTreeView::onNodeActivated(const QModelIndex& index) {
@@ -382,6 +406,8 @@ void LazyTreeView::Private::preareRootItemModel(QStandardItemModel* model) {
 }
 
 void LazyTreeView::Private::finalizeTemporaryNode(QStandardItem* item) {
+	model->blockSignals(true);
+
 	item->setData(false, LazyTreeNodeRole::IsTemp);
 
 	Qt::ItemFlags flags = item->flags();
@@ -390,7 +416,8 @@ void LazyTreeView::Private::finalizeTemporaryNode(QStandardItem* item) {
 
 	auto newNode = item->data(LazyTreeNodeRole::RawData).value<LazyTreeNodePtr>();
 	item->setData(newNode->id(), LazyTreeNodeRole::Id);
-	item->setData(false, LazyTreeNodeRole::IsTemp);
+
+	model->blockSignals(false);
 }
 
 void LazyTreeView::Private::removeTemporaryNode(QStandardItem* item) {

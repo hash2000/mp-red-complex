@@ -25,6 +25,7 @@ public:
 
 	QToolButton* btnAdd;
 	QToolButton* btnDelete;
+	QToolButton* btnEdit;
 	QToolButton* btnBack;
 	QToolButton* btnShowSearch;
 
@@ -105,6 +106,7 @@ void LazyTreeWidget::Private::setupUI() {
 
 	btnAdd = new QToolButton(q);
 	btnDelete = new QToolButton(q);
+	btnEdit = new QToolButton(q);
 	btnBack = new QToolButton(q);
 	btnShowSearch = new QToolButton(q);
 
@@ -112,6 +114,7 @@ void LazyTreeWidget::Private::setupUI() {
 	toolbarLayout->addWidget(btnBack);
 	toolbarLayout->addWidget(btnAdd);
 	toolbarLayout->addWidget(btnDelete);
+	toolbarLayout->addWidget(btnEdit);
 	toolbarLayout->addStretch();
 
 	mainLayout->addLayout(toolbarLayout);
@@ -128,15 +131,20 @@ void LazyTreeWidget::Private::setupUI() {
 
 void LazyTreeWidget::Private::setupToolbar() {
 	// UTF-8 иконки и тултипы
-	btnAdd->setText("➕");
-	btnAdd->setToolTip("Добавить узел");
+	btnAdd->setText("+");
+	btnAdd->setToolTip("Добавить");
 	btnAdd->setToolButtonStyle(Qt::ToolButtonIconOnly);
 	connect(btnAdd, &QToolButton::clicked, q, &LazyTreeWidget::onAddNode);
 
-	btnDelete->setText("➖");
-	btnDelete->setToolTip("Удалить узел");
+	btnDelete->setText("⌫");
+	btnDelete->setToolTip("Удалить");
 	btnDelete->setToolButtonStyle(Qt::ToolButtonIconOnly);
 	connect(btnDelete, &QToolButton::clicked, q, &LazyTreeWidget::onDeleteNode);
+
+	btnEdit->setText("✎");
+	btnEdit->setToolTip("Редактировать");
+	btnEdit->setToolButtonStyle(Qt::ToolButtonIconOnly);
+	connect(btnEdit, &QToolButton::clicked, q, &LazyTreeWidget::onEditNode);
 
 	btnShowSearch->setText("🔍");
 	btnShowSearch->setToolTip("Результат поиска");
@@ -198,6 +206,16 @@ void LazyTreeWidget::onDeleteNode() {
 	}
 }
 
+void LazyTreeWidget::onEditNode() {
+	auto tree = d->isSearchMode ? d->searchTreeView : d->normalTreeView;
+	auto index = tree->currentIndex();
+	if (!index.isValid()) {
+		return;
+	}
+
+	tree->startEdit(index);
+}
+
 void LazyTreeWidget::onShowSearch() {
 	d->isSearchMode = true;
 	d->btnBack->show();
@@ -228,8 +246,9 @@ void LazyTreeWidget::onBackToNormalView() {
 
 void LazyTreeWidget::showContextMenu(const QPoint& pos) {
 	QMenu menu(this);
-	menu.addAction("➕ Добавить узел", this, &LazyTreeWidget::onAddNode);
-	menu.addAction("➖ Удалить узел", this, &LazyTreeWidget::onDeleteNode);
+	menu.addAction("+ Добавить", this, &LazyTreeWidget::onAddNode);
+	menu.addAction("⌫ Удалить", this, &LazyTreeWidget::onDeleteNode);
+	menu.addAction("✎ Редактировать", this, &LazyTreeWidget::onEditNode);
 	menu.exec(d->normalTreeView->viewport()->mapToGlobal(pos));
 }
 

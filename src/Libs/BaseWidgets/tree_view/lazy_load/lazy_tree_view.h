@@ -26,6 +26,7 @@ public:
 	// Поиск узла по ID (возвращает nullptr, если не найден)
 	QStandardItem* findNode(const QVariant& id) const;
 
+	// Вернуть запись дерева по индексу
 	QStandardItem* itemFromIndex(const QModelIndex& index) const;
 
 	// Развернуть узел и всех его родителей, прокрутить к нему
@@ -33,6 +34,12 @@ public:
 
 	// Добавление нового узла и запуск редактирования
 	void addNodeAndStartEdit(QStandardItem* parentItem, LazyTreeNodePtr newNode);
+
+	// Начать редактирование узла
+	void startEdit(const QModelIndex& index);
+
+	// Начать редактирование выбранного узла
+	void startEditSelectedNode();
 
 	// Удаление выбранного узла
 	void removeSelectedNode();

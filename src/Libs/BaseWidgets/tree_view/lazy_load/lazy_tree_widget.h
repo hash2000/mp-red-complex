@@ -22,6 +22,7 @@ private slots:
 	void performSearch();
 	void onAddNode();
 	void onDeleteNode();
+	void onEditNode();
 	void onShowSearch();
 	void onBackToNormalView();
 	void showContextMenu(const QPoint& pos);

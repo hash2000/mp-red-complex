@@ -12,6 +12,7 @@ public:
 	QString path;
 	bool expanded = false;
 	bool needChildren = false;
+	QVariantMap properties;
 
 	std::optional<LazyTreeNodeList> children;
 };
@@ -85,9 +86,10 @@ std::optional<LazyTreeNodeList> FetchTree::children() const {
 }
 
 QVariantMap FetchTree::properties() const {
-	return QVariantMap();
+	return d->properties;
 }
 
 bool FetchTree::setProperty(const QString& name, const QVariant& value) {
-	return false;
+	d->properties[name] = value;
+	return true;
 }
