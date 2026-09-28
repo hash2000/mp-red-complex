@@ -70,6 +70,7 @@ signals:
 
 protected:
 	void mousePressEvent(QMouseEvent* event) override;
+	void dropEvent(QDropEvent* event) override;
 
 private slots:
 	void onExpanded(const QModelIndex& index);

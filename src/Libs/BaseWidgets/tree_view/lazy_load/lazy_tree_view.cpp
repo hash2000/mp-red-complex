@@ -1,10 +1,14 @@
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_view.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_node_roles.h"
+#include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_model.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/i_lazy_tree_node_action_handler.h"
 
 #include <QMouseEvent>
 #include <QStandardItemModel>
 #include <QVariant>
+#include <QDropEvent>
+#include <QMimeData>
+#include <QTimer>
 
 class LazyTreeView::Private {
 public:
@@ -12,7 +16,7 @@ public:
 	LazyTreeView* q;
 
 	QString lastCommittedText;
-	QStandardItemModel* model;
+	LazyTreeModel* model;
 	ILazyTreeNodeActionHandler* actionHandler = nullptr;
 
 	void buildSubTree(QStandardItem* parentItem, const LazyTreeNodeList& nodes);
@@ -27,11 +31,17 @@ public:
 
 LazyTreeView::LazyTreeView(QWidget* parent)
 	: d(std::make_unique<Private>(this)) {
-	d->model = new QStandardItemModel(this);
+	d->model = new LazyTreeModel(this);
 	setModel(d->model);
 	setHeaderHidden(true);
 	setUniformRowHeights(true); // Оптимизация для больших деревьев
+	setSelectionMode(QAbstractItemView::SingleSelection);
 	setIndentation(10);
+
+	setDragEnabled(true);
+	setAcceptDrops(true);
+	setDropIndicatorShown(true);
+	setDragDropMode(QAbstractItemView::InternalMove);
 
 	connect(this, &QTreeView::expanded, this, &LazyTreeView::onExpanded);
 	connect(this, &QTreeView::activated, this, &LazyTreeView::onNodeActivated);
@@ -60,6 +70,70 @@ void LazyTreeView::mousePressEvent(QMouseEvent* event) {
 	QTreeView::mousePressEvent(event);
 }
 
+void LazyTreeView::dropEvent(QDropEvent* event) {
+	QModelIndex targetIndex = indexAt(event->position().toPoint());
+	if (!targetIndex.isValid()) {
+		event->ignore();
+		return;
+	}
+
+	QStandardItem* targetItem = d->model->itemFromIndex(targetIndex);
+	if (!targetItem || d->isDummyNode(targetItem)) {
+		event->ignore();
+		return;
+	}
+
+	// Получаем ID перетаскиваемого узла из MIME-данных
+	if (!event->mimeData()->hasFormat(LazyTreeModel::MimeType)) {
+		event->ignore();
+		return;
+	}
+
+	QByteArray encodedData = event->mimeData()->data(LazyTreeModel::MimeType);
+	QDataStream stream(&encodedData, QIODevice::ReadOnly);
+	QVariant draggedId;
+	stream >> draggedId;
+
+	QStandardItem* draggedItem = d->model->findItemById(draggedId);
+	if (!draggedItem) {
+		event->ignore();
+		return;
+	}
+
+	// Определяем нового родителя (с учетом позиции drop)
+	auto newParent = targetItem;
+	auto dropPos = dropIndicatorPosition();
+	if (dropPos == QAbstractItemView::AboveItem || dropPos == QAbstractItemView::BelowItem) {
+		newParent = targetItem->parent();
+		if (!newParent) {
+			newParent = d->model->invisibleRootItem();
+		}
+	}
+
+	// Вызываем ActionHandler для сохранения в БД
+	if (d->actionHandler) {
+		auto result = d->actionHandler->moveNode(draggedItem, newParent);
+		if (!result.success) {
+			// showError(result.errorMessage);
+			event->ignore();
+			return;
+		}
+	}
+
+	// Если всё успешно, разрешаем событию завершиться
+	QTreeView::dropEvent(event);
+
+	QModelIndex newParentIndex = newParent->index();
+	if (newParentIndex.isValid()) {
+		setExpanded(newParentIndex, true);
+	}
+
+	// Эмитим сигнал после полного завершения операции
+	auto draggedNode = draggedItem->data(LazyTreeNodeRole::RawData).value<LazyTreeNodePtr>();
+	auto newParentId = newParent->data(LazyTreeNodeRole::Id);
+	emit nodeMoved(draggedNode, newParentId);
+}
+
 void LazyTreeView::setNodes(const LazyTreeNodeList& nodes) {
 	d->model->clear();
 	d->buildSubTree(d->model->invisibleRootItem(), nodes);
@@ -72,7 +146,9 @@ void LazyTreeView::Private::buildSubTree(QStandardItem* parentItem, const LazyTr
 		const auto& children = nodeData->children();
 		item->setData(nodeData->id(), LazyTreeNodeRole::Id);
 		item->setData(QVariant::fromValue(nodeData), LazyTreeNodeRole::RawData);
-		item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable); // Не редактируется по умолчанию
+		item->setFlags(
+			Qt::ItemIsEnabled | Qt::ItemIsSelectable |
+			Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled);
 
 		parentItem->appendRow(item);
 
@@ -234,6 +310,8 @@ void LazyTreeView::startEdit(const QModelIndex& index) {
 	auto item = itemFromIndex(index);
 
 	Qt::ItemFlags flags = item->flags();
+	flags &= ~Qt::ItemIsDragEnabled;
+	flags &= ~Qt::ItemIsDropEnabled;
 	flags |= Qt::ItemIsEditable;
 	item->setFlags(flags);
 
@@ -412,6 +490,7 @@ void LazyTreeView::Private::finalizeTemporaryNode(QStandardItem* item) {
 
 	Qt::ItemFlags flags = item->flags();
 	flags &= ~Qt::ItemIsEditable;
+	flags |= Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled;
 	item->setFlags(flags);
 
 	auto newNode = item->data(LazyTreeNodeRole::RawData).value<LazyTreeNodePtr>();

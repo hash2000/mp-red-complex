@@ -51,7 +51,7 @@ ActionResult LazyTreeNodeActionHandler::renameNode(QStandardItem* nodeItem, cons
 ActionResult LazyTreeNodeActionHandler::moveNode(QStandardItem* nodeItem, QStandardItem* newParentItem) {
 	auto nodeData = nodeItem->data(LazyTreeNodeRole::RawData).value<LazyTreeNodePtr>();
 
-	QVariant newParentId = newParentItem->data(LazyTreeNodeRole::RawData);
+	QVariant newParentId = newParentItem->data(LazyTreeNodeRole::Id);
 	nodeData->setParentId(newParentId);
 
 	if (!_provider->updateTreeNode(nodeData)) {
