@@ -18,5 +18,5 @@ void ActionPanelLoginBuilder::build() {
 	_panel->addButton(ActionButtonConfig("CodeEditor", "🖹", "Редактор кода",
 		"windows action:create target:code-editor", 2));
 	_panel->addButton(ActionButtonConfig("FetchApi", "📮", "Анализ запросов",
-		"windows action:create target:fetch-api", 2));
+		"windows action:create target:fetch-api-queries-tree", 2));
 }

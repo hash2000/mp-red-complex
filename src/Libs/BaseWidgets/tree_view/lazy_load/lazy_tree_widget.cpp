@@ -120,8 +120,8 @@ void LazyTreeWidget::Private::setupUI() {
 	mainLayout->addLayout(toolbarLayout);
 
 	stackedViews = new QStackedWidget(q);
-	normalTreeView = new LazyTreeView(q);
-	searchTreeView = new LazyTreeView(q);
+	normalTreeView = new LazyTreeView(provider->createRootNode(), q);
+	searchTreeView = new LazyTreeView(provider->createRootNode(), q);
 
 	stackedViews->addWidget(normalTreeView);
 	stackedViews->addWidget(searchTreeView);

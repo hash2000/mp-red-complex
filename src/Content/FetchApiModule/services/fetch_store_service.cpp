@@ -40,6 +40,10 @@ LazyTreeNodePtr FetchStoreService::createTreeNode() {
 	return std::make_shared<FetchTree>();
 }
 
+LazyTreeNodePtr FetchStoreService::createRootNode() {
+	return std::make_shared<FetchTree>();
+}
+
 LazyTreeNodeList FetchStoreService::treeNodes(const QVariant& parentId) const {
 	return d->treeNodesDataProvider->treeNodes(parentId);
 }

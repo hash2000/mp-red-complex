@@ -14,7 +14,6 @@ protected:
 	bool canDropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column, const QModelIndex& parent) const override;
 	bool dropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column, const QModelIndex& parent) override;
 	Qt::DropActions supportedDropActions() const override;
-	bool moveRows(const QModelIndex& sourceParent, int sourceRow, int count, const QModelIndex& destinationParent, int destinationChild) override;
 
 private:
 	bool isDescendantOf(QStandardItem* node, QStandardItem* target) const;

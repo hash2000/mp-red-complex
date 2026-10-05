@@ -11,6 +11,7 @@
 #include "Launcher/windows/materials/materials_window.h"
 #include "Launcher/windows/code_editor/code_editor_window.h"
 #include "Launcher/windows/fetch_api/fetch_api_window.h"
+#include "Launcher/windows/fetch_api/fetch_api_queries_tree.h"
 
 #include "Content/ShadersModule/services/shaders_service.h"
 
@@ -40,6 +41,7 @@ WindowsBuilder::WindowsBuilder()
 	d->factory.emplace("material-editor", [](const QString& id, QWidget* parent) { return new MaterialsWindow(id, parent); });
 	d->factory.emplace("code-editor", [](const QString& id, QWidget* parent) { return new CodeEditorWindow(id, parent); });
 	d->factory.emplace("fetch-api", [](const QString& id, QWidget* parent) { return new FetchApiWindow(id, parent); });
+	d->factory.emplace("fetch-api-queries-tree", [](const QString& id, QWidget* parent) { return new FetchApiQueriesTreeWindow(id, parent); });
 }
 
 WindowsBuilder::~WindowsBuilder() = default;

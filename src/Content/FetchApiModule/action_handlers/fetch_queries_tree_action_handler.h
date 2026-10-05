@@ -4,6 +4,7 @@
 #include <QWidget>
 
 class ILazyNodesDataProvider;
+class LazyTreeView;
 
 class LazyTreeNodeActionHandler : public ILazyTreeNodeActionHandler {
 public:
@@ -15,6 +16,7 @@ public:
 	ActionResult moveNode(QStandardItem* nodeItem, QStandardItem* newParentItem) override;
 
 private:
+	LazyTreeView* _view;
 	ILazyNodesDataProvider* _provider;
 	QWidget* _parent;
 };

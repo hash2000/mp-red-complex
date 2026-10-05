@@ -1,6 +1,5 @@
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_model.h"
-#include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_node_roles.h"
-
+#include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_view.h"
 #include <QMimeData>
 #include <QDataStream>
 #include <QIODevice>
@@ -13,92 +12,17 @@ QMimeData* LazyTreeModel::mimeData(const QModelIndexList& indexes) const {
 	QMimeData* mimeData = new QMimeData();
 	QByteArray encodedData;
 	QDataStream stream(&encodedData, QIODevice::WriteOnly);
-	qDebug() << "mimeData";
-	for (const QModelIndex& index : indexes) {
-		if (index.isValid()) {
-			QVariant nodeId = index.data(LazyTreeNodeRole::Id);
-			stream << nodeId;
-			qDebug() << "** id" << nodeId;
-		}
-	}
-
 	mimeData->setData(MimeType, encodedData);
 	return mimeData;
 }
 
 Qt::DropActions LazyTreeModel::supportedDropActions() const {
-	return Qt::MoveAction | Qt::TargetMoveAction;
+	return Qt::MoveAction;
 }
 
 bool LazyTreeModel::canDropMimeData(const QMimeData* data, Qt::DropAction action,
 	int row, int column, const QModelIndex& parent) const {
-	Q_UNUSED(action);
-	Q_UNUSED(row);
-	Q_UNUSED(column);
-	Q_UNUSED(parent);
-
-	// Разрешаем drop, если это наш формат данных
-	auto result =  data->hasFormat(MimeType);
-	if (!result) {
-		qDebug() << "canDropMimeData" << result;
-	}
-
-	return result;
-}
-
-bool LazyTreeModel::moveRows(const QModelIndex& sourceParent, int sourceRow, int count,
-	const QModelIndex& destinationParent, int destinationChild) {
-
-	// Валидация параметров
-	if (sourceRow < 0 || count <= 0 || destinationChild < 0) {
-		return false;
-	}
-
-	// Получаем родителей
-	QStandardItem* sourceParentItem = itemFromIndex(sourceParent);
-	if (!sourceParentItem) {
-		sourceParentItem = invisibleRootItem();
-	}
-
-	QStandardItem* destParentItem = itemFromIndex(destinationParent);
-	if (!destParentItem) {
-		destParentItem = invisibleRootItem();
-	}
-
-	// Проверка: нельзя перемещать в потомка
-	if (isDescendantOf(destParentItem, sourceParentItem)) {
-		return false;
-	}
-
-	if (!beginMoveRows(sourceParent, sourceRow, sourceRow + count - 1, destinationParent, destinationChild)) {
-		return false;
-	}
-
-	// Корректируем destinationChild, если перемещаем внутри одного родителя
-	int adjustedDestChild = destinationChild;
-	if (sourceParentItem == destParentItem && sourceRow < destinationChild) {
-		adjustedDestChild -= count;
-	}
-
-	// Извлекаем строки из источника
-	QList< QList<QStandardItem*>> takenRows;
-	for (int i = 0; i < count; i++) {
-		auto itm = sourceParentItem->takeRow(sourceRow + i);
-		if (itm.isEmpty()) {
-			continue;
-		}
-		takenRows.append(itm);
-	}
-
-	// Вставляем в destination
-	for (int i = 0; i < takenRows.count() - 1; i++) {
-		const auto itm = takenRows[i];
-		destParentItem->insertRow(adjustedDestChild + i, itm);
-	}
-
-	endMoveRows();
-
-	return true;
+	return data->hasFormat(MimeType);
 }
 
 bool LazyTreeModel::dropMimeData(const QMimeData* data, Qt::DropAction action,
@@ -127,23 +51,11 @@ bool LazyTreeModel::dropMimeData(const QMimeData* data, Qt::DropAction action,
 		targetParent = invisibleRootItem();
 	}
 
-	// Исходная позиция
-	QModelIndex sourceParentIndex;
-	int sourceRow = draggedItem->row();
-	QStandardItem* oldParent = draggedItem->parent();
-	if (oldParent && oldParent != invisibleRootItem()) {
-		sourceParentIndex = oldParent->index();
+	if (isDescendantOf(draggedItem, targetParent)) {
+		return false;
 	}
 
-	// Целевая позиция
-	QModelIndex destParentIndex;
-	int destRow = (row == -1) ? targetParent->rowCount() : row;
-	if (targetParent != invisibleRootItem()) {
-		destParentIndex = targetParent->index();
-	}
-
-	// moveRow вызовет наш переопределенный moveRows
-	return moveRow(sourceParentIndex, sourceRow, destParentIndex, destRow);
+	return true;
 }
 
 QStandardItem* LazyTreeModel::findItemById(const QVariant& id) const {
@@ -151,8 +63,9 @@ QStandardItem* LazyTreeModel::findItemById(const QVariant& id) const {
 	stack.append(invisibleRootItem());
 
 	while (!stack.isEmpty()) {
-		QStandardItem* current = stack.takeFirst();
-		if (current->data(LazyTreeNodeRole::Id) == id) {
+		auto current = stack.takeFirst();
+		auto node = LazyTreeView::nodeByItem(current);
+		if (node->id() == id) {
 			return current;
 		}
 
@@ -160,6 +73,7 @@ QStandardItem* LazyTreeModel::findItemById(const QVariant& id) const {
 			stack.append(current->child(i));
 		}
 	}
+
 	return nullptr;
 }
 

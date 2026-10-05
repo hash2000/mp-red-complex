@@ -9,6 +9,7 @@ class ILazyNodesDataProvider {
 public:
 	virtual ~ILazyNodesDataProvider() = default;
 	virtual LazyTreeNodePtr createTreeNode() = 0;
+	virtual LazyTreeNodePtr createRootNode() = 0;
 	virtual LazyTreeNodeList treeNodes(const QVariant& parentId) const = 0;
 	virtual LazyTreeNodeList searchTreeNodes(const QString& text) const = 0;
 	virtual bool addTreeNode(const LazyTreeNodePtr& node) = 0;

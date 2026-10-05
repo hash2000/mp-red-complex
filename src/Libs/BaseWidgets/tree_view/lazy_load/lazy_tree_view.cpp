@@ -1,7 +1,7 @@
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_view.h"
-#include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_node_roles.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_model.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/i_lazy_tree_node_action_handler.h"
+#include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_node_state.h"
 
 #include <QMouseEvent>
 #include <QStandardItemModel>
@@ -9,6 +9,11 @@
 #include <QDropEvent>
 #include <QMimeData>
 #include <QTimer>
+
+namespace LazyTreeNodeRole {
+constexpr int RawData = Qt::UserRole + 1;
+constexpr int State = Qt::UserRole + 2;
+}
 
 class LazyTreeView::Private {
 public:
@@ -18,6 +23,7 @@ public:
 	QString lastCommittedText;
 	LazyTreeModel* model;
 	ILazyTreeNodeActionHandler* actionHandler = nullptr;
+	LazyTreeNodePtr rootNode;
 
 	void buildSubTree(QStandardItem* parentItem, const LazyTreeNodeList& nodes);
 	void addDummyNode(QStandardItem* parentItem);
@@ -29,9 +35,10 @@ public:
 	void checkCurrentItemAndRemoveIfTemporary();
 };
 
-LazyTreeView::LazyTreeView(QWidget* parent)
+LazyTreeView::LazyTreeView(LazyTreeNodePtr rootNode, QWidget* parent)
 	: d(std::make_unique<Private>(this)) {
 	d->model = new LazyTreeModel(this);
+	d->rootNode = rootNode;
 	setModel(d->model);
 	setHeaderHidden(true);
 	setUniformRowHeights(true); // Оптимизация для больших деревьев
@@ -50,6 +57,16 @@ LazyTreeView::LazyTreeView(QWidget* parent)
 }
 
 LazyTreeView::~LazyTreeView() = default;
+
+LazyTreeNodePtr LazyTreeView::nodeByItem(QStandardItem* nodeItem) {
+	return nodeItem->data(LazyTreeNodeRole::RawData)
+		.value<LazyTreeNodePtr>();
+}
+
+LazyTreeNodeStatePtr LazyTreeView::nodeStateByItem(QStandardItem* nodeItem) {
+	return nodeItem->data(LazyTreeNodeRole::State)
+		.value<LazyTreeNodeStatePtr>();
+}
 
 void LazyTreeView::setActionHandler(ILazyTreeNodeActionHandler* actionHandler) {
 	d->actionHandler = actionHandler;
@@ -100,6 +117,13 @@ void LazyTreeView::dropEvent(QDropEvent* event) {
 		return;
 	}
 
+	auto oldParent = draggedItem->parent();
+	if (!oldParent) {
+		oldParent = d->model->invisibleRootItem();
+	}
+
+	auto oldParentIndex = oldParent->index();
+
 	// Определяем нового родителя (с учетом позиции drop)
 	auto newParent = targetItem;
 	auto dropPos = dropIndicatorPosition();
@@ -109,6 +133,8 @@ void LazyTreeView::dropEvent(QDropEvent* event) {
 			newParent = d->model->invisibleRootItem();
 		}
 	}
+
+	auto newParentIndex = newParent->index();
 
 	// Вызываем ActionHandler для сохранения в БД
 	if (d->actionHandler) {
@@ -123,15 +149,15 @@ void LazyTreeView::dropEvent(QDropEvent* event) {
 	// Если всё успешно, разрешаем событию завершиться
 	QTreeView::dropEvent(event);
 
-	QModelIndex newParentIndex = newParent->index();
+
 	if (newParentIndex.isValid()) {
 		setExpanded(newParentIndex, true);
 	}
 
-	// Эмитим сигнал после полного завершения операции
-	auto draggedNode = draggedItem->data(LazyTreeNodeRole::RawData).value<LazyTreeNodePtr>();
-	auto newParentId = newParent->data(LazyTreeNodeRole::Id);
-	emit nodeMoved(draggedNode, newParentId);
+	//// Эмитим сигнал после полного завершения операции
+	//auto draggedNode = nodeByItem(draggedItem);
+	//auto newParentId = newParent->data(LazyTreeNodeRole::Id);
+	//emit nodeMoved(draggedNode, newParentId);
 }
 
 void LazyTreeView::setNodes(const LazyTreeNodeList& nodes) {
@@ -143,8 +169,9 @@ void LazyTreeView::setNodes(const LazyTreeNodeList& nodes) {
 void LazyTreeView::Private::buildSubTree(QStandardItem* parentItem, const LazyTreeNodeList& nodes) {
 	for (const auto& nodeData : nodes) {
 		auto item = new QStandardItem(nodeData->name());
+		auto nodeState = std::make_shared<LazyTreeNodeState>();
 		const auto& children = nodeData->children();
-		item->setData(nodeData->id(), LazyTreeNodeRole::Id);
+		item->setData(QVariant::fromValue(nodeState), LazyTreeNodeRole::State);
 		item->setData(QVariant::fromValue(nodeData), LazyTreeNodeRole::RawData);
 		item->setFlags(
 			Qt::ItemIsEnabled | Qt::ItemIsSelectable |
@@ -168,17 +195,19 @@ void LazyTreeView::Private::buildSubTree(QStandardItem* parentItem, const LazyTr
 
 void LazyTreeView::Private::addDummyNode(QStandardItem* parentItem) {
 	auto dummy = new QStandardItem("Loading..."); // Можно оставить пустым ""
-	dummy->setData(true, LazyTreeNodeRole::IsDummy);
+	auto nodeState = std::make_shared<LazyTreeNodeState>();
+	nodeState->setDummy(true);
+	dummy->setData(QVariant::fromValue(nodeState), LazyTreeNodeRole::State);
 	dummy->setFlags(Qt::NoItemFlags); // Неактивный, не кликабельный
 	parentItem->appendRow(dummy);
 }
 
 bool LazyTreeView::Private::isDummyNode(QStandardItem* item) const {
-	return item && item->data(LazyTreeNodeRole::IsDummy).toBool();
+	return item && nodeStateByItem(item)->dummy();
 }
 
 bool LazyTreeView::Private::isTemporaryNode(QStandardItem* item) const {
-	return item && item->data(LazyTreeNodeRole::IsTemp).toBool();
+	return item && nodeStateByItem(item)->temporary();
 }
 
 void LazyTreeView::onExpanded(const QModelIndex& index) {
@@ -187,10 +216,12 @@ void LazyTreeView::onExpanded(const QModelIndex& index) {
 		return;
 	}
 
+	qDebug() << "onExpanded" << item->text();
+
 	// Если это первый раз и там dummy-узел
 	if (item->rowCount() == 1 && d->isDummyNode(item->child(0))) {
-		QVariant parentId = item->data(LazyTreeNodeRole::Id);
 		item->removeRow(0);
+		const auto parentId = nodeByItem(item)->id();
 		emit requestFetchChildren(parentId);
 	}
 }
@@ -210,14 +241,22 @@ void LazyTreeView::appendChildren(const QVariant& parentId, const LazyTreeNodeLi
 }
 
 QStandardItem* LazyTreeView::findNode(const QVariant& id) const {
-	// Рекурсивный поиск по всей модели
+	// Рекурсивный поиск по всей модели/
 	QList<QStandardItem*> stack;
 	stack.append(d->model->invisibleRootItem());
+	qDebug() << "findNode to id" << id;
 
 	while (!stack.isEmpty()) {
-		auto current = stack.takeFirst();
+		const auto current = stack.takeFirst();
+		const auto nodeState = nodeStateByItem(current);
+		if (nodeState->dummy()) {
+			continue;
+		}
 
-		if (current->data(LazyTreeNodeRole::Id) == id) {
+		const auto node = nodeByItem(current);
+		qDebug() << "** " << current->text() << (node ? "has node" : "has null node");
+
+		if (node && node->id() == id) {
 			return current;
 		}
 
@@ -250,25 +289,25 @@ void LazyTreeView::removeSelectedNode() {
 	}
 
 	auto result = d->actionHandler->removeNode(item);
+	if (!result.success) {
+		// showError(result.errorMessage);
+		return;
+	}
 
-	if (result.success) {
-		auto nodeId = item->data(LazyTreeNodeRole::Id);
-		auto parent = item->parent();
-		auto node = item->data(LazyTreeNodeRole::RawData)
-			.value<LazyTreeNodePtr>();
+	const auto node = nodeByItem(item);
 
-		if (parent) {
-			parent->removeRow(item->row());
-		}
-		else {
-			d->model->removeRow(item->row());
-		}
 
-		emit nodeRemoved(node);
+	const auto nodeId = node->id();
+	auto parent = item->parent();
+
+	if (parent) {
+		parent->removeRow(item->row());
 	}
 	else {
-		// showError(result.errorMessage);
+		d->model->removeRow(item->row());
 	}
+
+	emit nodeRemoved(node);
 }
 
 LazyTreeNodePtr LazyTreeView::selectedNode() const {
@@ -282,8 +321,7 @@ LazyTreeNodePtr LazyTreeView::selectedNode() const {
 		return LazyTreeNodePtr();
 	}
 
-	return item->data(LazyTreeNodeRole::RawData)
-		.value<LazyTreeNodePtr>();
+	return nodeByItem(item);
 }
 
 QVariant LazyTreeView::selectedNodeId() const {
@@ -297,15 +335,13 @@ QVariant LazyTreeView::selectedNodeId() const {
 		return QVariant();
 	}
 
-	return item->data(LazyTreeNodeRole::Id);
+	return nodeByItem(item)->id();
 }
 
 void LazyTreeView::startEdit(const QModelIndex& index) {
 	if (!index.isValid()) {
 		return;
 	}
-
-	d->model->blockSignals(true);
 
 	auto item = itemFromIndex(index);
 
@@ -314,8 +350,6 @@ void LazyTreeView::startEdit(const QModelIndex& index) {
 	flags &= ~Qt::ItemIsDropEnabled;
 	flags |= Qt::ItemIsEditable;
 	item->setFlags(flags);
-
-	d->model->blockSignals(false);
 
 	edit(index);
 }
@@ -333,9 +367,11 @@ void LazyTreeView::addNodeAndStartEdit(QStandardItem* parentItem, LazyTreeNodePt
 	}
 
 	auto item = new QStandardItem("");
-	item->setData(QVariant(), LazyTreeNodeRole::Id);
+	auto nodeState = std::make_shared<LazyTreeNodeState>();
+	nodeState->setTemporary(true);
+
+	item->setData(QVariant::fromValue(nodeState), LazyTreeNodeRole::State);
 	item->setData(QVariant::fromValue(newNode), LazyTreeNodeRole::RawData);
-	item->setData(true, LazyTreeNodeRole::IsTemp);
 	item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsEditable);
 
 	parentItem->appendRow(item);
@@ -352,31 +388,43 @@ void LazyTreeView::onSelectionChanged(const QModelIndex& current, const QModelIn
 	Q_UNUSED(previous);
 
 	if (!current.isValid()) {
+		qDebug() << "onSelectionChanged skip";
 		return;
 	}
 
 	auto item = d->model->itemFromIndex(current);
-	auto isDummy = d->isDummyNode(item);
-	auto isTemp = d->isTemporaryNode(item);
+	auto nodeState = nodeStateByItem(item);
+	auto isDummy = nodeState->dummy();
+	auto isTemp = nodeState->temporary();
+
+	qDebug() << "onSelectionChanged pass" << item->text() << isDummy << isTemp;
 
 	if (item && !isDummy && !isTemp) {
-		auto node = item->data(LazyTreeNodeRole::RawData).value<LazyTreeNodePtr>();
+		auto node = nodeByItem(item);
 		emit selectionChanged(node);
 		return;
 	}
+
+	//d->removeTemporaryNode(item);
 
 	emit selectionChanged(LazyTreeNodePtr());
 }
 
 void LazyTreeView::onItemChanged(QStandardItem* item) {
+
 	QString currentText = item->text();
 	if (currentText == d->lastCommittedText) {
+		qDebug() << "item change skip" << currentText;
 		return;
 	}
 
+	qDebug() << "item change pass" << currentText;
 	d->lastCommittedText = currentText;
 
-	if (item->data(LazyTreeNodeRole::IsTemp).toBool()) {
+	auto nodeState = nodeStateByItem(item);
+	auto node = nodeByItem(item);
+
+	if (nodeState->temporary()) {
 		QString newName = currentText.trimmed();
 
 		if (newName.isEmpty()) {
@@ -384,8 +432,7 @@ void LazyTreeView::onItemChanged(QStandardItem* item) {
 			return;
 		}
 
-		auto newNode = item->data(LazyTreeNodeRole::RawData).value<LazyTreeNodePtr>();
-		newNode->setName(newName);
+		node->setName(newName);
 
 		if (!d->actionHandler) {
 			// showError("Обработчик действий не установлен");
@@ -398,11 +445,11 @@ void LazyTreeView::onItemChanged(QStandardItem* item) {
 			parentItem = d->model->invisibleRootItem();
 		}
 
-		auto result = d->actionHandler->addNode(parentItem, newNode);
+		auto result = d->actionHandler->addNode(parentItem, node);
 
 		if (result.success) {
 			d->finalizeTemporaryNode(item);
-			emit nodeAdded(newNode);
+			emit nodeAdded(node);
 		}
 		else {
 			// showError(result.errorMessage);
@@ -413,27 +460,23 @@ void LazyTreeView::onItemChanged(QStandardItem* item) {
 	else if (d->actionHandler) {
 		QString newName = currentText.trimmed();
 		if (newName.isEmpty()) {
-			auto nodeData = item->data(LazyTreeNodeRole::RawData).value<LazyTreeNodePtr>();
-			d->model->blockSignals(true);
+			auto nodeData = nodeByItem(item);
 			item->setText(nodeData->name());
 			d->lastCommittedText = nodeData->name();
-			d->model->blockSignals(false);
 			// showError("Имя не может быть пустым");
 		}
 		else {
 			auto result = d->actionHandler->renameNode(item, newName);
 			if (result.success) {
-				auto nodeData = item->data(LazyTreeNodeRole::RawData).value<LazyTreeNodePtr>();
+				auto nodeData = nodeByItem(item);
 				nodeData->setName(newName);
 				emit nodeRenamed(nodeData, newName);
 			}
 			else {
 				// Откатываем изменение
-				auto nodeData = item->data(LazyTreeNodeRole::RawData).value<LazyTreeNodePtr>();
-				d->model->blockSignals(true);
+				auto nodeData = nodeByItem(item);
 				item->setText(nodeData->name());
 				d->lastCommittedText = nodeData->name();
-				d->model->blockSignals(false);
 				//showError(result.errorMessage);
 			}
 		}
@@ -448,11 +491,16 @@ void LazyTreeView::onNodeActivated(const QModelIndex& index) {
 	}
 
 	QStandardItem* item = d->model->itemFromIndex(index);
-	if (!item || d->isDummyNode(item)) {
+	if (!item) {
 		return;
 	}
 
-	auto node = item->data(LazyTreeNodeRole::RawData).value<LazyTreeNodePtr>();
+	auto nodeStates = nodeStateByItem(item);
+	if (nodeStates->dummy()) {
+		return;
+	}
+
+	auto node = nodeByItem(item);
 	emit nodeActivated(node, item->text());
 }
 
@@ -479,24 +527,22 @@ void LazyTreeView::expandAndSelectNode(const QVariant& id) {
 
 void LazyTreeView::Private::preareRootItemModel(QStandardItemModel* model) {
 	auto normalRootItem = model->invisibleRootItem();
-	normalRootItem->setData(QVariant(), LazyTreeNodeRole::Id);
-	normalRootItem->setData(false, LazyTreeNodeRole::IsDummy);
+	auto nodeStates = std::make_shared<LazyTreeNodeState>();
+	normalRootItem->setData(QVariant::fromValue(nodeStates), LazyTreeNodeRole::State);
+	normalRootItem->setData(QVariant::fromValue(rootNode), LazyTreeNodeRole::RawData);
 }
 
 void LazyTreeView::Private::finalizeTemporaryNode(QStandardItem* item) {
-	model->blockSignals(true);
 
-	item->setData(false, LazyTreeNodeRole::IsTemp);
+	auto nodeState = nodeStateByItem(item);
+	auto node = nodeByItem(item);
+
+	nodeState->setTemporary(false);
 
 	Qt::ItemFlags flags = item->flags();
 	flags &= ~Qt::ItemIsEditable;
 	flags |= Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled;
 	item->setFlags(flags);
-
-	auto newNode = item->data(LazyTreeNodeRole::RawData).value<LazyTreeNodePtr>();
-	item->setData(newNode->id(), LazyTreeNodeRole::Id);
-
-	model->blockSignals(false);
 }
 
 void LazyTreeView::Private::removeTemporaryNode(QStandardItem* item) {
