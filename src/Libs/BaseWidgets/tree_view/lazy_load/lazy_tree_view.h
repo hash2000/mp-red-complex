@@ -57,6 +57,9 @@ public:
 	// Вернуть идентификатор выбранного узла
 	QVariant selectedNodeId() const;
 
+	// Завершить редактирование узла
+	void finalizeEditItem(QStandardItem* item);
+
 signals:
 	// Запрос данных: виджет-владелец должен загрузить детей и вызвать appendChildren
 	void requestFetchChildren(const QVariant& parentId);
