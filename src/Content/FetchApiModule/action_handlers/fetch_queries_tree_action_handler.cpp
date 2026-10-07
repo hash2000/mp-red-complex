@@ -1,6 +1,6 @@
 #include "Content/FetchApiModule/action_handlers/fetch_queries_tree_action_handler.h"
 #include "Content/FetchApiModule/data_providers/fetch_tree_nodes_data_provider_db.h"
-#include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_view.h"
+#include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_node_role.h"
 
 #include <QVariant>
 #include <QMessageBox>
@@ -14,7 +14,7 @@ LazyTreeNodeActionHandler::LazyTreeNodeActionHandler(ILazyNodesDataProvider* pro
 }
 
 ActionResult LazyTreeNodeActionHandler::addNode(QStandardItem* parentItem,  LazyTreeNodePtr newNode) {
-	auto node = LazyTreeView::nodeByItem(parentItem);
+	auto node = LazyTreeNodeRole::nodeByItem(parentItem);
 	newNode->setParentId(node->id());
 
 	if (!_provider->addTreeNode(newNode)) {
@@ -25,7 +25,7 @@ ActionResult LazyTreeNodeActionHandler::addNode(QStandardItem* parentItem,  Lazy
 }
 
 ActionResult LazyTreeNodeActionHandler::removeNode(QStandardItem* nodeItem) {
-	auto node = LazyTreeView::nodeByItem(nodeItem);
+	auto node = LazyTreeNodeRole::nodeByItem(nodeItem);
 	auto nodeId = node->id();
 
 	if (!_provider->deleteTreeNode(nodeId.toInt())) {
@@ -35,7 +35,7 @@ ActionResult LazyTreeNodeActionHandler::removeNode(QStandardItem* nodeItem) {
 }
 
 ActionResult LazyTreeNodeActionHandler::renameNode(QStandardItem* nodeItem, const QString& newName) {
-	auto node = LazyTreeView::nodeByItem(nodeItem);
+	auto node = LazyTreeNodeRole::nodeByItem(nodeItem);
 
 	// Валидация уникальности среди братьев
 	QStandardItem* parent = nodeItem->parent();
@@ -53,8 +53,8 @@ ActionResult LazyTreeNodeActionHandler::renameNode(QStandardItem* nodeItem, cons
 }
 
 ActionResult LazyTreeNodeActionHandler::moveNode(QStandardItem* nodeItem, QStandardItem* newParentItem) {
-	auto nodeData = LazyTreeView::nodeByItem(nodeItem);
-	auto newParentNode = LazyTreeView::nodeByItem(newParentItem);;
+	auto nodeData = LazyTreeNodeRole::nodeByItem(nodeItem);
+	auto newParentNode = LazyTreeNodeRole::nodeByItem(newParentItem);;
 	auto newParentId = newParentNode->id();
 
 	nodeData->setParentId(newParentId);

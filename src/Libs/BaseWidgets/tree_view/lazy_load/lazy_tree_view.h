@@ -34,7 +34,7 @@ public:
 	void expandAndSelectNode(const QVariant& id);
 
 	// Добавление нового узла и запуск редактирования
-	void addNodeAndStartEdit(QStandardItem* parentItem, LazyTreeNodePtr newNode);
+	bool addNodeAndStartEdit(QStandardItem* parentItem, LazyTreeNodePtr newNode);
 
 	// Начать редактирование узла
 	void startEdit(const QModelIndex& index);
@@ -47,12 +47,6 @@ public:
 
 	// Вернуть описатель выбранного узла
 	LazyTreeNodePtr selectedNode() const;
-
-	// Вернуть описатель указанного узал
-	static LazyTreeNodePtr nodeByItem(QStandardItem* nodeItem);
-
-	// Вернуть описатель состояния указанного узал
-	static LazyTreeNodeStatePtr nodeStateByItem(QStandardItem* nodeItem);
 
 	// Вернуть идентификатор выбранного узла
 	QVariant selectedNodeId() const;

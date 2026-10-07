@@ -1,5 +1,7 @@
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_model.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_view.h"
+#include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_node_role.h"
+
 #include <QMimeData>
 #include <QDataStream>
 #include <QIODevice>
@@ -12,6 +14,19 @@ QMimeData* LazyTreeModel::mimeData(const QModelIndexList& indexes) const {
 	QMimeData* mimeData = new QMimeData();
 	QByteArray encodedData;
 	QDataStream stream(&encodedData, QIODevice::WriteOnly);
+
+	for (const QModelIndex& index : indexes) {
+		if (!index.isValid()) {
+			continue;
+		}
+
+		auto item = itemFromIndex(index);
+		auto node = LazyTreeNodeRole::nodeByItem(item);
+
+		QVariant nodeId = node->id();
+		stream << nodeId;
+	}
+
 	mimeData->setData(MimeType, encodedData);
 	return mimeData;
 }
@@ -64,7 +79,11 @@ QStandardItem* LazyTreeModel::findItemById(const QVariant& id) const {
 
 	while (!stack.isEmpty()) {
 		auto current = stack.takeFirst();
-		auto node = LazyTreeView::nodeByItem(current);
+		auto node = LazyTreeNodeRole::nodeByItem(current);
+		if (!node) {
+			continue;
+		}
+
 		if (node->id() == id) {
 			return current;
 		}
