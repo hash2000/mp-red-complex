@@ -1,11 +1,11 @@
 #pragma once
-#include "Libs/BaseWidgets/tree_view/lazy_load/i_lazy_tree_node.h"
 
 #include <QWidget>
 
+using LazyTreeNodePtr = std::shared_ptr<class ILazyTreeNode>;
+using LazyTreeNodeList = std::vector<LazyTreeNodePtr>;
 class QStandardItem;
 class ILazyNodesDataProvider;
-class ILazyTreeNodeActionHandler;
 
 class LazyTreeWidget : public QWidget {
 	Q_OBJECT
@@ -13,7 +13,6 @@ public:
 	explicit LazyTreeWidget(ILazyNodesDataProvider* provider, QWidget* parent = nullptr);
 	~LazyTreeWidget() override;
 
-	void setActionHandler(ILazyTreeNodeActionHandler* actionHandler);
 	bool updateNode(const QVariant& nodeId, const LazyTreeNodePtr& nodeData);
 	void refreshAll(); // Полное обновление дерева
 

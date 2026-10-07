@@ -1,22 +1,20 @@
 #pragma once
-
-#include "Libs/BaseWidgets/tree_view/lazy_load/i_lazy_tree_node.h"
-#include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_node_state.h"
-
 #include <QTreeView>
 #include <QStandardItem>
 #include <memory>
 
-class ILazyTreeNodeActionHandler;
+using LazyTreeNodePtr = std::shared_ptr<class ILazyTreeNode>;
+using LazyTreeNodeList = std::vector<LazyTreeNodePtr>;
+using LazyTreeNodeStatePtr = std::shared_ptr<class LazyTreeNodeState>;
+
+class ILazyNodesDataProvider;
 
 class LazyTreeView : public QTreeView {
 	Q_OBJECT
 public:
-	explicit LazyTreeView(LazyTreeNodePtr rootNode, QWidget* parent = nullptr);
+	explicit LazyTreeView(ILazyNodesDataProvider* provider, QWidget* parent = nullptr);
 
 	~LazyTreeView() override;
-
-	void setActionHandler(ILazyTreeNodeActionHandler* actionHandler);
 
 	// Установка данных (полная перезагрузка)
 	void setNodes(const LazyTreeNodeList& nodes);

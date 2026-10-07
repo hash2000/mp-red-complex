@@ -2,6 +2,7 @@
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_highlight_delegate.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_view.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/i_lazy_tree_data_provider.h"
+#include "Libs/BaseWidgets/tree_view/lazy_load/i_lazy_tree_node.h"
 
 #include <QVBoxLayout>
 #include <QStandardItemModel>
@@ -120,8 +121,8 @@ void LazyTreeWidget::Private::setupUI() {
 	mainLayout->addLayout(toolbarLayout);
 
 	stackedViews = new QStackedWidget(q);
-	normalTreeView = new LazyTreeView(provider->createRootNode(), q);
-	searchTreeView = new LazyTreeView(provider->createRootNode(), q);
+	normalTreeView = new LazyTreeView(provider, q);
+	searchTreeView = new LazyTreeView(provider, q);
 
 	stackedViews->addWidget(normalTreeView);
 	stackedViews->addWidget(searchTreeView);
@@ -156,11 +157,6 @@ void LazyTreeWidget::Private::setupToolbar() {
 	btnBack->setToolButtonStyle(Qt::ToolButtonIconOnly);
 	btnBack->hide(); // Скрыта по умолчанию
 	connect(btnBack, &QToolButton::clicked, q, &LazyTreeWidget::onBackToNormalView);
-}
-
-void LazyTreeWidget::setActionHandler(ILazyTreeNodeActionHandler* actionHandler) {
-	d->normalTreeView->setActionHandler(actionHandler);
-	d->searchTreeView->setActionHandler(actionHandler);
 }
 
 void LazyTreeWidget::onSearchTextChanged(const QString& text) {

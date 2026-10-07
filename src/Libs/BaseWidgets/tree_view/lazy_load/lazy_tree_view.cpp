@@ -1,8 +1,9 @@
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_view.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_model.h"
-#include "Libs/BaseWidgets/tree_view/lazy_load/i_lazy_tree_node_action_handler.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_node_state.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_node_role.h"
+#include "Libs/BaseWidgets/tree_view/lazy_load/i_lazy_tree_node.h"
+#include "Libs/BaseWidgets/tree_view/lazy_load/i_lazy_tree_data_provider.h"
 
 #include <QMouseEvent>
 #include <QStandardItemModel>
@@ -18,7 +19,7 @@ public:
 
 	QString lastCommittedText;
 	LazyTreeModel* model;
-	ILazyTreeNodeActionHandler* actionHandler = nullptr;
+	ILazyNodesDataProvider* dataProvider = nullptr;
 	LazyTreeNodePtr rootNode;
 
 	void buildSubTree(QStandardItem* parentItem, const LazyTreeNodeList& nodes);
@@ -33,10 +34,11 @@ public:
 	void removeAllChildren(QStandardItem* parentItem);
 };
 
-LazyTreeView::LazyTreeView(LazyTreeNodePtr rootNode, QWidget* parent)
+LazyTreeView::LazyTreeView(ILazyNodesDataProvider* provider, QWidget* parent)
 	: d(std::make_unique<Private>(this)) {
 	d->model = new LazyTreeModel(this);
-	d->rootNode = rootNode;
+	d->dataProvider = provider;
+	d->rootNode = provider->createRootNode();
 	setModel(d->model);
 	setHeaderHidden(true);
 	setUniformRowHeights(true); // Оптимизация для больших деревьев
@@ -55,10 +57,6 @@ LazyTreeView::LazyTreeView(LazyTreeNodePtr rootNode, QWidget* parent)
 }
 
 LazyTreeView::~LazyTreeView() = default;
-
-void LazyTreeView::setActionHandler(ILazyTreeNodeActionHandler* actionHandler) {
-	d->actionHandler = actionHandler;
-}
 
 void LazyTreeView::mousePressEvent(QMouseEvent* event) {
 	if (event->button() == Qt::LeftButton) {
@@ -122,16 +120,6 @@ void LazyTreeView::dropEvent(QDropEvent* event) {
 		}
 	}
 
-	// Вызываем ActionHandler для сохранения в БД
-	if (d->actionHandler) {
-		auto result = d->actionHandler->moveNode(draggedItem, newParent);
-		if (!result.success) {
-			// showError(result.errorMessage);
-			event->ignore();
-			return;
-		}
-	}
-
 	// Если всё успешно, разрешаем событию завершиться
 	QTreeView::dropEvent(event);
 
@@ -140,6 +128,24 @@ void LazyTreeView::dropEvent(QDropEvent* event) {
 	auto newParentId = newParentNode->id();
 	auto newParentIndex = newParent->index();
 	auto isRoot = (newParent == d->model->invisibleRootItem());
+
+	draggedNode->setParentId(newParentId);
+
+	// Вызываем ActionHandler для сохранения в БД
+	if (!d->dataProvider) {
+		event->ignore();
+		return;
+	}
+
+	auto result = d->dataProvider->updateTreeNode(draggedNode);
+	if (!result) {
+		qWarning() << "LazyTreeView::dropEvent: dragged" << draggedItem->text()
+			<< "from" << oldParent->text()
+			<< "to" << newParent->text();
+		// showError(result.errorMessage);
+		event->ignore();
+		return;
+	}
 
 	// дял рутового узла QTreeView не работают методы collapse/expand
 	// его нужно обрабатывать отдельно
@@ -278,6 +284,11 @@ QStandardItem* LazyTreeView::itemFromIndex(const QModelIndex& index) const {
 }
 
 void LazyTreeView::removeSelectedNode() {
+	if (!d->dataProvider) {
+	//	showError("Обработчик действий не установлен");
+		return;
+	}
+
 	QModelIndex currentIndex = this->currentIndex();
 	if (!currentIndex.isValid()) {
 		return;
@@ -288,19 +299,14 @@ void LazyTreeView::removeSelectedNode() {
 		return;
 	}
 
-	if (!d->actionHandler) {
-	//	showError("Обработчик действий не установлен");
-		return;
-	}
+	const auto node = LazyTreeNodeRole::nodeByItem(item);
+	const auto nodeId = node->id();
 
-	auto result = d->actionHandler->removeNode(item);
-	if (!result.success) {
+	auto result = d->dataProvider->deleteTreeNode(nodeId);
+	if (!result) {
 		// showError(result.errorMessage);
 		return;
 	}
-
-	const auto node = LazyTreeNodeRole::nodeByItem(item);
-	const auto nodeId = node->id();
 
 	auto parent = item->parent();
 	if (parent) {
@@ -435,7 +441,7 @@ void LazyTreeView::onItemChanged(QStandardItem* item) {
 }
 
 void LazyTreeView::finalizeEditItem(QStandardItem* item) {
-	if (!d->actionHandler) {
+	if (!d->dataProvider) {
 		//	showError("Обработчик действий не установлен");
 		return;
 	}
@@ -468,9 +474,12 @@ void LazyTreeView::finalizeEditItem(QStandardItem* item) {
 			parentItem = d->model->invisibleRootItem();
 		}
 
-		auto result = d->actionHandler->addNode(parentItem, node);
+		auto parentNode = LazyTreeNodeRole::nodeByItem(parentItem);
+		node->setParentId(parentNode->id());
 
-		if (result.success) {
+		auto result = d->dataProvider->addTreeNode(node);
+
+		if (result) {
 			d->finalizeTemporaryNode(item);
 			emit nodeAdded(node);
 		}
@@ -487,17 +496,19 @@ void LazyTreeView::finalizeEditItem(QStandardItem* item) {
 			// showError("Имя не может быть пустым");
 		}
 		else {
-			auto result = d->actionHandler->renameNode(item, currentText);
-			if (result.success) {
-				auto nodeData = LazyTreeNodeRole::nodeByItem(item);
-				nodeData->setName(currentText);
-				emit nodeRenamed(nodeData, currentText);
+
+			auto prevName = node->name();
+			node->setName(currentText);
+			auto result = d->dataProvider->updateTreeNode(node);
+
+			if (result) {
+				emit nodeRenamed(node, currentText);
 			}
 			else {
 				// Откатываем изменение
 				auto nodeData = LazyTreeNodeRole::nodeByItem(item);
-				item->setText(nodeData->name());
-				d->lastCommittedText = nodeData->name();
+				item->setText(prevName);
+				d->lastCommittedText = prevName;
 				//showError(result.errorMessage);
 			}
 		}
