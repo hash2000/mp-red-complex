@@ -24,6 +24,7 @@ private slots:
 	void onEditNode();
 	void onShowSearch();
 	void onBackToNormalView();
+	void onRefreshNode();
 	void showContextMenu(const QPoint& pos);
 
 signals:

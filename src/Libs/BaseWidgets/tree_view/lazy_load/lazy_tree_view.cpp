@@ -162,7 +162,7 @@ void LazyTreeView::dropEvent(QDropEvent* event) {
 	}
 
 	// Эмитим сигнал после полного завершения операции
-	emit nodeMoved(draggedNode, newParentId);
+	emit nodeMoved(draggedNode, newParentNode);
 }
 
 void LazyTreeView::setNodes(const LazyTreeNodeList& nodes) {
@@ -248,10 +248,23 @@ void LazyTreeView::appendChildren(const QVariant& parentId, const LazyTreeNodeLi
 	}
 
 	if (newNodes.empty()) {
-		// Если детей нет, просто оставляем узел пустым (он уже развернут, dummy удален)
 		return;
 	}
 
+	d->buildSubTree(parentItem, newNodes);
+}
+
+void LazyTreeView::setChildren(const QVariant& parentId, const LazyTreeNodeList& newNodes) {
+	QStandardItem* parentItem = findNode(parentId);
+	if (!parentItem) {
+		return;
+	}
+
+	if (newNodes.empty()) {
+		return;
+	}
+
+	d->removeAllChildren(parentItem);
 	d->buildSubTree(parentItem, newNodes);
 }
 

@@ -19,8 +19,11 @@ public:
 	// Установка данных (полная перезагрузка)
 	void setNodes(const LazyTreeNodeList& nodes);
 
-	// Добавление детей в существующий узел (после загрузки от провайдера)
+	// Добавление детей в существующий узел
 	void appendChildren(const QVariant& parentId, const LazyTreeNodeList& newNodes);
+
+	// Перезаписыавет детей в существующий узел
+	void setChildren(const QVariant& parentId, const LazyTreeNodeList& newNodes);
 
 	// Поиск узла по ID (возвращает nullptr, если не найден)
 	QStandardItem* findNode(const QVariant& id) const;
@@ -68,7 +71,7 @@ signals:
 	void nodeAdded(const LazyTreeNodePtr& node);
 	void nodeRemoved(const LazyTreeNodePtr& node);
 	void nodeRenamed(const LazyTreeNodePtr& node, const QString& newName);
-	void nodeMoved(const LazyTreeNodePtr& node, const QVariant& newParentId);
+	void nodeMoved(const LazyTreeNodePtr& node, const LazyTreeNodePtr& newParent);
 
 protected:
 	void mousePressEvent(QMouseEvent* event) override;

@@ -245,11 +245,20 @@ void LazyTreeWidget::showContextMenu(const QPoint& pos) {
 	menu.addAction("+ Добавить", this, &LazyTreeWidget::onAddNode);
 	menu.addAction("⌫ Удалить", this, &LazyTreeWidget::onDeleteNode);
 	menu.addAction("✎ Редактировать", this, &LazyTreeWidget::onEditNode);
+	menu.addAction("🗘 Обновить", this, &LazyTreeWidget::onRefreshNode);
 	menu.exec(d->normalTreeView->viewport()->mapToGlobal(pos));
 }
 
 void LazyTreeWidget::refreshAll() {
 	d->loadTreeData();
+}
+
+void LazyTreeWidget::onRefreshNode() {
+	auto tree = d->isSearchMode ? d->searchTreeView : d->normalTreeView;
+	auto nodeId = tree->selectedNodeId();
+	qDebug() << nodeId;
+	auto items = d->provider->treeNodes(nodeId);
+	tree->setChildren(nodeId, items);
 }
 
 void LazyTreeWidget::Private::loadSearchResults(const QString& searchText) {
