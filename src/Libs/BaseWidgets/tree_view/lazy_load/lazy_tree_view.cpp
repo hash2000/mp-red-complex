@@ -30,6 +30,7 @@ public:
 	void removeTemporaryNode(QStandardItem* item);
 	void checkCurrentItemAndRemoveIfTemporary();
 	void finalizeTemporaryNode(QStandardItem* item);
+	void checkAndFinalizeTemporaryNode(const QModelIndex& index);
 	bool searchAndRemoveDummyNode(QStandardItem* parent);
 	void removeAllChildren(QStandardItem* parentItem);
 };
@@ -402,8 +403,19 @@ bool LazyTreeView::addNodeAndStartEdit(QStandardItem* parentItem, LazyTreeNodePt
 	return true;
 }
 
+void LazyTreeView::Private::checkAndFinalizeTemporaryNode(const QModelIndex& index) 	{
+	if (index.isValid()) {
+		auto prevItem = model->itemFromIndex(index);
+		auto prevNodeState = LazyTreeNodeRole::nodeStateByItem(prevItem);
+		if (prevNodeState->temporary()) {
+			q->finalizeEditItem(prevItem);
+		}
+	}
+}
+
 void LazyTreeView::onSelectionChanged(const QModelIndex& current, const QModelIndex& previous) {
 	if (!current.isValid()) {
+		d->checkAndFinalizeTemporaryNode(previous);
 		return;
 	}
 
@@ -417,13 +429,7 @@ void LazyTreeView::onSelectionChanged(const QModelIndex& current, const QModelIn
 		return;
 	}
 
-	if (previous.isValid()) {
-		auto prevItem = d->model->itemFromIndex(previous);
-		auto prevNodeState = LazyTreeNodeRole::nodeStateByItem(prevItem);
-		if (prevNodeState->temporary()) {
-			finalizeEditItem(prevItem);
-		}
-	}
+	d->checkAndFinalizeTemporaryNode(previous);
 
 	auto isDummy = nodeState->dummy();
 	auto isTemp = nodeState->temporary();
