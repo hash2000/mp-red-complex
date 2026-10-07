@@ -30,6 +30,7 @@ public:
 	void checkCurrentItemAndRemoveIfTemporary();
 	void finalizeTemporaryNode(QStandardItem* item);
 	bool searchAndRemoveDummyNode(QStandardItem* parent);
+	void removeAllChildren(QStandardItem* parentItem);
 };
 
 LazyTreeView::LazyTreeView(LazyTreeNodePtr rootNode, QWidget* parent)
@@ -88,8 +89,6 @@ void LazyTreeView::dropEvent(QDropEvent* event) {
 		return;
 	}
 
-	qDebug() << "target item" << targetItem->text();
-
 	if (!event->mimeData()->hasFormat(LazyTreeModel::MimeType)) {
 		event->ignore();
 		return;
@@ -106,17 +105,10 @@ void LazyTreeView::dropEvent(QDropEvent* event) {
 		return;
 	}
 
-	qDebug() << "dragged item" << draggedItem->text();
-
 	auto oldParent = draggedItem->parent();
 	if (!oldParent) {
-		qDebug() << "oldParent is null set root";
 		oldParent = d->model->invisibleRootItem();
 	}
-	else {
-		qDebug() << "oldParent" << oldParent->text();
-	}
-
 
 	auto oldParentIndex = oldParent->index();
 
@@ -134,30 +126,35 @@ void LazyTreeView::dropEvent(QDropEvent* event) {
 	if (d->actionHandler) {
 		auto result = d->actionHandler->moveNode(draggedItem, newParent);
 		if (!result.success) {
-			qDebug() << "move fail";
 			// showError(result.errorMessage);
 			event->ignore();
 			return;
-		}
-		else {
-			qDebug() << "move success";
 		}
 	}
 
 	// Если всё успешно, разрешаем событию завершиться
 	QTreeView::dropEvent(event);
 
-	auto newParentIndex = newParent->index();
-	if (!newParentIndex.isValid()) {
-		return;
-	}
-
-	setExpanded(newParentIndex, true);
-
-	// Эмитим сигнал после полного завершения операции
 	auto draggedNode = LazyTreeNodeRole::nodeByItem(draggedItem);
 	auto newParentNode = LazyTreeNodeRole::nodeByItem(newParent);
 	auto newParentId = newParentNode->id();
+	auto newParentIndex = newParent->index();
+	auto isRoot = (newParent == d->model->invisibleRootItem());
+
+	// дял рутового узла QTreeView не работают методы collapse/expand
+	// его нужно обрабатывать отдельно
+	if (isRoot) {
+		d->removeAllChildren(newParent);
+		emit requestFetchChildren(QVariant());
+	}
+	else {
+		collapse(newParentIndex);
+		d->removeAllChildren(newParent);
+		d->addDummyNode(newParent);
+		expand(newParentIndex);
+	}
+
+	// Эмитим сигнал после полного завершения операции
 	emit nodeMoved(draggedNode, newParentId);
 }
 
@@ -212,6 +209,7 @@ bool LazyTreeView::Private::isTemporaryNode(QStandardItem* item) const {
 }
 
 void LazyTreeView::onExpanded(const QModelIndex& index) {
+	qDebug() << "LazyTreeView::onExpanded";
 	QStandardItem* item = d->model->itemFromIndex(index);
 	if (!item) {
 		return;
@@ -586,15 +584,26 @@ void LazyTreeView::Private::removeTemporaryNode(QStandardItem* item) {
 }
 
 void LazyTreeView::Private::checkCurrentItemAndRemoveIfTemporary() {
-	QModelIndex currentIndex = q->currentIndex();
+	auto currentIndex = q->currentIndex();
 	if (!currentIndex.isValid()) {
 		return;
 	}
 
-	QStandardItem* item = model->itemFromIndex(currentIndex);
+	auto item = model->itemFromIndex(currentIndex);
 	if (!item) {
 		return;
 	}
 
 	removeTemporaryNode(item);
+}
+
+void LazyTreeView::Private::removeAllChildren(QStandardItem* parentItem) {
+	if (!parentItem) {
+		return;
+	}
+
+	auto count = parentItem->rowCount();
+	if (count > 0) {
+		parentItem->removeRows(0, count);
+	}
 }
