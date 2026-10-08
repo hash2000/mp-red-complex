@@ -56,18 +56,9 @@ public:
 	void finalizeEditItem(QStandardItem* item);
 
 signals:
-	// Запрос данных: виджет-владелец должен загрузить детей и вызвать appendChildren
-	void requestFetchChildren(const QVariant& parentId);
-
-	// Пользователь активировал узел (двойной клик / Enter)
-	void nodeActivated(const LazyTreeNodePtr& node, const QString& nodeName);
-
-	// Изменился выделенный узел (пустой QVariant, если выделение снято)
+	void nodeActivated(const LazyTreeNodePtr& node);
 	void selectionChanged(const LazyTreeNodePtr& node);
-
-	// Клик по пустому месту
 	void emptyAreaClicked();
-
 	void nodeAdded(const LazyTreeNodePtr& node);
 	void nodeRemoved(const LazyTreeNodePtr& node);
 	void nodeRenamed(const LazyTreeNodePtr& node, const QString& newName);

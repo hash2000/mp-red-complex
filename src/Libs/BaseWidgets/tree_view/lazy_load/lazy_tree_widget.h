@@ -18,18 +18,23 @@ public:
 
 private slots:
 	void onSearchTextChanged(const QString& text);
-	void performSearch();
+	void onSearchPerform();
 	void onAddNode();
 	void onDeleteNode();
 	void onEditNode();
 	void onShowSearch();
 	void onBackToNormalView();
 	void onRefreshNode();
-	void showContextMenu(const QPoint& pos);
+	void onContextMenu(const QPoint& pos);
 
 signals:
-	void nodeEditRequested(const LazyTreeNodePtr& node);
-	void nodeSelectionChanged(const LazyTreeNodePtr& node);
+	void nodeMoved(const LazyTreeNodePtr& node, const LazyTreeNodePtr& newParent);
+	void nodeRenamed(const LazyTreeNodePtr& node, const QString& newName);
+	void nodeRemoved(const LazyTreeNodePtr& node);
+	void nodeAdded(const LazyTreeNodePtr& node);
+	void emptyAreaClicked();
+	void nodeActivated(const LazyTreeNodePtr& node);
+	void selectionChanged(const LazyTreeNodePtr& node);
 
 private:
 	class Private;

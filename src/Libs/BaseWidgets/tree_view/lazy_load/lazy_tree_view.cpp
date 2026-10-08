@@ -19,7 +19,7 @@ public:
 
 	QString lastCommittedText;
 	LazyTreeModel* model;
-	ILazyNodesDataProvider* dataProvider = nullptr;
+	ILazyNodesDataProvider* provider = nullptr;
 	LazyTreeNodePtr rootNode;
 
 	void buildSubTree(QStandardItem* parentItem, const LazyTreeNodeList& nodes);
@@ -38,7 +38,7 @@ public:
 LazyTreeView::LazyTreeView(ILazyNodesDataProvider* provider, QWidget* parent)
 	: d(std::make_unique<Private>(this)) {
 	d->model = new LazyTreeModel(this);
-	d->dataProvider = provider;
+	d->provider = provider;
 	d->rootNode = provider->createRootNode();
 	setModel(d->model);
 	setHeaderHidden(true);
@@ -128,17 +128,16 @@ void LazyTreeView::dropEvent(QDropEvent* event) {
 	auto newParentNode = LazyTreeNodeRole::nodeByItem(newParent);
 	auto newParentId = newParentNode->id();
 	auto newParentIndex = newParent->index();
-	auto isRoot = (newParent == d->model->invisibleRootItem());
 
 	draggedNode->setParentId(newParentId);
 
 	// Вызываем ActionHandler для сохранения в БД
-	if (!d->dataProvider) {
+	if (!d->provider) {
 		event->ignore();
 		return;
 	}
 
-	auto result = d->dataProvider->updateTreeNode(draggedNode);
+	auto result = d->provider->updateTreeNode(draggedNode);
 	if (!result) {
 		qWarning() << "LazyTreeView::dropEvent: dragged" << draggedItem->text()
 			<< "from" << oldParent->text()
@@ -148,18 +147,8 @@ void LazyTreeView::dropEvent(QDropEvent* event) {
 		return;
 	}
 
-	// дял рутового узла QTreeView не работают методы collapse/expand
-	// его нужно обрабатывать отдельно
-	if (isRoot) {
-		d->removeAllChildren(newParent);
-		emit requestFetchChildren(QVariant());
-	}
-	else {
-		collapse(newParentIndex);
-		d->removeAllChildren(newParent);
-		d->addDummyNode(newParent);
-		expand(newParentIndex);
-	}
+	LazyTreeNodeList nodeAsList = { draggedNode };
+	appendChildren(newParentId, nodeAsList);
 
 	// Эмитим сигнал после полного завершения операции
 	emit nodeMoved(draggedNode, newParentNode);
@@ -216,7 +205,6 @@ bool LazyTreeView::Private::isTemporaryNode(QStandardItem* item) const {
 }
 
 void LazyTreeView::onExpanded(const QModelIndex& index) {
-	qDebug() << "LazyTreeView::onExpanded";
 	QStandardItem* item = d->model->itemFromIndex(index);
 	if (!item) {
 		return;
@@ -225,7 +213,8 @@ void LazyTreeView::onExpanded(const QModelIndex& index) {
 	// Если это первый раз и там dummy-узел
 	if (d->searchAndRemoveDummyNode(item)) {
 		const auto parentId = LazyTreeNodeRole::nodeByItem(item)->id();
-		emit requestFetchChildren(parentId);
+		const auto nodes = d->provider->treeNodes(parentId);
+		appendChildren(parentId, nodes);
 	}
 }
 
@@ -298,7 +287,7 @@ QStandardItem* LazyTreeView::itemFromIndex(const QModelIndex& index) const {
 }
 
 void LazyTreeView::removeSelectedNode() {
-	if (!d->dataProvider) {
+	if (!d->provider) {
 	//	showError("Обработчик действий не установлен");
 		return;
 	}
@@ -316,7 +305,7 @@ void LazyTreeView::removeSelectedNode() {
 	const auto node = LazyTreeNodeRole::nodeByItem(item);
 	const auto nodeId = node->id();
 
-	auto result = d->dataProvider->deleteTreeNode(nodeId);
+	auto result = d->provider->deleteTreeNode(nodeId);
 	if (!result) {
 		// showError(result.errorMessage);
 		return;
@@ -460,7 +449,7 @@ void LazyTreeView::onItemChanged(QStandardItem* item) {
 }
 
 void LazyTreeView::finalizeEditItem(QStandardItem* item) {
-	if (!d->dataProvider) {
+	if (!d->provider) {
 		//	showError("Обработчик действий не установлен");
 		return;
 	}
@@ -496,7 +485,7 @@ void LazyTreeView::finalizeEditItem(QStandardItem* item) {
 		auto parentNode = LazyTreeNodeRole::nodeByItem(parentItem);
 		node->setParentId(parentNode->id());
 
-		auto result = d->dataProvider->addTreeNode(node);
+		auto result = d->provider->addTreeNode(node);
 
 		if (result) {
 			d->finalizeTemporaryNode(item);
@@ -518,7 +507,7 @@ void LazyTreeView::finalizeEditItem(QStandardItem* item) {
 
 			auto prevName = node->name();
 			node->setName(currentText);
-			auto result = d->dataProvider->updateTreeNode(node);
+			auto result = d->provider->updateTreeNode(node);
 
 			if (result) {
 				emit nodeRenamed(node, currentText);
@@ -564,7 +553,7 @@ void LazyTreeView::onNodeActivated(const QModelIndex& index) {
 	}
 
 	auto node = LazyTreeNodeRole::nodeByItem(item);
-	emit nodeActivated(node, item->text());
+	emit nodeActivated(node);
 }
 
 void LazyTreeView::expandAndSelectNode(const QVariant& id) {
