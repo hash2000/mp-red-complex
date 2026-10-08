@@ -164,7 +164,6 @@ LazyTreeNodeList FetchTreeNodesDataProviderDb::Private::readNodesList(const std:
 			item->setChildren(LazyTreeNodeList());
 		}
 
-
 		result.push_back(item);
 	}
 
