@@ -11,7 +11,7 @@
 #include "Launcher/windows/materials/materials_window.h"
 #include "Launcher/windows/code_editor/code_editor_window.h"
 #include "Launcher/windows/fetch_api/fetch_api_window.h"
-#include "Launcher/windows/fetch_api/fetch_api_queries_tree.h"
+#include "Launcher/windows/fetch_api/fetch_api_queries_tree_window.h"
 
 #include "Content/ShadersModule/services/shaders_service.h"
 

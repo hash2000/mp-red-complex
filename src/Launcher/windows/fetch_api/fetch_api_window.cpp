@@ -2,7 +2,7 @@
 #include "Launcher/app_controller.h"
 #include "Content/FetchApiModule/widgets/fetch_api_widget.h"
 #include "Content/FetchApiModule/widgets/fetch_queries_tree_widget.h"
-#include "Content/FetchApiModule/services/fetch_store_service.h"
+#include "Content/FetchApiModule/services/fetch_store_db_service.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
 #include "Content/ConsoleModule/command_context.h"
 #include "Content/ConsoleModule/models/instruction.h"
@@ -64,7 +64,7 @@ bool FetchApiWindow::Private::applyInstructionCreate(const std::shared_ptr<Instr
 	toolButton->setToolTip("Показать сохранённый запросы");
 	buttonsLayout->addWidget(toolButton);
 
-	tree = new FetchQueriesTreeWidget(services->get<FetchStoreService>());
+	tree = new FetchQueriesTreeWidget(services->get<FetchStoreDbService>());
 	tree->setWindowFlags(Qt::Popup | Qt::FramelessWindowHint);
 	tree->setStyleSheet("border: 1px solid #cccccc; border-radius: 5px;");
 

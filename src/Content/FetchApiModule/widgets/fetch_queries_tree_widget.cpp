@@ -8,8 +8,8 @@ public:
 };
 
 FetchQueriesTreeWidget::FetchQueriesTreeWidget(ILazyNodesDataProvider* provider, QWidget* parent)
-	: d(std::make_unique<Private>(this))
-	, LazyTreeWidget(provider, parent) {
+	: LazyTreeWidget(provider, parent)
+	, d(std::make_unique<Private>(this)) {
 
 	connect(this, &LazyTreeWidget::nodeActivated, this, &FetchQueriesTreeWidget::onNodeActivated);
 }

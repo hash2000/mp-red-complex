@@ -256,16 +256,16 @@ void LazyTreeWidget::refreshAll() {
 void LazyTreeWidget::onRefreshNode() {
 	auto tree = d->isSearchMode ? d->searchTreeView : d->normalTreeView;
 	auto nodeId = tree->selectedNodeId();
-	auto items = d->provider->treeNodes(nodeId);
+	auto items = d->provider->get(nodeId);
 	tree->setChildren(nodeId, items);
 }
 
 void LazyTreeWidget::Private::loadSearchResults(const QString& searchText) {
-	auto results = provider->searchTreeNodes(searchText);
+	auto results = provider->search(searchText);
 	searchTreeView->setNodes(results);
 }
 
 void LazyTreeWidget::Private::loadTreeData() {
-	auto roots = provider->treeNodes(QVariant());
+	auto roots = provider->get(QVariant());
 	normalTreeView->setNodes(roots);
 }

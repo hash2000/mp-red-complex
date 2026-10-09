@@ -1,8 +1,10 @@
 #include "Libs/BaseWidgets/tree_view/lazy_load/data_providers/lazy_tree_data_provider_db.h"
-
-#include "Content/DatabaseModule/services/databases_service.h"
+#include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_builder.h"
 #include "libs/Resources/db/sqlite/sqlite_connection.h"
 #include "libs/Resources/db/sqlite/sqlite_reader.h"
+
+#include "Content/DatabaseModule/services/databases_service.h"
+
 #include <QJsonObject>
 
 namespace {
@@ -188,7 +190,7 @@ LazyTreeNodeList LazyNodesDataProviderDb::Private::readNodesList(const std::uniq
 	return result;
 }
 
-LazyTreeNodeList LazyNodesDataProviderDb::treeNodes(const QVariant& parentId) const {
+LazyTreeNodeList LazyNodesDataProviderDb::get(const QVariant& parentId) const {
 	auto conn = d->databasesService->connection(d->databaseName);
 	if (!conn) {
 		return LazyTreeNodeList();
@@ -210,7 +212,7 @@ LazyTreeNodeList LazyNodesDataProviderDb::treeNodes(const QVariant& parentId) co
 	return d->readNodesList(reader);
 }
 
-LazyTreeNodeList LazyNodesDataProviderDb::searchTreeNodes(const QString& text) const {
+LazyTreeNodeList LazyNodesDataProviderDb::search(const QString& text) const {
 	auto conn = d->databasesService->connection(d->databaseName);
 	if (!conn) {
 		return LazyTreeNodeList();
@@ -223,11 +225,12 @@ LazyTreeNodeList LazyNodesDataProviderDb::searchTreeNodes(const QString& text) c
 	}
 
 	reader->bindValue(":search_text", text);
-
-	return d->readNodesList(reader);
+	auto nodes = d->readNodesList(reader);
+	auto result = LazyTreeBuilder::buildFromFlat(nodes);
+	return result;
 }
 
-bool LazyNodesDataProviderDb::deleteTreeNode(const QVariant& id) {
+bool LazyNodesDataProviderDb::remove(const QVariant& id) {
 	auto conn = d->databasesService->connection(d->databaseName);
 	if (!conn) {
 		return false;
@@ -260,7 +263,7 @@ void LazyNodesDataProviderDb::Private::writeNodeProperties(std::unique_ptr<SQLit
 	}
 }
 
-bool LazyNodesDataProviderDb::updateTreeNode(const LazyTreeNodePtr& node) {
+bool LazyNodesDataProviderDb::update(const LazyTreeNodePtr& node) {
 	auto conn = d->databasesService->connection(d->databaseName);
 	if (!conn) {
 		return false;
@@ -284,7 +287,7 @@ bool LazyNodesDataProviderDb::updateTreeNode(const LazyTreeNodePtr& node) {
 	return true;
 }
 
-bool LazyNodesDataProviderDb::addTreeNode(const LazyTreeNodePtr& node) {
+bool LazyNodesDataProviderDb::add(const LazyTreeNodePtr& node) {
 	auto conn = d->databasesService->connection(d->databaseName);
 	if (!conn) {
 		return false;

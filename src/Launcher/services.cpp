@@ -5,9 +5,7 @@
 
 // FetchApiModule
 #include "Content/FetchApiModule/services/fetch_service.h"
-#include "Content/FetchApiModule/data_providers/fetch_queries_data_provider_db.h"
-#include "Content/FetchApiModule/data_providers/fetch_tree_nodes_data_provider_db.h"
-#include "Content/FetchApiModule/services/fetch_store_service.h"
+#include "Content/FetchApiModule/services/fetch_store_db_service.h"
 
 // ShadersModule
 #include "Content/ShadersModule/data_providers/shaders_data_provider_impl.h"
@@ -66,8 +64,6 @@ public:
 		, characterDataProvider([this] {	return std::make_unique<CharacterDataProviderDb>(databasesService.get());	})
 		, shadersDataProvider([this] { return std::make_unique<ShadersDataProviderLocalImpl>(resources); })
 		, materialsDataProvider([this] { return std::make_unique<MaterialsDataProviderJsonImpl>(resources); })
-		, fetchTreeNodesDataProvider([this] { return std::make_unique<FetchTreeNodesDataProviderDb>(databasesService.get()); })
-		, fetchQueriesDataProvider([this] { return std::make_unique<FetchQueriesDataProviderDb>(databasesService.get()); })
 
 		// Services
 		, databasesService([this] {
@@ -91,8 +87,6 @@ private:
 	LazyPtr<ITileGroupsDataProvider> tileGroupsDataProvider;
 	LazyPtr<IShadersDataProvider> shadersDataProvider;
 	LazyPtr<IMaterialsDataProvider> materialsDataProvider;
-	LazyPtr<IFetchTreeNodesDataProvider> fetchTreeNodesDataProvider;
-	LazyPtr<IFetchQueriesDataProvider> fetchQueriesDataProvider;
 
 	// Services
 	LazyPtr<DatabasesService> databasesService;
@@ -160,10 +154,9 @@ public:
 			return std::make_unique<FetchApiService>();
 		});
 
-		registerFactory<FetchStoreService>([this]() {
-			return std::make_unique<FetchStoreService>(
-				fetchQueriesDataProvider.get(),
-				fetchTreeNodesDataProvider.get());
+		registerFactory<FetchStoreDbService>([this]() {
+			return std::make_unique<FetchStoreDbService>(
+				databasesService.get());
 		});
 
 		registerFactory<HighlightingPluginManager>([this] {

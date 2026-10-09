@@ -137,7 +137,7 @@ void LazyTreeView::dropEvent(QDropEvent* event) {
 		return;
 	}
 
-	auto result = d->provider->updateTreeNode(draggedNode);
+	auto result = d->provider->update(draggedNode);
 	if (!result) {
 		qWarning() << "LazyTreeView::dropEvent: dragged" << draggedItem->text()
 			<< "from" << oldParent->text()
@@ -213,7 +213,7 @@ void LazyTreeView::onExpanded(const QModelIndex& index) {
 	// Если это первый раз и там dummy-узел
 	if (d->searchAndRemoveDummyNode(item)) {
 		const auto parentId = LazyTreeNodeRole::nodeByItem(item)->id();
-		const auto nodes = d->provider->treeNodes(parentId);
+		const auto nodes = d->provider->get(parentId);
 		appendChildren(parentId, nodes);
 	}
 }
@@ -305,7 +305,7 @@ void LazyTreeView::removeSelectedNode() {
 	const auto node = LazyTreeNodeRole::nodeByItem(item);
 	const auto nodeId = node->id();
 
-	auto result = d->provider->deleteTreeNode(nodeId);
+	auto result = d->provider->remove(nodeId);
 	if (!result) {
 		// showError(result.errorMessage);
 		return;
@@ -421,9 +421,6 @@ void LazyTreeView::onSelectionChanged(const QModelIndex& current, const QModelIn
 		return;
 	}
 
-	// выбор item по индексу должен быть обязательно до проверки previous
-	// иначе после finalizeEditItem индекс будет указывать на другую ветку
-	// и item будет указывать не на тот узел
 	auto item = d->model->itemFromIndex(current);
 	auto nodeState = LazyTreeNodeRole::nodeStateByItem(item);
 	if (!nodeState) {
@@ -485,7 +482,7 @@ void LazyTreeView::finalizeEditItem(QStandardItem* item) {
 		auto parentNode = LazyTreeNodeRole::nodeByItem(parentItem);
 		node->setParentId(parentNode->id());
 
-		auto result = d->provider->addTreeNode(node);
+		auto result = d->provider->add(node);
 
 		if (result) {
 			d->finalizeTemporaryNode(item);
@@ -507,7 +504,7 @@ void LazyTreeView::finalizeEditItem(QStandardItem* item) {
 
 			auto prevName = node->name();
 			node->setName(currentText);
-			auto result = d->provider->updateTreeNode(node);
+			auto result = d->provider->update(node);
 
 			if (result) {
 				emit nodeRenamed(node, currentText);

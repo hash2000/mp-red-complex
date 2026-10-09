@@ -1,12 +1,13 @@
-#include "Launcher/windows/fetch_api/fetch_api_queries_tree.h"
-#include "Launcher/app_controller.h"
+#include "Launcher/windows/fetch_api/fetch_api_queries_tree_window.h"
 #include "Content/FetchApiModule/widgets/fetch_queries_tree_widget.h"
-#include "Content/FetchApiModule/services/fetch_store_service.h"
+#include "Content/FetchApiModule/services/fetch_store_db_service.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
 #include "Content/ConsoleModule/command_context.h"
 #include "Content/ConsoleModule/models/instruction.h"
 
 #include "Libs/Engine/services/services_registry.h"
+
+#include "Launcher/app_controller.h"
 
 #include <QRegularExpression>
 #include <QHBoxLayout>
@@ -44,7 +45,9 @@ bool FetchApiQueriesTreeWindow::handleCommand(const std::shared_ptr<Instruction>
 		return false;
 	}
 
-	if (action == "create") return d->applyInstructionCreate(instruction, context);
+	if (action == "create") {
+		return d->applyInstructionCreate(instruction, context);
+	}
 
 	return false;
 }
@@ -56,7 +59,7 @@ bool FetchApiQueriesTreeWindow::Private::applyInstructionCreate(const std::share
 		tree->deleteLater();
 	}
 
-	tree = new FetchQueriesTreeWidget(services->get<FetchStoreService>());
+	tree = new FetchQueriesTreeWidget(services->get<FetchStoreDbService>());
 	tree->setWindowFlags(Qt::Popup | Qt::FramelessWindowHint);
 	tree->setStyleSheet("border: 1px solid #cccccc; border-radius: 5px;");
 	q->setWidget(tree);

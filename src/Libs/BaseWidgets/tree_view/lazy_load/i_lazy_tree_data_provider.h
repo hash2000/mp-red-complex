@@ -10,9 +10,9 @@ public:
 	virtual ~ILazyNodesDataProvider() = default;
 	virtual LazyTreeNodePtr createTreeNode() = 0;
 	virtual LazyTreeNodePtr createRootNode() = 0;
-	virtual LazyTreeNodeList treeNodes(const QVariant& parentId) const = 0;
-	virtual LazyTreeNodeList searchTreeNodes(const QString& text) const = 0;
-	virtual bool addTreeNode(const LazyTreeNodePtr& node) = 0;
-	virtual bool deleteTreeNode(const QVariant& id) = 0;
-	virtual bool updateTreeNode(const LazyTreeNodePtr& node) = 0;
+	virtual LazyTreeNodeList get(const QVariant& parentId) const = 0;
+	virtual LazyTreeNodeList search(const QString& text) const = 0;
+	virtual bool add(const LazyTreeNodePtr& node) = 0;
+	virtual bool remove(const QVariant& id) = 0;
+	virtual bool update(const LazyTreeNodePtr& node) = 0;
 };

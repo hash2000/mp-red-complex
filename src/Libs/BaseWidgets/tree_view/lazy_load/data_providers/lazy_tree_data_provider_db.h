@@ -9,11 +9,11 @@ public:
 	LazyNodesDataProviderDb(DatabasesService* databasesService, const QString& databaseName, const QString& tableName);
 	~LazyNodesDataProviderDb() override;
 
-	LazyTreeNodeList treeNodes(const QVariant& parentId) const override;
-	LazyTreeNodeList searchTreeNodes(const QString& text) const override;
-	bool addTreeNode(const LazyTreeNodePtr& node) override;
-	bool deleteTreeNode(const QVariant& id) override;
-	bool updateTreeNode(const LazyTreeNodePtr& node) override;
+	LazyTreeNodeList get(const QVariant& parentId) const override;
+	LazyTreeNodeList search(const QString& text) const override;
+	bool add(const LazyTreeNodePtr& node) override;
+	bool remove(const QVariant& id) override;
+	bool update(const LazyTreeNodePtr& node) override;
 
 protected:
 	virtual void onProcessNodeAfterInsert(const LazyTreeNodePtr& node, long lastInsertId) { };
