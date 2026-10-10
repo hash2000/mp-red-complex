@@ -6,7 +6,7 @@
 class FetchApiQueriesTreeWindow : public MdiChildWindow {
 	Q_OBJECT
 public:
-	FetchApiQueriesTreeWindow(const QString& id, QWidget* parent = nullptr);
+	FetchApiQueriesTreeWindow(const QString& id, std::shared_ptr<CommandContext> context, QWidget* parent = nullptr);
 	~FetchApiQueriesTreeWindow() override;
 
 	QString windowType() const override {
@@ -18,7 +18,7 @@ public:
 	}
 	QString help() const;
 
-	bool handleCommand(const std::shared_ptr<Instruction> instruction, CommandContext* context) override;
+	bool handleCommand(const std::shared_ptr<Instruction> instruction) override;
 
 private:
 	class Private;

@@ -8,7 +8,7 @@ public:
 	CharactersCommand(QObject* parent = nullptr);
 	~CharactersCommand() override;
 
-	bool execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) override;
+	bool execute(const std::shared_ptr<Instruction> instruction, std::shared_ptr<CommandContext> context) override;
 
 	QString name() const override {
 		return "characters";

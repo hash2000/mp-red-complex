@@ -2,6 +2,7 @@
 #include "Content/FetchApiModule/services/fetch_service.h"
 
 #include "Content/ConsoleModule/command_context.h"
+#include "Content/ConsoleModule/command_controller.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
 #include "Content/FetchApiModule/models/fetch_opt.h"
 
@@ -36,8 +37,8 @@ public:
 	Private(FetchApiWidget* parent) : q(parent) {}
 	FetchApiWidget* q;
 
+	std::shared_ptr<CommandContext> commandContext;
 	FetchApiService* fetchApiService = nullptr;
-	CommandContext* commandContext = nullptr;
 	QLineEdit* requestUrlEdit = nullptr;
 	QComboBox* requestMethodCombo = nullptr;
 	QPlainTextEdit* requestBodyEdit = nullptr;
@@ -64,11 +65,11 @@ public:
 	void fetchProgress(qint64 received, qint64 total);
 };
 
-FetchApiWidget::FetchApiWidget(CommandContext* commandContext, QWidget* parent)
+FetchApiWidget::FetchApiWidget(std::shared_ptr<CommandContext> commandContext, QWidget* parent)
 	: d(std::make_unique<Private>(this))
 	, QWidget(parent) {
 	d->commandContext = commandContext;
-	d->fetchApiService = commandContext->services()->get<FetchApiService>(),
+	d->fetchApiService = commandContext->commandController()->services()->get<FetchApiService>(),
 	d->setupUI();
 }
 
@@ -184,9 +185,10 @@ void FetchApiWidget::Private::setupUI() {
 	// Вкладки ответа
 	QTabWidget* respTabs = new QTabWidget();
 
+	auto connamdController = commandContext->commandController();
 	responseBodyEdit = new CodeEditorWidget(
-		commandContext->services()->get<HighlightingPluginManager>(),
-		commandContext->services()->get<FormatterPluginManager>());
+		connamdController->services()->get<HighlightingPluginManager>(),
+		connamdController->services()->get<FormatterPluginManager>());
 	responseBodyEdit->setReadOnly(true);
 	responseBodyEdit->setFont(monoFont);
 	responseBodyEdit->setPlaceholderText("Ответ сервера появится здесь...");

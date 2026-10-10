@@ -42,18 +42,27 @@ QString WindowsCommand::help() const {
 	)";
 }
 
-bool WindowsCommand::execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
+bool WindowsCommand::execute(const std::shared_ptr<Instruction> instruction, std::shared_ptr<CommandContext> context) {
+	const auto controller = context->commandController();
 	const auto action = instruction->text("action");
 	if (action.isEmpty()) {
-		context->printError(QString("Usage: %1").arg(help()));
+		controller->printError(QString("Usage: %1").arg(help()));
 		return false;
 	}
 
-	if (action == "close") return WindowsNs::handleClose(instruction->text("id"), context, d->controllers);
-	else if (action == "create") return WindowsNs::handleCreate(instruction, context, d->controllers);
-	else if (action == "list") return WindowsNs::handleList(context, d->controllers);
-	else if (action == "invoke") return WindowsNs::handleInvoke(instruction, context, d->controllers);
+	if (action == "close") {
+		return WindowsNs::handleClose(instruction->text("id"), context, d->controllers);
+	}
+	else if (action == "create") {
+		return WindowsNs::handleCreate(instruction, context, d->controllers);
+	}
+	else if (action == "list") {
+		return WindowsNs::handleList(context, d->controllers);
+	}
+	else if (action == "invoke") {
+		return WindowsNs::handleInvoke(instruction, context, d->controllers);
+	}
 
-	context->printError(QString("Usage: %1").arg(help()));
+	controller->printError(QString("Usage: %1").arg(help()));
 	return false;
 }

@@ -12,7 +12,7 @@ class QMdiArea;
 class MdiChildWindow : public QMdiSubWindow {
 	Q_OBJECT
 public:
-	explicit MdiChildWindow(const QString& id, QWidget* parent = nullptr);
+	explicit MdiChildWindow(const QString& id, std::shared_ptr<CommandContext> context, QWidget* parent = nullptr);
 	~MdiChildWindow() override;
 
 	virtual QString windowType() const;
@@ -29,7 +29,10 @@ public:
 	/// Центрировать окно относительно родительского MDI area
 	void setupMdiArea();
 
-	virtual bool handleCommand(const std::shared_ptr<Instruction> cmd, class CommandContext* context);
+	virtual bool handleCommand(const std::shared_ptr<Instruction> cmd);
+
+protected:
+	std::shared_ptr<CommandContext> currentContext() const;
 
 private:
 	class Private;

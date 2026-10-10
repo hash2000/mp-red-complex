@@ -1,8 +1,9 @@
 #include "Content/ConsoleModule/command_context.h"
 #include "Content/ConsoleModule/command_controller.h"
-#include "Content/ConsoleModule/command_console/console_table.h"
-#include "Content/ConsoleModule/command_console/console_json.h"
 #include "Libs/Engine/services/services_registry.h"
+
+#include <QList>
+#include <QMap>
 
 class CommandContext::Private {
 public:
@@ -10,17 +11,25 @@ public:
 	CommandContext* q;
 
 	CommandController* commandController = nullptr;
-	CommandContext* globalContext = nullptr;
-	std::unique_ptr<ServicesRegistry> services;
+	QList<std::weak_ptr<CommandContext>> scopedList;
+	QMap<const QString, std::weak_ptr<CommandContext>> contexts;
+	std::shared_ptr<CommandContext> parentContext;
+	QString name;
+	QString nameSpace;
 };
 
-CommandContext::CommandContext(CommandController* commandController,
-	CommandContext* globalContext,
-	QObject* parent)
+CommandContext::CommandContext(CommandController* commandController, std::shared_ptr<CommandContext> parentContext, const QString& name, QObject* parent)
 : d(std::make_unique<Private>(this))
 , QObject(parent) {
-	d->globalContext = globalContext;
-	d->commandController = commandController;	
+	d->commandController = commandController;
+	d->parentContext = parentContext;
+	d->name = name;
+
+	if (parentContext) {
+		d->nameSpace = QString("%1.%2")
+			.arg(parentContext->nameSpace())
+			.arg(name);
+	}
 }
 
 CommandContext::~CommandContext() = default;
@@ -29,62 +38,60 @@ CommandController* CommandContext::commandController() const {
 	return d->commandController;
 }
 
-std::unique_ptr<CommandContext> CommandContext::createScopedContext() {
-	return std::make_unique<CommandContext>(d->commandController, globalContext());
+QString CommandContext::name() const {
+	return d->name;
 }
 
-CommandContext* CommandContext::globalContext() {
-	return d->globalContext == nullptr ? this : d->globalContext;
+QString CommandContext::nameSpace() const {
+	return d->nameSpace;
+}
+
+void CommandContext::registerContext(const QString& ns, std::weak_ptr<CommandContext> context) {
+	if (d->contexts.contains(ns)) {
+		qWarning() << "CommandContext::registerNamespace:" << ns << "allready defined. Revrite.";
+	}
+
+	d->contexts[ns] = context;
+}
+
+std::shared_ptr<CommandContext> CommandContext::createScopedContext(const QString& name) {
+	auto self = shared_from_this();
+	auto scoped = std::make_shared<CommandContext>(d->commandController, self, name);
+	d->scopedList.push_back(scoped->weak_from_this());
+	d->commandController->globalContext()->registerContext(scoped->nameSpace(), scoped);
+	return scoped;
+}
+
+std::shared_ptr<CommandContext> CommandContext::parentContext() const {
+	return d->parentContext;
+}
+
+std::shared_ptr<CommandContext> CommandContext::globalContext() const {
+	return d->commandController->globalContext();
 }
 
 bool CommandContext::isGlobalContext() const {
-	return d->globalContext == nullptr;
+	return !d->parentContext;
 }
 
-ServicesRegistry* CommandContext::services() {
-	if (!d->services) {
-		d->services = d->commandController->createServices();
+std::shared_ptr<CommandContext> CommandContext::context(const QString& ns) const {
+	if (ns == ".") {
+		return globalContext();
 	}
 
-	return d->services.get();
-}
+	if (isGlobalContext()) {
+		const auto it = d->contexts.constFind(ns);
+		if (it == d->contexts.constEnd()) {
+			return nullptr;
+		}
 
-void CommandContext::print(const QString& message, const QString& styleClass, const QString& type) {
-	QMetaObject::invokeMethod(this, [this, message, styleClass, type]() {
-		emit outputRequested(message, styleClass, type);
-		}, Qt::QueuedConnection);
-}
+		auto locked = it->lock();
+		if (!locked) {
+			return nullptr;
+		}
 
-void CommandContext::print(const ConsoleTable& table, const QString& styleClass) {
-	const auto html = table.toHtml();
-	if (html.isEmpty()) {
-		return;
+		return locked;
 	}
 
-	print(html, styleClass, kCommandPrintStyle_Table);
-}
-
-void CommandContext::print(const ConsoleJson& json, const QString& styleClass) {
-	const auto html = json.toHtml();
-	if (html.isEmpty()) {
-		return;
-	}
-
-	print(html, styleClass, kCommandPrintStyle_Json);
-}
-
-void CommandContext::printSystem(const QString& message) {
-	print(message, "system");
-}
-
-void CommandContext::printError(const QString& message) {
-	print(message, "error");
-}
-
-void CommandContext::printSuccess(const QString& message) {
-	print(message, "success");
-}
-
-void CommandContext::printWarning(const QString& message) {
-	print(message, "warning");
+	return globalContext()->context(ns);
 }

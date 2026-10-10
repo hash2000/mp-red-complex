@@ -18,15 +18,15 @@ public:
 	//WindowsController* windowsController = nullptr;
 };
 
-EntitiesWindow::EntitiesWindow(const QString& id, QWidget* parent)
+EntitiesWindow::EntitiesWindow(const QString& id, std::shared_ptr<CommandContext> context, QWidget* parent)
 : d(std::make_unique<Private>(this))
-, MdiChildWindow(id, parent) {
+, MdiChildWindow(id, context, parent) {
 }
 
 EntitiesWindow::~EntitiesWindow() = default;
 
 
-bool EntitiesWindow::handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) {
+bool EntitiesWindow::handleCommand(const std::shared_ptr<Instruction> cmd) {
 	const auto action = cmd->parameters.value("action");
 	if (!action.isNull() && action == "create") {
 		//auto services = context->services();

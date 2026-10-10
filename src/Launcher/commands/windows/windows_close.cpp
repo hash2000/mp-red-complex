@@ -1,6 +1,7 @@
 #include "Launcher/commands/windows/windows_close.h"
 #include "Content/ConsoleModule/processors/command_processor.h"
 #include "Content/ConsoleModule/command_context.h"
+#include "Content/ConsoleModule/command_controller.h"
 #include "Content/ConsoleModule/command_console/console_table.h"
 #include "Content/ConsoleModule/command_console/console_image.h"
 #include "Content/ConsoleModule/models/instruction.h"
@@ -12,54 +13,62 @@
 
 namespace WindowsNs {
 
-bool handleCloseAll(CommandContext* context, Controllers* controllers) {
-	auto controller = controllers->windowsController();
-	auto windows = controller->allWindows();
+bool handleCloseAll(std::shared_ptr<CommandContext> context, Controllers* controllers) {
+	const auto wndController = controllers->windowsController();
+	const auto cmdController = context->commandController();
+	auto windows = wndController->allWindows();
 	int count = windows.size();
 	for (MdiChildWindow* window : windows) {
 		window->deleteLater();
 	}
 
-	context->printSuccess(QString("Closed %1 window(s)")
+	cmdController->printSuccess(QString("Closed %1 window(s)")
 		.arg(count));
 
 	return true;
 }
 
-bool handleCloseActive(CommandContext* context, Controllers* controllers) {
-	auto controller = controllers->windowsController();
-	auto activeEntry = controller->activeWindowEntry();
+bool handleCloseActive(std::shared_ptr<CommandContext> context, Controllers* controllers) {
+	const auto wndController = controllers->windowsController();
+	const auto cmdController = context->commandController();
+	auto activeEntry = wndController->activeWindowEntry();
 	if (!activeEntry.first) {
-		context->printError("No active window");
+		cmdController->printError("No active window");
 		return false;
 	}
 
 	const auto windowId = activeEntry.second;
-	controller->closeWindowById(windowId);
-	context->printSuccess(QString("Closed active window [%1]")
+	wndController->closeWindowById(windowId);
+	cmdController->printSuccess(QString("Closed active window [%1]")
 		.arg(windowId));
 
 	return true;
 }
 
-bool handleCloseById(const QString& id, CommandContext* context, Controllers* controllers) {
-	auto controller = controllers->windowsController();
-	if (controller->findWindowById(id)) {
-		controller->closeWindowById(id);
-		context->printSuccess(QString("Closed window [%1]")
+bool handleCloseById(const QString& id, std::shared_ptr<CommandContext> context, Controllers* controllers) {
+	const auto wndController = controllers->windowsController();
+	const auto cmdController = context->commandController();
+	if (wndController->findWindowById(id)) {
+		wndController->closeWindowById(id);
+		cmdController->printSuccess(QString("Closed window [%1]")
 			.arg(id));
 		return true;
 	}
 
-	context->printError(QString("Window not found: %1")
+	cmdController->printError(QString("Window not found: %1")
 		.arg(id));
 
 	return false;
 }
 
-bool handleClose(const QString& id, CommandContext* context, Controllers* controllers) {
-	if (id == "all") return handleCloseAll(context, controllers);
-	else if (id == "active") return handleCloseActive(context, controllers);
+bool handleClose(const QString& id, std::shared_ptr<CommandContext> context, Controllers* controllers) {
+
+	if (id == "all") {
+		return handleCloseAll(context, controllers);
+	}
+	else if (id == "active") {
+		return handleCloseActive(context, controllers);
+	}
 
 	return handleCloseById(id, context, controllers);
 }

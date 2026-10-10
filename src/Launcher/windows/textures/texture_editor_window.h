@@ -7,14 +7,14 @@ class TextureEditorWindow : public MdiChildWindow {
 	Q_OBJECT
 
 public:
-	explicit TextureEditorWindow(const QString& id,	QWidget* parent = nullptr);
+	explicit TextureEditorWindow(const QString& id, std::shared_ptr<CommandContext> context,	QWidget* parent = nullptr);
 	~TextureEditorWindow() override;
 
 	QString windowType() const override { return "texture-editor"; }
 	QString windowTitle() const override { return "Редактор текстур"; }
 	QSize windowDefaultSizes() const override { return QSize(900, 600); }
 
-	bool handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) override;
+	bool handleCommand(const std::shared_ptr<Instruction> cmd) override;
 
 private:
 	class Private;

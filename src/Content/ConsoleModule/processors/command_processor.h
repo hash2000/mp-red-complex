@@ -1,5 +1,6 @@
 #pragma once
 #include <QObject>
+#include <memory>
 
 class CommandContext;
 class ICommand;
@@ -16,10 +17,8 @@ public:
   void registerCommand(std::unique_ptr<ICommand> command);
 
   // Выполнение команды по тексту
-  bool execute(const QString& commandLine, CommandContext* context);
-
-	bool executeCommand(const QString& commandName, const QMap<QString, QString>& args,
-		CommandContext* context);
+  bool execute(const QString& commandLine, std::shared_ptr<CommandContext> context);
+	bool executeCommand(const QString& commandName, const QMap<QString, QString>& args, std::shared_ptr<CommandContext> context);
 
   // Получение списка доступных команд
   QStringList availableCommands() const;

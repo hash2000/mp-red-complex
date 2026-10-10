@@ -22,11 +22,11 @@ public:
 
 	FetchQueriesTreeWidget* tree = nullptr;
 
-	bool applyInstructionCreate(const std::shared_ptr<Instruction> instruction, CommandContext* context);
+	bool applyInstructionCreate(const std::shared_ptr<Instruction> instruction);
 };
 
-FetchApiQueriesTreeWindow::FetchApiQueriesTreeWindow(const QString& id, QWidget* parent)
-	: MdiChildWindow(id, parent)
+FetchApiQueriesTreeWindow::FetchApiQueriesTreeWindow(const QString& id, std::shared_ptr<CommandContext> context, QWidget* parent)
+	: MdiChildWindow(id, context, parent)
 	, d(std::make_unique<Private>(this)) {}
 
 FetchApiQueriesTreeWindow::~FetchApiQueriesTreeWindow() = default;
@@ -39,21 +39,22 @@ QString FetchApiQueriesTreeWindow::windowTitle() const {
 	return "fetch-api-queries-tree";
 }
 
-bool FetchApiQueriesTreeWindow::handleCommand(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
+bool FetchApiQueriesTreeWindow::handleCommand(const std::shared_ptr<Instruction> instruction) {
 	const auto action = instruction->text("action");
 	if (action.isEmpty()) {
 		return false;
 	}
 
 	if (action == "create") {
-		return d->applyInstructionCreate(instruction, context);
+		return d->applyInstructionCreate(instruction);
 	}
 
 	return false;
 }
 
-bool FetchApiQueriesTreeWindow::Private::applyInstructionCreate(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
-	auto services = context->services();
+bool FetchApiQueriesTreeWindow::Private::applyInstructionCreate(const std::shared_ptr<Instruction> instruction) {
+	const auto context = q->currentContext();
+	const auto services = context->commandController()->services();
 
 	if (tree) {
 		tree->deleteLater();

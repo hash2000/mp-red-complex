@@ -8,27 +8,28 @@
 #include "Libs/Resources/resources.h"
 #include "Libs/Resources/variables/variables_context.h"
 
-bool HelpCommand::execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
-	const auto processor = context->commandController()->commandProcessor();
+bool HelpCommand::execute(const std::shared_ptr<Instruction> instruction, std::shared_ptr<CommandContext> context) {
+	const auto controller = context->commandController();
+	const auto processor = controller->commandProcessor();
 
 	if (instruction->parameters.isEmpty()) {
-		context->print("Commands:");
+		controller->print("Commands:");
 		ConsoleTable commandsTab({ "Name", "Descroption", "Help" });
 		for (const auto& name : processor->availableCommands()) {
 			const auto cmd = processor->findCommand(name);
 			commandsTab.addRow({ cmd->name(), cmd->description(), cmd->help() });
 		}
-		context->print(commandsTab);
+		controller->print(commandsTab);
 
-		context->print("Variables:");
-		const auto& variables = context->commandController()->resources()->Variables;
+		controller->print("Variables:");
+		const auto& variables = controller->resources()->Variables;
 		const auto& variablesNames = variables.available();
 		ConsoleTable variablesTab({ "Name", "Value" });
 		for (const auto& name : variablesNames) {
 			const auto var = variables.get(name, QVariant());
 			variablesTab.addRow({ name, var.toString() });
 		}
-		context->print(variablesTab);
+		controller->print(variablesTab);
 		return true;
 	}
 	else {
@@ -37,16 +38,16 @@ bool HelpCommand::execute(const std::shared_ptr<Instruction> instruction, Comman
 		if (cmd) {
 			ConsoleTable commandsTab({ "Name", "Descroption" });
 			commandsTab.addRow({ cmd->name(), cmd->description() });
-			context->print(commandsTab);
+			controller->print(commandsTab);
 			return true;
 		}
 
-		const auto& variables = context->commandController()->resources()->Variables;
+		const auto& variables = controller->resources()->Variables;
 		const auto var = variables.get(cmdName, QVariant());
 		if (var.isValid()) {
 			ConsoleTable variablesTab({ "Name", "Value", "Help" });
 			variablesTab.addRow({ cmdName, var.toString(), cmd->help() });
-			context->print(variablesTab);
+			controller->print(variablesTab);
 			return true;
 		}
 	}

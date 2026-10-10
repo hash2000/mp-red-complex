@@ -153,7 +153,9 @@ QPushButton* ActionPanelWidget::createToolButton(const ActionButtonConfig& confi
 
 void ActionPanelWidget::onToolButtonClicked() {
 	auto* button = qobject_cast<QPushButton*>(sender());
-	if (!button) return;
+	if (!button) {
+		return;
+	}
 
 	QString command = button->property("actionCommand").toString();
 	if (!command.isEmpty()) {

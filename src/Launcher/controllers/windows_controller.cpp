@@ -57,7 +57,7 @@ MdiArea* WindowsController::mdiArea() const {
 	return d->mdiArea.data();
 }
 
-bool WindowsController::checkWindowRegistration(const QString& id) {
+bool WindowsController::checkWindowRegistration(const QString& id) const {
 	return d->windowRegistry.contains(id);
 }
 

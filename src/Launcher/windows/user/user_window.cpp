@@ -1,5 +1,6 @@
 #include "Launcher/windows/user/user_window.h"
 #include "Content/ConsoleModule/command_context.h"
+#include "Content/ConsoleModule/command_controller.h"
 #include "Content/ConsoleModule/models/instruction.h"
 #include "Content/UsersModule/widgets/user_widget.h"
 #include "Content/UsersModule/services/users_service.h"
@@ -14,14 +15,12 @@ public:
 	UsersService* usersService = nullptr;
 	ImagesService* imagesService = nullptr;
 	UserWidget* userWidget = nullptr;
-	CommandController* commandController = nullptr;
-
 //	void executeCharCommand(const QString& target, const Character* chr);
 };
 
-UserWindow::UserWindow(const QString& id, QWidget* parent)
+UserWindow::UserWindow(const QString& id, std::shared_ptr<CommandContext> context, QWidget* parent)
 	: d(std::make_unique<Private>(this))
-	, MdiChildWindow(id, parent) {
+	, MdiChildWindow(id, context, parent) {
 }
 
 UserWindow::~UserWindow() = default;
@@ -42,24 +41,25 @@ UserWindow::~UserWindow() = default;
 //		fullTarget, itemIdStr, title });
 //}
 
-bool UserWindow::handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) {
+bool UserWindow::handleCommand(const std::shared_ptr<Instruction> cmd) {
+	const auto context = currentContext();
+	const auto controller = context->commandController();
 	const auto action = cmd->parameters.value("action");
-	if (!action.isNull() && action == "create") {
-		auto services = context->services();
+	if (action == "create") {
+		auto services = currentContext()->commandController()->services();
 		d->usersService = services->get<UsersService>();
 		d->imagesService = services->get<ImagesService>();
 
 		if (!d->usersService) {
-			context->printError("Unsupported Users service");
+			controller->printError("Unsupported Users service");
 			return false;
 		}
 
 		if (!d->imagesService) {
-			context->printError("Unsupported Images service");
+			controller->printError("Unsupported Images service");
 			return false;
 		}
 
-		d->commandController = context->commandController();
 		d->userWidget = new UserWidget(d->usersService, d->imagesService, this);
 
 		// Подключаем сигналы

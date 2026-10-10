@@ -7,7 +7,7 @@ class CommandContext;
 class FetchApiWidget : public QWidget {
 	Q_OBJECT
 public:
-	FetchApiWidget(CommandContext* commandContext, QWidget* parent = nullptr);
+	FetchApiWidget(std::shared_ptr<CommandContext> commandContext, QWidget* parent = nullptr);
 	~FetchApiWidget() override;
 
 private slots:

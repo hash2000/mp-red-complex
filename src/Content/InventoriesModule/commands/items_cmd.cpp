@@ -1,5 +1,6 @@
 #include "Content/InventoriesModule/commands/items_cmd.h"
 #include "Content/ConsoleModule/processors/command_processor.h"
+#include "Content/ConsoleModule/command_controller.h"
 #include "Content/ConsoleModule/command_context.h"
 #include "Content/ConsoleModule/command_console/console_table.h"
 #include "Content/ConsoleModule/command_console/console_image.h"
@@ -19,12 +20,12 @@ public:
 
 	void printEntity(ConsoleTable& table, std::shared_ptr<ItemEntity> entity);
 	void printItem(ConsoleTable& table, std::shared_ptr<Item> item);
-	bool showEntities(CommandContext* context);
-	bool showContainerItems(CommandContext* context, const QUuid& containerId);
-	bool showItem(CommandContext* context, const QUuid& itemId);
-	bool showContainers(CommandContext* context);
-	bool showEquipments(CommandContext* context);
-	bool changeContainerId(CommandContext* context, const QUuid& itemId, const QUuid& containerId);
+	bool showEntities(std::shared_ptr<CommandContext> context);
+	bool showContainerItems(std::shared_ptr<CommandContext> context, const QUuid& containerId);
+	bool showItem(std::shared_ptr<CommandContext> context, const QUuid& itemId);
+	bool showContainers(std::shared_ptr<CommandContext> context);
+	bool showEquipments(std::shared_ptr<CommandContext> context);
+	bool changeContainerId(std::shared_ptr<CommandContext> context, const QUuid& itemId, const QUuid& containerId);
 };
 
 ItemsCommand::ItemsCommand(QObject* parent)
@@ -76,8 +77,9 @@ void ItemsCommand::Private::printItem(ConsoleTable& table, std::shared_ptr<Item>
 		});
 }
 
-bool ItemsCommand::Private::showEntities(CommandContext* context) {
-	auto services = context->services();
+bool ItemsCommand::Private::showEntities(std::shared_ptr<CommandContext> context) {
+	const auto controller = context->commandController();
+	const auto services = controller->services();
 	auto itemsService = services->get<ItemsService>();
 	auto entities = itemsService->entities();
 
@@ -87,16 +89,17 @@ bool ItemsCommand::Private::showEntities(CommandContext* context) {
 		printEntity(table, item);
 	}
 
-	context->print(table);
+	controller->print(table);
 	return true;
 }
 
-bool ItemsCommand::Private::showContainerItems(CommandContext* context, const QUuid& containerId) {
-	auto services = context->services();
+bool ItemsCommand::Private::showContainerItems(std::shared_ptr<CommandContext> context, const QUuid& containerId) {
+	const auto controller = context->commandController();
+	const auto services = controller->services();
 	auto itemsService = services->get<ItemsService>();
 	auto items = itemsService->itemsFromContainer(containerId);
 	if (items.empty()) {
-		context->printWarning(QString("Container is empty or undefined. %1")
+		controller->printWarning(QString("Container is empty or undefined. %1")
 			.arg(containerId
 				.toString(QUuid::WithoutBraces)));
 		return false;
@@ -107,16 +110,17 @@ bool ItemsCommand::Private::showContainerItems(CommandContext* context, const QU
 		printItem(table, item);
 	}
 
-	context->print(table);
+	controller->print(table);
 	return true;
 }
 
-bool ItemsCommand::Private::showItem(CommandContext* context, const QUuid& itemId) {
-	auto services = context->services();
+bool ItemsCommand::Private::showItem(std::shared_ptr<CommandContext> context, const QUuid& itemId) {
+	const auto controller = context->commandController();
+	const auto services = controller->services();
 	auto itemsService = services->get<ItemsService>();
 	auto item = itemsService->item(itemId);
 	if (!item) {
-		context->printWarning(QString("Item is undefined. %1")
+		controller->printWarning(QString("Item is undefined. %1")
 			.arg(itemId
 				.toString(QUuid::WithoutBraces)));
 		return false;
@@ -124,12 +128,13 @@ bool ItemsCommand::Private::showItem(CommandContext* context, const QUuid& itemI
 
 	ConsoleTable table({ "..", "Id", "EntityId", "ContainerId", "Lvl", "Count", "x", "y" });
 	printItem(table, item);
-	context->print(table);
+	controller->print(table);
 	return true;
 }
 
-bool ItemsCommand::Private::showContainers(CommandContext* context) {
-	auto services = context->services();
+bool ItemsCommand::Private::showContainers(std::shared_ptr<CommandContext> context) {
+	const auto controller = context->commandController();
+	const auto services = controller->services();
 	auto itemsService = services->get<ItemsService>();
 	auto items = itemsService->containers();
 
@@ -138,12 +143,13 @@ bool ItemsCommand::Private::showContainers(CommandContext* context) {
 		printItem(table, item);
 	}
 
-	context->print(table);
+	controller->print(table);
 	return true;
 }
 
-bool ItemsCommand::Private::showEquipments(CommandContext* context) {
-	auto services = context->services();
+bool ItemsCommand::Private::showEquipments(std::shared_ptr<CommandContext> context) {
+	const auto controller = context->commandController();
+	const auto services = controller->services();
 	auto itemsService = services->get<ItemsService>();
 	auto items = itemsService->equipments();
 
@@ -152,16 +158,17 @@ bool ItemsCommand::Private::showEquipments(CommandContext* context) {
 		printItem(table, item);
 	}
 
-	context->print(table);
+	controller->print(table);
 	return true;
 }
 
-bool ItemsCommand::Private::changeContainerId(CommandContext* context, const QUuid& itemId, const QUuid& containerId) {
-	auto services = context->services();
+bool ItemsCommand::Private::changeContainerId(std::shared_ptr<CommandContext> context, const QUuid& itemId, const QUuid& containerId) {
+	const auto controller = context->commandController();
+	const auto services = controller->services();
 	auto itemsService = services->get<ItemsService>();
 	auto item = itemsService->item(itemId);
 	if (!item) {
-		context->printWarning(QString("Item is undefined. %1")
+		controller->printWarning(QString("Item is undefined. %1")
 			.arg(itemId
 			.toString(QUuid::WithoutBraces)));
 		return false;
@@ -170,27 +177,40 @@ bool ItemsCommand::Private::changeContainerId(CommandContext* context, const QUu
 	itemsService->changeItemContainer(item, containerId);
 	ConsoleTable table({ "..", "Id", "EntityId", "ContainerId", "Lvl", "Count", "x", "y" });
 	printItem(table, item);
-	context->print(table);
+	controller->print(table);
 	return true;
 }
 
-bool ItemsCommand::execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
+bool ItemsCommand::execute(const std::shared_ptr<Instruction> instruction, std::shared_ptr<CommandContext> context) {
+	const auto controller = context->commandController();
 	const auto action = instruction->text("action");
 	if (action.isEmpty()) {
-		context->printError(QString("Usage: %1").arg(help()));
+		controller->printError(QString("Usage: %1").arg(help()));
 		return false;
 	}
 
-	if (action == "show-container") return d->showContainerItems(context,
-		instruction->parameter("id").toUuid());
-	else if (action == "show-item") return d->showItem(context,
-		instruction->parameter("id").toUuid());
-	else if (action == "change-container") return d->changeContainerId(context,
-		instruction->parameter("itemId").toUuid(),
-		instruction->parameter("containerId").toUuid());
-	else if (action == "show-containers") return d->showContainers(context);
-	else if (action == "show-equipments") return d->showEquipments(context);
-	else if (action == "show-entities") return d->showEntities(context);
+	if (action == "show-container") {
+		return d->showContainerItems(context,
+			instruction->parameter("id").toUuid());
+	}
+	else if (action == "show-item") {
+		return d->showItem(context,
+			instruction->parameter("id").toUuid());
+	}
+	else if (action == "change-container") {
+		return d->changeContainerId(context,
+			instruction->parameter("itemId").toUuid(),
+			instruction->parameter("containerId").toUuid());
+	}
+	else if (action == "show-containers") {
+		return d->showContainers(context);
+	}
+	else if (action == "show-equipments") {
+		return d->showEquipments(context);
+	}
+	else if (action == "show-entities") {
+		return d->showEntities(context);
+	}
 
 	return false;
 }

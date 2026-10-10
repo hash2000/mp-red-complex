@@ -6,7 +6,7 @@ class InventoryWindow : public MdiChildWindow {
 	Q_OBJECT
 
 public:
-	InventoryWindow(const QString& id, QWidget* parent = nullptr);
+	InventoryWindow(const QString& id, std::shared_ptr<CommandContext> context, QWidget* parent = nullptr);
 	~InventoryWindow() override;
 
 	QString windowType() const override { return "inventory"; }
@@ -15,7 +15,7 @@ public:
 
 	QSize windowDefaultSizes() const override { return QSize(460, 500); }
 
-	bool handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) override;
+	bool handleCommand(const std::shared_ptr<Instruction> cmd) override;
 
 protected:
 	void closeEvent(QCloseEvent* closeEvent) override;

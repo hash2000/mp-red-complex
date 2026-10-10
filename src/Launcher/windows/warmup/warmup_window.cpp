@@ -15,10 +15,9 @@ namespace {
 	static bool s_allreadyWarmedUp = false;
 }
 
-WarmupWindow::WarmupWindow(const QString& id, QWidget* parent)
-	: MdiChildWindow(id, parent)
-	, d(std::make_unique<Private>(this)) {
-	
+WarmupWindow::WarmupWindow(const QString& id, std::shared_ptr<CommandContext> context, QWidget* parent)
+	: MdiChildWindow(id, context, parent)
+	, d(std::make_unique<Private>(this)) {	
 	d->widget = new WarmupWidget(this);
 	setWidget(d->widget);
 	setWindowTitle("OpenGL Warmup");
@@ -26,10 +25,7 @@ WarmupWindow::WarmupWindow(const QString& id, QWidget* parent)
 
 WarmupWindow::~WarmupWindow() = default;
 
-bool WarmupWindow::handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) {
-	Q_UNUSED(cmd);
-	Q_UNUSED(context);
-
+bool WarmupWindow::handleCommand(const std::shared_ptr<Instruction> cmd) {
 	if (s_allreadyWarmedUp) {
 		return false;
 	}

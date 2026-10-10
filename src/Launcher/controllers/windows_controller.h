@@ -19,7 +19,7 @@ public:
  * @param id имдентификатор окна
  * @return Идентификатор окна (может отличаться от запрошенного, если был занят)
  */
-	bool checkWindowRegistration(const QString& id);
+	bool checkWindowRegistration(const QString& id) const;
 
 	/**
 	 * Регистрация нового окна в системе

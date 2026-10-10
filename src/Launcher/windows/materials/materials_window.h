@@ -8,14 +8,14 @@ class MaterialsWindow : public MdiChildWindow {
 	Q_OBJECT
 
 public:
-	explicit MaterialsWindow(const QString& id, QWidget* parent = nullptr);
+	explicit MaterialsWindow(const QString& id, std::shared_ptr<CommandContext> context, QWidget* parent = nullptr);
 	~MaterialsWindow() override;
 
 	QString windowType() const override { return "materials"; }
 	QString windowTitle() const override { return "Materials"; }
 	QSize windowDefaultSizes() const override { return QSize(1024, 768); }
 
-	bool handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) override;
+	bool handleCommand(const std::shared_ptr<Instruction> cmd) override;
 
 private slots:
 	void onEditMaterialFile(MaterialObjectTypes type, const QString& path);

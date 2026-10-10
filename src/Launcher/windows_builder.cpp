@@ -25,32 +25,33 @@ public:
 	}
 
 	WindowsBuilder* q;
-	std::map<QString, std::function<MdiChildWindow*(const QString&, QWidget*)>> factory;
+	std::map<QString, std::function<MdiChildWindow*(const QString&, std::shared_ptr<CommandContext> context, QWidget*)>> factory;
 };
 
 WindowsBuilder::WindowsBuilder()
 : d(std::make_unique<Private>(this)) {
+	using CommandContextPtr = std::shared_ptr<CommandContext>;
 
-	d->factory.emplace("equipment", [](const QString& id, QWidget* parent) { return new EquipmentWindow(id, parent); });
-	d->factory.emplace("inventory", [](const QString& id, QWidget* parent) { return new InventoryWindow(id, parent); });
-	d->factory.emplace("item-entities", [](const QString& id, QWidget* parent) { return new EntitiesWindow(id,	parent); });
-	d->factory.emplace("user-login", [](const QString& id, QWidget* parent) { return new LoginWindow(id, parent); });
-	d->factory.emplace("user-profile", [](const QString& id, QWidget* parent) { return new UserWindow(id,	parent); });
-	d->factory.emplace("warmup", [](const QString& id, QWidget* parent) { return new WarmupWindow(id, parent); });
-	d->factory.emplace("texture-editor", [](const QString& id, QWidget* parent) { return new TextureEditorWindow(id, parent); });
-	d->factory.emplace("material-editor", [](const QString& id, QWidget* parent) { return new MaterialsWindow(id, parent); });
-	d->factory.emplace("code-editor", [](const QString& id, QWidget* parent) { return new CodeEditorWindow(id, parent); });
-	d->factory.emplace("fetch-api", [](const QString& id, QWidget* parent) { return new FetchApiWindow(id, parent); });
-	d->factory.emplace("fetch-api-queries-tree", [](const QString& id, QWidget* parent) { return new FetchApiQueriesTreeWindow(id, parent); });
+	d->factory.emplace("equipment", [](const QString& id, CommandContextPtr context, QWidget* parent) { return new EquipmentWindow(id, context, parent); });
+	d->factory.emplace("inventory", [](const QString& id, CommandContextPtr context, QWidget* parent) { return new InventoryWindow(id, context, parent); });
+	d->factory.emplace("item-entities", [](const QString& id, CommandContextPtr context, QWidget* parent) { return new EntitiesWindow(id, context, parent); });
+	d->factory.emplace("user-login", [](const QString& id, CommandContextPtr context, QWidget* parent) { return new LoginWindow(id, context, parent); });
+	d->factory.emplace("user-profile", [](const QString& id, CommandContextPtr context, QWidget* parent) { return new UserWindow(id, context, parent); });
+	d->factory.emplace("warmup", [](const QString& id, CommandContextPtr context, QWidget* parent) { return new WarmupWindow(id, context, parent); });
+	d->factory.emplace("texture-editor", [](const QString& id, CommandContextPtr context, QWidget* parent) { return new TextureEditorWindow(id, context, parent); });
+	d->factory.emplace("material-editor", [](const QString& id, CommandContextPtr context, QWidget* parent) { return new MaterialsWindow(id, context, parent); });
+	d->factory.emplace("code-editor", [](const QString& id, CommandContextPtr context, QWidget* parent) { return new CodeEditorWindow(id, context, parent); });
+	d->factory.emplace("fetch-api", [](const QString& id, CommandContextPtr context, QWidget* parent) { return new FetchApiWindow(id, context, parent); });
+	d->factory.emplace("fetch-api-queries-tree", [](const QString& id, CommandContextPtr context, QWidget* parent) { return new FetchApiQueriesTreeWindow(id, context, parent); });
 }
 
 WindowsBuilder::~WindowsBuilder() = default;
 
-MdiChildWindow* WindowsBuilder::build(const QString& name, const QString& id, QWidget* parent) {
+MdiChildWindow* WindowsBuilder::build(const QString& name, const QString& id, std::shared_ptr<CommandContext> context, QWidget* parent) {
 	const auto &it = d->factory.find(name);
 	if (it == d->factory.end()) {
 		return nullptr;
 	}
 
-	return it->second(id, parent);
+	return it->second(id, context, parent);
 }

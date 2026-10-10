@@ -1,5 +1,6 @@
 #include "Launcher/windows/user/login_window.h"
 #include "Content/ConsoleModule/command_context.h"
+#include "Content/ConsoleModule/command_controller.h"
 #include "Content/ConsoleModule/models/instruction.h"
 #include "Content/UsersModule/widgets/login_widget.h"
 #include "Content/UsersModule/models/user_view.h"
@@ -17,17 +18,18 @@ public:
 	LoginWidget* loginWidget = nullptr;
 };
 
-LoginWindow::LoginWindow(const QString& id, QWidget* parent)
+LoginWindow::LoginWindow(const QString& id, std::shared_ptr<CommandContext> context, QWidget* parent)
 	: d(std::make_unique<Private>(this))
-	, MdiChildWindow(id, parent) {
+	, MdiChildWindow(id, context, parent) {
 }
 
 LoginWindow::~LoginWindow() = default;
 
-bool LoginWindow::handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) {
+bool LoginWindow::handleCommand(const std::shared_ptr<Instruction> cmd) {
 	const auto action = cmd->parameters.value("action");
-	if (!action.isNull() && action == "create") {
-		auto services = context->services();
+	if (action == "create") {
+		const auto context = currentContext();
+		const auto services = context->commandController()->services();
 		d->usersService = services->get<UsersService>();
 		d->loginWidget = new LoginWidget(d->usersService, this);
 

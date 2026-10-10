@@ -20,8 +20,8 @@ public:
 	CharactersCommand* q;
 
 	void printCharacter(ConsoleTable& table, const std::shared_ptr<Character> chr);
-	bool showCharacters(CommandContext* context, const QString& userId);
-	bool showCharacter(CommandContext* context, const QUuid& id);
+	bool showCharacters(std::shared_ptr<CommandContext> context, const QString& userId);
+	bool showCharacter(std::shared_ptr<CommandContext> context, const QUuid& id);
 };
 
 
@@ -48,8 +48,9 @@ void CharactersCommand::Private::printCharacter(ConsoleTable& table, const std::
 		});
 }
 
-bool CharactersCommand::Private::showCharacters(CommandContext* context, const QString& userId) {
-	auto services = context->services();
+bool CharactersCommand::Private::showCharacters(std::shared_ptr<CommandContext> context, const QString& userId) {
+	const auto controller = context->commandController();
+	const auto services = controller->services();
 	auto charactersService = services->get<CharactersService>();
 	auto chrs = charactersService->charactersByUser(userId);
 
@@ -59,34 +60,42 @@ bool CharactersCommand::Private::showCharacters(CommandContext* context, const Q
 		printCharacter(table, chr);
 	}
 
-	context->print(table);
+	controller->print(table);
 	return true;
 }
 
-bool CharactersCommand::Private::showCharacter(CommandContext* context, const QUuid& id) {
-	auto services = context->services();
+bool CharactersCommand::Private::showCharacter(std::shared_ptr<CommandContext> context, const QUuid& id) {
+	const auto controller = context->commandController();
+	auto services = controller->services();
 	auto charactersService = services->get<CharactersService>();
 	auto chr = charactersService->character(id);
 	if (!chr) {
-		context->printError("Undefined user");
+		controller->printError("Undefined user");
 		return false;
 	}
 
 	ConsoleTable table({ "..", "Id", "Name", "Lvl", "EquipmentId" });
 	printCharacter(table, chr);
-	context->print(table);
+	controller->print(table);
 	return true;
 }
 
-bool CharactersCommand::execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
+bool CharactersCommand::execute(const std::shared_ptr<Instruction> instruction, std::shared_ptr<CommandContext> context) {
+	const auto controller = context->commandController();
 	const auto action = instruction->text("action");
 	if (action.isEmpty()) {
-		context->printError(QString("Usage: %1").arg(help()));
+		controller->printError(QString("Usage: %1").arg(help()));
 		return false;
 	}
 
-	if (action == "show-user") return d->showCharacters(context, instruction->text("id"));
-	else if (action == "show-character") return d->showCharacter(context, instruction->parameter("id").toUuid());
+	if (action == "show-user") {
+		return d->showCharacters(context,
+			instruction->text("id"));
+	}
+	else if (action == "show-character") {
+		return d->showCharacter(context,
+			instruction->parameter("id").toUuid());
+	}
 
 	return true;
 }

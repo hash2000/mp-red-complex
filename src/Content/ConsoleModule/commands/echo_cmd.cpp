@@ -16,8 +16,8 @@ QString EchoCommand::help() const {
 		return "echo {param_name}:{text} print all params and text";
 }
 
-bool EchoCommand::execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
-	const auto processor = context->commandController()->commandProcessor();
+bool EchoCommand::execute(const std::shared_ptr<Instruction> instruction, std::shared_ptr<CommandContext> context) {
+	const auto controller = context->commandController();
 
 	ConsoleTable table({ "Name", "mime-type", "text" });
 
@@ -51,6 +51,6 @@ bool EchoCommand::execute(const std::shared_ptr<Instruction> instruction, Comman
 			});
 	}
 
-	context->print(table);
+	controller->print(table);
 	return true;
 }

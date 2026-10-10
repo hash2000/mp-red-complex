@@ -3,6 +3,7 @@
 #include "Content/MaterialsModule/widgets/material_objects.h"
 #include "Content/MaterialsModule/widgets/material_variables.h"
 #include "Content/ConsoleModule/command_context.h"
+#include "Content/ConsoleModule/processors/command_processor.h"
 #include "Content/ConsoleModule/models/instruction.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/services.h"
@@ -15,7 +16,6 @@ class MaterialsWindow::Private {
 public:
 	Private(MaterialsWindow* parent) : q(parent) {}
 	MaterialsWindow* q;
-
 
 	ApplicationController* applicationController = nullptr;
 	MaterialsService* materialsService = nullptr;
@@ -30,8 +30,8 @@ public:
 	MaterialVariables* variablesTree = nullptr;
 };
 
-MaterialsWindow::MaterialsWindow(const QString& id, QWidget* parent)
-	: MdiChildWindow(id, parent)
+MaterialsWindow::MaterialsWindow(const QString& id, std::shared_ptr<CommandContext> context, QWidget* parent)
+	: MdiChildWindow(id, context, parent)
 	, d(std::make_unique<Private>(this)) {
 }
 
@@ -65,7 +65,7 @@ void MaterialsWindow::setupUi() {
 	connect(d->objectTree, &MaterialObjects::editMaterialFile, this, &MaterialsWindow::onEditMaterialFile);
 }
 
-bool MaterialsWindow::handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) {
+bool MaterialsWindow::handleCommand(const std::shared_ptr<Instruction> cmd) {
 	const auto action = cmd->parameters.value("action");
 	if (!action.isNull() && action == "create") {
 		//auto services = context->services();
@@ -79,17 +79,15 @@ bool MaterialsWindow::handleCommand(const std::shared_ptr<Instruction> cmd, Comm
 }
 
 void MaterialsWindow::onEditMaterialFile(MaterialObjectTypes type, const QString& path) {
-	if (!d->applicationController) {
-		return;
-	}
-
-	d->applicationController->executeCommand("windows",
+	auto context = currentContext();
+	auto procassor = context->commandController()->commandProcessor();
+	procassor->executeCommand("windows",
 		{
 			{ "action", "crerate" },
 			{ "target", "code-editor" },
 			{ "path", path },
 			{ "id", path }
-		});
+		}, context);
 }
 
 

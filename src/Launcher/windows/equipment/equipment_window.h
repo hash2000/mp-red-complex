@@ -5,7 +5,7 @@ class EquipmentWindow : public MdiChildWindow {
 	Q_OBJECT
 
 public:
-	EquipmentWindow(const QString& id, QWidget* parent = nullptr);
+	EquipmentWindow(const QString& id, std::shared_ptr<CommandContext> context, QWidget* parent = nullptr);
 	~EquipmentWindow() override;
 
 	QString windowType() const override { return "equipment"; }
@@ -16,7 +16,7 @@ public:
 
 	bool NeedFixedSize() const override { return true; }
 
-	bool handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) override;
+	bool handleCommand(const std::shared_ptr<Instruction> cmd) override;
 
 private:
 	class Private;

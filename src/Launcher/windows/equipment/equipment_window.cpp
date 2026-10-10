@@ -17,14 +17,14 @@ public:
 //	EquipmentWidget* widget;
 };
 
-EquipmentWindow::EquipmentWindow(const QString& id, QWidget* parent)
+EquipmentWindow::EquipmentWindow(const QString& id, std::shared_ptr<CommandContext> context, QWidget* parent)
 	: d(std::make_unique<Private>(this))
-	, MdiChildWindow(id, parent) {
+	, MdiChildWindow(id, context, parent) {
 }
 
 EquipmentWindow::~EquipmentWindow() = default;
 
-bool EquipmentWindow::handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) {
+bool EquipmentWindow::handleCommand(const std::shared_ptr<Instruction> cmd) {
 	const auto action = cmd->parameter("action")
 		.toString();
 	if (action == "create") {

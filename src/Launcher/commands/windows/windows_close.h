@@ -5,7 +5,5 @@ class CommandContext;
 class Controllers;
 
 namespace WindowsNs {
-bool handleClose(const QString& id,
-	CommandContext* context,
-	Controllers* controllers);
+bool handleClose(const QString& id, std::shared_ptr<CommandContext> context, Controllers* controllers);
 }

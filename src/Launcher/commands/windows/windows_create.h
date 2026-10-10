@@ -7,5 +7,5 @@ class CommandContext;
 class Controllers;
 
 namespace WindowsNs {
-bool handleCreate(const std::shared_ptr<Instruction> instruction, CommandContext* context, Controllers* controllers);
+bool handleCreate(const std::shared_ptr<Instruction> instruction, std::shared_ptr<CommandContext> context, Controllers* controllers);
 }

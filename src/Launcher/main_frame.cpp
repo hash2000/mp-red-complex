@@ -65,7 +65,10 @@ LauncherMainFrame::LauncherMainFrame(Resources* resources)
 		onToggleCommandConsole(newState);
 		});
 
-	auto userService = d->commandController->commandContext()->services()->get<UsersService>();
+	const auto context = d->commandController->globalContext();
+	const auto services = context->commandController();
+
+	auto userService = services->services()->get<UsersService>();
 	if (userService) {
 		connect(userService, &UsersService::loggedOut, this, &LauncherMainFrame::onUserLogout);
 		connect(userService, &UsersService::loginSuccess, this, &LauncherMainFrame::onUserLogin);
@@ -98,6 +101,7 @@ void LauncherMainFrame::Private::setupMdiArea(LauncherMainFrame* parent) {
 }
 
 void LauncherMainFrame::Private::setupConsole() {
+
 	commandController = std::make_unique<ApplicationController>(resources);
 	commandController->init();
 	commandConsole = new CommandConsole(commandController.get(), q);
@@ -169,6 +173,6 @@ void LauncherMainFrame::onUserLogin(const UserView& user) {
 	qDebug() << "User login" << user.data->displayName;
 	ActionPanelByUserBuilder builder(
 		d->commandController->controllers()->actionPanelController(),
-		d->commandController->commandContext()->services()->get<UsersService>());
+		d->commandController->globalContext()->commandController()->services()->get<UsersService>());
 	builder.build();
 }

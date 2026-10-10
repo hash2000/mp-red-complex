@@ -5,6 +5,7 @@
 #include "Content/FetchApiModule/services/fetch_store_db_service.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
 #include "Content/ConsoleModule/command_context.h"
+#include "Content/ConsoleModule/command_controller.h"
 #include "Content/ConsoleModule/models/instruction.h"
 
 #include "Libs/Engine/services/services_registry.h"
@@ -27,11 +28,11 @@ public:
 	void showToolWidget(QToolButton* button);
 
 	// Команды
-	bool applyInstructionCreate(const std::shared_ptr<Instruction> instruction, CommandContext* context);
+	bool applyInstructionCreate(const std::shared_ptr<Instruction> instruction);
 };
 
-FetchApiWindow::FetchApiWindow(const QString& id, QWidget* parent)
-	: MdiChildWindow(id, parent)
+FetchApiWindow::FetchApiWindow(const QString& id, std::shared_ptr<CommandContext> context, QWidget* parent)
+	: MdiChildWindow(id, context, parent)
 	, d(std::make_unique<Private>(this)) {
 }
 
@@ -45,8 +46,9 @@ QString FetchApiWindow::windowTitle() const {
 	return "Fetch api";
 }
 
-bool FetchApiWindow::Private::applyInstructionCreate(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
-	auto services = context->services();
+bool FetchApiWindow::Private::applyInstructionCreate(const std::shared_ptr<Instruction> instruction) {
+	const auto context = q->currentContext();
+	const auto services = context->commandController()->services();
 
 	if (mainContainer) {
 		mainContainer->deleteLater();
@@ -99,13 +101,15 @@ void FetchApiWindow::Private::showToolWidget(QToolButton* button) {
 	tree->raise();
 }
 
-bool FetchApiWindow::handleCommand(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
+bool FetchApiWindow::handleCommand(const std::shared_ptr<Instruction> instruction) {
 	const auto action = instruction->text("action");
 	if (action.isEmpty()) {
 		return false;
 	}
 
-	if (action == "create") return d->applyInstructionCreate(instruction, context);
+	if (action == "create") {
+		return d->applyInstructionCreate(instruction);
+	}
 
 	return false;
 }

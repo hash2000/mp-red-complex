@@ -10,16 +10,22 @@ public:
 	MdiChildWindow* q;
 	QString windowId;
 	QPointer<QMdiArea> mdiArea;
+	std::shared_ptr<CommandContext> currentContext;
 };
 
 
-MdiChildWindow::MdiChildWindow(const QString& id, QWidget* parent)
+MdiChildWindow::MdiChildWindow(const QString& id, std::shared_ptr<CommandContext> context, QWidget* parent)
 	: QMdiSubWindow(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->windowId = id;
+	d->currentContext = context;
 }
 
 MdiChildWindow::~MdiChildWindow() = default;
+
+std::shared_ptr<CommandContext> MdiChildWindow::currentContext() const {
+	return d->currentContext;
+}
 
 QString MdiChildWindow::windowType() const {
 	return "window";
@@ -83,9 +89,6 @@ void MdiChildWindow::setupMdiArea() {
 	update();
 }
 
-bool MdiChildWindow::handleCommand(const std::shared_ptr<Instruction> cmd,
-	CommandContext* context) {
-	Q_UNUSED(cmd);
-	Q_UNUSED(context);
+bool MdiChildWindow::handleCommand(const std::shared_ptr<Instruction> cmd) {
 	return false;
 }

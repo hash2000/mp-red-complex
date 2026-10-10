@@ -3,6 +3,7 @@
 #include "Content/TexturesModule/services/images_service.h"
 #include "Content/TexturesModule/services/tiles_selector_service.h"
 #include "Content/ConsoleModule/command_context.h"
+#include "Content/ConsoleModule/command_controller.h"
 #include "Content/ConsoleModule/models/instruction.h"
 #include "Libs/Engine/services/services_registry.h"
 
@@ -12,23 +13,22 @@ public:
 	TextureEditorWindow* q;
 };
 
-TextureEditorWindow::TextureEditorWindow(const QString& id, QWidget* parent)
+TextureEditorWindow::TextureEditorWindow(const QString& id, std::shared_ptr<CommandContext> context, QWidget* parent)
 	: d(std::make_unique<Private>(this))
-	, MdiChildWindow(id, parent) {
+	, MdiChildWindow(id, context, parent) {
 }
 
 TextureEditorWindow::~TextureEditorWindow() = default;
 
-bool TextureEditorWindow::handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) {
+bool TextureEditorWindow::handleCommand(const std::shared_ptr<Instruction> cmd) {
 	const auto action = cmd->parameters.value("action");
-	if (!action.isNull() && action == "create") {
-		auto services = context->services();
+	if (action == "create") {
+		const auto context = currentContext();
+		const auto services = context->commandController()->services();
 		auto editorWidget = new TextureEditorWidget(
 			services->get<ImagesService>(),
 			services->get<TilesSelectorService>(), this);
-
 		setWidget(editorWidget);
-
 		return true;
 	}
 	return false;

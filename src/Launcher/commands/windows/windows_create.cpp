@@ -1,6 +1,7 @@
 #include "Launcher/commands/windows/windows_create.h"
 #include "Content/ConsoleModule/processors/command_processor.h"
 #include "Content/ConsoleModule/command_context.h"
+#include "Content/ConsoleModule/command_controller.h"
 #include "Content/ConsoleModule/command_console/console_table.h"
 #include "Content/ConsoleModule/command_console/console_image.h"
 #include "Content/ConsoleModule/models/instruction.h"
@@ -14,11 +15,10 @@
 #include <QUuid>
 
 namespace WindowsNs {
-bool handleCreate(const std::shared_ptr<Instruction> instruction,
-	CommandContext* context,
-	Controllers* controllers) {
-	auto controller = controllers->windowsController();
-	auto mdiArea = controller->mdiArea();
+bool handleCreate(const std::shared_ptr<Instruction> instruction, std::shared_ptr<CommandContext> context, Controllers* controllers) {
+	const auto wndController = controllers->windowsController();
+	const auto cmdController = context->commandController();
+	auto mdiArea = wndController->mdiArea();
 	auto id = instruction->text("id");
 	const auto target = instruction->text("target");
 	const auto alternateTitle = instruction->text("title");
@@ -28,21 +28,21 @@ bool handleCreate(const std::shared_ptr<Instruction> instruction,
 			.toString(QUuid::StringFormat::WithoutBraces);
 	}
 
-	if (controller->checkWindowRegistration(id)) {
+	if (wndController->checkWindowRegistration(id)) {
 		qWarning() << "Window allready registered" << id;
 		return false;
 	}
 
 	WindowsBuilder builder;
-	auto widget = builder.build(target, id, nullptr);
+	auto widget = builder.build(target, id, context, nullptr);
 	if (!widget) {
-		context->printError(QString("Can't find target window %1")
+		cmdController->printError(QString("Can't find target window %1")
 			.arg(target));
 		return false;
 	}
 
-	if (!widget->handleCommand(instruction, context)) {
-		context->printError(QString("Method create returned false. %1")
+	if (!widget->handleCommand(instruction)) {
+		cmdController->printError(QString("Method create returned false. %1")
 			.arg(target));
 		delete widget;
 		return false;
@@ -65,8 +65,8 @@ bool handleCreate(const std::shared_ptr<Instruction> instruction,
 	widget->setupMdiArea();
 	subWndow->show();
 
-	if (!controller->registerWindow(widget)) {
-		context->printError(QString("Method create returned false. target '%1' title '%2' and id '%3'")
+	if (!wndController->registerWindow(widget)) {
+		cmdController->printError(QString("Method create returned false. target '%1' title '%2' and id '%3'")
 			.arg(target)
 			.arg(title)
 			.arg(id));
@@ -74,7 +74,7 @@ bool handleCreate(const std::shared_ptr<Instruction> instruction,
 		return false;
 	}
 
-	context->printSuccess(QString("Register window '%1' with title '%2' and id '%3'")
+	cmdController->printSuccess(QString("Register window '%1' with title '%2' and id '%3'")
 		.arg(target)
 		.arg(title)
 		.arg(id));

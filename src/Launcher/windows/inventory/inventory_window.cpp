@@ -22,14 +22,14 @@ public:
 	QString inventoryName;
 };
 
-InventoryWindow::InventoryWindow(const QString& id, QWidget* parent)
+InventoryWindow::InventoryWindow(const QString& id, std::shared_ptr<CommandContext> context, QWidget* parent)
 : d(std::make_unique<Private>(this))
-, MdiChildWindow(id, parent) {	
+, MdiChildWindow(id, context, parent) {
 }
 
 InventoryWindow::~InventoryWindow() = default;
 
-bool InventoryWindow::handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context)
+bool InventoryWindow::handleCommand(const std::shared_ptr<Instruction> cmd)
 {
 	const auto action = cmd->parameters.value("action");
 	if (!action.isNull() && action == "create") {

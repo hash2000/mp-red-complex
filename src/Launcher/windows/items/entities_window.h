@@ -7,7 +7,7 @@ class EntitiesWindow : public MdiChildWindow {
 	Q_OBJECT
 
 public:
-	explicit EntitiesWindow(const QString& id, QWidget* parent = nullptr);
+	explicit EntitiesWindow(const QString& id, std::shared_ptr<CommandContext> context, QWidget* parent = nullptr);
 	~EntitiesWindow() override;
 
 	QString windowType() const override { return "entities"; }
@@ -16,7 +16,7 @@ public:
 
 	QSize windowDefaultSizes() const override { return QSize(460, 500); }
 
-	bool handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) override;
+	bool handleCommand(const std::shared_ptr<Instruction> cmd) override;
 
 private slots:
 	void onItemCreateRequested(const QString& itemId, const QString& inventoryId);
