@@ -1,4 +1,7 @@
 #include "Content/ConsoleModule/processors/parser/source_cursor.h"
+#include <QRegularExpression>
+#include <QRegularExpressionMatch>
+#include <QRegularExpressionMatchOption>
 
 SourceCursor::SourceCursor(QStringView text)
 	: _text(text)
@@ -182,6 +185,40 @@ void SourceCursor::resetPosition(const SourceCursor& src) {
 	_pos = src._pos;
 	_line = src._line;
 	_column = src._column;
+}
+
+QStringView SourceCursor::readRegex(const QRegularExpression& regex) {
+	// Получаем оставшуюся часть текста
+	QStringView remaining = _text.mid(_pos);
+
+	// Ищем совпадение ТОЛЬКО с начала (anchored)
+	QRegularExpressionMatch match = regex.match(
+		remaining,
+		0,  // Начальная позиция в remaining
+		QRegularExpression::MatchType::NormalMatch,
+		QRegularExpression::MatchOption::AnchoredMatchOption
+	);
+
+	if (match.hasMatch()) {
+		QStringView matched = match.capturedView();
+
+		// Продвигаем курсор на длину совпадения, обновляя координаты
+		for (int i = 0; i < matched.length(); ++i) {
+			if (matched[i] == '\n') {
+				_line++;
+				_column = 1;
+			}
+			else {
+				_column++;
+			}
+			_pos++;
+		}
+
+		return matched;
+	}
+
+	// Совпадения нет - курсор не двигается
+	return QStringView();
 }
 
 bool SourceCursor::token(const QString& t) {

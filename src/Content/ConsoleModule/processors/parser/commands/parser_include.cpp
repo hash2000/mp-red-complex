@@ -9,6 +9,12 @@ QString ParserInclude::name() const {
 	return "ParserInclude";
 }
 
+QStringList ParserInclude::tokens() const {
+	return {
+		"#include"
+	};
+}
+
 IAstPtr ParserInclude::parse(SourceCursor& cursor, std::optional<ParseError>& error) {
 	SourceCursorTransaction backup(cursor);
 	if (!cursor.skipWhitespaceAndComments(error)) {
@@ -32,7 +38,7 @@ IAstPtr ParserInclude::parse(SourceCursor& cursor, std::optional<ParseError>& er
 
 	auto node = std::make_shared<AstInclude>();
 	node->setLocation(startLoc);
-	node->setPath(path.toUtf8());
+	node->path = path.toUtf8();
 	backup.commit();
 	return node;
 }

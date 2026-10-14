@@ -6,4 +6,5 @@ public:
 	~ParserInclude() override;
 	QString name() const override;
 	IAstPtr parse(SourceCursor& cursor, std::optional<ParseError>& error) override;
+	QStringList tokens() const override;
 };

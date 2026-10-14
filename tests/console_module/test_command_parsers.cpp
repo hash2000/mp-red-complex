@@ -1,7 +1,4 @@
 #include <QtTest/QtTest>
-#include "Content/ConsoleModule/processors/parser/commands/parser_command.h"
-#include "Content/ConsoleModule/processors/parser/commands/parser_include.h"
-
 
 class TestConsoleModule : public QObject {
 	Q_OBJECT
@@ -9,14 +6,6 @@ class TestConsoleModule : public QObject {
 public:
 	TestConsoleModule() = default;
 	~TestConsoleModule() = default;
-
-private slots:
-	void initTestCase();
-	void cleanupTestCase();
-	void init();
-	void cleanup();
-
-	void testCommandParser_ParseInclude_ShouldReturnIncludeAstWithPath();
 
 private:
 	QString _testScript = R"(
@@ -88,7 +77,26 @@ context .system.auth { // объявить контекст
 
 	#include "base/utils.script" // подключить файл
 )";
+	QString _testTypedVariableDeclaration = R"(
+	// тип данных (string, int, double, bool)
+	string[secret,mime("text/plane")] key;
+)";
+
+private slots:
+	void initTestCase();
+	void cleanupTestCase();
+	void init();
+	void cleanup();
+
+	void testCommandParser_ParseInclude_ShouldReturnIncludeAstWithPath();
+	void testCommandParser_ParseTypedVariable_ShouldReturnVariableDeclarationWithoutValue();
 };
+ 
+#include "Content/ConsoleModule/processors/parser/commands/parser_command.h"
+#include "Content/ConsoleModule/processors/parser/commands/parser_include.h"
+#include "Content/ConsoleModule/processors/parser/commands/ast_include.h"
+#include "Content/ConsoleModule/processors/parser/commands/parser_variable.h"
+#include "Content/ConsoleModule/processors/parser/commands/ast_variable.h"
 
 void TestConsoleModule::initTestCase() {}
 void TestConsoleModule::cleanupTestCase() {}
@@ -99,13 +107,14 @@ void TestConsoleModule::init() {
 void TestConsoleModule::cleanup() {
 }
 
-void TestConsoleModule::testCommandParser_ParseInclude_ShouldReturnIncludeAstWithPath() {
+void TestConsoleModule::testCommandParser_ParseTypedVariable_ShouldReturnVariableDeclarationWithoutValue() {
 	// Prepare
-	SourceCursor source(_testInclude);
+	SourceCursor source(_testTypedVariableDeclaration);
 	std::optional<ParseError> error;
 
 	// Pass
-	auto result = ParserInclude().parse(source, error);
+	auto result = ParserVariable().parse(source, error);
+	auto ast = static_cast<AstVariable*>(result.get());
 
 	// Verify
 	auto location = result->location();
@@ -113,6 +122,27 @@ void TestConsoleModule::testCommandParser_ParseInclude_ShouldReturnIncludeAstWit
 	auto nextCh = source.peek();
 
 	QVERIFY(result != nullptr);
+	QVERIFY(ast != nullptr);
+}
+
+void TestConsoleModule::testCommandParser_ParseInclude_ShouldReturnIncludeAstWithPath() {
+	// Prepare
+	SourceCursor source(_testInclude);
+	std::optional<ParseError> error;
+
+	// Pass
+	auto result = ParserInclude().parse(source, error);
+	auto ast = static_cast<AstInclude*>(result.get());
+
+	// Verify
+	auto location = result->location();
+	auto srcLocation = source.currentLocation();
+	auto nextCh = source.peek();
+
+	QVERIFY(result != nullptr);
+	QVERIFY(ast != nullptr);
+	QCOMPARE(ast->path, "base/utils.script");	
+	QCOMPARE(error.has_value(), false);
 	QCOMPARE(location.offset, 19);
 	QCOMPARE(location.column, 2);
 	QCOMPARE(location.line, 4);

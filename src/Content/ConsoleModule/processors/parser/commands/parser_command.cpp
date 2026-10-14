@@ -1,5 +1,5 @@
 #include "Content/ConsoleModule/processors/parser/commands/parser_command.h"
-#include "Content/ConsoleModule/processors/parser/commands/ast_namespace.h"
+#include "Content/ConsoleModule/processors/parser/commands/ast_context.h"
 #include "Content/ConsoleModule/processors/parser/source_cursor.h"
 
 

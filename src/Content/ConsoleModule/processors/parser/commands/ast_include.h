@@ -5,9 +5,7 @@
 class AstInclude : public IAst, public IAstNodeCompiler {
 public:
 	void compile(std::shared_ptr<ScriptProgram> program) override;
-	void setPath(const QString& path);
-	QString path() const;
 
-private:
-	QString _path;
+public:
+	QString path;
 };

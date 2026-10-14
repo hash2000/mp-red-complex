@@ -38,6 +38,12 @@ public:
 	// Прочитать курсор до указанного маркера
 	QStringView readUntil(const QString& endMarker, bool multiline = true);
 
+	/// @brief Пытается найти совпадение с регулярным выражением, начиная с текущей позиции.
+	/// @param regex Регулярное выражение для поиска.
+	/// @return Найденная строка (QStringView). Если совпадения нет, возвращает пустую строку.
+	/// @note Использует AnchoredMatchOption, поэтому ищет ТОЛЬКО с текущей позиции курсора.
+	QStringView readRegex(const QRegularExpression& regex);
+
 	SourceLocation currentLocation() const;
 
 	bool isEnd() const;

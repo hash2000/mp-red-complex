@@ -6,9 +6,7 @@ class AstContext : public IAst, public IAstNodeCompiler {
 public:
 
 	void compile(std::shared_ptr<ScriptProgram> program) override;
-	void setName(const QString& name);
-	QString name() const;
 
-private:
-	QString _name;
+public:
+	QString name;
 };
