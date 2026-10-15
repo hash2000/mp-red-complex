@@ -21,4 +21,4 @@ target_link_libraries(TestConsoleModule PRIVATE
     RedComplexConsoleModule
 )
 
-add_test(NAME TestConsoleModule COMMAND TestConsoleModule)
+add_test(NAME TestConsoleModule COMMAND TestConsoleModule )

@@ -1,5 +1,5 @@
 #include "Content/ConsoleModule/processors/parser/commands/parser_identifier.h"
-#include "Content/ConsoleModule/processors/parser/commands/ast_identifier..h"
+#include "Content/ConsoleModule/processors/parser/commands/ast_identifier.h"
 #include <QRegularExpression>
 
 ParserIdentifier::~ParserIdentifier() = default;
@@ -26,13 +26,12 @@ IAstPtr ParserIdentifier::parse(SourceCursor& cursor, std::optional<ParseError>&
 
 	QStringView idView = cursor.readRegex(identifierRegex);
 	if (idView.isEmpty()) {
-		// Это не идентификатор, возвращаем nullptr
 		return nullptr;
 	}
 
 	auto node = std::make_shared<AstIdentifier>();
 	node->setLocation(startLoc);
-	node->name = idView.toUtf8();
+	node->setParameter("name", idView.toUtf8());
 	backup.commit();
 	return node;
 }

@@ -1,7 +1,6 @@
 #include "Content/ConsoleModule/processors/parser/source_cursor.h"
 #include <QRegularExpression>
 #include <QRegularExpressionMatch>
-#include <QRegularExpressionMatchOption>
 
 SourceCursor::SourceCursor(QStringView text)
 	: _text(text)
@@ -54,7 +53,6 @@ QChar SourceCursor::advance(size_t len) {
 QStringView SourceCursor::readUntil(const QString& endMarker, bool multiline) {
 	int start = _pos;
 	int markerLen = endMarker.length();
-
 	if (markerLen == 0) {
 		return QStringView(); // Защита от пустого маркера
 	}

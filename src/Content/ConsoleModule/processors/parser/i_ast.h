@@ -1,10 +1,8 @@
 #pragma once
 #include "Content/ConsoleModule/processors/parser/source_cursor.h"
-#include <memory>
-#include <vector>
 
 using IAstPtr = std::shared_ptr<class IAst>;
-using IAstContainer = std::vector<IAstPtr>;
+using IAstCollection = std::vector<IAstPtr>;
 
 class IAst {
 public:
@@ -13,14 +11,15 @@ public:
 	virtual ~IAst() = default;
 	IAst& operator=(const IAst&) = default;
 
-	void setLocation(const SourceLocation& loc) {
-		_location = loc;
-	}
+	virtual void setLocation(const SourceLocation& loc) = 0;
 
-	SourceLocation location() const {
-		return _location;
-	}
+	virtual SourceLocation location() const = 0;
 
-private:
-	SourceLocation _location;
+	virtual void setParameter(const QString& name, const QVariant& value) = 0;
+
+	virtual QVariant parameter(const QString& name) const = 0;
+
+	virtual void setChild(IAstPtr child) = 0;
+
+	virtual IAstCollection& children() const = 0;
 };

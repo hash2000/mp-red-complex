@@ -19,25 +19,29 @@ ParserVariable::~ParserVariable() = default;
 
 
 bool ParserVariable::Private::tryPopulateType(std::shared_ptr<AstVariable> node, SourceCursor& cursor, std::optional<ParseError>& error) {
-	node->needRVal = false;
+	bool needRVal = false;
+	QString type;
 	if (cursor.token("var")) {
-		node->needRVal = true;
+		needRVal = true;
 	}
 	else if (cursor.token("int")) {
-		node->type = "int";
+		type = "int";
 	}
 	else if (cursor.token("double")) {
-		node->type = "double";
+		type = "double";
 	}
 	else if (cursor.token("bool")) {
-		node->type = "bool";
+		type = "bool";
 	}
 	else if (cursor.token("string")) {
-		node->type = "string";
+		type = "string";
 	}
 	else {
 		return false;
 	}
+
+	node->setParameter("need-rvalue", needRVal);
+	node->setParameter("type", type);
 
 	return true;
 }
