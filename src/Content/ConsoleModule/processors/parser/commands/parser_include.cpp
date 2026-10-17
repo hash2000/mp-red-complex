@@ -38,7 +38,7 @@ IAstPtr ParserInclude::parse(SourceCursor& cursor, std::optional<ParseError>& er
 
 	auto node = std::make_shared<AstInclude>();
 	node->setLocation(startLoc);
-	node->setParameter("path", path.toUtf8());
+	node->setParameter("path", path.toString());
 	backup.commit();
 	return node;
 }

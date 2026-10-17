@@ -31,7 +31,7 @@ IAstPtr ParserIdentifier::parse(SourceCursor& cursor, std::optional<ParseError>&
 
 	auto node = std::make_shared<AstIdentifier>();
 	node->setLocation(startLoc);
-	node->setParameter("name", idView.toUtf8());
+	node->setParameter("name", idView.toString());
 	backup.commit();
 	return node;
 }

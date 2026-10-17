@@ -8,85 +8,26 @@ public:
 	TestConsoleModule() = default;
 	~TestConsoleModule() = default;
 
-private:
-	QString _testScript = R"(
-#include "base/utils.script" // подключить файл
-
-context .system.auth { // объявить контекст
-
-	define session { // внутри текущего контекста объявить объект session
-		string[secret, mime("text/plane")] key; // в объекте session объявить секретную переменную key (её значение не выводится никуда (лог, экран), но можно пользоваться нативно при использовании внутри ICommand). точка с запятой в конце означает , что переменная объявлена, но значения нет. если стоит двоеточик ':', то дальче читается значение по правилам ниже? точка с запятой в конце не нужна.
-		// <<text>><</text>> - многострочный текст
-		// "" - однострочный текст, с экранированными символами как в C++
-		// <<json>><</json>> - формат json
-		// <<xml>><</xml>> - формат xml
-		string user; // переменная user 
-		var description:
-		// значение переменной читается от открывающегося тега и до закрывающегося у переменной mime тип "text/plane"	
-		<<text>> 
-			сессия пользователя
-		<</text>>
-		var json: 
-		// значение переменной читается от открывающегося тега и до закрывающегося у переменной mime тип "application/json"
-		// значение переменной хранится как 
-		// QJsonDocument doc = QJsonDocument::fromJson(
-		// QVariant::fromValue(doc)
-		<<json>> 
-			{
-				"mime": "session",
-				"controller": ".session.auth.SessionController"
-			}
-		<</json>>
-		var userPage: 
-		// значение переменной читается от открывающегося тега и до закрывающегося у переменной mime тип "application/xml"
-		// значение переменной хранится как 
-		// QDomDocument doc;
-		// QVariant::fromValue(doc)
-		<<xml>>
-			<head></head>
-			<body></body>
-		<</xml>>
-		var params:
-		<<ini>>
-		option1:value1
-		option2:value2
-		<</ini>>
-	}
-
-	// объявление переменных. на бэке будет вызван класс производный от ICommand который обработает переменные 
-	var {
-		session[secret] current;
-		session[repeated, secret] previus;
-		var label = "Authorization"
-	}
-
-	// выполнить компнду объявленную class WindowsCommand : public ICommand
-	// параметры читаюся "имя параметра":"значение" заканчивается чтение параметров команды ;
-	windows 
-		action:create
-		target:login
-		desctiption:<text>
-			Войти в систему
-		</text>
-		// результат поместить в контекст .globalContext.test.auth
-		// если сразу стоит ; поместить в текущий контекст
-		>> .globalContext.test.auth;	
-}
-)";
-
 private slots:
 	void initTestCase();
 	void cleanupTestCase();
 	void init();
 	void cleanup();
 
-
 	void testCommandParser_SourceCursorReadUntil_ShouldReturnTextBetweenQuotesMarkers();
 	void testCommandParser_ParseAttributesCollection_ShouldReturnAttribetes();
 	void testCommandParser_ParseInclude_ShouldReturnIncludeAstWithPath();
-	void testCommandParser_ParseTypedVariable_ShouldReturnVariableDeclarationWithoutValue();
 	void testCommandParser_ParseSingleTextValue_ShouldReturnAstValue();
 	void testCommandParser_ParseMultilineTextValue_ShouldReturnAstValue();
+	void testCommandParser_ParseUntypedVariableWithoutRValue_ShouldReturnError();
+	void testCommandParser_ParseTypedVariable_ShouldReturnVariableDeclarationWithoutValue();
+	void testCommandParser_ParseRValueTypedVariable_ShouldReturnVariableDeclarationWithValue();
+	void testCommandParser_ParseVariableWithBinding_ShouldReturnVariableDeclarationWithBindName();
+	void testCommandParser_ParseObject_ShouldReturnObjectWithFields();
+	void testCommandParser_ParseBoolValue_ShouldReturnTrueFalseValue_data();
+	void testCommandParser_ParseBoolValue_ShouldReturnTrueFalseValue();
+	void testCommandParser_ParseNumberValue_ShouldReturnPositiveOrNegativeNumber_data();
+	void testCommandParser_ParseNumberValue_ShouldReturnPositiveOrNegativeNumber();
 };
  
 #include "Content/ConsoleModule/processors/parser/commands/parser_command.h"
@@ -94,6 +35,7 @@ private slots:
 #include "Content/ConsoleModule/processors/parser/commands/parser_variable.h"
 #include "Content/ConsoleModule/processors/parser/commands/parser_value.h"
 #include "Content/ConsoleModule/processors/parser/commands/parser_attributes_collection.h"
+#include "Content/ConsoleModule/processors/parser/commands/parser_object.h"
 
 void TestConsoleModule::initTestCase() {}
 void TestConsoleModule::cleanupTestCase() {}
@@ -104,9 +46,245 @@ void TestConsoleModule::init() {
 void TestConsoleModule::cleanup() {
 }
 
+void TestConsoleModule::testCommandParser_ParseObject_ShouldReturnObjectWithFields() {
+	// Given
+	QString testScript = R"(
+	object car {
+		string vendor;
+		string vin;
+		number aaaa;
+		bool isEnabled;
+	}
+)";
+
+	SourceCursor source(testScript);
+	std::optional<ParseError> error;
+
+	// When
+	auto result = ParserObject().parse(source, error);
+
+	// Then
+	QCOMPARE(error.has_value(), false);
+	QVERIFY(result != nullptr);
+
+	auto location = result->location();
+	auto srcLocation = source.currentLocation();
+
+}
+
+void TestConsoleModule::testCommandParser_ParseNumberValue_ShouldReturnPositiveOrNegativeNumber_data() {
+	QTest::addColumn<QString>("testScript");
+	QTest::addColumn<double>("expected");
+
+	QTest::newRow("+456") << R"(
+	// комментарий 
+	+456
+)" << 456.0;
+
+	QTest::newRow("123") << R"(
+	// комментарий 
+	123
+)" << 123.0;
+
+	QTest::newRow("-789") << R"(
+	// комментарий 
+	-789
+)" << -789.0;
+
+	QTest::newRow("1_000") << R"(
+	// комментарий 
+	1_000
+)" << 1000.0;
+
+	QTest::newRow("1000") << R"(
+	// комментарий 
+	1000
+)" << 1000.0;
+
+	QTest::newRow("1_000_000") << R"(
+	// комментарий 
+	1_000_000
+)" << 1000000.0;
+
+	QTest::newRow("3.14") << R"(
+	// комментарий 
+	3.14
+)" << 3.14;
+
+	QTest::newRow("-0.5") << R"(
+	// комментарий 
+	-0.5
+)" << -0.5;
+
+	QTest::newRow("1_000.50") << R"(
+	// комментарий 
+	1_000.50
+)" << 1000.5;
+
+	QTest::newRow("+1_234.567") << R"(
+	// комментарий 
+	+1_234.567
+)" << 1234.567;
+}
+
+void TestConsoleModule::testCommandParser_ParseNumberValue_ShouldReturnPositiveOrNegativeNumber() {
+	// Given
+	QFETCH(QString, testScript);
+	QFETCH(double, expected);
+	SourceCursor source(testScript);
+	std::optional<ParseError> error;
+
+	// When
+	auto result = ParserValue().parse(source, error);
+
+	// Then
+	QCOMPARE(error.has_value(), false);
+	QVERIFY(result != nullptr);
+
+	auto location = result->location();
+	auto srcLocation = source.currentLocation();
+
+	QCOMPARE(result->parameter("value").isNull(), false);
+	QCOMPARE(result->parameter("value").toDouble(), expected);
+}
+
+
+void TestConsoleModule::testCommandParser_ParseBoolValue_ShouldReturnTrueFalseValue_data() {
+	QTest::addColumn<QString>("testScript");
+	QTest::addColumn<bool>("expected");
+
+	QTest::newRow("true value") << R"(
+	// true value
+	true
+)" << true;
+
+	QTest::newRow("false value") << R"(
+	// false value
+	false
+)" << false;
+
+}
+
+void TestConsoleModule::testCommandParser_ParseBoolValue_ShouldReturnTrueFalseValue() {
+	// Given
+	QFETCH(QString, testScript);
+	QFETCH(bool, expected);
+	SourceCursor source(testScript);
+	std::optional<ParseError> error;
+
+	// When
+	auto result = ParserValue().parse(source, error);
+
+	// Then
+	QCOMPARE(error.has_value(), false);
+	QVERIFY(result != nullptr);
+
+	auto location = result->location();
+	auto srcLocation = source.currentLocation();
+
+	QCOMPARE(result->parameter("value").isNull(), false);
+	QCOMPARE(result->parameter("value").toBool(), expected);
+}
+
+void TestConsoleModule::testCommandParser_ParseUntypedVariableWithoutRValue_ShouldReturnError() {
+	// Given
+	QString testScript = R"(
+	// тип данных (string, number, bool)
+	var key;
+)";
+
+	SourceCursor source(testScript);
+	std::optional<ParseError> error;
+
+	// When
+	auto result = ParserVariable().parse(source, error);
+
+	// Then
+	QCOMPARE(error.has_value(), true);
+	QVERIFY(result == nullptr);
+}
+
+void TestConsoleModule::testCommandParser_ParseVariableWithBinding_ShouldReturnVariableDeclarationWithBindName() {
+	// Given
+	QString testScript = R"(
+	// тип данных (string, number, bool)
+	string key:{{anotherValue}};
+)";
+
+	SourceCursor source(testScript);
+	std::optional<ParseError> error;
+
+	// When
+	auto result = ParserVariable().parse(source, error);
+
+	// Then
+	QCOMPARE(error.has_value(), false);
+	QVERIFY(result != nullptr);
+
+	auto location = result->location();
+	auto srcLocation = source.currentLocation();
+
+	QCOMPARE(error.has_value(), false);
+	QVERIFY(result != nullptr);
+	QCOMPARE(result->parameter("name").toString(), "key");
+	QCOMPARE(result->parameter("value").isNull(), true);
+	QCOMPARE(result->parameter("bind").toString(), "anotherValue");
+}
+
+void TestConsoleModule::testCommandParser_ParseTypedVariable_ShouldReturnVariableDeclarationWithoutValue() {
+	// Given
+	QString testScript = R"(
+	// тип данных (string, number, bool)
+	string[secret, mime("text/plane"), rare] key;
+)";
+
+	SourceCursor source(testScript);
+	std::optional<ParseError> error;
+
+	// When
+	auto result = ParserVariable().parse(source, error);
+
+	// Then
+	QCOMPARE(error.has_value(), false);
+	QVERIFY(result != nullptr);
+
+	auto location = result->location();
+	auto srcLocation = source.currentLocation();
+	QCOMPARE(result->parameter("name").toString(), "key");
+	QCOMPARE(result->parameter("value").isNull(), true);
+}
+
+void TestConsoleModule::testCommandParser_ParseRValueTypedVariable_ShouldReturnVariableDeclarationWithValue() {
+	// Given
+	QString testScript = R"(
+	// тип данных (string, number, bool)
+	var[secret, rare] key: <<text>>super puper
+multiline secret text
+<</text>>;
+)";
+
+	SourceCursor source(testScript);
+	std::optional<ParseError> error;
+
+	// When
+	auto result = ParserVariable().parse(source, error);
+
+	// Then
+	QCOMPARE(error.has_value(), false);
+	QVERIFY(result != nullptr);
+
+	auto location = result->location();
+	auto srcLocation = source.currentLocation();
+	QCOMPARE(result->parameter("name").toString(), "key");
+	QCOMPARE(result->parameter("value").toString(), R"(super puper
+multiline secret text
+)");
+	
+}
+
 void TestConsoleModule::testCommandParser_ParseAttributesCollection_ShouldReturnAttribetes() {
-	// Prepare
-	QString script = R"(
+	// Given
+	QString testScript = R"(
 	[ // секретный, нельзя просматривать в консоли или другими встроенными средствами отладки
 		secret, // это секрет
 		// mime-тип - text/plane
@@ -117,13 +295,14 @@ void TestConsoleModule::testCommandParser_ParseAttributesCollection_ShouldReturn
 		repeated
 	]
 )";
-	SourceCursor source(script);
+	SourceCursor source(testScript);
 	std::optional<ParseError> error;
 
-	// Pass
+	// When
 	auto result = ParserAttributesCollection().parse(source, error);
 
-	// Verify
+	// Then
+	QCOMPARE(error.has_value(), false);
 	QVERIFY(result != nullptr);
 
 	auto location = result->location();
@@ -168,41 +347,20 @@ void TestConsoleModule::testCommandParser_ParseAttributesCollection_ShouldReturn
 	QCOMPARE(found.size(), 3);
 }
 
-void TestConsoleModule::testCommandParser_ParseTypedVariable_ShouldReturnVariableDeclarationWithoutValue() {
-	// Prepare
-	QString testTypedVariableDeclaration = R"(
-	// тип данных (string, int, double, bool)
-	string[secret mime("text/plane")] key;
-)";
-
-	SourceCursor source(testTypedVariableDeclaration);
-	std::optional<ParseError> error;
-
-	// Pass
-	auto result = ParserVariable().parse(source, error);
-
-	// Verify
-	QVERIFY(result != nullptr);
-
-	auto location = result->location();
-	auto srcLocation = source.currentLocation();
-
-}
-
 void TestConsoleModule::testCommandParser_ParseSingleTextValue_ShouldReturnAstValue() {
-	// Prepare
-	QString script = R"(
+	// Given
+	QString testScript = R"(
 	// комментарий
 	// комментарий
 "тестовая строка"
 )";
-	SourceCursor source(script);
+	SourceCursor source(testScript);
 	std::optional<ParseError> error;
 
-	// Pass
+	// When
 	auto result = ParserValue().parse(source, error);
 
-	// Verify
+	// Then
 	QVERIFY(result != nullptr);
 
 	auto srcLoc = source.currentLocation();
@@ -213,6 +371,7 @@ void TestConsoleModule::testCommandParser_ParseSingleTextValue_ShouldReturnAstVa
 	auto value = result->parameter("value");
 	auto mime = result->parameter("mime-type");
 
+	QCOMPARE(error.has_value(), false);
 	QCOMPARE_NE(source.peek(), '\"');
 	QCOMPARE(location.offset, 33);
 	QCOMPARE(srcLoc.offset, 50);
@@ -223,8 +382,8 @@ void TestConsoleModule::testCommandParser_ParseSingleTextValue_ShouldReturnAstVa
 }
 
 void TestConsoleModule::testCommandParser_ParseMultilineTextValue_ShouldReturnAstValue() {
-	// Prepare
-	QString script = R"(
+	// Given
+	QString testScript = R"(
 	// комментарий
 	// комментарий
 <<text>>
@@ -232,13 +391,13 @@ void TestConsoleModule::testCommandParser_ParseMultilineTextValue_ShouldReturnAs
 	2 текстовая строка
 <</text>> 
 )";
-	SourceCursor source(script);
+	SourceCursor source(testScript);
 	std::optional<ParseError> error;
 
-	// Pass
+	// When
 	auto result = ParserValue().parse(source, error);
 
-	// Verify
+	// Then
 	QVERIFY(result != nullptr);
 
 	auto location = result->location();
@@ -248,6 +407,7 @@ void TestConsoleModule::testCommandParser_ParseMultilineTextValue_ShouldReturnAs
 	auto value = result->parameter("value").toString();
 	auto mime = result->parameter("mime-type").toString();
 
+	QCOMPARE(error.has_value(), false);
 	QCOMPARE(name.isNull(), true);
 	QCOMPARE(value.isNull(), false);
 	QCOMPARE(value, R"(
@@ -258,19 +418,20 @@ void TestConsoleModule::testCommandParser_ParseMultilineTextValue_ShouldReturnAs
 }
 
 void TestConsoleModule::testCommandParser_ParseInclude_ShouldReturnIncludeAstWithPath() {
-	// Prepare
-	QString testInclude = R"(
+	// Given
+	QString testScript = R"(
 	// комментарий
 
 	#include "base/utils.script" // подключить файл
 )";
-	SourceCursor source(testInclude);
+	SourceCursor source(testScript);
 	std::optional<ParseError> error;
 
-	// Pass
+	// When
 	auto result = ParserInclude().parse(source, error);
 
-	// Verify
+	// Then
+	QCOMPARE(error.has_value(), false);
 	QVERIFY(result != nullptr);
 
 	auto location = result->location();
@@ -289,25 +450,26 @@ void TestConsoleModule::testCommandParser_ParseInclude_ShouldReturnIncludeAstWit
 }
 
 void TestConsoleModule::testCommandParser_SourceCursorReadUntil_ShouldReturnTextBetweenQuotesMarkers() {
-	// Prepare
+	// Given
 	QString prefix = "any block ";
 	QString suffif = R"(<<text>>
 	1 тестовая строка
 	2 текстовая строка
 <</text>> 
 )";
-	QString script = QString("%1%2")
+	QString testScript = QString("%1%2")
 		.arg(prefix)
 		.arg(suffif);
 
-	SourceCursor source(script);
+	SourceCursor source(testScript);
 	std::optional<ParseError> error;
 
-	// Pass
+	// When
 	source.advance(prefix.length());
 	auto block = source.tryReadQuotedBlock("<<text>>", "<</text>>", true, "", error).toUtf8();
 
-	// Verify
+	// Then
+	QCOMPARE(error.has_value(), false);
 	QCOMPARE(block.isEmpty(), false);
 	QCOMPARE(block.startsWith("<<text>>"), false);
 	QCOMPARE(block.endsWith("<</text>>"), false);
