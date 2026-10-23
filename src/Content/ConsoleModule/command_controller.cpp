@@ -27,7 +27,7 @@ CommandController::CommandController(Resources* resources, QObject* parent)
 }
 
 CommandController::~CommandController() {
-	qInfo() << "CommandController destroyed";
+	d->globalContext.reset();
 }
 
 void CommandController::init() {

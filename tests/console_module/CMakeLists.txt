@@ -5,6 +5,9 @@ project(TestItemsService LANGUAGES CXX)
 find_package(Qt6 REQUIRED COMPONENTS Core Test)
 
 add_executable(TestConsoleModule
+    test_command.h
+    test_command.cpp
+		test_command_context.cpp
     test_command_parsers.cpp
 )
 
@@ -19,6 +22,8 @@ target_link_libraries(TestConsoleModule PRIVATE
     Qt6::Gui
 
     RedComplexConsoleModule
+		RedComplexResources
+		RedComplexGraphics
 )
 
 add_test(NAME TestConsoleModule COMMAND TestConsoleModule )

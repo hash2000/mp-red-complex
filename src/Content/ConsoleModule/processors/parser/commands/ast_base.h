@@ -17,9 +17,15 @@ public:
 
 	QVariant parameter(const QString& name) const override;
 
-	void setChild(IAstPtr child) override;
+	void setChild(const QString& type, IAstPtr child) override;
 
-	IAstCollection& children() const override;
+	void setChildren(const QString& type, const IAstCollection& children) override;
+
+	size_t childTypesCount() const  override;
+
+	std::list<QString> childTypes() const  override;
+
+	IAstCollection children(const QString& type) const override;
 
 private:
 	class Private;

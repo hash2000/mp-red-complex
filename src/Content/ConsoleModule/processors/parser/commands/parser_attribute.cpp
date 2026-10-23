@@ -1,7 +1,9 @@
 #include "Content/ConsoleModule/processors/parser/commands/parser_attribute.h"
 #include "Content/ConsoleModule/processors/parser/commands/ast_attribute.h"
+#include "Content/ConsoleModule/processors/parser/commands/ast_variable_defs.h"
 #include "Content/ConsoleModule/processors/parser/commands/parser_identifier.h"
 #include "Content/ConsoleModule/processors/parser/commands/parser_value.h"
+#include "Content/ConsoleModule/processors/parser/commands/ast_variable_defs.h"
 
 ParserAttribute::~ParserAttribute() = default;
 
@@ -29,7 +31,7 @@ IAstPtr ParserAttribute::parse(SourceCursor& cursor, std::optional<ParseError>& 
 	if (cursor.peek() == '(') {
 		cursor.advance(); // Съедаем (
 
-		ParserValue valueParser;
+		ParserValue valueParser(AstDataType::Any);
 
 		while (!cursor.isEnd()) {
 			if (!cursor.skipWhitespaceAndComments(error)) {
@@ -52,7 +54,7 @@ IAstPtr ParserAttribute::parse(SourceCursor& cursor, std::optional<ParseError>& 
 				return nullptr;
 			}
 
-			node->setChild(paramValue);
+			node->setChild("parameters", paramValue);
 
 			if (!cursor.skipWhitespaceAndComments(error)) {
 				return nullptr;

@@ -1,13 +1,12 @@
 #pragma once
 #include <QObject>
 #include <QString>
-#include <QMdiArea>
 #include <memory>
 
 class CommandController;
 class ServicesRegistry;
 
-class CommandContext : public QObject , public std::enable_shared_from_this<CommandContext> {
+class CommandContext : public QObject, public std::enable_shared_from_this<CommandContext> {
 	Q_OBJECT
 public:
 	explicit CommandContext(CommandController* commandController, std::shared_ptr<CommandContext> parentContext, const QString& name, QObject* parent = nullptr);

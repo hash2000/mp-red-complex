@@ -1,13 +1,16 @@
 
+find_package(OpenGL REQUIRED)
 
 find_package(Qt6
 	REQUIRED COMPONENTS
 		Core
 		Gui
 		Widgets
+		OpenGL
 		OpenGLWidgets
 		Network
 		Xml
+		Svg
 		Concurrent
 )
 

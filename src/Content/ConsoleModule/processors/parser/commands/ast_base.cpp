@@ -6,7 +6,7 @@ public:
 	AstBase* q;
 
 	SourceLocation location;
-	IAstCollection children;
+	IAstGroupegCollection children;
 	QVariantMap parameters;
 };
 
@@ -32,10 +32,45 @@ QVariant AstBase::parameter(const QString& name) const {
 	return d->parameters[name];
 }
 
-void AstBase::setChild(IAstPtr child) {
-	d->children.emplace_back(child);
+void AstBase::setChild(const QString& type, IAstPtr child) {
+	auto it = d->children.find(type);
+	if (it == d->children.end()) {
+		it = d->children.emplace(type, IAstCollection()).first;
+	}
+
+	it->second.emplace_back(child);
 }
 
-IAstCollection& AstBase::children() const {
-	return d->children;
+void AstBase::setChildren(const QString& type, const IAstCollection& children) {
+	auto it = d->children.find(type);
+	if (it == d->children.end()) {
+		it = d->children.emplace(type, IAstCollection()).first;
+	}
+
+	for (const auto& item : children) {
+		it->second.emplace_back(item);
+	}
+}
+
+size_t AstBase::childTypesCount() const {
+	return d->children.size();
+}
+
+std::list<QString> AstBase::childTypes() const {
+	std::list<QString> result;
+	for (const auto& i : d->children) {
+		result.push_back(i.first);
+	}
+
+	return std::move(result);
+}
+
+
+IAstCollection AstBase::children(const QString& type) const {
+	const auto it = d->children.find(type);
+	if (it == d->children.end()) {
+		return IAstCollection();
+	}
+
+	return it->second;
 }

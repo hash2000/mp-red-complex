@@ -44,7 +44,7 @@ IAstPtr ParserAttributesCollection::parse(SourceCursor& cursor, std::optional<Pa
 			return nullptr;
 		}
 
-		node->setChild(attr);
+		node->setChild("attributes", attr);
 
 		if (!cursor.skipWhitespaceAndComments(error)) {
 			return nullptr;

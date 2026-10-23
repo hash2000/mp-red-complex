@@ -4,7 +4,6 @@
 #include "Content/ConsoleModule/processors/parser/commands/parser_identifier.h"
 #include "Content/ConsoleModule/processors/parser/commands/parser_value.h"
 #include "Content/ConsoleModule/processors/parser/commands/parser_bindings.h"
-#include "Content/ConsoleModule/processors/parser/commands/ast_variable_defs.h"
 
 class ParserVariable::Private {
 public:
@@ -29,6 +28,7 @@ bool ParserVariable::Private::tryPopulateType(std::shared_ptr<AstVariable> node,
 	AstDataType type = AstDataType::Undefined;
 	if (cursor.token("var")) {
 		needRVal = true;
+		type = AstDataType::Any;
 	}
 	else if (cursor.token("number")) {
 		type = AstDataType::Number;
@@ -44,7 +44,7 @@ bool ParserVariable::Private::tryPopulateType(std::shared_ptr<AstVariable> node,
 	}
 
 	node->setParameter("need-rvalue", needRVal);
-	node->setParameter("type", QVariant::fromValue(static_cast<char>(type)));
+	node->setParameter("type", QVariant::fromValue(static_cast<size_t>(type)));
 
 	return true;
 }
@@ -67,13 +67,19 @@ bool ParserVariable::Private::tryPopulateAttributes(std::shared_ptr<AstVariable>
 		return !error.has_value();
 	}
 
-	node->setChild(attribs);
+	node->setChildren("attributes", attribs->children("attributes"));
 
 	return true;
 }
 
 bool ParserVariable::Private::tryPopulateValues(std::shared_ptr<AstVariable> node, SourceCursor& cursor, std::optional<ParseError>& error) {
-	auto val = ParserValue().parse(cursor, error);
+	auto requiredMimeType = node->parameter("mime-type").toString();
+	auto requiredType = static_cast<AstDataType>(node->parameter("type").value<size_t>());
+	auto val = ParserValue(requiredType, requiredMimeType).parse(cursor, error);
+	if (error.has_value()) {
+		return false;
+	}
+
 	if (!val) {
 		auto bind = ParserBindings().parse(cursor, error);
 		if (!bind) {
@@ -132,11 +138,18 @@ IAstPtr ParserVariable::parse(SourceCursor& cursor, std::optional<ParseError>& e
 		return node;
 	}
 
-	if (cursor.peek() != ':' && needRValue) {
-		error = ParseError(loc, QString("Expected rvalue to variable %1.")
+	if (cursor.peek() != ':') {
+		if (needRValue) {
+			error = ParseError(loc, QString("Expected rvalue to variable %1.")
+				.arg(node->parameter("name").toString()));
+			return nullptr;
+		}
+
+		error = ParseError(loc, QString("Expected semicolon %1.")
 			.arg(node->parameter("name").toString()));
 		return nullptr;
 	}
+
 	cursor.advance();
 
 	if (!d->tryPopulateValues(node, cursor, error)) {

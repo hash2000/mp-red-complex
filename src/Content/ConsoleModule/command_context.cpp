@@ -2,6 +2,7 @@
 #include "Content/ConsoleModule/command_controller.h"
 #include "Libs/Engine/services/services_registry.h"
 
+#include <QDebug>
 #include <QList>
 #include <QMap>
 
@@ -26,9 +27,17 @@ CommandContext::CommandContext(CommandController* commandController, std::shared
 	d->name = name;
 
 	if (parentContext) {
+		auto parentName = QString();
+		if (!parentContext->isGlobalContext()) {
+			parentName = parentContext->nameSpace();
+		}
 		d->nameSpace = QString("%1.%2")
-			.arg(parentContext->nameSpace())
+			.arg(parentName)
 			.arg(name);
+	}
+	else {
+		d->nameSpace = ".";
+		d->name = QString();
 	}
 }
 

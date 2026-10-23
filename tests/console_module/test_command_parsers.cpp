@@ -1,50 +1,11 @@
-#include <QtTest/QtTest>
-#include <set>
-
-class TestConsoleModule : public QObject {
-	Q_OBJECT
-
-public:
-	TestConsoleModule() = default;
-	~TestConsoleModule() = default;
-
-private slots:
-	void initTestCase();
-	void cleanupTestCase();
-	void init();
-	void cleanup();
-
-	void testCommandParser_SourceCursorReadUntil_ShouldReturnTextBetweenQuotesMarkers();
-	void testCommandParser_ParseAttributesCollection_ShouldReturnAttribetes();
-	void testCommandParser_ParseInclude_ShouldReturnIncludeAstWithPath();
-	void testCommandParser_ParseSingleTextValue_ShouldReturnAstValue();
-	void testCommandParser_ParseMultilineTextValue_ShouldReturnAstValue();
-	void testCommandParser_ParseUntypedVariableWithoutRValue_ShouldReturnError();
-	void testCommandParser_ParseTypedVariable_ShouldReturnVariableDeclarationWithoutValue();
-	void testCommandParser_ParseRValueTypedVariable_ShouldReturnVariableDeclarationWithValue();
-	void testCommandParser_ParseVariableWithBinding_ShouldReturnVariableDeclarationWithBindName();
-	void testCommandParser_ParseObject_ShouldReturnObjectWithFields();
-	void testCommandParser_ParseBoolValue_ShouldReturnTrueFalseValue_data();
-	void testCommandParser_ParseBoolValue_ShouldReturnTrueFalseValue();
-	void testCommandParser_ParseNumberValue_ShouldReturnPositiveOrNegativeNumber_data();
-	void testCommandParser_ParseNumberValue_ShouldReturnPositiveOrNegativeNumber();
-};
- 
+#include "test_command.h"
 #include "Content/ConsoleModule/processors/parser/commands/parser_command.h"
 #include "Content/ConsoleModule/processors/parser/commands/parser_include.h"
 #include "Content/ConsoleModule/processors/parser/commands/parser_variable.h"
 #include "Content/ConsoleModule/processors/parser/commands/parser_value.h"
 #include "Content/ConsoleModule/processors/parser/commands/parser_attributes_collection.h"
 #include "Content/ConsoleModule/processors/parser/commands/parser_object.h"
-
-void TestConsoleModule::initTestCase() {}
-void TestConsoleModule::cleanupTestCase() {}
-
-void TestConsoleModule::init() {
-}
-
-void TestConsoleModule::cleanup() {
-}
+#include "Content/ConsoleModule/processors/parser/commands/ast_variable_defs.h"
 
 void TestConsoleModule::testCommandParser_ParseObject_ShouldReturnObjectWithFields() {
 	// Given
@@ -135,7 +96,7 @@ void TestConsoleModule::testCommandParser_ParseNumberValue_ShouldReturnPositiveO
 	std::optional<ParseError> error;
 
 	// When
-	auto result = ParserValue().parse(source, error);
+	auto result = ParserValue(AstDataType::Number).parse(source, error);
 
 	// Then
 	QCOMPARE(error.has_value(), false);
@@ -173,7 +134,7 @@ void TestConsoleModule::testCommandParser_ParseBoolValue_ShouldReturnTrueFalseVa
 	std::optional<ParseError> error;
 
 	// When
-	auto result = ParserValue().parse(source, error);
+	auto result = ParserValue(AstDataType::Bool).parse(source, error);
 
 	// Then
 	QCOMPARE(error.has_value(), false);
@@ -223,12 +184,14 @@ void TestConsoleModule::testCommandParser_ParseVariableWithBinding_ShouldReturnV
 
 	auto location = result->location();
 	auto srcLocation = source.currentLocation();
+	auto type = static_cast<AstDataType>(result->parameter("type").value<size_t>());
 
 	QCOMPARE(error.has_value(), false);
 	QVERIFY(result != nullptr);
 	QCOMPARE(result->parameter("name").toString(), "key");
 	QCOMPARE(result->parameter("value").isNull(), true);
 	QCOMPARE(result->parameter("bind").toString(), "anotherValue");
+	QCOMPARE(type, AstDataType::String);
 }
 
 void TestConsoleModule::testCommandParser_ParseTypedVariable_ShouldReturnVariableDeclarationWithoutValue() {
@@ -250,8 +213,93 @@ void TestConsoleModule::testCommandParser_ParseTypedVariable_ShouldReturnVariabl
 
 	auto location = result->location();
 	auto srcLocation = source.currentLocation();
+	auto type = static_cast<AstDataType>(result->parameter("type").value<size_t>());
+
 	QCOMPARE(result->parameter("name").toString(), "key");
 	QCOMPARE(result->parameter("value").isNull(), true);
+	QCOMPARE(type, AstDataType::String);
+}
+
+void TestConsoleModule::testCommandParser_ParseTypedVariableWithValue_ShouldRequridTypeMustCorrecponded_data() {
+	QTest::addColumn<QString>("testScript");
+	QTest::addColumn<AstDataType>("expectedType");
+	QTest::addColumn<QString>("expectedMimeType");
+
+	QTest::addRow("string & text/jason") << R"(
+	// тип данных (string, number, bool)
+	string[mime("text/jason")] key: <<json>>{"key1":"val1","key2":"val2"}<</json>>;
+)" << AstDataType::String << "application/json";
+
+	QTest::addRow("string & application/xml") << R"(
+	// тип данных (string, number, bool)
+	string[mime("application/xml")] key: <<xml>>
+<root>
+		<head></head>
+		<body></body>
+</root>
+<</xml>>;
+)" << AstDataType::String << "application/xml";
+
+	QTest::addRow("string & text/x-ini") << R"(
+	// тип данных (string, number, bool)
+	string[mime("text/x-ini")] key: <<ini>>
+[Settings]
+test1:val1
+test2:val2
+<</ini>>;
+)" << AstDataType::String << "text/x-ini";
+}
+
+void TestConsoleModule::testCommandParser_ParseTypedVariableWithValue_ShouldRequridTypeMustCorrecponded() {
+	// Given
+	QFETCH(QString, testScript);
+	QFETCH(AstDataType, expectedType);
+	QFETCH(QString, expectedMimeType);
+	SourceCursor source(testScript);
+	std::optional<ParseError> error;
+
+	// When
+	auto result = ParserVariable().parse(source, error);
+
+	// Then
+	QCOMPARE(error.has_value(), false);
+	QVERIFY(result != nullptr);
+
+	auto location = result->location();
+	auto srcLocation = source.currentLocation();
+	auto type = static_cast<AstDataType>(result->parameter("type").value<size_t>());
+	auto mimeType = result->parameter("mime-type").toString();
+
+	QCOMPARE(result->parameter("name").toString(), "key");
+	QCOMPARE(result->parameter("value").isNull(), false);
+	QCOMPARE(type, expectedType);
+	QCOMPARE(mimeType, expectedMimeType);
+}
+
+
+void TestConsoleModule::testCommandParser_ParseTypedVariableWithValue_ShouldCompareLTypeAndRType() {
+	// Given
+	QString testScript = R"(
+	// тип данных (string, number, bool)
+	string[secret, mime("text/jason"), rare] key;
+)";
+
+	SourceCursor source(testScript);
+	std::optional<ParseError> error;
+
+	// When
+	auto result = ParserVariable().parse(source, error);
+
+	// Then
+	QCOMPARE(error.has_value(), false);
+	QVERIFY(result != nullptr);
+
+	auto location = result->location();
+	auto srcLocation = source.currentLocation();
+	auto type = static_cast<AstDataType>(result->parameter("type").value<size_t>());
+	QCOMPARE(result->parameter("name").toString(), "key");
+	QCOMPARE(result->parameter("value").isNull(), true);
+	QCOMPARE(type, AstDataType::String);
 }
 
 void TestConsoleModule::testCommandParser_ParseRValueTypedVariable_ShouldReturnVariableDeclarationWithValue() {
@@ -308,21 +356,22 @@ void TestConsoleModule::testCommandParser_ParseAttributesCollection_ShouldReturn
 	auto location = result->location();
 	auto srcLocation = source.currentLocation();
 
-	QCOMPARE(result->children().size(), 3);
+	QCOMPARE(result->children("any-group").size(), 0);
+	QCOMPARE(result->children("attributes").size(), 3);
 
 	std::set<QString> found;
-	for (const auto attr : result->children()) {
+	for (const auto attr : result->children("attributes")) {
 		auto name = attr->parameter("name").toString();
 		auto inserResult = found.emplace(name);
 		QCOMPARE(inserResult.second, true);
 
 		if (name == "secret") {
-			QCOMPARE(attr->children().size(), 0);
+			QCOMPARE(attr->children("parameters").size(), 0);
 		}
 		else if (name == "testParametrizedAttribyte") {
-			QCOMPARE(attr->children().size(), 3);
+			QCOMPARE(attr->children("parameters").size(), 3);
 			int paramid = 0;
-			for (const auto param : attr->children()) {
+			for (const auto param : attr->children("parameters")) {
 				auto paramValue = param->parameter("value").toString();
 				auto paramMimeType = param->parameter("mime-type").toString();
 				if (paramid == 0) {
@@ -340,7 +389,7 @@ void TestConsoleModule::testCommandParser_ParseAttributesCollection_ShouldReturn
 			}
 		}
 		else if (name == "repeated") {
-			QCOMPARE(attr->children().size(), 0);
+			QCOMPARE(attr->children("parameters").size(), 0);
 		}
 	}
 
@@ -358,7 +407,7 @@ void TestConsoleModule::testCommandParser_ParseSingleTextValue_ShouldReturnAstVa
 	std::optional<ParseError> error;
 
 	// When
-	auto result = ParserValue().parse(source, error);
+	auto result = ParserValue(AstDataType::String, "text/plane").parse(source, error);
 
 	// Then
 	QVERIFY(result != nullptr);
@@ -395,7 +444,7 @@ void TestConsoleModule::testCommandParser_ParseMultilineTextValue_ShouldReturnAs
 	std::optional<ParseError> error;
 
 	// When
-	auto result = ParserValue().parse(source, error);
+	auto result = ParserValue(AstDataType::String, "text/plane").parse(source, error);
 
 	// Then
 	QVERIFY(result != nullptr);
@@ -481,5 +530,3 @@ void TestConsoleModule::testCommandParser_SourceCursorReadUntil_ShouldReturnText
 }
 
 
-QTEST_MAIN(TestConsoleModule)
-#include "test_command_parsers.moc"

@@ -1,0 +1,31 @@
+#pragma once
+
+#include <QtTest/QtTest>
+
+class TestConsoleModule : public QObject {
+	Q_OBJECT
+
+private slots:
+
+	// test_command_parsers
+	void testCommandParser_SourceCursorReadUntil_ShouldReturnTextBetweenQuotesMarkers();
+	void testCommandParser_ParseAttributesCollection_ShouldReturnAttribetes();
+	void testCommandParser_ParseInclude_ShouldReturnIncludeAstWithPath();
+	void testCommandParser_ParseSingleTextValue_ShouldReturnAstValue();
+	void testCommandParser_ParseMultilineTextValue_ShouldReturnAstValue();
+	void testCommandParser_ParseUntypedVariableWithoutRValue_ShouldReturnError();
+	void testCommandParser_ParseTypedVariable_ShouldReturnVariableDeclarationWithoutValue();
+	void testCommandParser_ParseTypedVariableWithValue_ShouldCompareLTypeAndRType();
+	void testCommandParser_ParseTypedVariableWithValue_ShouldRequridTypeMustCorrecponded_data();
+	void testCommandParser_ParseTypedVariableWithValue_ShouldRequridTypeMustCorrecponded();
+	void testCommandParser_ParseRValueTypedVariable_ShouldReturnVariableDeclarationWithValue();
+	void testCommandParser_ParseVariableWithBinding_ShouldReturnVariableDeclarationWithBindName();
+	void testCommandParser_ParseObject_ShouldReturnObjectWithFields();
+	void testCommandParser_ParseBoolValue_ShouldReturnTrueFalseValue_data();
+	void testCommandParser_ParseBoolValue_ShouldReturnTrueFalseValue();
+	void testCommandParser_ParseNumberValue_ShouldReturnPositiveOrNegativeNumber_data();
+	void testCommandParser_ParseNumberValue_ShouldReturnPositiveOrNegativeNumber();
+
+	// test_command_context
+	void testCommandContext_BuildChildContext();
+};
