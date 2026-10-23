@@ -13,6 +13,7 @@ set(Test-Mocks
 # Поддиректории с тестами
 add_subdirectory(items_service)
 add_subdirectory(inventories_service)
+add_subdirectory(console_module)
 
 # Включаем тесты в CTest
 enable_testing()
@@ -20,6 +21,6 @@ enable_testing()
 # Цель для запуска всех тестов
 add_custom_target(run_tests
     COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
-    DEPENDS TestItemsService TestInventoriesService
+    DEPENDS TestItemsService TestInventoriesService TestConsoleModule
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )

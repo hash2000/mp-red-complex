@@ -69,6 +69,8 @@ public:
 	void reset();
 	void finish();
 
+	long lastInsert() const;
+
 private:
 	class Private;
 	std::unique_ptr<Private> d;

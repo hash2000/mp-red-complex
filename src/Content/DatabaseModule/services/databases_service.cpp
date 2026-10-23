@@ -3,9 +3,13 @@
 #include "Libs/Resources/db/sqlite/sqlite_connection.h"
 #include "Libs/Resources/db/sqlite/sqlite_wal_manager.h"
 #include "Libs/Resources/db/sqlite/migration_manager.h"
+#include "Libs/Resources/resources.h"
+#include "Libs/Resources/directories/directories_context.h"
+#include "Libs/Base/crypto/security_buffer.h"
 
 #include "Content/DatabaseModule/migrations/game_migrations.h"
-#include "Content/DatabaseModule/migrations/users_migrations.h"
+#include "Content/DatabaseModule/migrations/accounts_migrations.h"
+#include "Content/DatabaseModule/migrations/fetch_api_migrations.h"
 
 #include <QApplication>
 #include <QDir>
@@ -25,13 +29,24 @@ public:
 		bool initialized = false;
 	};
 
+	struct DatabaseAlias {
+		QString path;
+		bool encrypted = false;
+	};
+
+	std::unique_ptr<SecureBuffer> encryptionKey; // Ключ для SQLCipher (32 байта)
+	std::map<QString, DatabaseAlias> aliases;
 	std::map<QString, DatabaseEntry> entries;
 	std::map<QString, std::function<void (MigrationManager*)>> migrations;
 	Resources* resources;
 	IDatabaseSettingsDataProvider* settingsDataProvider;
+
+	void appendAlias(DirectoryPath path, const QString& alias, bool encripted);
 };
 
-DatabasesService::DatabasesService(Resources* resources, IDatabaseSettingsDataProvider* settingsDataProvider, QObject* parent)
+DatabasesService::DatabasesService(Resources* resources,
+	IDatabaseSettingsDataProvider* settingsDataProvider,
+	QObject* parent)
 	: QObject(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->resources = resources;
@@ -39,8 +54,11 @@ DatabasesService::DatabasesService(Resources* resources, IDatabaseSettingsDataPr
 
 	d->migrations = {
 		{ "game", [](MigrationManager* manager) { GameMigrations::build(manager); } },
-		{ "users", [](MigrationManager* manager) { UsersMigrations::build(manager); } },
+		{ "accounts", [](MigrationManager* manager) { AccountsMigrations::build(manager); } },
+		{ "fetch_api", [](MigrationManager* manager) { FetchApiMigrations::build(manager); } },
 	};
+
+	reloadAliases();
 
 	// shutdown application
 	connect(qApp, &QApplication::aboutToQuit, this, &DatabasesService::onApplicationShutdown);
@@ -48,26 +66,39 @@ DatabasesService::DatabasesService(Resources* resources, IDatabaseSettingsDataPr
 
 DatabasesService::~DatabasesService() = default;
 
+
 void DatabasesService::onApplicationShutdown() {
 	shutdown();
+}
+
+void DatabasesService::reloadAliases() {
+	d->aliases.clear();
+	d->appendAlias(DirectoryPath::AccountsDbFile, "accounts", false);
+	d->appendAlias(DirectoryPath::GameDbFile, "game", true);
+	d->appendAlias(DirectoryPath::FetchApiDbFile, "fetch_api", false);
+	d->appendAlias(DirectoryPath::MessangerDbFile, "messanger", true);
+}
+
+void DatabasesService::Private::appendAlias(DirectoryPath path, const QString& alias, bool encrypted) {
+	 const auto dir = resources->Directories.get(path);
+	 if (!dir) {
+		 return;
+	 }
+
+	 auto &it = aliases[alias.toLower()];
+	 it.path = dir.value().absolutePath();
+	 it.encrypted = encrypted;
 }
 
 void DatabasesService::shutdown() {
 	for (auto& entry : d->entries) {
 		auto& db = entry.second;
 
-		if (db.initialized) {
-			// Останавливаем авто-checkpoint
-			db.walManager->stopAutoCheckpoint();
-
-			// Финальный checkpoint
-			db.walManager->checkpoint(SQLiteWalManager::TRUNCATE);
-
-			// Оптимизация
-			db.connection->execute("PRAGMA optimize");
-
-			// Закрываем соединение
-			db.connection.reset();
+		if (db.initialized) {			
+			db.walManager->stopAutoCheckpoint(); // Останавливаем авто-checkpoint
+			db.walManager->checkpoint(SQLiteWalManager::TRUNCATE); // Финальный checkpoint
+			db.connection->execute("PRAGMA optimize");// Оптимизация
+			db.connection.reset(); // Закрываем соединение
 		}
 	}
 
@@ -77,6 +108,24 @@ void DatabasesService::shutdown() {
 
 SQLiteConnection* DatabasesService::connection(const QString& name) {
 	const auto identName = name.toLower();
+	const auto dbPathIt = d->aliases.find(identName);
+
+	if (dbPathIt == d->aliases.end()) {
+		qCritical() << "Undefined database alias:" << name;
+		return nullptr;
+	}
+
+	const auto dbAlies = dbPathIt->second;
+	const auto dbPath = dbAlies.path;
+
+	QFileInfo fileInfo(dbPath);
+	if (!fileInfo.absoluteDir().exists()) {
+		if (!QDir().mkpath(fileInfo.absolutePath())) {
+			qCritical() << "Failed to create directory:" << fileInfo.absolutePath();
+			return nullptr;
+		}
+	}
+
 	const auto& db = d->entries.find(identName);
 	if (db != d->entries.end()) {
 		return db->second.connection.get();
@@ -89,8 +138,15 @@ SQLiteConnection* DatabasesService::connection(const QString& name) {
 	}
 
 	Private::DatabaseEntry entry;
-	entry.connection = std::make_unique<SQLiteConnection>(d->resources);
-	if (!entry.connection->open(identName)) {
+	entry.connection = std::make_unique<SQLiteConnection>();
+	auto connectionString = QString("file=%1;").arg(dbPath);
+
+	if (dbAlies.encrypted) {
+		connectionString += QString("token=%1;")
+			.arg(d->encryptionKey->toHex());
+	}
+
+	if (!entry.connection->open(connectionString)) {
 		qCritical() << "Failed to open database:" << name;
 		return nullptr;
 	}
@@ -120,4 +176,23 @@ SQLiteConnection* DatabasesService::connection(const QString& name) {
 	}	
 
 	return conn;
+}
+
+void DatabasesService::setEncryptionKey(const QByteArray& data) {
+	if (data.size() == 0) {
+		return;
+	}
+
+	if (!d->encryptionKey) {
+		d->encryptionKey = std::make_unique<SecureBuffer>(data.size());
+	}
+
+	d->encryptionKey->setData(data);
+	return;
+}
+
+void DatabasesService::cleadEncryptionKey() {
+
+	shutdown();
+	d->encryptionKey->clear();
 }

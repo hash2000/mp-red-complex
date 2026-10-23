@@ -6,7 +6,7 @@
 class CodeEditorWindow : public MdiChildWindow {
 	Q_OBJECT
 public:
-	explicit CodeEditorWindow(const QString& id, QWidget* parent = nullptr);
+	explicit CodeEditorWindow(const QString& id, std::shared_ptr<CommandContext> context, QWidget* parent = nullptr);
 	~CodeEditorWindow() override;
 
 	QString windowType() const override { return "code-editor"; }
@@ -15,7 +15,7 @@ public:
 	QString help() const;
 	void formatDocument();
 
-	bool handleCommand(const std::shared_ptr<Instruction> instruction, CommandContext* context) override;
+	bool handleCommand(const std::shared_ptr<Instruction> instruction) override;
 
 private slots:
 	void onOpenDocumentClick();

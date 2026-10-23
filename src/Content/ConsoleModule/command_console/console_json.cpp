@@ -188,7 +188,7 @@ JsonNode ConsoleJson::Private::buildNode(const QJsonDocument& doc, const QString
 	if (doc.isObject()) {
 		node.type = "object";
 		QJsonObject obj = doc.object();
-		for (auto it = obj.begin(); it != obj.end(); ++it) {
+		for (auto it = obj.begin(); it != obj.end(); it++) {
 			node.children.append(buildNode(it.value(), it.key(), depth + 1));
 		}
 		node.value = QString("{%1}").arg(obj.size());
@@ -197,7 +197,7 @@ JsonNode ConsoleJson::Private::buildNode(const QJsonDocument& doc, const QString
 		node.type = "array";
 		QJsonArray arr = doc.array();
 		if (style.collapseLongArrays && arr.size() > style.maxArrayItems) {
-			for (int i = 0; i < qMin(arr.size(), style.maxArrayItems); ++i) {
+			for (int i = 0; i < qMin(arr.size(), style.maxArrayItems); i++) {
 				node.children.append(buildNode(arr[i], QString::number(i), depth + 1));
 			}
 			// Добавляем информацию о пропущенных элементах
@@ -209,7 +209,7 @@ JsonNode ConsoleJson::Private::buildNode(const QJsonDocument& doc, const QString
 			node.children.append(moreNode);
 		}
 		else {
-			for (int i = 0; i < arr.size(); ++i) {
+			for (int i = 0; i < arr.size(); i++) {
 				node.children.append(buildNode(arr[i], QString::number(i), depth + 1));
 			}
 		}
@@ -339,7 +339,7 @@ QString ConsoleJson::Private::renderValue(const QJsonValue& value, int depth, co
 
 			// Рендерим все свойства объекта
 			bool first = true;
-			for (auto it = obj.begin(); it != obj.end(); ++it) {
+			for (auto it = obj.begin(); it != obj.end(); it++) {
 				if (!first) {
 					html += QString("<span class=\"json-punctuation\" style=\"color: %1;\">,</span>")
 						.arg(style.punctuationColor);
@@ -369,7 +369,7 @@ QString ConsoleJson::Private::renderValue(const QJsonValue& value, int depth, co
 			html += "<div class=\"json-children\">";
 
 			// Рендерим элементы массива
-			for (int i = 0; i < itemsToShow; ++i) {
+			for (int i = 0; i < itemsToShow; i++) {
 				if (i > 0) {
 					html += QString("<span class=\"json-punctuation\" style=\"color: %1;\">,</span>")
 						.arg(style.punctuationColor);

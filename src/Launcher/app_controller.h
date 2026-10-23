@@ -11,7 +11,7 @@ public:
 	ApplicationController(Resources* resources, QObject* parent = nullptr);
 	~ApplicationController();
 
-	std::unique_ptr<ServicesRegistry> createServices() override;
+	ServicesRegistry* services() const override;
 	CommandProcessor* commandProcessor() const override;
 	Controllers* controllers() const;
 

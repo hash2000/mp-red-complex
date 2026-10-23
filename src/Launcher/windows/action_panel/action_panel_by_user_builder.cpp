@@ -12,9 +12,9 @@ public:
 	UsersService* usersService;
 
 	void addProfileButton() {
-		QString cmd = QString("windows action:create target:user-profile id:%1")
-			.arg(usersService->currentUserId());
-		panel->addButton(ActionButtonConfig("Profile", "👤", "Профиль", cmd, 1));
+		//QString cmd = QString("windows action:create target:user-profile id:%1")
+		//	.arg(usersService->currentUserId());
+		//panel->addButton(ActionButtonConfig("Profile", "👤", "Профиль", cmd, 1));
 	}
 
 	void addChestButton() {

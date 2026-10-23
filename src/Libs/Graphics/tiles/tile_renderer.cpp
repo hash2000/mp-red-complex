@@ -250,7 +250,7 @@ bool TileRenderer::isChunkVisible(const Chunk* chunk, const Camera& camera, int 
 	// Запас на размер чанка (чтобы рисовать чанки, которые частично видны)
 	const float margin = 2.0f;
 
-	for (int i = 0; i < 4; ++i) {
+	for (int i = 0; i < 4; i++) {
 		QVector4D clipSpace = mvp * QVector4D(corners[i], 1.0f);
 		auto w = clipSpace.w();
 		if (w > 0) {

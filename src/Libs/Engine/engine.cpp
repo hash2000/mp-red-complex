@@ -17,6 +17,7 @@ void Engine::setup(Config* config, Resources* resources) {
 	config->loadSettings();
 	resources->configure(config);
 	resources->load();
+	resources->loadProfile();
 
 	registerTypes();
 }

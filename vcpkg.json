@@ -7,8 +7,12 @@
 				"opengl",
 				"openssl",
 				"dnslookup",
-				"concurrent"
+				"concurrent",
+				"windeployqt"
 			]
+		},
+		{
+			"name": "qtsvg"
 		},
 		{
 			"name": "zlib"
@@ -17,7 +21,13 @@
 			"name": "entt"
 		},
 		{
-			"name": "sqlite3"
+			"name": "libsodium"
+		},
+		{
+			"name": "sqlcipher",
+			"features": [
+				"json1"
+			]
 		},
 		{
 			"name": "openssl",

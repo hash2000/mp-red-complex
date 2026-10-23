@@ -20,7 +20,8 @@ public:
 
 	std::unique_ptr<CommandProcessor> commandProcessor;
 	std::unique_ptr<Controllers> controllers;
-	std::unique_ptr<Services> services;
+	std::unique_ptr<Services> servicesBuilder;
+	std::unique_ptr<ServicesRegistry> services;
 };
 
 ApplicationController::ApplicationController(Resources* resources, QObject* parent)
@@ -28,7 +29,7 @@ ApplicationController::ApplicationController(Resources* resources, QObject* pare
 	, CommandController(resources, parent) {
 	d->commandProcessor = std::make_unique<CommandProcessor>(resources);
 	d->controllers = std::make_unique<Controllers>(this);
-	d->services = std::make_unique<Services>(resources);
+	d->servicesBuilder = std::make_unique<Services>(resources);
 }
 
 ApplicationController::~ApplicationController() = default;
@@ -49,8 +50,11 @@ CommandProcessor* ApplicationController::commandProcessor() const {
 	return d->commandProcessor.get();
 }
 
-std::unique_ptr<ServicesRegistry> ApplicationController::createServices() {
-	return d->services->create();
+ServicesRegistry* ApplicationController::services() const {
+	if (!d->services) {
+		d->services = d->servicesBuilder->create();
+	}
+	return d->services.get();
 }
 
 Controllers* ApplicationController::controllers() const {

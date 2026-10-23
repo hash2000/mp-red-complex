@@ -23,7 +23,7 @@ public:
 	Private(FetchApiCommand* parent) : q(parent) {}
 	FetchApiCommand* q;
 
-	bool sendRequest(CommandContext* context,
+	bool sendRequest(std::shared_ptr<CommandContext> context,
 		const QString& method,
 		const QString& location,
 		const QString& headers,
@@ -31,7 +31,7 @@ public:
 		bool showEditor
 		);
 
-	bool showSsl(CommandContext* context);
+	bool showSsl(std::shared_ptr<CommandContext> context);
 };
 
 
@@ -50,38 +50,39 @@ QString FetchApiCommand::help() const {
 	)";
 }
 
-bool FetchApiCommand::Private::sendRequest(CommandContext* context,
+bool FetchApiCommand::Private::sendRequest(std::shared_ptr<CommandContext> context,
 	const QString& method,
 	const QString& location,
 	const QString& headers,
 	const QByteArray& body,
 	bool showEditor
 ) {
-	auto services = context->services();
+	const auto controller = context->commandController();
+	const auto services = controller->services();
 	auto fetchService = services->get<FetchApiService>();
 
 	if (location.isEmpty()) {
-		context->printError("fetch-api. Empty location");
+		controller->printError("fetch-api. Empty location");
 		return false;
 	}
 
 	FetchApiOpt opt(location, std::map<QString, QString>(), headers);
 
 	if (!opt.setMethod(method)) {
-		context->printError(QString("fetch-api. Unknown action. %1")
+		controller->printError(QString("fetch-api. Unknown action. %1")
 			.arg(method));
 		return false;
 	}
 	opt.setBody(body);
 
 	fetchService->fetchRequest(opt,
-		[context, showEditor] (int statusCode, const QByteArray& data, const QHttpHeaders& headers) {
+		[controller, showEditor] (int statusCode, const QByteArray& data, const QHttpHeaders& headers) {
 			QString contentType = QString::fromUtf8(headers.value("Content-Type"));
-			context->printSuccess(QString("fetch-api %1 %2 bytes")
+			controller->printSuccess(QString("fetch-api %1 %2 bytes")
 				.arg(statusCode)
 				.arg(data.length()));
 			if (showEditor) {
-				context->commandController()->executeCommand("windows", {
+				controller->executeCommand("windows", {
 					{ "action", "create" },
 					{ "target", "code-editor" },
 					{ "format-document", "true" },
@@ -90,8 +91,8 @@ bool FetchApiCommand::Private::sendRequest(CommandContext* context,
 					});
 			}
 		},
-		[context] (int errorCode, const QString& errorString, const QHttpHeaders& headers) {
-			context->printError(QString("fetch-api %1 %2")
+		[controller] (int errorCode, const QString& errorString, const QHttpHeaders& headers) {
+		controller->printError(QString("fetch-api %1 %2")
 				.arg(errorCode)
 				.arg(errorString));
 		},
@@ -102,25 +103,29 @@ bool FetchApiCommand::Private::sendRequest(CommandContext* context,
 	return true;
 }
 
-bool FetchApiCommand::Private::showSsl(CommandContext* context) {
+bool FetchApiCommand::Private::showSsl(std::shared_ptr<CommandContext> context) {
+	const auto controller = context->commandController();
 	ConsoleTable table({ "Option", "Value" });
 	table.addRow({ "SSL Support", QSslSocket::supportsSsl() });
 	table.addRow({ "Backend", QSslSocket::activeBackend() });
 	table.addRow({ "OpenSSL build", QSslSocket::sslLibraryBuildVersionString() });
 	table.addRow({ "OpenSSL runtime", QSslSocket::sslLibraryVersionString() });
 
-	context->print(table);
+	controller->print(table);
 	return true;
 }
 
-bool FetchApiCommand::execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
+bool FetchApiCommand::execute(const std::shared_ptr<Instruction> instruction, std::shared_ptr<CommandContext> context) {
+	const auto controller = context->commandController();
 	const auto action = instruction->text("action");
 	if (action.isEmpty()) {
-		context->printError(QString("Usage: %1").arg(help()));
+		controller->printError(QString("Usage: %1").arg(help()));
 		return false;
 	}
 
-	if (action == "show-ssl") return d->showSsl(context);
+	if (action == "show-ssl") {
+		return d->showSsl(context);
+	}
 
 	const auto showEditor = instruction->text("show-editor", "false") != "false";
 	auto body = instruction->parameter("body")

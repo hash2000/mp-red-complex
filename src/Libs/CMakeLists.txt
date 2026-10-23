@@ -1,4 +1,5 @@
 add_subdirectory(Base)
+add_subdirectory(BaseWidgets)
 add_subdirectory(Resources)
 add_subdirectory(Graphics)
 add_subdirectory(Engine)

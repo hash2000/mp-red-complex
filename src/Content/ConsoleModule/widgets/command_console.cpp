@@ -159,7 +159,6 @@ public:
 	Private(CommandConsole* parent) :	q(parent) { }
 	CommandConsole* q;
 
-	CommandContext* context = nullptr;
 	CommandController* controller = nullptr;
 
 	// UI элементы
@@ -202,13 +201,12 @@ CommandConsole::CommandConsole(CommandController* controller, QWidget* parent)
 	, QWidget(parent, Qt::WindowFlags(Qt::Dialog | Qt::WindowStaysOnTopHint))
 {
 	d->controller = controller;
-	d->context = controller->commandContext();
 
 	d->setupUi();
 	d->setupOutputStyling();
 
 	// Подключение сигналов контекста
-	connect(d->context, &CommandContext::outputRequested, this, &CommandConsole::onOutputRequested);
+	connect(d->controller, &CommandController::outputRequested, this, &CommandConsole::onOutputRequested);
 
 	// Приветственное сообщение
 	appendMessage("Command Console ready. Type 'help' for available commands.", "system");
@@ -357,7 +355,7 @@ void CommandConsole::Private::executeCommand(const QString& command) {
 
 	// Выполнение
 	if (controller && controller->commandProcessor()) {
-		controller->commandProcessor()->execute(command, context);
+		controller->commandProcessor()->execute(command, controller->globalContext());
 	}
 	else {
 		q->appendMessage("Error: Command processor not available", "error");
@@ -412,9 +410,15 @@ void CommandConsole::Private::cleanLatestMessages() {
 }
 
 void CommandConsole::onOutputRequested(const QString& message, const QString& styleClass, const QString& type) {
-	if (type == kCommandPrintStyle_Plane) appendMessage(message, styleClass);
-	else if (type == kCommandPrintStyle_Table) d->appendTable(message, styleClass);
-	else if (type == kCommandPrintStyle_Json) d->appendJson(message, styleClass);
+	if (type == kCommandPrintStyle_Plane) {
+		appendMessage(message, styleClass);
+	}
+	else if (type == kCommandPrintStyle_Table) {
+		d->appendTable(message, styleClass);
+	}
+	else if (type == kCommandPrintStyle_Json) {
+		d->appendJson(message, styleClass);
+	}
 
 	d->cleanLatestMessages();
 	auto sb = d->outputArea->verticalScrollBar();

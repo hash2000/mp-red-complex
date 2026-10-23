@@ -8,7 +8,7 @@ class Resources;
 
 class FormatterPluginManager {
 public:
-	FormatterPluginManager(const QString& toolsPath);
+	FormatterPluginManager(Resources* resources);
 	~FormatterPluginManager();
 
 	void registerPlugin(std::unique_ptr<FormatterPlugin> plugin);

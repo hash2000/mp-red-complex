@@ -1,6 +1,7 @@
 #include "Launcher/commands/windows/windows_list.h"
 #include "Content/ConsoleModule/processors/command_processor.h"
 #include "Content/ConsoleModule/command_context.h"
+#include "Content/ConsoleModule/command_controller.h"
 #include "Content/ConsoleModule/command_console/console_table.h"
 #include "Content/ConsoleModule/command_console/console_image.h"
 #include "Content/ConsoleModule/models/instruction.h"
@@ -11,19 +12,20 @@
 #include "Launcher/controllers/windows_controller.h"
 
 namespace WindowsNs {
-bool handleList(CommandContext* context, Controllers* controllers) {
-	auto controller = controllers->windowsController();
-	auto entries = controller->windowEntries();
+bool handleList(std::shared_ptr<CommandContext> context, Controllers* controllers) {
+	const auto wndController = controllers->windowsController();
+	const auto cmdController = context->commandController();
+	auto entries = wndController->windowEntries();
 
 	if (entries.isEmpty()) {
-		context->print("No windows open", "info");
+		cmdController->print("No windows open", "info");
 		return true;
 	}
 
-	auto activeEntry = controller->activeWindowEntry();
+	auto activeEntry = wndController->activeWindowEntry();
 	QString activeId = activeEntry.second;
 
-	context->print(QString("Open windows (%1):")
+	cmdController->print(QString("Open windows (%1):")
 		.arg(entries.size()), "system");
 
 	ConsoleTable table({ "..", "Id", "Title", "Type", "Status" });
@@ -50,7 +52,7 @@ bool handleList(CommandContext* context, Controllers* controllers) {
 			(windowId == activeId) ? "success" : "info"
 			});
 
-		context->print(table);
+		cmdController->print(table);
 	}
 
 	return true;

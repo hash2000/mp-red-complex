@@ -11,7 +11,7 @@
 #include "Launcher/windows/action_panel/action_panel_widget.h"
 #include "Content/UsersModule/services/users_service.h"
 #include "Content/UsersModule/models/user_view.h"
-#include "Content/BaseWidgets/mdi_area.h"
+#include "Libs/BaseWidgets/mdi_area.h"
 #include "Libs/Resources/resources.h"
 #include "Libs/Engine/services/services_registry.h"
 
@@ -65,7 +65,10 @@ LauncherMainFrame::LauncherMainFrame(Resources* resources)
 		onToggleCommandConsole(newState);
 		});
 
-	auto userService = d->commandController->commandContext()->services()->get<UsersService>();
+	const auto context = d->commandController->globalContext();
+	const auto services = context->commandController();
+
+	auto userService = services->services()->get<UsersService>();
 	if (userService) {
 		connect(userService, &UsersService::loggedOut, this, &LauncherMainFrame::onUserLogout);
 		connect(userService, &UsersService::loginSuccess, this, &LauncherMainFrame::onUserLogin);
@@ -98,6 +101,7 @@ void LauncherMainFrame::Private::setupMdiArea(LauncherMainFrame* parent) {
 }
 
 void LauncherMainFrame::Private::setupConsole() {
+
 	commandController = std::make_unique<ApplicationController>(resources);
 	commandController->init();
 	commandConsole = new CommandConsole(commandController.get(), q);
@@ -120,10 +124,10 @@ void LauncherMainFrame::Private::setupConsole() {
 void LauncherMainFrame::Private::setupView() {
 
 	// Горизонтальный сплиттер для основной области и панели действий
-	auto* horizontalSplitter = new QSplitter(Qt::Horizontal);
+	auto horizontalSplitter = new QSplitter(Qt::Horizontal);
 
 	// Вертикальный сплиттер для MDI и консоли
-	auto* verticalSplitter = new QSplitter(Qt::Vertical);
+	auto verticalSplitter = new QSplitter(Qt::Vertical);
 	verticalSplitter->addWidget(mdiArea);
 	verticalSplitter->addWidget(commandConsole);
 	verticalSplitter->setStretchFactor(0, 1);
@@ -144,7 +148,6 @@ void LauncherMainFrame::Private::setupView() {
 
 	q->setCentralWidget(horizontalSplitter);
 
-	// Добавляем кнопку Login
 	setupActionPanel();
 }
 
@@ -170,6 +173,6 @@ void LauncherMainFrame::onUserLogin(const UserView& user) {
 	qDebug() << "User login" << user.data->displayName;
 	ActionPanelByUserBuilder builder(
 		d->commandController->controllers()->actionPanelController(),
-		d->commandController->commandContext()->services()->get<UsersService>());
+		d->commandController->globalContext()->commandController()->services()->get<UsersService>());
 	builder.build();
 }

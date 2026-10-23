@@ -2,7 +2,7 @@
 #include "Content/MaterialsModule/widgets/material_objects/material_object_menu_actions.h"
 #include "Content/MaterialsModule/widgets/material_objects/material_object_node.h"
 #include "Content/MaterialsModule/services/materials_service.h"
-#include "Content/BaseWidgets/properties/properties_list_widget.h"
+#include "Libs/BaseWidgets/properties/properties_list_widget.h"
 
 #include <QSplitter>
 #include <QTreeView>

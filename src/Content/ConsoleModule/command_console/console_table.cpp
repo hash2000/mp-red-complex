@@ -56,7 +56,7 @@ void ConsoleTable::setColumnAlignment(int columnIndex, Alignment alignment) {
 }
 
 void ConsoleTable::setColumnAlignment(const QString& columnName, Alignment alignment) {
-	for (int i = 0; i < _columnData.size(); ++i) {
+	for (int i = 0; i < _columnData.size(); i++) {
 		if (_columnData[i].name == columnName) {
 			_columnData[i].alignment = alignment;
 			return;
@@ -103,7 +103,7 @@ QString ConsoleTable::toHtml() const {
 		for (const QList<QVariant>& row : _rows) {
 			bool useEscapeHtml = true;
 			html += "    <tr>";
-			for (int i = 0; i < row.size() && i < _columnData.size(); ++i) {
+			for (int i = 0; i < row.size() && i < _columnData.size(); i++) {
 				QString cellContent;
 				const QVariant& value = row[i];
 

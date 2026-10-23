@@ -1,13 +1,16 @@
 
+find_package(OpenGL REQUIRED)
 
 find_package(Qt6
 	REQUIRED COMPONENTS
 		Core
 		Gui
 		Widgets
+		OpenGL
 		OpenGLWidgets
 		Network
 		Xml
+		Svg
 		Concurrent
 )
 
@@ -18,7 +21,9 @@ find_package(ZLIB REQUIRED)
 
 find_package(EnTT CONFIG REQUIRED)
 
-find_package(SQLite3 REQUIRED)
+find_package(sqlcipher CONFIG REQUIRED)
 
 find_package(OpenSSL REQUIRED)
+
+find_package(unofficial-sodium CONFIG REQUIRED)
 

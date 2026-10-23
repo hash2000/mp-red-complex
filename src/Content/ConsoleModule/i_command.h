@@ -14,7 +14,7 @@ public:
 	virtual ~ICommand() = default;
 
 	// Выполнение команды
-	virtual bool execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) = 0;
+	virtual bool execute(const std::shared_ptr<Instruction> instruction, std::shared_ptr<CommandContext> context) = 0;
 
 	// Название команды (для вызова из консоли)
 	virtual QString name() const = 0;

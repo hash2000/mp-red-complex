@@ -1,133 +1,186 @@
 #include "Content/UsersModule/services/users_service.h"
-#include "Content/UsersModule/data_providers/users/i_users_data_provider.h"
+#include "Content/UsersModule/data_providers/users_registry/i_users_registry_data_provider.h"
 #include "Content/UsersModule/models/user_view.h"
+#include "Content/DatabaseModule/services/databases_service.h"
 #include "Content/TexturesModule/services/images_service.h"
-#include "Content/TexturesModule/data_providers/i_images_data_provider.h"
+#include "Content/UsersModule/extensions/crypto_extensions.h"
+
+#include "Libs/Base/crypto/bip_39.h"
+#include "Libs/Resources/resources.h"
 
 #include <QCryptographicHash>
-#include <QUuid>
+#include <QByteArray>
+#include <QFile>
+#include <QCryptographicHash>
+
+#include <sodium.h>
 
 class UsersService::Private {
 public:
 	Private(UsersService* parent) : q(parent) { }
 	UsersService* q;
 
-	IUsersDataProvider* usersDataProvider = nullptr;
+	IUsersRegistryDataProvider* usersRegistryDataProvider = nullptr;
 	ImagesService* imagesService = nullptr;
-	std::shared_ptr<UserView> currentUser;
+	DatabasesService* databasesService = nullptr;
+	Resources* resources;
+	QString currentUserHash;
+	QByteArray encryptedSeed;
 
-	/// Создать хэш пароля
-	static QString hashPassword(const QString& password) {
-		return QCryptographicHash::hash(password.toUtf8(), QCryptographicHash::Sha256).toHex();
-	}
-
-	static QString hashLogin(const QString& login) {
-		return QCryptographicHash::hash(login.toUtf8(), QCryptographicHash::Sha256).toHex();
-	}
-
-	std::shared_ptr<UserView> loadUser(const QString& id);
+	// Читаем зашифрованную seed-фразу из файла
+	static bool loadEncryptedSeed(
+		const QDir& profilePath,
+		const QString& userHash,
+		QByteArray& outSalt,
+		QByteArray& outEncryptedSeed);
 };
 
 UsersService::UsersService(
-	IUsersDataProvider* usersDataProvider,
+	Resources* resources,
+	DatabasesService* databasesService,
+	IUsersRegistryDataProvider* usersRegistryDataProvider,
 	ImagesService* imagesService,
 	QObject* parent)
 	: QObject(parent)
 	, d(std::make_unique<Private>(this)) {
-	d->usersDataProvider = usersDataProvider;
+	d->resources = resources;
+	d->usersRegistryDataProvider = usersRegistryDataProvider;
+	d->databasesService = databasesService;
 	d->imagesService = imagesService;
 }
 
 UsersService::~UsersService() = default;
 
-std::optional<QString> UsersService::login(const QString& login, const QString& password) {
+bool UsersService::login(const QString& username, const QString& password) {
+	using namespace Extensions::Users::Crypto;
+
 	if (isAuthenticated()) {
 		logout();
 	}
 
-	const auto loginHash = Private::hashLogin(login);
-	auto user = d->loadUser(loginHash);
-	if (!user) {
-		qWarning() << "User not found" << login;
-		return std::nullopt;
+	try {
+		const QString userHash = d->usersRegistryDataProvider->getUserHashByUsername(username);
+		if (userHash.isEmpty()) {
+			throw std::runtime_error("Username is not registered.");
+		}
+
+		auto profile_path = d->resources->createProfilePath(userHash, true);
+		if (!profile_path) {
+			throw std::runtime_error("Can't open user profile path.");
+		}
+
+		// 1. Читаем зашифрованную seed-фразу из файла
+		QByteArray salt, encryptedSeed;
+		if (!Private::loadEncryptedSeed(profile_path.value(), userHash, salt, encryptedSeed)) {
+			throw std::runtime_error("User not found or auth file corrupted");
+		}
+
+		// 2. Выводим ключ шифрования из пароля
+		QByteArray encKey = deriveEncryptionKey(password, salt);
+
+		// 3. Расшифровываем seed-фразу
+		QString seedPhraseStr;
+		try {
+			seedPhraseStr = decryptSeedPhrase(encryptedSeed, encKey);
+		}
+		catch (const std::exception& e) {
+			sodium_memzero(encKey.data(), encKey.size());
+			throw std::runtime_error("Invalid password");
+		}
+
+		// 4. Парсим seed-фразу
+		QStringList seedPhrase = seedPhraseStr.split(' ', Qt::SkipEmptyParts);
+
+		// 5. Получаем мастер-сид из seed-фразы
+		Bip39 bip39(d->resources);
+		QByteArray masterSeed = bip39.mnemonicToSeed(seedPhrase);
+
+		// 6. Проверяем, что user_hash совпадает
+		QString computedHash = computeUserHash(masterSeed);
+		if (computedHash != userHash) {
+			sodium_memzero(masterSeed.data(), masterSeed.size());
+			sodium_memzero(encKey.data(), encKey.size());
+			throw std::runtime_error("User hash mismatch (data corruption?)");
+		}
+
+		QByteArray dbKey;
+		try {
+			// 7. Выводим ключ для БД
+			dbKey = deriveDatabaseKey(masterSeed);
+		}
+		catch (const std::exception& e) {
+			sodium_memzero(masterSeed.data(), masterSeed.size());
+			sodium_memzero(encKey.data(), encKey.size());
+			throw std::runtime_error("Invalid master seed");
+		}
+
+		// 8. Устанавливаем контекст пользователя
+		d->currentUserHash = userHash;
+		d->resources->loadProfile(userHash);
+		d->databasesService->setEncryptionKey(dbKey);
+		d->databasesService->reloadAliases();
+		d->encryptedSeed = encryptedSeed;
+
+		// 9. Очищаем чувствительные данные
+		sodium_memzero(masterSeed.data(), masterSeed.size());
+		sodium_memzero(encKey.data(), encKey.size());
+		sodium_memzero(dbKey.data(), dbKey.size());
+
+		qDebug() << "User logged in successfully. Hash:" << userHash;
+	}
+	catch (const std::exception& e) {
+		qCritical() << "Login failed:" << e.what();
+		return false;
 	}
 
-	QString passwordHash = Private::hashPassword(password);
-
-	if (user->data->passwordHash != passwordHash) {
-		return std::nullopt;
-	}
-
-	// Успешный вход
-	d->currentUser = user;
-
-	emit loginSuccess(*user);
-
-	return user->data->loginHash;
+	return true;
 }
 
 void UsersService::logout() {
-	d->currentUser.reset();
+	d->encryptedSeed.clear();
+	d->currentUserHash.clear();
+	d->resources->loadProfile();
+	d->databasesService->cleadEncryptionKey();
+	d->databasesService->reloadAliases();
+
 	emit loggedOut();
 }
 
 bool UsersService::isAuthenticated() const {
-	return (bool)d->currentUser;
+	return !d->currentUserHash.isEmpty();
 }
 
-std::shared_ptr<UserView> UsersService::Private::loadUser(const QString& id) {
-	if (id.isEmpty()) {
-		return std::shared_ptr<UserView>();
+// Читаем зашифрованную seed-фразу из файла
+bool UsersService::Private::loadEncryptedSeed(
+	const QDir& profilePath,
+	const QString& userHash,
+	QByteArray& outSalt,
+	QByteArray& outEncryptedSeed) {
+
+	const auto path = profilePath.filePath("auth.enc");
+	QFile file(path);
+	if (!file.open(QIODevice::ReadOnly)) {
+		return false;
 	}
 
-	auto userData = usersDataProvider->loadUser(id);
-	if (!userData) {
-		return std::shared_ptr<UserView>();
+	QByteArray fileData = file.readAll();
+	file.close();
+
+	int saltSize = crypto_pwhash_SALTBYTES;
+	if (fileData.size() < saltSize) {
+		return false;
 	}
 
-	if (!userData->iconPath.isEmpty()) {
-		userData->icon = imagesService->getImage(userData->iconPath, ImageType::Users);
-	}
+	outSalt = fileData.left(saltSize);
+	outEncryptedSeed = fileData.mid(saltSize);
 
-	auto view = std::make_shared<UserView>();
-	view->data = userData;
-	view->permissions = usersDataProvider->permissions(id);
-	view->permissionsFlags.usersCreate = view->permissions.find("--users-create") != view->permissions.end();
-	view->permissionsFlags.usersView  = view->permissions.find("--users-view") != view->permissions.end();
-	view->permissionsFlags.userCanRegisterInGame = view->permissions.find("--user-can-register-in-game") != view->permissions.end();
-	view->permissionsFlags.userCanRegisterInMessages = view->permissions.find("--user-can-register-in-messages") != view->permissions.end();
-	view->permissionsFlags.charactersView = view->permissions.find("--characters-view") != view->permissions.end();
-
-	return view;
+	return true;
 }
 
-std::shared_ptr<UserView> UsersService::currentUser() const {
-	return d->currentUser;
+QString UsersService::currentUserHash() {
+	return d->currentUserHash;
 }
 
-QString UsersService::currentUserId() const {
-	if (!d->currentUser) {
-		return QString();
-	}
-
-	return d->currentUser->data->loginHash;
-}
-
-std::optional<QString> UsersService::registerUser(const QString& login, const QString& password, const QString& displayName) {
-	const auto loginHash = Private::hashLogin(login);
-	auto containsUser = d->usersDataProvider->containsUser(loginHash);
-	if (containsUser) {
-		return std::nullopt;
-	}
-
-	auto user = std::make_shared<UserData>();
-	user->loginHash = loginHash;
-	user->passwordHash = Private::hashPassword(password);
-	user->displayName = displayName.isEmpty() ? login : displayName;
-
-	if (!d->usersDataProvider->saveUser(user)) {
-		return std::nullopt;
-	}
-
-	return user->loginHash;
+QByteArray UsersService::currentUserEncryptedSeed() {
+	return d->encryptedSeed;
 }

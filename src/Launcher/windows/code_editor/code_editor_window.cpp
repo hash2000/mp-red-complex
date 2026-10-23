@@ -30,18 +30,18 @@ public:
 	void changeTargetPath(const QString& path);
 
 	// Команды
-	bool applyInstructionCreate(const std::shared_ptr<Instruction> instruction, CommandContext* context);
-	bool applyInstructionStyle(const std::shared_ptr<Instruction> instruction, CommandContext* context);
-	bool applyInstructionLanguageHighlighter(const std::shared_ptr<Instruction> instruction, CommandContext* context);
-	bool applyInstructionContentTypeHighlighter(const std::shared_ptr<Instruction> instruction, CommandContext* context);
-	bool applyInstructionPlantText(const std::shared_ptr<Instruction> instruction, CommandContext* context);
-	bool applyInstructionFormatDocument(const std::shared_ptr<Instruction> instruction, CommandContext* context);
+	bool applyInstructionCreate(const std::shared_ptr<Instruction> instruction);
+	bool applyInstructionStyle(const std::shared_ptr<Instruction> instruction);
+	bool applyInstructionLanguageHighlighter(const std::shared_ptr<Instruction> instruction);
+	bool applyInstructionContentTypeHighlighter(const std::shared_ptr<Instruction> instruction);
+	bool applyInstructionPlantText(const std::shared_ptr<Instruction> instruction);
+	bool applyInstructionFormatDocument(const std::shared_ptr<Instruction> instruction);
 	bool handleStyleWordWrap(const QString& value);
 	bool handleStyleFont(const QString& value);
 };
 
-CodeEditorWindow::CodeEditorWindow(const QString& id, QWidget* parent)
-	: MdiChildWindow(id, parent)
+CodeEditorWindow::CodeEditorWindow(const QString& id, std::shared_ptr<CommandContext> context, QWidget* parent)
+	: MdiChildWindow(id, context, parent)
 	, d(std::make_unique<Private>(this)) {
 }
 
@@ -99,14 +99,18 @@ void CodeEditorWindow::Private::setupUI(ServicesRegistry* services) {
 	q->setWidget(buttonsContainer);
 }
 
-bool CodeEditorWindow::handleCommand(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
+bool CodeEditorWindow::handleCommand(const std::shared_ptr<Instruction> instruction) {
 	const auto action = instruction->text("action");
 	if (action.isEmpty()) {
 		return false;
 	}
 
-	if (action == "create") return d->applyInstructionCreate(instruction, context);
-	else if (action == "style") return d->applyInstructionStyle(instruction, context);
+	if (action == "create") {
+		return d->applyInstructionCreate(instruction);
+	}
+	else if (action == "style") {
+		return d->applyInstructionStyle(instruction);
+	}
 
 	return false;
 }
@@ -134,27 +138,27 @@ bool CodeEditorWindow::Private::handleStyleFont(const QString& value) {
 	return true;
 }
 
-bool CodeEditorWindow::Private::applyInstructionContentTypeHighlighter(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
+bool CodeEditorWindow::Private::applyInstructionContentTypeHighlighter(const std::shared_ptr<Instruction> instruction) {
 	return this->editor->setContentType(instruction->text("content-type", "text/plane"));
 }
 
-bool CodeEditorWindow::Private::applyInstructionLanguageHighlighter(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
+bool CodeEditorWindow::Private::applyInstructionLanguageHighlighter(const std::shared_ptr<Instruction> instruction) {
 	return this->editor->setLanguage(instruction->text("lang", "txt"));
 }
 
-bool CodeEditorWindow::Private::applyInstructionPlantText(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
+bool CodeEditorWindow::Private::applyInstructionPlantText(const std::shared_ptr<Instruction> instruction) {
 	this->editor->setText(instruction->text("text"));
 	return true;
 }
 
-bool CodeEditorWindow::Private::applyInstructionFormatDocument(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
+bool CodeEditorWindow::Private::applyInstructionFormatDocument(const std::shared_ptr<Instruction> instruction) {
 	if (instruction->text("format-document") == "true") {
 		this->editor->formatDocument();
 	}
 	return true;
 }
 
-bool CodeEditorWindow::Private::applyInstructionStyle(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
+bool CodeEditorWindow::Private::applyInstructionStyle(const std::shared_ptr<Instruction> instruction) {
 	if (!this->editor) {
 		return false;
 	}
@@ -165,8 +169,9 @@ bool CodeEditorWindow::Private::applyInstructionStyle(const std::shared_ptr<Inst
 	return true;
 }
 
-bool CodeEditorWindow::Private::applyInstructionCreate(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
-	auto services = context->services();
+bool CodeEditorWindow::Private::applyInstructionCreate(const std::shared_ptr<Instruction> instruction) {
+	const auto context = q->currentContext();
+	const auto services = context->commandController()->services();
 	const auto path = instruction->text("path");
 	setupUI(services);
 	changeTargetPath(path);
@@ -175,11 +180,11 @@ bool CodeEditorWindow::Private::applyInstructionCreate(const std::shared_ptr<Ins
 		editor->openFile(path);
 	}
 
-	applyInstructionStyle(instruction, context);
-	applyInstructionLanguageHighlighter(instruction, context);
-	applyInstructionContentTypeHighlighter(instruction, context);
-	applyInstructionPlantText(instruction, context);
-	applyInstructionFormatDocument(instruction, context);
+	applyInstructionStyle(instruction);
+	applyInstructionLanguageHighlighter(instruction);
+	applyInstructionContentTypeHighlighter(instruction);
+	applyInstructionPlantText(instruction);
+	applyInstructionFormatDocument(instruction);
 
 	return true;
 }

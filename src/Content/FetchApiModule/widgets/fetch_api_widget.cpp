@@ -1,13 +1,14 @@
 #include "Content/FetchApiModule/widgets/fetch_api_widget.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
-#include "Content/BaseWidgets/key_value/key_value_editor_widget.h"
 
 #include "Content/ConsoleModule/command_context.h"
+#include "Content/ConsoleModule/command_controller.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
 #include "Content/FetchApiModule/models/fetch_opt.h"
 
 #include "Libs/Engine/services/services_registry.h"
 #include "Libs/Base/extensions/text_edit_extensions.h"
+#include "Libs/BaseWidgets/key_value/key_value_editor_widget.h"
 
 #include "Content/CodeEditorWidget/code_editor_widget.h"
 #include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
@@ -36,8 +37,8 @@ public:
 	Private(FetchApiWidget* parent) : q(parent) {}
 	FetchApiWidget* q;
 
+	std::shared_ptr<CommandContext> commandContext;
 	FetchApiService* fetchApiService = nullptr;
-	CommandContext* commandContext = nullptr;
 	QLineEdit* requestUrlEdit = nullptr;
 	QComboBox* requestMethodCombo = nullptr;
 	QPlainTextEdit* requestBodyEdit = nullptr;
@@ -64,11 +65,11 @@ public:
 	void fetchProgress(qint64 received, qint64 total);
 };
 
-FetchApiWidget::FetchApiWidget(CommandContext* commandContext, QWidget* parent)
+FetchApiWidget::FetchApiWidget(std::shared_ptr<CommandContext> commandContext, QWidget* parent)
 	: d(std::make_unique<Private>(this))
 	, QWidget(parent) {
 	d->commandContext = commandContext;
-	d->fetchApiService = commandContext->services()->get<FetchApiService>(),
+	d->fetchApiService = commandContext->commandController()->services()->get<FetchApiService>(),
 	d->setupUI();
 }
 
@@ -184,9 +185,10 @@ void FetchApiWidget::Private::setupUI() {
 	// Вкладки ответа
 	QTabWidget* respTabs = new QTabWidget();
 
+	auto connamdController = commandContext->commandController();
 	responseBodyEdit = new CodeEditorWidget(
-		commandContext->services()->get<HighlightingPluginManager>(),
-		commandContext->services()->get<FormatterPluginManager>());
+		connamdController->services()->get<HighlightingPluginManager>(),
+		connamdController->services()->get<FormatterPluginManager>());
 	responseBodyEdit->setReadOnly(true);
 	responseBodyEdit->setFont(monoFont);
 	responseBodyEdit->setPlaceholderText("Ответ сервера появится здесь...");
@@ -314,7 +316,7 @@ QString FetchApiWidget::Private::formatBytes(qint64 bytes) const {
 
 void FetchApiWidget::Private::setResponseHeaders(const QHttpHeaders& headers) {
 	std::vector<KeyValueEditorWidget::Parameter> parameters;
-	for (qsizetype i = 0; i < headers.size(); ++i) {
+	for (qsizetype i = 0; i < headers.size(); i++) {
 		KeyValueEditorWidget::Parameter parameter;
 		parameter.name = headers.nameAt(i);
 		parameter.value = QString::fromUtf8(headers.valueAt(i));

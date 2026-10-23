@@ -6,7 +6,7 @@ class EchoCommand : public ICommand {
 public:
 	EchoCommand(QObject* parent = nullptr) : ICommand(parent) { }
 
-	bool execute(const std::shared_ptr<Instruction> instruction, CommandContext* context) override;
+	bool execute(const std::shared_ptr<Instruction> instruction, std::shared_ptr<CommandContext> context) override;
 
 	QString name() const override { return "echo"; }
 	QString description() const override { return "Print text"; }

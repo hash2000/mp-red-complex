@@ -4,13 +4,14 @@
 #include <memory>
 
 class MdiChildWindow;
+class CommandContext;
 
 class WindowsBuilder {
 public:
 	WindowsBuilder();
 	~WindowsBuilder();
 
-	MdiChildWindow* build(const QString& name, const QString& id, QWidget* parent);
+	MdiChildWindow* build(const QString& name, const QString& id, std::shared_ptr<CommandContext> context, QWidget* parent);
 
 private:
 	class Private;

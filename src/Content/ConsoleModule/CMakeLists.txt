@@ -1,9 +1,5 @@
 message(STATUS "> Build ConsoleModule")
 
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-set(CMAKE_AUTOUIC ON)
-
 set(ConsoleModule-Sources
 	${RedComplex_SOURCE_DIR}/src/Content/ConsoleModule
 )

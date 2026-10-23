@@ -1,5 +1,6 @@
 #include "Content/ConsoleModule/processors/command_processor.h"
 #include "Content/ConsoleModule/command_context.h"
+#include "Content/ConsoleModule/command_controller.h"
 #include "Content/ConsoleModule/i_command.h"
 #include "Content/ConsoleModule/models/instruction.h"
 #include "Libs/Resources/resources.h"
@@ -20,11 +21,11 @@ public:
 	Resources* resources;
 	std::map<QString, std::unique_ptr<ICommand>> commands;
 
-	static std::shared_ptr<Instruction> parseCommandLine(const QString& line, CommandContext* context);
+	static std::shared_ptr<Instruction> parseCommandLine(const QString& line, std::shared_ptr<CommandContext> context);
 
 	ICommand* findCommandUnsafe(const QString& name) const;
-	void printElapsedTimeForCommand(const QElapsedTimer& timer, bool succes, CommandContext* context);
-	bool executeInstruction(const std::shared_ptr<Instruction> instruction, CommandContext* context);
+	void printElapsedTimeForCommand(const QElapsedTimer& timer, bool succes, std::shared_ptr<CommandContext> context);
+	bool executeInstruction(const std::shared_ptr<Instruction> instruction, std::shared_ptr<CommandContext> context);
 };
 
 CommandProcessor::CommandProcessor(Resources* resources, QObject* parent)
@@ -35,7 +36,8 @@ CommandProcessor::CommandProcessor(Resources* resources, QObject* parent)
 
 CommandProcessor::~CommandProcessor() = default;
 
-std::shared_ptr<Instruction> CommandProcessor::Private::parseCommandLine(const QString& line, CommandContext* context) {
+std::shared_ptr<Instruction> CommandProcessor::Private::parseCommandLine(const QString& line, std::shared_ptr<CommandContext> context) {
+	const auto controller = context->commandController();
 	auto instruction = std::make_shared<Instruction>();
 
 	int pos = 0;
@@ -43,13 +45,13 @@ std::shared_ptr<Instruction> CommandProcessor::Private::parseCommandLine(const Q
 
 	auto skipSpaces = [&]() {
 		while (pos < len && line[pos].isSpace()) {
-			++pos;
+			pos++;
 		}
 	};
 
 	skipSpaces();
 	if (pos >= len) {		
-		return std::shared_ptr<Instruction>();
+		return nullptr;
 	}
 
 	// Имя команды
@@ -70,28 +72,29 @@ std::shared_ptr<Instruction> CommandProcessor::Private::parseCommandLine(const Q
 		const int nameStart = pos;
 		while (pos < len && line[pos] != u':') {
 			if (line[pos].isSpace()) {
-				context->printError(QString("Invalid parameter name. pos %1")
+				controller->printError(QString("Invalid parameter name. pos %1")
 					.arg(pos));
-				return std::shared_ptr<Instruction>();
+				return nullptr;
 			}
 
 			++pos;
 		}
 
 		if (pos >= len) {
-			context->printError(QString("Parameter without ':' delimiter. pos %1")
+			controller->printError(QString("Parameter without ':' delimiter. pos %1")
 				.arg(pos));
-			return std::shared_ptr<Instruction>();
+			return nullptr;
 		}
 
 		const QString paramName = line.mid(nameStart, pos - nameStart);
 		if (paramName.isEmpty()) {
-			context->printError(QString("Empty parameter name. pos %1")
+			controller->printError(QString("Empty parameter name. pos %1")
 				.arg(pos));
-			return std::shared_ptr<Instruction>();
+			return nullptr;
 		}
 
-		++pos; // пропускаем ':'
+		// пропускаем ':'
+		pos++;
 
 		if (pos >= len) {
 			instruction->parameters.insert(paramName, QVariant{ });
@@ -146,10 +149,10 @@ std::shared_ptr<Instruction> CommandProcessor::Private::parseCommandLine(const Q
 				QJsonParseError error;
 				QJsonDocument doc = QJsonDocument::fromJson(content.toUtf8(), &error);
 				if (error.error != QJsonParseError::NoError) {
-					context->printError(QString("Invalid JSON: %1. pos %2")
+					controller->printError(QString("Invalid JSON: %1. pos %2")
 						.arg(error.errorString())
 						.arg(pos));
-					return std::shared_ptr<Instruction>();
+					return nullptr;
 				}
 
 				instruction->parameters.insert(paramName, QVariant::fromValue(doc));
@@ -166,9 +169,9 @@ std::shared_ptr<Instruction> CommandProcessor::Private::parseCommandLine(const Q
 
 				QDomDocument doc;
 				if (!doc.setContent(content)) {
-					context->printError(QString("Invalid XML. pos %1")
+					controller->printError(QString("Invalid XML. pos %1")
 						.arg(pos));
-					return std::shared_ptr<Instruction>();
+					return nullptr;
 				}
 
 				instruction->parameters.insert(paramName, QVariant::fromValue(doc));
@@ -246,50 +249,54 @@ std::shared_ptr<Instruction> CommandProcessor::Private::parseCommandLine(const Q
 	return instruction;
 }
 
-void CommandProcessor::Private::printElapsedTimeForCommand(const QElapsedTimer& timer, bool succes, CommandContext* context) {
+void CommandProcessor::Private::printElapsedTimeForCommand(const QElapsedTimer& timer, bool succes, std::shared_ptr<CommandContext> context) {
+	const auto controller = context->commandController();
 	const auto ms = timer.elapsed();
 	const double secs = ms / 1000.0;
 	const auto formatted = QString("Cmd elapsed %1 Sec")
 		.arg(QString::number(secs, 'f', 2));
 
 	if (succes) {
-		context->printSuccess(formatted);
+		controller->printSuccess(formatted);
 	}
 	else {
-		context->printError(formatted);
+		controller->printError(formatted);
 	}
 }
 
-bool CommandProcessor::Private::executeInstruction(const std::shared_ptr<Instruction> instruction, CommandContext* context) {
+bool CommandProcessor::Private::executeInstruction(const std::shared_ptr<Instruction> instruction, std::shared_ptr<CommandContext> context) {
 	if (!context) {
 		qWarning() << "CommandContext is null";
 		return false;
 	}
 
-	QString cmdName = instruction->command;
+	const auto controller = context->commandController();
+	const auto cmdName = instruction->command;
 
 	auto command = findCommandUnsafe(cmdName);
 	if (!command) {
-		context->printError(QString("Command '%1' not found")
+		controller->printError(QString("Command '%1' not found")
 			.arg(cmdName));
 		return false;
 	}
 
 	// Проверка количества аргументов
 	if (instruction->parameters.size() < command->minArgs()) {
-		context->printError(QString("Command '%1' requires at least %2 arguments")
+		controller->printError(QString("Command '%1' requires at least %2 arguments")
 			.arg(cmdName)
 			.arg(command->minArgs()));
-		context->print(QString("Usage: %1").arg(command->help()));
+		controller->print(QString("Usage: %1")
+			.arg(command->help()));
 		emit q->commandError(cmdName, "Insufficient arguments");
 		return false;
 	}
 
 	if (command->maxArgs() >= 0 && instruction->parameters.size() > command->maxArgs()) {
-		context->printError(QString("Command '%1' accepts at most %2 arguments")
+		controller->printError(QString("Command '%1' accepts at most %2 arguments")
 			.arg(cmdName)
 			.arg(command->maxArgs()));
-		context->print(QString("Usage: %1").arg(command->help()));
+		controller->print(QString("Usage: %1")
+			.arg(command->help()));
 		emit q->commandError(cmdName, "Too many arguments");
 		return false;
 	}
@@ -299,11 +306,14 @@ bool CommandProcessor::Private::executeInstruction(const std::shared_ptr<Instruc
 		success = command->execute(instruction, context);
 	}
 	catch (const std::exception& e) {
-		context->printError(QString("Exception in command '%1': %2").arg(cmdName).arg(e.what()));
+		controller->printError(QString("Exception in command '%1': %2")
+			.arg(cmdName)
+			.arg(e.what()));
 		success = false;
 	}
 	catch (...) {
-		context->printError(QString("Unknown exception in command '%1'").arg(cmdName));
+		controller->printError(QString("Unknown exception in command '%1'")
+			.arg(cmdName));
 		success = false;
 	}
 
@@ -321,8 +331,7 @@ void CommandProcessor::registerCommand(std::unique_ptr<ICommand> command) {
 	d->commands.emplace(name, std::move(command));
 }
 
-bool CommandProcessor::executeCommand(const QString& commandName, const QMap<QString, QString>& args,
-	CommandContext* context) {
+bool CommandProcessor::executeCommand(const QString& commandName, const QMap<QString, QString>& args, std::shared_ptr<CommandContext> context) {
 	auto instruction = std::make_shared<Instruction>();
 	instruction->command = commandName;
 	for (auto it = args.begin(); it != args.end(); it++) {
@@ -332,7 +341,7 @@ bool CommandProcessor::executeCommand(const QString& commandName, const QMap<QSt
 	return d->executeInstruction(instruction, context);
 }
 
-bool CommandProcessor::execute(const QString& commandLine, CommandContext* context) {
+bool CommandProcessor::execute(const QString& commandLine, std::shared_ptr<CommandContext> context) {
 	QElapsedTimer timer;
 	timer.start();
 

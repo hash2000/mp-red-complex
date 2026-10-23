@@ -17,7 +17,7 @@ public:
 	}
 
 	LoginWidget* q;
-	UsersService* usersService;
+	UsersService* usersService = nullptr;
 
 	QLineEdit* loginEdit = nullptr;
 	QLineEdit* passwordEdit = nullptr;
@@ -192,25 +192,25 @@ void LoginWidget::onLoginClicked() {
 		return;
 	}
 
-	auto result = d->usersService->login(login, password);
-	if (result.has_value()) {
-		d->errorLabel->hide();
-		emit loginSuccess();
-	}
-	else {
-		d->errorLabel->setText("Неверный логин или пароль");
-		d->errorLabel->show();
-	}
+	//auto result = d->usersService->login(login, password);
+	//if (result.has_value()) {
+	//	d->errorLabel->hide();
+	//	emit loginSuccess();
+	//}
+	//else {
+	//	d->errorLabel->setText("Неверный логин или пароль");
+	//	d->errorLabel->show();
+	//}
 }
 
 void LoginWidget::onRegisterClicked() {
-	RegisterWidget registerDialog(d->usersService, this);
-	if (registerDialog.exec() == QDialog::Accepted) {
-		// Заполняем поля входа новыми учётными данными
-		d->loginEdit->setText(registerDialog.login());
-		d->passwordEdit->setText(registerDialog.password());
-		
-		// Автоматически выполняем вход
-		onLoginClicked();
-	}
+	//RegisterWidget registerDialog(d->usersService, this);
+	//if (registerDialog.exec() == QDialog::Accepted) {
+	//	// Заполняем поля входа новыми учётными данными
+	//	d->loginEdit->setText(registerDialog.login());
+	//	d->passwordEdit->setText(registerDialog.password());
+	//	
+	//	// Автоматически выполняем вход
+	//	onLoginClicked();
+	//}
 }

@@ -24,11 +24,6 @@ public:
 
 HighlightingPluginManager::HighlightingPluginManager()
 	: d(std::make_unique<Private>(this)) {
-}
-
-HighlightingPluginManager::~HighlightingPluginManager() = default;
-
-void HighlightingPluginManager::loadPlugins(const QString& pluginsDir) {
 	registerPlugin(std::make_unique<GLSLHighlighterPlugin>());
 	registerPlugin(std::make_unique<PlaneTextHighlighterPlugin>());
 	registerPlugin(std::make_unique<MarkdownHighlighterPlugin>());
@@ -37,6 +32,8 @@ void HighlightingPluginManager::loadPlugins(const QString& pluginsDir) {
 	registerPlugin(std::make_unique<CssHighlighterPlugin>());
 	registerPlugin(std::make_unique<JsonHighlighterPlugin>());
 }
+
+HighlightingPluginManager::~HighlightingPluginManager() = default;
 
 void HighlightingPluginManager::registerPlugin(std::unique_ptr<HighlightingPlugin> plugin) {
 	const auto& info = plugin->languageInfo();

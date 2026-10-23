@@ -1,5 +1,5 @@
 #include "Content/UsersModule/widgets/register_widget.h"
-#include "Content/UsersModule/services/users_service.h"
+#include "Content/UsersModule/services/users_registry_service.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -15,7 +15,7 @@ public:
 	}
 
 	RegisterWidget* q;
-	UsersService* usersService;
+	UsersRegistryService* usersRegistryService;
 
 	QLineEdit* loginEdit = nullptr;
 	QLineEdit* passwordEdit = nullptr;
@@ -29,10 +29,10 @@ public:
 	QString resultPassword;
 };
 
-RegisterWidget::RegisterWidget(UsersService* usersService, QWidget* parent)
+RegisterWidget::RegisterWidget(UsersRegistryService* usersRegistryService, QWidget* parent)
 	: d(std::make_unique<Private>(this))
 	, QDialog(parent) {
-	d->usersService = usersService;
+	d->usersRegistryService = usersRegistryService;
 
 	setWindowTitle("Регистрация");
 	setModal(true);
@@ -228,8 +228,9 @@ void RegisterWidget::onRegisterClicked() {
 		return;
 	}
 
-	auto result = d->usersService->registerUser(login, password, nickname);
-	if (result.has_value()) {
+	QStringList seedPhrase;
+	auto registerResult = d->usersRegistryService->registerUser(login, password, seedPhrase);
+	if (registerResult) {
 		d->resultLogin = login;
 		d->resultPassword = password;
 		accept();

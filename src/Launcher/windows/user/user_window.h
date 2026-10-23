@@ -7,14 +7,14 @@ class UserWindow : public MdiChildWindow {
 	Q_OBJECT
 
 public:
-	explicit UserWindow(const QString& id, QWidget* parent = nullptr);
+	explicit UserWindow(const QString& id, std::shared_ptr<CommandContext> context, QWidget* parent = nullptr);
 	~UserWindow() override;
 
 	QString windowType() const override { return "user-profile"; }
 	QString windowTitle() const override { return "Профиль пользователя"; }
 	QSize windowDefaultSizes() const override { return QSize(400, 600); }
 
-	bool handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) override;
+	bool handleCommand(const std::shared_ptr<Instruction> cmd) override;
 
 private slots:
 	void onUserLoggedOut();

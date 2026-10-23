@@ -5,6 +5,7 @@
 
 // FetchApiModule
 #include "Content/FetchApiModule/services/fetch_service.h"
+#include "Content/FetchApiModule/services/fetch_store_db_service.h"
 
 // ShadersModule
 #include "Content/ShadersModule/data_providers/shaders_data_provider_impl.h"
@@ -38,7 +39,8 @@
 
 // UsersModule
 #include "Content/UsersModule/services/users_service.h"
-#include "Content/UsersModule/data_providers/users/users_data_provider_db.h"
+#include "Content/UsersModule/services/users_registry_service.h"
+#include "Content/UsersModule/data_providers/users_registry/users_registry_data_provider_db.h"
 
 // HighlightingPluginManager
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
@@ -58,7 +60,7 @@ public:
 		, entitiesDataProvider([this] { return std::make_unique<EntitiesDataProviderDb>(databasesService.get()); })
 		, imagesDataProvider([this] {	return std::make_unique<ImagesDataProviderJsonImpl>(resources);	})
 		, tileGroupsDataProvider([this] {	return std::make_unique<TileGroupsDataProviderJsonImpl>(resources);	})
-		, usersDataProvider([this] {	return std::make_unique<UsersDataProviderDb>(databasesService.get());	})
+		, usersRegistryDataProvider([this] {	return std::make_unique<UsersRegistryDataProviderDb>(databasesService.get()); })
 		, characterDataProvider([this] {	return std::make_unique<CharacterDataProviderDb>(databasesService.get());	})
 		, shadersDataProvider([this] { return std::make_unique<ShadersDataProviderLocalImpl>(resources); })
 		, materialsDataProvider([this] { return std::make_unique<MaterialsDataProviderJsonImpl>(resources); })
@@ -79,7 +81,7 @@ private:
 	LazyPtr<DatabaseSettingsDataProviderJsonImpl> databaseSettingsDataProvider;
 	LazyPtr<IItemsDataProvider> itemsDataProvider;
 	LazyPtr<IEntitiesDataProvider> entitiesDataProvider;
-	LazyPtr<IUsersDataProvider> usersDataProvider;
+	LazyPtr<IUsersRegistryDataProvider> usersRegistryDataProvider;
 	LazyPtr<ICharacterDataProvider> characterDataProvider;
 	LazyPtr<IImagesDataProvider> imagesDataProvider;
 	LazyPtr<ITileGroupsDataProvider> tileGroupsDataProvider;
@@ -101,8 +103,17 @@ public:
 
 		registerFactory<UsersService>([this] {
 			return std::make_unique<UsersService>(
-				usersDataProvider.get(),
+				resources,
+				databasesService.get(),
+				usersRegistryDataProvider.get(),
 				this->get<ImagesService>());
+		});
+
+		registerFactory<UsersRegistryService>([this] {
+			return std::make_unique<UsersRegistryService>(
+				resources,
+				usersRegistryDataProvider.get(),
+				this->get<UsersService>());
 		});
 
 		registerFactory<ImagesService>([this] {
@@ -143,15 +154,18 @@ public:
 			return std::make_unique<FetchApiService>();
 		});
 
+		registerFactory<FetchStoreDbService>([this]() {
+			return std::make_unique<FetchStoreDbService>(
+				databasesService.get());
+		});
+
 		registerFactory<HighlightingPluginManager>([this] {
-			auto manager = std::make_unique<HighlightingPluginManager>();
-			manager->loadPlugins(resources->Variables.get("Plugins.Path", "").toString());
-			return manager;
+			return std::make_unique<HighlightingPluginManager>();
 		});
 
 		registerFactory<FormatterPluginManager>([this] {
 			return std::make_unique<FormatterPluginManager>(
-				resources->Variables.get("Tools.Path", "").toString());
+				resources);
 		});
 	}
 };

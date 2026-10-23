@@ -16,6 +16,7 @@ public:
 	bool hasRow = false;
 	QStringList columnNames;
 	bool firstNext = true;
+	long lasInsertRewind = -1;
 
 	void cacheColumnNames();
 	QVariant extractValue(int column) const;
@@ -62,11 +63,13 @@ bool SQLiteReader::exec() {
 
 	if (rc == SQLITE_DONE) {
 		d->hasRow = false;
+		d->lasInsertRewind = sqlite3_last_insert_rowid(d->connection.handle());
 		return true;  // Успешно для INSERT/UPDATE/DELETE
 	}
 	else if (rc == SQLITE_ROW) {
 		// Неожиданно получили строки для не-SELECT запроса
 		d->hasRow = true;
+		d->lasInsertRewind = -1;
 		d->cacheColumnNames();
 		d->firstNext = false;
 		return true;
@@ -74,6 +77,7 @@ bool SQLiteReader::exec() {
 	else {
 		qWarning() << "Execute error:" << d->connection.lastError();
 		d->hasRow = false;
+		d->lasInsertRewind = -1;
 		return false;
 	}
 }
@@ -206,7 +210,7 @@ void SQLiteReader::bindValues(const std::initializer_list<std::pair<QString, QVa
 }
 
 void SQLiteReader::bindValuesList(const QVariantList& values) {
-	for (int i = 0; i < values.size(); ++i) {
+	for (int i = 0; i < values.size(); i++) {
 		bindValue(i, values[i]);
 	}
 }
@@ -226,6 +230,7 @@ bool SQLiteReader::next() {
 
 	if (rc == SQLITE_ROW) {
 		d->hasRow = true;
+		d->lasInsertRewind = -1;
 		if (d->firstNext) {
 			d->cacheColumnNames();
 			d->firstNext = false;
@@ -234,11 +239,13 @@ bool SQLiteReader::next() {
 	}
 	else if (rc == SQLITE_DONE) {
 		d->hasRow = false;
+		d->lasInsertRewind = sqlite3_last_insert_rowid(d->connection.handle());
 		return false;
 	}
 	else {
 		qWarning() << "Step error:" << d->connection.lastError();
 		d->hasRow = false;
+		d->lasInsertRewind = -1;
 		return false;
 	}
 }
@@ -260,7 +267,7 @@ void SQLiteReader::Private::cacheColumnNames() {
 	int count = sqlite3_column_count(stmt);
 	columnNames.reserve(count);
 
-	for (int i = 0; i < count; ++i) {
+	for (int i = 0; i < count; i++) {
 		const char* name = sqlite3_column_name(stmt, i);
 		columnNames.append(name ? QString::fromUtf8(name) : QString());
 	}
@@ -302,7 +309,7 @@ int SQLiteReader::Private::findColumn(const QString& name) const {
 	int index = columnNames.indexOf(name);
 	if (index == -1) {
 		// Поиск без учета регистра
-		for (int i = 0; i < columnNames.size(); ++i) {
+		for (int i = 0; i < columnNames.size(); i++) {
 			if (columnNames[i].compare(name, Qt::CaseInsensitive) == 0) {
 				return i;
 			}
@@ -350,6 +357,7 @@ void SQLiteReader::reset() {
 		sqlite3_reset(d->stmt);
 	//	sqlite3_clear_bindings(d->stmt);
 		d->hasRow = false;
+		d->lasInsertRewind = -1;
 		d->firstNext = true;
 	}
 }
@@ -360,6 +368,11 @@ void SQLiteReader::finish() {
 		sqlite3_finalize(d->stmt);
 		d->stmt = nullptr;
 		d->hasRow = false;
+		d->lasInsertRewind = -1;
 		d->columnNames.clear();
 	}
+}
+
+long SQLiteReader::lastInsert() const {
+	return d->lasInsertRewind;
 }

@@ -261,7 +261,7 @@ void TextureEditorWidget::loadsPage() {
 
 	// Блокируем сигналы, чтобы не вызывать onTextureItemSelected
 	d->textureList->blockSignals(true);
-	for (int i = startIdx; i < endIdx; ++i) {
+	for (int i = startIdx; i < endIdx; i++) {
 		auto* item = new QListWidgetItem(d->allTextures[i]);
 		d->textureList->addItem(item);
 	}

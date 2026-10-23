@@ -211,7 +211,7 @@ void TileGroupsDialog::refreshList() {
 	d->groupsList->clear();
 
 	d->cachedGroups = d->tilesSelectorService->getGroups(d->texturePath);
-	for (int i = 0; i < d->cachedGroups.size(); ++i) {
+	for (int i = 0; i < d->cachedGroups.size(); i++) {
 		const auto& group = d->cachedGroups[i];
 		auto* item = new QListWidgetItem(QString("%1 (%2 тайлов)").arg(group.name).arg(group.tileIds.size()));
 		item->setData(Qt::UserRole, i);  // Сохраняем индекс в кэше

@@ -10,9 +10,15 @@ qt_add_library(RedComplexBase STATIC
 	${SRCS}
 )
 
+target_include_directories(RedComplexBase PRIVATE
+	${SODIUM_INCLUDE_DIRS}
+)
+
 target_link_libraries(RedComplexBase
 	PRIVATE
 		Qt6::Core
 		Qt6::Gui
 		Qt6::Widgets
+
+		unofficial-sodium::sodium
 )

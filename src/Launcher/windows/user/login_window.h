@@ -5,9 +5,8 @@
 
 class LoginWindow : public MdiChildWindow {
 	Q_OBJECT
-
 public:
-	explicit LoginWindow(const QString& id, QWidget* parent = nullptr);
+	explicit LoginWindow(const QString& id, std::shared_ptr<CommandContext> context, QWidget* parent = nullptr);
 	~LoginWindow() override;
 
 	QString windowType() const override { return "login"; }
@@ -20,7 +19,7 @@ public:
 
 	bool NeedFixedSize() const override { return true; }
 
-	bool handleCommand(const std::shared_ptr<Instruction> cmd, CommandContext* context) override;
+	bool handleCommand(const std::shared_ptr<Instruction> cmd) override;
 
 private slots:
 	void onLoginSuccess();

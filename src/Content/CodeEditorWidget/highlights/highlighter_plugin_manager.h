@@ -9,7 +9,6 @@ public:
 	HighlightingPluginManager();
 	~HighlightingPluginManager();
 
-	void loadPlugins(const QString& pluginsDir);
 	void registerPlugin(std::unique_ptr<HighlightingPlugin> plugin);
 	HighlightingPlugin* pluginForFile(const QString& filename) const;
 	HighlightingPlugin* pluginForLanguage(const QString& name) const;
