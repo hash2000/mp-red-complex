@@ -1,7 +1,7 @@
 #include "Content/UsersModule/widgets/user_widget.h"
 #include "Content/UsersModule/services/users_service.h"
 #include "Content/UsersModule/models/user_view.h"
-#include "Content/TexturesModule/services/images_service.h"
+//#include "Content/TexturesModule/services/images_service.h"
 #include "Libs/Graphics/textures/extensions/pixmap_extensions.h"
 
 #include <QLabel>
@@ -19,7 +19,7 @@ public:
 
 	UserWidget* q;
 	UsersService* usersService = nullptr;
-	ImagesService* ImagesService = nullptr;
+	//ImagesService* ImagesService = nullptr;
 	std::shared_ptr<UserView> currentUser;
 
 	// Элементы заголовка
@@ -33,11 +33,11 @@ public:
 	QScrollArea* scrollArea = nullptr;
 };
 
-UserWidget::UserWidget(UsersService* usersService, ImagesService* ImagesService, QWidget* parent)
+UserWidget::UserWidget(UsersService* usersService, QWidget* parent)
 	: QFrame(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->usersService = usersService;
-	d->ImagesService = ImagesService;
+	//d->ImagesService = ImagesService;
 
 	setObjectName("UserWidget");
 	setFrameStyle(QFrame::StyledPanel | QFrame::Plain);

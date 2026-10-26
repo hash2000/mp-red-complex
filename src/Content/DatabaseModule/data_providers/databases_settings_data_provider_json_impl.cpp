@@ -1,5 +1,4 @@
 #include "Content/DatabaseModule/data_providers/databases_settings_data_provider_json_impl.h"
-#include "Libs/DataStream/format/json/data_reader.h"
 #include "Libs/Resources/resources.h"
 #include <QJsonArray>
 #include <QJsonObject>
@@ -40,16 +39,18 @@ bool DatabaseSettingsDataProviderJsonImpl::Private::loadFromFile() const {
 		return true;
 	}
 
-	QJsonObject json;
-	Format::Json::DataReader reader(resources, "data", path);
-	if (!reader.read(json)) {
-		return false;
-	}
+	//QJsonObject json;
+	//Format::Json::DataReader reader(resources, "data", path);
+	//if (!reader.read(json)) {
+	//	return false;
+	//}
 
-	cachedJson = json;
-	lastModified = fileInfo.lastModified();
-	qDebug() << "Config file loaded and cached:" << path;
-	return true;
+	//cachedJson = json;
+	//lastModified = fileInfo.lastModified();
+	//qDebug() << "Config file loaded and cached:" << path;
+	//return true;
+
+	return false;
 }
 
 DatabaseSettingsDataProviderJsonImpl::Settings DatabaseSettingsDataProviderJsonImpl::Private::parseSettings(const QJsonObject& json) const {

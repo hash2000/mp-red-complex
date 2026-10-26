@@ -6,11 +6,9 @@
 #include "Launcher/services.h"
 
 #include "Launcher/commands/windows_cmd.h"
-#include "Content/CharactersModule/commands/characters_cmd.h"
 #include "Content/ConsoleModule/commands/help_cmd.h"
 #include "Content/FetchApiModule/commands/fetch_api_cmd.h"
 #include "Content/UsersModule/commands/users_cmd.h"
-#include "Content/InventoriesModule/commands/items_cmd.h"
 #include "Content/ConsoleModule/commands/echo_cmd.h"
 
 class ApplicationController::Private {
@@ -40,9 +38,7 @@ void ApplicationController::initContext() {
 	commands->registerCommand(std::make_unique<HelpCommand>(this));
 	commands->registerCommand(std::make_unique<EchoCommand>(this));
 	commands->registerCommand(std::make_unique<WindowsCommand>(controllers(), this));
-	commands->registerCommand(std::make_unique<ItemsCommand>(this));
 	commands->registerCommand(std::make_unique<UsersCommand>(this));
-	commands->registerCommand(std::make_unique<CharactersCommand>(this));
 	commands->registerCommand(std::make_unique<FetchApiCommand>(this));
 }
 

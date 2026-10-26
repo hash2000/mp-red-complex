@@ -4,7 +4,7 @@
 #include "Content/ConsoleModule/models/instruction.h"
 #include "Content/UsersModule/widgets/user_widget.h"
 #include "Content/UsersModule/services/users_service.h"
-#include "Content/TexturesModule/services/images_service.h"
+//#include "Content/TexturesModule/services/images_service.h"
 #include "Libs/Engine/services/services_registry.h"
 
 class UserWindow::Private {
@@ -13,7 +13,7 @@ public:
 	UserWindow* q;
 
 	UsersService* usersService = nullptr;
-	ImagesService* imagesService = nullptr;
+	//ImagesService* imagesService = nullptr;
 	UserWidget* userWidget = nullptr;
 //	void executeCharCommand(const QString& target, const Character* chr);
 };
@@ -45,30 +45,30 @@ bool UserWindow::handleCommand(const std::shared_ptr<Instruction> cmd) {
 	const auto context = currentContext();
 	const auto controller = context->commandController();
 	const auto action = cmd->parameters.value("action");
-	if (action == "create") {
-		auto services = currentContext()->commandController()->services();
-		d->usersService = services->get<UsersService>();
-		d->imagesService = services->get<ImagesService>();
+	//if (action == "create") {
+	//	auto services = currentContext()->commandController()->services();
+	//	d->usersService = services->get<UsersService>();
+	//	//d->imagesService = services->get<ImagesService>();
 
-		if (!d->usersService) {
-			controller->printError("Unsupported Users service");
-			return false;
-		}
+	//	if (!d->usersService) {
+	//		controller->printError("Unsupported Users service");
+	//		return false;
+	//	}
 
-		if (!d->imagesService) {
-			controller->printError("Unsupported Images service");
-			return false;
-		}
+	//	if (!d->imagesService) {
+	//		controller->printError("Unsupported Images service");
+	//		return false;
+	//	}
 
-		d->userWidget = new UserWidget(d->usersService, d->imagesService, this);
+	//	d->userWidget = new UserWidget(d->usersService, d->imagesService, this);
 
-		// Подключаем сигналы
-		connect(d->usersService, &UsersService::loggedOut, this, &UserWindow::onUserLoggedOut);
+	//	// Подключаем сигналы
+	//	connect(d->usersService, &UsersService::loggedOut, this, &UserWindow::onUserLoggedOut);
 
-		setWidget(d->userWidget);
+	//	setWidget(d->userWidget);
 
-		return true;
-	}
+	//	return true;
+	//}
 
 	return false;
 }

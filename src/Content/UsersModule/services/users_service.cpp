@@ -2,7 +2,6 @@
 #include "Content/UsersModule/data_providers/users_registry/i_users_registry_data_provider.h"
 #include "Content/UsersModule/models/user_view.h"
 #include "Content/DatabaseModule/services/databases_service.h"
-#include "Content/TexturesModule/services/images_service.h"
 #include "Content/UsersModule/extensions/crypto_extensions.h"
 
 #include "Libs/Base/crypto/bip_39.h"
@@ -21,7 +20,6 @@ public:
 	UsersService* q;
 
 	IUsersRegistryDataProvider* usersRegistryDataProvider = nullptr;
-	ImagesService* imagesService = nullptr;
 	DatabasesService* databasesService = nullptr;
 	Resources* resources;
 	QString currentUserHash;
@@ -39,14 +37,12 @@ UsersService::UsersService(
 	Resources* resources,
 	DatabasesService* databasesService,
 	IUsersRegistryDataProvider* usersRegistryDataProvider,
-	ImagesService* imagesService,
 	QObject* parent)
 	: QObject(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->resources = resources;
 	d->usersRegistryDataProvider = usersRegistryDataProvider;
 	d->databasesService = databasesService;
-	d->imagesService = imagesService;
 }
 
 UsersService::~UsersService() = default;

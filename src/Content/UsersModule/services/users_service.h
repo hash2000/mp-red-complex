@@ -5,7 +5,6 @@
 #include <map>
 #include <list>
 
-class ImagesService;
 class IUsersRegistryDataProvider;
 class UserView;
 class Resources;
@@ -19,7 +18,6 @@ public:
 		Resources* resources,
 		DatabasesService* databasesService,
 		IUsersRegistryDataProvider* usersRegistryDataProvider,
-		ImagesService* imagesService,
 		QObject* parent = nullptr);
 
 	~UsersService() override;

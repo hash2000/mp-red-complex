@@ -104,9 +104,11 @@ void TestConsoleModule::testCommandParser_ParseNumberValue_ShouldReturnPositiveO
 
 	auto location = result->location();
 	auto srcLocation = source.currentLocation();
+	auto type = static_cast<AstDataType>(result->parameter("type").value<size_t>());
 
 	QCOMPARE(result->parameter("value").isNull(), false);
 	QCOMPARE(result->parameter("value").toDouble(), expected);
+	QCOMPARE(type, AstDataType::Number);
 }
 
 
@@ -142,9 +144,11 @@ void TestConsoleModule::testCommandParser_ParseBoolValue_ShouldReturnTrueFalseVa
 
 	auto location = result->location();
 	auto srcLocation = source.currentLocation();
+	auto type = static_cast<AstDataType>(result->parameter("type").value<size_t>());
 
 	QCOMPARE(result->parameter("value").isNull(), false);
 	QCOMPARE(result->parameter("value").toBool(), expected);
+	QCOMPARE(type, AstDataType::Bool);
 }
 
 void TestConsoleModule::testCommandParser_ParseUntypedVariableWithoutRValue_ShouldReturnError() {

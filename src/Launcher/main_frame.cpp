@@ -6,9 +6,9 @@
 #include "Launcher/services.h"
 #include "Launcher/controllers.h"
 #include "Launcher/controllers/windows_controller.h"
-#include "Launcher/windows/action_panel/action_panel_login_builder.h"
-#include "Launcher/windows/action_panel/action_panel_by_user_builder.h"
-#include "Launcher/windows/action_panel/action_panel_widget.h"
+//#include "Launcher/windows/action_panel/action_panel_login_builder.h"
+//#include "Launcher/windows/action_panel/action_panel_by_user_builder.h"
+//#include "Launcher/windows/action_panel/action_panel_widget.h"
 #include "Content/UsersModule/services/users_service.h"
 #include "Content/UsersModule/models/user_view.h"
 #include "Libs/BaseWidgets/mdi_area.h"
@@ -40,7 +40,7 @@ public:
 	Resources* resources;
 	MdiArea* mdiArea;
 	QToolButton* consoleToggleButton;
-	ActionPanelWidget* actionPanel = nullptr;
+	//ActionPanelWidget* actionPanel = nullptr;
 
 	void setupMdiArea(LauncherMainFrame* parent);
 	void setupConsole();
@@ -134,26 +134,26 @@ void LauncherMainFrame::Private::setupView() {
 	verticalSplitter->setStretchFactor(1, 0);
 	verticalSplitter->setCollapsible(1, false);
 
-	horizontalSplitter->addWidget(verticalSplitter);
+	//horizontalSplitter->addWidget(verticalSplitter);
 
-	// Панель действий
-	actionPanel = new ActionPanelWidget(commandController->controllers()->actionPanelController(), q);
-	horizontalSplitter->addWidget(actionPanel);
+	//// Панель действий
+	//actionPanel = new ActionPanelWidget(commandController->controllers()->actionPanelController(), q);
+	//horizontalSplitter->addWidget(actionPanel);
 
-	horizontalSplitter->setStretchFactor(0, 1);
-	horizontalSplitter->setStretchFactor(1, 0);
+	//horizontalSplitter->setStretchFactor(0, 1);
+	//horizontalSplitter->setStretchFactor(1, 0);
 
-	// Фиксируем размер сплиттера (запрещаем изменение)
-	horizontalSplitter->setHandleWidth(0);
+	//// Фиксируем размер сплиттера (запрещаем изменение)
+	//horizontalSplitter->setHandleWidth(0);
 
-	q->setCentralWidget(horizontalSplitter);
+	//q->setCentralWidget(horizontalSplitter);
 
-	setupActionPanel();
+	//setupActionPanel();
 }
 
 void LauncherMainFrame::Private::setupActionPanel() {
-	ActionPanelLoginBuilder builder(commandController->controllers()->actionPanelController());
-	builder.build();
+	//ActionPanelLoginBuilder builder(commandController->controllers()->actionPanelController());
+	//builder.build();
 }
 
 void LauncherMainFrame::onToggleCommandConsole(bool visible) {
@@ -170,9 +170,9 @@ void LauncherMainFrame::onUserLogout() {
 }
 
 void LauncherMainFrame::onUserLogin(const UserView& user) {
-	qDebug() << "User login" << user.data->displayName;
-	ActionPanelByUserBuilder builder(
-		d->commandController->controllers()->actionPanelController(),
-		d->commandController->globalContext()->commandController()->services()->get<UsersService>());
-	builder.build();
+	//qDebug() << "User login" << user.data->displayName;
+	//ActionPanelByUserBuilder builder(
+	//	d->commandController->controllers()->actionPanelController(),
+	//	d->commandController->globalContext()->commandController()->services()->get<UsersService>());
+	//builder.build();
 }

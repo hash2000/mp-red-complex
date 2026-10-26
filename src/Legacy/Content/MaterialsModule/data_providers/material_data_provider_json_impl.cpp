@@ -1,6 +1,4 @@
 #include "Content/MaterialsModule/data_providers/material_data_provider_json_impl.h"
-#include "Libs/DataStream/format/json/data_reader.h"
-#include "Libs/DataStream/format/json/data_writer.h"
 #include "Libs/Resources/resources.h"
 #include <QJsonObject>
 #include <QJsonArray>
@@ -25,10 +23,10 @@ bool MaterialsDataProviderJsonImpl::loadIds(const QString& name, std::list<QStri
 		.arg(name);
 
 	QJsonObject json;
-	Format::Json::DataReader reader(d->resources, "assets", path);
-	if (!reader.read(json)) {
-		return false;
-	}
+	//Format::Json::DataReader reader(d->resources, "assets", path);
+	//if (!reader.read(json)) {
+	//	return false;
+	//}
 
 	const QJsonArray items = json["items"]
 		.toArray();
@@ -45,10 +43,10 @@ bool MaterialsDataProviderJsonImpl::loadMaterial(const QString& name, Material& 
 		.arg(name);
 
 	QJsonObject json;
-	Format::Json::DataReader reader(d->resources, "assets", path);
-	if (!reader.read(json)) {
-		return false;
-	}
+	//Format::Json::DataReader reader(d->resources, "assets", path);
+	//if (!reader.read(json)) {
+	//	return false;
+	//}
 
 	if (json.contains("albedo") && json["albedo"].isObject()) {
 		QJsonObject albedo = json["albedo"].toObject();
@@ -79,10 +77,10 @@ bool MaterialsDataProviderJsonImpl::saveMaterial(Material& mat) const {
 
 
 
-	Format::Json::DataWriter reader(d->resources, "assets", path);
-	if (!reader.write(json)) {
-		return false;
-	}
+	//Format::Json::DataWriter reader(d->resources, "assets", path);
+	//if (!reader.write(json)) {
+	//	return false;
+	//}
 
 	return true;
 }

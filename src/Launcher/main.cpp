@@ -4,8 +4,17 @@
 
 class LauncherApplication : public Application {
 protected:
-	virtual std::unique_ptr<MainFrame> createMainFrame(Resources* resources) override {
+	std::unique_ptr<MainFrame> createMainFrame(Resources* resources) override {
 		return std::make_unique<LauncherMainFrame>(resources);
+	}
+	QString organizationName() const {
+		return "Hash2000";
+	}
+	QString organizationDomain() const {
+		return "ru.hash2000";
+	}
+	QString applicationName() const {
+		return "red-complex";
 	}
 };
 

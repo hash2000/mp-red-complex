@@ -14,9 +14,11 @@ std::shared_ptr<DataStream> BaseTabWidget::currentStream() const {
 	const auto containerName = _params.value("container.name").toString();
 	const auto containerPath = _params.value("container.path").toString();
 
-	auto blockOpt = _resources->getStream(containerName, containerPath);
-	auto block = blockOpt.value()->makeBlockAsStream();
-	return block;
+	//auto blockOpt = _resources->getStream(containerName, containerPath);
+	//auto block = blockOpt.value()->makeBlockAsStream();
+	//return block;
+
+	return std::shared_ptr<DataStream>();
 }
 
 void BaseTabWidget::dragEnterEvent(QDragEnterEvent* event) {

@@ -41,7 +41,7 @@ public:
 	Resources* resources;
 	IDatabaseSettingsDataProvider* settingsDataProvider;
 
-	void appendAlias(DirectoryPath path, const QString& alias, bool encripted);
+	void appendAlias(const QString& path, const QString& alias, bool encripted);
 };
 
 DatabasesService::DatabasesService(Resources* resources,
@@ -73,13 +73,13 @@ void DatabasesService::onApplicationShutdown() {
 
 void DatabasesService::reloadAliases() {
 	d->aliases.clear();
-	d->appendAlias(DirectoryPath::AccountsDbFile, "accounts", false);
-	d->appendAlias(DirectoryPath::GameDbFile, "game", true);
-	d->appendAlias(DirectoryPath::FetchApiDbFile, "fetch_api", false);
-	d->appendAlias(DirectoryPath::MessangerDbFile, "messanger", true);
+	//d->appendAlias(DirectoryPath::AccountsDbFile, "accounts", false);
+	//d->appendAlias(DirectoryPath::GameDbFile, "game", true);
+	//d->appendAlias(DirectoryPath::FetchApiDbFile, "fetch_api", false);
+	//d->appendAlias(DirectoryPath::MessangerDbFile, "messanger", true);
 }
 
-void DatabasesService::Private::appendAlias(DirectoryPath path, const QString& alias, bool encrypted) {
+void DatabasesService::Private::appendAlias(const QString& path, const QString& alias, bool encrypted) {
 	 const auto dir = resources->Directories.get(path);
 	 if (!dir) {
 		 return;
