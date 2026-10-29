@@ -3,8 +3,8 @@
 //#include "Launcher/windows/inventory/inventory_grid.h"
 #include "Launcher/app_controller.h"
 #include "Launcher/services.h"
-#include "Content/ConsoleModule/command_context.h"
-#include "Content/ConsoleModule/models/instruction.h"
+#include "Libs/Engine/scripting/command_context.h"
+#include "Libs/Engine/scripting/instruction.h"
 //#include "Content/InventoriesModule/services/inventories_service.h"
 #include "Content/InventoriesModule/models/item_mime_data.h"
 #include <QVBoxLayout>

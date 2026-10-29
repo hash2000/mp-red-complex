@@ -22,7 +22,9 @@ target_link_libraries(RedComplexEngine
 		Qt6::Core
 		Qt6::Gui
 		Qt6::Widgets
+		Qt6::Xml
 
 		RedComplexBase
+		RedComplexGraphics
 )
 

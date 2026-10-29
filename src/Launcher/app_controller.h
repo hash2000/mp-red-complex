@@ -1,5 +1,5 @@
 #pragma once
-#include "Content/ConsoleModule/command_controller.h"
+#include "Libs/Engine/scripting/command_controller.h"
 #include <memory>
 
 class Resources;

@@ -1,8 +1,8 @@
 #include "Content/FetchApiModule/widgets/fetch_api_widget.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
 
-#include "Content/ConsoleModule/command_context.h"
-#include "Content/ConsoleModule/command_controller.h"
+#include "Libs/Engine/scripting/command_context.h"
+#include "Libs/Engine/scripting/command_controller.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
 #include "Content/FetchApiModule/models/fetch_opt.h"
 

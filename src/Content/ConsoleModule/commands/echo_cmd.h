@@ -1,5 +1,5 @@
 #pragma once
-#include "Content/ConsoleModule/i_command.h"
+#include "Libs/Engine/scripting/i_command.h"
 #include <QString>
 
 class EchoCommand : public ICommand {

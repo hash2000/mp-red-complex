@@ -1,12 +1,8 @@
-#include "Launcher/main_frame.h"
 #include "Libs/Engine/application.h"
 #include <QCoreApplication>
 
 class LauncherApplication : public Application {
 protected:
-	std::unique_ptr<MainFrame> createMainFrame(Resources* resources) override {
-		return std::make_unique<LauncherMainFrame>(resources);
-	}
 	QString organizationName() const {
 		return "Hash2000";
 	}

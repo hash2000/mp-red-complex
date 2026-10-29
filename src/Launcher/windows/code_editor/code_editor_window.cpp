@@ -1,8 +1,8 @@
 #include "Launcher/windows/code_editor/code_editor_window.h"
 #include "Content/CodeEditorWidget/code_editor_widget.h"
 #include "Launcher/app_controller.h"
-#include "Content/ConsoleModule/command_context.h"
-#include "Content/ConsoleModule/models/instruction.h"
+#include "Libs/Engine/scripting/command_context.h"
+#include "Libs/Engine/scripting/instruction.h"
 #include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
 

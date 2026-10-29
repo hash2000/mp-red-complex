@@ -23,6 +23,8 @@ public:
 private:
 	void registerTypes();
 	bool setupResources();
+	bool setupAppearance();
+	bool setupScriptsSubsystem();
 	void installMessageHandler();
 	bool installStylesheets();
 	QPalette darkPalette();
@@ -49,6 +51,10 @@ int Application::run(int &argc, char **argv) {
 int Application::Private::tryRun(int& argc, char** argv) {
 	qDebug() << "Bootstrap" << q->applicationName();
 	resources = std::make_unique<Resources>();
+
+	if (!setupResources()) {
+		return 1;
+	}
 
 	QSurfaceFormat fmt;
 	fmt.setVersion(3, 3);
@@ -82,9 +88,6 @@ int Application::Private::tryRun(int& argc, char** argv) {
 
 	QApplication app(argc, argv);
 
-	if (!setupResources()) {
-		return 1;
-	}
 
 
 
@@ -105,6 +108,21 @@ bool Application::Private::setupResources() {
 
 	registerTypes();
 
+	if (!setupScriptsSubsystem()) {
+		return false;
+	}
+
+	setupAppearance();
+	return true;
+}
+
+bool Application::Private::setupScriptsSubsystem() {
+
+
+	return true;
+}
+
+bool Application::Private::setupAppearance() {
 	QApplication::styleHints()->setColorScheme(Qt::ColorScheme::Dark);
 
 	if (!installStylesheets()) {

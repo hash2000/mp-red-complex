@@ -1,7 +1,7 @@
 #include "Content/ConsoleModule/widgets/command_console.h"
-#include "Content/ConsoleModule/command_context.h"
-#include "Content/ConsoleModule/processors/command_processor.h"
-#include "Content/ConsoleModule/command_controller.h"
+#include "Libs/Engine/scripting/command_context.h"
+#include "Libs/Engine/scripting/command_processor.h"
+#include "Libs/Engine/scripting/command_controller.h"
 #include "Libs/Base/extensions/text_edit_extensions.h"
 
 #include <QFontDatabase>

@@ -1,7 +1,7 @@
 #include "Launcher/app_controller.h"
-#include "Content/ConsoleModule/i_command.h"
-#include "Content/ConsoleModule/processors/command_processor.h"
-#include "Content/ConsoleModule/command_context.h"
+#include "Libs/Engine/scripting/i_command.h"
+#include "Libs/Engine/scripting/command_processor.h"
+#include "Libs/Engine/scripting/command_context.h"
 #include "Launcher/controllers.h"
 #include "Launcher/services.h"
 

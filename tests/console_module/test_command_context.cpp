@@ -1,6 +1,6 @@
 #include "test_command.h"
-#include "Content/ConsoleModule/command_controller.h"
-#include "Content/ConsoleModule/command_context.h"
+#include "Libs/Engine/scripting/command_controller.h"
+#include "Libs/Engine/scripting/command_context.h"
 
 #include <memory>
 

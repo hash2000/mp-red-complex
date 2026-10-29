@@ -2,9 +2,9 @@
 #include "Content/TexturesModule/widgets/texture_editor_widget.h"
 #include "Content/TexturesModule/services/images_service.h"
 #include "Content/TexturesModule/services/tiles_selector_service.h"
-#include "Content/ConsoleModule/command_context.h"
-#include "Content/ConsoleModule/command_controller.h"
-#include "Content/ConsoleModule/models/instruction.h"
+#include "Libs/Engine/scripting/command_context.h"
+#include "Libs/Engine/scripting/command_controller.h"
+#include "Libs/Engine/scripting/instruction.h"
 #include "Libs/Engine/services/services_registry.h"
 
 class TextureEditorWindow::Private {

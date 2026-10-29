@@ -25,6 +25,7 @@ private slots:
 	void testCommandParser_ParseBoolValue_ShouldReturnTrueFalseValue();
 	void testCommandParser_ParseNumberValue_ShouldReturnPositiveOrNegativeNumber_data();
 	void testCommandParser_ParseNumberValue_ShouldReturnPositiveOrNegativeNumber();
+	void testCommandParser_ParsePalette_ShouldReturnPaletteOptions();
 
 	// test_command_context
 	void testCommandContext_BuildChildContext();

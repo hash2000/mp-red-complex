@@ -2,8 +2,8 @@
 #include "Content/FetchApiModule/widgets/fetch_queries_tree_widget.h"
 #include "Content/FetchApiModule/services/fetch_store_db_service.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
-#include "Content/ConsoleModule/command_context.h"
-#include "Content/ConsoleModule/models/instruction.h"
+#include "Libs/Engine/scripting/command_context.h"
+#include "Libs/Engine/scripting/instruction.h"
 
 #include "Libs/Engine/services/services_registry.h"
 

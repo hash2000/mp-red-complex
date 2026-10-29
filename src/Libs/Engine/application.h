@@ -13,7 +13,6 @@ public:
 	virtual ~Application();
 
 protected:
-	virtual std::unique_ptr<MainFrame> createMainFrame(Resources* resources) = 0;
 	virtual QString organizationName() const = 0;
 	virtual QString organizationDomain() const = 0;
 	virtual QString applicationName() const = 0;

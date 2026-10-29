@@ -31,10 +31,10 @@ bool Resources::load() {
 	const auto configPath = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
 
 	qDebug() << "Bootstrap path:" << bootstrapPath;
-	d->defaultsDirectories.set("system.path.bootstrap", bootstrapPath);
+	d->defaultsDirectories.set("path.bootstrap", bootstrapPath);
 
 	qDebug() << "Profile path:" << configPath;
-	d->defaultsDirectories.set("system.path.profile", configPath);
+	d->defaultsDirectories.set("path.profile", configPath);
 
 	if (!d->loadDefaults()) {
 		qDebug() << "Load resources Failed";
@@ -53,19 +53,19 @@ bool Resources::Private::loadDefaults() {
 	q->Directories.apply(defaultsDirectories);
 	q->Variables.apply(defaultsVariables);
 
-	auto resourcesPath = defaultsDirectories.get("system.path.profile");
+	auto resourcesPath = defaultsDirectories.get("path.profile");
 	if (!resourcesPath) {
 		qCritical() << "Resources.Path is not set.";
 		return false;
 	}
 
-	q->Directories.set("system.path.tools", resourcesPath.value().filePath("tools"));
-	q->Directories.set("system.path.databases", resourcesPath.value().filePath("data"));
-	q->Directories.set("system.path.databases.settings.file", resourcesPath.value().filePath("data/databases.json"));
-	q->Directories.set("system.path.auth.words", resourcesPath.value().filePath("data/recovery/english.txt"));
-	q->Directories.set("system.path.users", resourcesPath.value().filePath("users"));
-	q->Directories.set("system.path.databases.accounts.file", resourcesPath.value().filePath("data/accounts.db"));
-	q->Directories.set("system.path.databases.fetch_api.file", resourcesPath.value().filePath("data/fetch_api.db"));
+	q->Directories.set("path.tools", resourcesPath.value().filePath("tools"));
+	q->Directories.set("path.databases", resourcesPath.value().filePath("data"));
+	q->Directories.set("path.databases.settings.file", resourcesPath.value().filePath("data/databases.json"));
+	q->Directories.set("path.auth.words", resourcesPath.value().filePath("data/recovery/english.txt"));
+	q->Directories.set("path.users", resourcesPath.value().filePath("users"));
+	q->Directories.set("path.databases.accounts.file", resourcesPath.value().filePath("data/accounts.db"));
+	q->Directories.set("path.databases.fetch_api.file", resourcesPath.value().filePath("data/fetch_api.db"));
 	return true;
 }
 
@@ -84,8 +84,8 @@ bool Resources::loadProfile(const QString& userHash) {
 	}
 
 	auto userBasePath = userBasePathOpt.value();
-	//Directories.set("system.path.users.current.file", userBasePath);
-	//Directories.set("system.path.auth.current.file", userBasePath.filePath("auth.enc"));
+	//Directories.set("path.users.current.file", userBasePath);
+	//Directories.set("path.auth.current.file", userBasePath.filePath("auth.enc"));
 	//Directories.set(DirectoryPath::MessangerDbFile, userBasePath.filePath("data/messanger.db"));
 	//Directories.set(DirectoryPath::GameDbFile, userBasePath.filePath("data/game.db"));
 
@@ -93,7 +93,7 @@ bool Resources::loadProfile(const QString& userHash) {
 }
 
 std::optional<QDir> Resources::createProfilePath(const QString& userHash, bool checkOnly) {
-	auto usersPath = Directories.get("system.path.users");
+	auto usersPath = Directories.get("path.users");
 	if (!usersPath) {
 		qCritical() << "Users.Path is not set.";
 		return std::nullopt;

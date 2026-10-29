@@ -8,11 +8,11 @@
 #include "Launcher/commands/windows/windows_create.h"
 #include "Launcher/commands/windows/windows_invoke.h"
 
-#include "Content/ConsoleModule/processors/command_processor.h"
-#include "Content/ConsoleModule/command_context.h"
-#include "Content/ConsoleModule/command_console/console_table.h"
-#include "Content/ConsoleModule/command_console/console_image.h"
-#include "Content/ConsoleModule/models/instruction.h"
+#include "Libs/Engine/scripting/command_processor.h"
+#include "Libs/Engine/scripting/command_context.h"
+#include "Libs/Engine/console/console_table.h"
+#include "Libs/Engine/console/console_image.h"
+#include "Libs/Engine/scripting/instruction.h"
 #include "Libs/Engine/services/services_registry.h"
 
 class WindowsCommand::Private {
