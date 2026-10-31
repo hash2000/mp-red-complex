@@ -1,8 +1,6 @@
 #include "Libs/Engine/scripting/parser/base/parser_attribute.h"
 #include "Libs/Engine/scripting/parser/base/ast_base.h"
-#include "Libs/Engine/scripting/parser/base/ast_variable_defs.h"
 #include "Libs/Engine/scripting/parser/base/parser_value.h"
-#include "Libs/Engine/scripting/parser/base/ast_variable_defs.h"
 #include "Libs/Engine/scripting/parser/base/parser_identifier.h"
 
 ParserAttribute::~ParserAttribute() = default;
@@ -28,47 +26,21 @@ IAstPtr ParserAttribute::parse(SourceCursor& cursor, std::optional<ParseError>& 
 	node->setLocation(startLoc);
 	node->setParameter("name", ident->parameter("name"));
 
-	if (cursor.peek() == '(') {
-		cursor.advance(); // Съедаем (
+	if (!cursor.skipWhitespaceAndComments(error)) {
+		return nullptr;
+	}
 
-		ParserValue valueParser;
+	if (cursor.peek() == '=') {
+		cursor.advance();
 
-		while (!cursor.isEnd()) {
-			if (!cursor.skipWhitespaceAndComments(error)) {
-				return nullptr;
-			}
-
-			// Проверяем конец списка параметров
-			if (cursor.peek() == ')') {
-				cursor.advance(); // Съедаем )
-				break;
-			}
-
-			// Парсим значение параметра
-			auto paramValue = valueParser.parse(cursor, error);
-			if (!paramValue) {
-				if (error.has_value()) {
-					return nullptr;
-				}
-				error = ParseError{ cursor.currentLocation(), "Expected parameter value." };
-				return nullptr;
-			}
-
-			node->setChild("parameters", paramValue);
-
-			if (!cursor.skipWhitespaceAndComments(error)) {
-				return nullptr;
-			}
-
-			// Проверяем разделитель (запятая) или конец
-			if (cursor.peek() == ',') {
-				cursor.advance(); // Съедаем ,
-			}
-			else if (cursor.peek() != ')') {
-				error = ParseError{ cursor.currentLocation(), "Expected ',' or ')'" };
-				return nullptr;
-			}
+		auto value = ParserValue().parse(cursor, error);
+		if (!value || error) {
+			return nullptr;
 		}
+
+		node->setParameter("value", value->parameter("value"));
+		node->setParameter("type", value->parameter("type"));
+		node->setParameter("mime-type", value->parameter("mime-type"));
 	}
 
 	backup.commit();

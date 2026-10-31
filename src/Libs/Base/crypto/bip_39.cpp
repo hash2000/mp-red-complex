@@ -40,7 +40,7 @@ Bip39::Bip39(Resources* resources)
 Bip39::~Bip39() = default;
 
 bool Bip39::Private::loadWordlist() {
-	auto recoveryFile = resources->Directories.get("system.path.auth.words");
+	auto recoveryFile = resources->Directories.get("path.auth.words");
 	if (!recoveryFile) {
 		throw std::invalid_argument("Recovery file is not set.");
 	}

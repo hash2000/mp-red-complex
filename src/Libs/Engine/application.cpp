@@ -7,9 +7,8 @@
 #include <QApplication>
 #include <QStyleHints>
 #include <QSettings>
-#include <QStandardPaths>
-#include <QFile>
-#include <QDir>
+#include <QDirIterator>
+#include <QFileInfo>
 
 class Application::Private {
 public:
@@ -27,7 +26,7 @@ private:
 	bool setupScriptsSubsystem();
 	void installMessageHandler();
 	bool installStylesheets();
-	QPalette darkPalette();
+	QPalette loadPalette();
 };
 
 Application::Application()
@@ -52,14 +51,13 @@ int Application::Private::tryRun(int& argc, char** argv) {
 	qDebug() << "Bootstrap" << q->applicationName();
 	resources = std::make_unique<Resources>();
 
-	if (!setupResources()) {
-		return 1;
-	}
+	QApplication::setApplicationName(q->applicationName());
+	QApplication::setOrganizationName(q->organizationName());
 
 	QSurfaceFormat fmt;
+	//fmt.setVersion(2, 1);
 	fmt.setVersion(3, 3);
 	fmt.setRenderableType(QSurfaceFormat::OpenGL);
-	//fmt.setVersion(2, 1);
 	fmt.setProfile(QSurfaceFormat::CompatibilityProfile);
 	fmt.setDepthBufferSize(24);
 	fmt.setAlphaBufferSize(0);
@@ -69,6 +67,7 @@ int Application::Private::tryRun(int& argc, char** argv) {
 	fmt.setSamples(4);
 	fmt.setStencilBufferSize(8);
 	//fmt.setStereo(true);
+
 	QSurfaceFormat::setDefaultFormat(fmt);
 
 	QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
@@ -83,12 +82,11 @@ int Application::Private::tryRun(int& argc, char** argv) {
 	qputenv("QT_MAC_DONT_OVERRIDE_CTRL_LMB", "1");
 	qputenv("QT_OPENGL_BUGLIST", ":/opengl_buglist.json");
 
-	QApplication::setApplicationName(q->applicationName());
-	QApplication::setOrganizationName(q->organizationName());
-
 	QApplication app(argc, argv);
 
-
+	if (!setupResources()) {
+		return 1;
+	}
 
 
 	//installMessageHandler();
@@ -97,8 +95,8 @@ int Application::Private::tryRun(int& argc, char** argv) {
 	//mainFrame->configure(pCfg);
 	//engine.setupMainFrame(std::move(mainFrame));
 
-	qDebug() << "Startup";
-	return app.exec();
+	qDebug() << "Start application";
+	return QApplication::exec();
 }
 
 bool Application::Private::setupResources() {
@@ -123,30 +121,44 @@ bool Application::Private::setupScriptsSubsystem() {
 }
 
 bool Application::Private::setupAppearance() {
-	QApplication::styleHints()->setColorScheme(Qt::ColorScheme::Dark);
 
 	if (!installStylesheets()) {
 		return false;
 	}
 
-	QApplication::setPalette(darkPalette());
+	QApplication::setPalette(loadPalette());
+	QApplication::styleHints()->setColorScheme(Qt::ColorScheme::Dark);
 
 	return true;
 }
 
 bool Application::Private::installStylesheets() {
-	const auto pathVar = resources->Directories.get("system.path.profile");
+	const auto pathVar = resources->Directories.get("path.profile");
 	if (!pathVar.has_value()) {
+		qDebug() << "Variable 'path.profile' is not exists";
 		return false;
 	}
 
-	const auto path = pathVar.value().filePath("stylesheets/base.qss");
-	if (auto file = QFile{ path }; file.exists() && file.open(QFile::ReadOnly | QFile::Text)) {
-		qApp->setStyleSheet(QTextStream{ &file }.readAll());
-		return true;
+	QDir path(pathVar.value().filePath("stylesheets/"));
+	if (!path.exists()) {
+		qDebug() << "Stylesheet directory is not exists:" << path;
+		return false;
 	}
 
-	return false;
+	QDirIterator it(path.path(), QStringList() << "*.qss", QDir::Files, QDirIterator::Subdirectories);
+	while (it.hasNext()) {
+		const auto styleFilePath = it.next();
+		if (auto file = QFile{ styleFilePath }; file.exists() && file.open(QFile::ReadOnly | QFile::Text)) {
+			qApp->setStyleSheet(QTextStream{ &file }.readAll());
+			qDebug() << "Loaded style:" << file.fileName();
+		}
+		else {
+			qWarning() << "Load style:" << file.fileName();
+		}
+	}
+
+	qDebug() << "Stylesheets loaded";
+	return true;
 }
 
 void Application::Private::installMessageHandler() {
@@ -168,7 +180,7 @@ void Application::Private::registerTypes() {
 	qRegisterMetaType<ProgramOpCode>("OpCode");
 }
 
-QPalette Application::Private::darkPalette() {
+QPalette Application::Private::loadPalette() {
 	const auto button = QColor{ 35, 35, 35 };
 	const auto text = QColor{ 207, 207, 207 };
 	const auto highlight = QColor{ 62, 112, 205 };

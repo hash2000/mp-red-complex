@@ -3,40 +3,46 @@
 #include "Libs/Engine/scripting/parser/base/parser_value.h"
 #include "Libs/Engine/scripting/parser/base/parser_variable.h"
 #include "Libs/Engine/scripting/parser/base/parser_attributes_collection.h"
-#include "Libs/Engine/scripting/parser/commands/parser_command.h"
 #include "Libs/Engine/scripting/parser/commands/parser_object.h"
-#include "Libs/Engine/scripting/parser/stylesheets/parser_palette.h"
+#include "Libs/Engine/scripting/parser/base/parser_identifiers_space.h"
 
 
-
-void TestConsoleModule::testCommandParser_ParsePalette_ShouldReturnPaletteOptions() {
+void TestCommandModule::testParser_ParseNamespace_ShouldReturnNamespacePath() {
 	// Given
 	QString testScript = R"(
-	use {
-		var button: (35, 35, 35);
-		var[darker(200)] buttonDark: {{.button}};
-	}
-
-	window[active]: {{.button}}
-	window[Disabled]: {{.buttonDark}}
+	system
+	.	text
+	.  json
+	. converters
 )";
 
 	SourceCursor source(testScript);
 	std::optional<ParseError> error;
 
 	// When
-	auto result = ParserPalette().parse(source, error);
+	auto result = ParserIdentifiersSpace().parse(source, error);
 
-	//// Then
-	//QCOMPARE(error.has_value(), false);
-	//QVERIFY(result != nullptr);
+	// Then
+	QCOMPARE(error.has_value(), false);
+	QVERIFY(result != nullptr);
+	QCOMPARE(result->parameter("ns-path").toString(), ".system.text.json.converters");
 
-	//auto location = result->location();
-	//auto srcLocation = source.currentLocation();
+	int index = 0;
+	std::vector<QString> map = {
+		"system", "text", "json", "converters"
+	};
+	for (const auto attr : result->children("namespace")) {
+		auto name = attr->parameter("name").toString();
 
+		QCOMPARE_LT(index, map.size());
+		QCOMPARE(name, map[index]);
+		index++;
+	}
+
+	QCOMPARE(index, map.size());
 }
 
-void TestConsoleModule::testCommandParser_ParseObject_ShouldReturnObjectWithFields() {
+void TestCommandModule::testParser_ParseObject_ShouldReturnObjectWithFields() {
 	// Given
 	QString testScript = R"(
 	object car {
@@ -62,7 +68,7 @@ void TestConsoleModule::testCommandParser_ParseObject_ShouldReturnObjectWithFiel
 
 }
 
-void TestConsoleModule::testCommandParser_ParseNumberValue_ShouldReturnPositiveOrNegativeNumber_data() {
+void TestCommandModule::testParser_ParseNumberValue_ShouldReturnPositiveOrNegativeNumber_data() {
 	QTest::addColumn<QString>("testScript");
 	QTest::addColumn<double>("expected");
 
@@ -117,7 +123,7 @@ void TestConsoleModule::testCommandParser_ParseNumberValue_ShouldReturnPositiveO
 )" << 1234.567;
 }
 
-void TestConsoleModule::testCommandParser_ParseNumberValue_ShouldReturnPositiveOrNegativeNumber() {
+void TestCommandModule::testParser_ParseNumberValue_ShouldReturnPositiveOrNegativeNumber() {
 	// Given
 	QFETCH(QString, testScript);
 	QFETCH(double, expected);
@@ -140,7 +146,7 @@ void TestConsoleModule::testCommandParser_ParseNumberValue_ShouldReturnPositiveO
 }
 
 
-void TestConsoleModule::testCommandParser_ParseBoolValue_ShouldReturnTrueFalseValue_data() {
+void TestCommandModule::testParser_ParseBoolValue_ShouldReturnTrueFalseValue_data() {
 	QTest::addColumn<QString>("testScript");
 	QTest::addColumn<bool>("expected");
 
@@ -156,7 +162,7 @@ void TestConsoleModule::testCommandParser_ParseBoolValue_ShouldReturnTrueFalseVa
 
 }
 
-void TestConsoleModule::testCommandParser_ParseBoolValue_ShouldReturnTrueFalseValue() {
+void TestCommandModule::testParser_ParseBoolValue_ShouldReturnTrueFalseValue() {
 	// Given
 	QFETCH(QString, testScript);
 	QFETCH(bool, expected);
@@ -178,7 +184,7 @@ void TestConsoleModule::testCommandParser_ParseBoolValue_ShouldReturnTrueFalseVa
 	QCOMPARE(result->parameter("type").toString(), "bool");
 }
 
-void TestConsoleModule::testCommandParser_ParseUntypedVariableWithoutRValue_ShouldReturnError() {
+void TestCommandModule::testParser_ParseUntypedVariableWithoutRValue_ShouldReturnError() {
 	// Given
 	QString testScript = R"(
 	// тип данных (string, number, bool)
@@ -196,7 +202,7 @@ void TestConsoleModule::testCommandParser_ParseUntypedVariableWithoutRValue_Shou
 	QVERIFY(result == nullptr);
 }
 
-void TestConsoleModule::testCommandParser_ParseVariableWithBinding_ShouldReturnVariableDeclarationWithBindName() {
+void TestCommandModule::testParser_ParseVariableWithBinding_ShouldReturnVariableDeclarationWithBindName() {
 	// Given
 	QString testScript = R"(
 	// тип данных (string, number, bool)
@@ -224,11 +230,11 @@ void TestConsoleModule::testCommandParser_ParseVariableWithBinding_ShouldReturnV
 	QCOMPARE(result->parameter("type").toString(), "string");
 }
 
-void TestConsoleModule::testCommandParser_ParseTypedVariable_ShouldReturnVariableDeclarationWithoutValue() {
+void TestCommandModule::testParser_ParseTypedVariable_ShouldReturnVariableDeclarationWithoutValue() {
 	// Given
 	QString testScript = R"(
 	// тип данных (string, number, bool)
-	string[secret, mime("text/plane"), rare] key;
+	string[secret, mime="text/plane", rare] key;
 )";
 
 	SourceCursor source(testScript);
@@ -249,19 +255,19 @@ void TestConsoleModule::testCommandParser_ParseTypedVariable_ShouldReturnVariabl
 	QCOMPARE(result->parameter("type").toString(), "string");
 }
 
-void TestConsoleModule::testCommandParser_ParseTypedVariableWithValue_ShouldRequridTypeMustCorrecponded_data() {
+void TestCommandModule::testParser_ParseTypedVariableWithValue_ShouldRequridTypeMustCorrecponded_data() {
 	QTest::addColumn<QString>("testScript");
 	QTest::addColumn<QString>("expectedType");
 	QTest::addColumn<QString>("expectedMimeType");
 
 	QTest::addRow("string & text/jason") << R"(
 	// тип данных
-	string[any_attribute("param")] key: <<json>>{"key1":"val1","key2":"val2"}<</json>>;
+	string[any_attribute="param"] key: <<json>>{"key1":"val1","key2":"val2"}<</json>>;
 )" << "string" << "application/json";
 
 	QTest::addRow("string & application/xml") << R"(
 	// тип данных
-	string[any_attribute("param")] key: <<xml>>
+	string[any_attribute="param"] key: <<xml>>
 <root>
 		<head></head>
 		<body></body>
@@ -271,7 +277,7 @@ void TestConsoleModule::testCommandParser_ParseTypedVariableWithValue_ShouldRequ
 
 	QTest::addRow("string & text/x-ini") << R"(
 	// тип данных
-	string[any_attribute("param")] key: <<ini>>
+	string[any_attribute="param"] key: <<ini>>
 [Settings]
 test1:val1
 test2:val2
@@ -280,7 +286,7 @@ test2:val2
 
 	QTest::addRow("string & multiline text/plane") << R"(
 	// тип данных
-	string[any_attribute("param")] key: <<text>>
+	string[any_attribute="param"] key: <<text>>
 		any
 		multiline
 		text
@@ -289,21 +295,21 @@ test2:val2
 
 	QTest::addRow("string & single line text/plane") << R"(
 	// тип данных
-	string[any_attribute("param")] key: "single line text";
+	string[any_attribute="param"] key: "single line text";
 )" << "string" << "text/plane";
 
 	QTest::addRow("number") << R"(
 	// тип данных
-	number[any_attribute("param")] key: 100.0;
+	number[any_attribute="param"] key: 100.0;
 )" << "number" << "";
 
 	QTest::addRow("AnyObject") << R"(
 	// тип данных
-	AnyObject[any_attribute("param")] key: 100.0;
+	AnyObject[any_attribute="param"] key: 100.0;
 )" << "AnyObject" << "";
 }
 
-void TestConsoleModule::testCommandParser_ParseTypedVariableWithValue_ShouldRequridTypeMustCorrecponded() {
+void TestCommandModule::testParser_ParseTypedVariableWithValue_ShouldRequridTypeMustCorrecponded() {
 	// Given
 	QFETCH(QString, testScript);
 	QFETCH(QString, expectedType);
@@ -329,11 +335,11 @@ void TestConsoleModule::testCommandParser_ParseTypedVariableWithValue_ShouldRequ
 }
 
 
-void TestConsoleModule::testCommandParser_ParseTypedVariableWithValue_ShouldCompareLTypeAndRType() {
+void TestCommandModule::testParser_ParseTypedVariableWithValue_ShouldCompareLTypeAndRType() {
 	// Given
 	QString testScript = R"(
 	// тип данных (string, number, bool)
-	string[secret, mime("text/jason"), rare] key;
+	string[secret, mime="text/jason", rare] key;
 )";
 
 	SourceCursor source(testScript);
@@ -354,7 +360,7 @@ void TestConsoleModule::testCommandParser_ParseTypedVariableWithValue_ShouldComp
 	QCOMPARE(result->parameter("type").toString(), "string");
 }
 
-void TestConsoleModule::testCommandParser_ParseRValueTypedVariable_ShouldReturnVariableDeclarationWithValue() {
+void TestCommandModule::testParser_ParseRValueTypedVariable_ShouldReturnVariableDeclarationWithValue() {
 	// Given
 	QString testScript = R"(
 	// тип данных (string, number, bool)
@@ -383,17 +389,16 @@ multiline secret text
 	
 }
 
-void TestConsoleModule::testCommandParser_ParseAttributesCollection_ShouldReturnAttribetes() {
+void TestCommandModule::testParser_ParseAttributesCollection_ShouldReturnAttribetes() {
 	// Given
 	QString testScript = R"(
-	[ // секретный, нельзя просматривать в консоли или другими встроенными средствами отладки
-		secret, // это секрет
-		// mime-тип - text/plane
-		testParametrizedAttribyte("param1", <<text>>
+	[
+		attr1=1,
+		attr2=<<text>>
 	parameter value
-	<</text>>, "test"),
-		// обозначает коллекцию 
-		repeated
+<</text>>,
+		attr3=true,
+		attr4=false
 	]
 )";
 	SourceCursor source(testScript);
@@ -410,7 +415,7 @@ void TestConsoleModule::testCommandParser_ParseAttributesCollection_ShouldReturn
 	auto srcLocation = source.currentLocation();
 
 	QCOMPARE(result->children("any-group").size(), 0);
-	QCOMPARE(result->children("attributes").size(), 3);
+	QCOMPARE(result->children("attributes").size(), 4);
 
 	std::set<QString> found;
 	for (const auto attr : result->children("attributes")) {
@@ -418,38 +423,34 @@ void TestConsoleModule::testCommandParser_ParseAttributesCollection_ShouldReturn
 		auto inserResult = found.emplace(name);
 		QCOMPARE(inserResult.second, true);
 
-		if (name == "secret") {
-			QCOMPARE(attr->children("parameters").size(), 0);
+		if (name == "attr1") {
+			QCOMPARE(attr->parameter("type").toString(), "number");
+			QCOMPARE(attr->parameter("mime-type").isNull(), true);
+			QCOMPARE(attr->parameter("value").toInt(), 1);
 		}
-		else if (name == "testParametrizedAttribyte") {
-			QCOMPARE(attr->children("parameters").size(), 3);
-			int paramid = 0;
-			for (const auto param : attr->children("parameters")) {
-				auto paramValue = param->parameter("value").toString();
-				auto paramMimeType = param->parameter("mime-type").toString();
-				if (paramid == 0) {
-					QCOMPARE(paramValue, "param1");
-				}
-				else if (paramid == 1) {
-					QCOMPARE(paramValue, R"(
+		else if (name == "attr2") {
+			QCOMPARE(attr->parameter("type").toString(), "string");
+			QCOMPARE(attr->parameter("mime-type").toString(), "text/plane");
+			QCOMPARE(attr->parameter("value").toString(), R"(
 	parameter value
-	)");
-				}
-				else if (paramid == 2) {
-					QCOMPARE(paramValue, "test");
-				}
-				paramid++;
-			}
+)");
 		}
-		else if (name == "repeated") {
-			QCOMPARE(attr->children("parameters").size(), 0);
+		else if (name == "attr3") {
+			QCOMPARE(attr->parameter("type").toString(), "bool");
+			QCOMPARE(attr->parameter("mime-type").isNull(), true);
+			QCOMPARE(attr->parameter("value").toBool(), true);
+		}
+		else if (name == "attr4") {
+			QCOMPARE(attr->parameter("type").toString(), "bool");
+			QCOMPARE(attr->parameter("mime-type").isNull(), true);
+			QCOMPARE(attr->parameter("value").toBool(), false);
 		}
 	}
 
-	QCOMPARE(found.size(), 3);
+	QCOMPARE(found.size(), 4);
 }
 
-void TestConsoleModule::testCommandParser_ParseSingleTextValue_ShouldReturnAstValue() {
+void TestCommandModule::testParser_ParseSingleTextValue_ShouldReturnAstValue() {
 	// Given
 	QString testScript = R"(
 	// комментарий
@@ -483,7 +484,7 @@ void TestConsoleModule::testCommandParser_ParseSingleTextValue_ShouldReturnAstVa
 	QCOMPARE(mime, "text/plane");
 }
 
-void TestConsoleModule::testCommandParser_ParseMultilineTextValue_ShouldReturnAstValue() {
+void TestCommandModule::testParser_ParseMultilineTextValue_ShouldReturnAstValue() {
 	// Given
 	QString testScript = R"(
 	// комментарий
@@ -519,7 +520,7 @@ void TestConsoleModule::testCommandParser_ParseMultilineTextValue_ShouldReturnAs
 	QCOMPARE(mime, "text/plane");
 }
 
-void TestConsoleModule::testCommandParser_ParseInclude_ShouldReturnIncludeAstWithPath() {
+void TestCommandModule::testParser_ParseInclude_ShouldReturnIncludeAstWithPath() {
 	// Given
 	QString testScript = R"(
 	// комментарий
@@ -551,7 +552,7 @@ void TestConsoleModule::testCommandParser_ParseInclude_ShouldReturnIncludeAstWit
 	QCOMPARE(srcLocation.line, 4);
 }
 
-void TestConsoleModule::testCommandParser_SourceCursorReadUntil_ShouldReturnTextBetweenQuotesMarkers() {
+void TestCommandModule::testParser_SourceCursorReadUntil_ShouldReturnTextBetweenQuotesMarkers() {
 	// Given
 	QString prefix = "any block ";
 	QString suffif = R"(<<text>>
@@ -581,5 +582,3 @@ void TestConsoleModule::testCommandParser_SourceCursorReadUntil_ShouldReturnText
 )");
 
 }
-
-

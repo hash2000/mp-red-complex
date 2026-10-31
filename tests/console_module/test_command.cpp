@@ -1,4 +1,4 @@
 #include "test_command.h"
 
-QTEST_MAIN(TestConsoleModule)
+QTEST_MAIN(TestCommandModule)
 #include "test_command.moc"

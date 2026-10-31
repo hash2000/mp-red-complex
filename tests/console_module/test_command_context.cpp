@@ -23,7 +23,7 @@ private:
 };
 }
 
-void TestConsoleModule::testCommandContext_BuildChildContext() {
+void TestCommandModule::testContext_BuildChildContext() {
 	// Given
 	auto ctl = std::make_unique<TestCommandController>();
 	auto glob = ctl->globalContext();
@@ -56,4 +56,6 @@ void TestConsoleModule::testCommandContext_BuildChildContext() {
 	QCOMPARE(ch111_ptr->name(), "test11");
 	QCOMPARE(ch111_ptr->nameSpace(), ".test1.test11");
 }
+
+
 

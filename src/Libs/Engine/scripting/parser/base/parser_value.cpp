@@ -129,11 +129,9 @@ IAstPtr ParserValue::Private::tryReadBoolValue(SourceCursor& cursor, std::option
 	auto startLoc = cursor.currentLocation();
 	bool result;
 	if (cursor.token(trueToken)) {
-		cursor.advance(trueToken.length());
 		result = true;
 	}
 	else if (cursor.token(falseToken)) {
-		cursor.advance(falseToken.length());
 		result = false;
 	}
 	else {

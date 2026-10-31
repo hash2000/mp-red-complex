@@ -9,6 +9,7 @@ add_executable(TestConsoleModule
     test_command.cpp
 		test_command_context.cpp
     test_command_parsers.cpp
+    test_command_parsers_palette.cpp
 )
 
 target_include_directories(TestConsoleModule PRIVATE
@@ -26,4 +27,4 @@ target_link_libraries(TestConsoleModule PRIVATE
 		RedComplexGraphics
 )
 
-add_test(NAME TestConsoleModule COMMAND TestConsoleModule )
+add_test(NAME TestConsoleModule COMMAND TestConsoleModule)
