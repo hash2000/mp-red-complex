@@ -17,20 +17,13 @@ public:
 	IAst& operator=(const IAst&) = default;
 
 	virtual void setLocation(const SourceLocation& loc) = 0;
-
 	virtual SourceLocation location() const = 0;
 
-	virtual void setParameter(const QString& name, const QVariant& value) = 0;
-
+	virtual void setParameter(const QString& name, const QVariant& value, bool reset = true) = 0;
 	virtual QVariant parameter(const QString& name) const = 0;
-
 	virtual void setChild(const QString& type, IAstPtr child) = 0;
-
 	virtual void setChildren(const QString& type, const IAstCollection& children) = 0;
-
 	virtual size_t childTypesCount() const = 0;
-
 	virtual std::list<QString> childTypes() const = 0;
-
 	virtual IAstCollection children(const QString& type) const = 0;
 };

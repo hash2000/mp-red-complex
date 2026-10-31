@@ -10,21 +10,15 @@ public:
 	~AstBase() override;
 
 	void setLocation(const SourceLocation& loc) override;
-
 	SourceLocation location() const override;
 
-	void setParameter(const QString& name, const QVariant& value) override;
-
+	void setParameter(const QString& name, const QVariant& value, bool reset = true) override;
 	QVariant parameter(const QString& name) const override;
 
 	void setChild(const QString& type, IAstPtr child) override;
-
 	void setChildren(const QString& type, const IAstCollection& children) override;
-
 	size_t childTypesCount() const  override;
-
 	std::list<QString> childTypes() const  override;
-
 	IAstCollection children(const QString& type) const override;
 
 private:

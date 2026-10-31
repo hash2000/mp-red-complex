@@ -8,6 +8,7 @@ class ParserVariable::Private {
 public:
 	Private(ParserVariable* parent) : q(parent) { }
 	ParserVariable* q;
+	bool forseNeedValue;
 
 	bool tryPopulateType(std::shared_ptr<AstBase> node, SourceCursor& cursor, std::optional<ParseError>& error);
 	bool tryPopulateAttributes(std::shared_ptr<AstBase> node, SourceCursor& cursor, std::optional<ParseError>& error);
@@ -15,8 +16,9 @@ public:
 	bool tryPopulateVariableName(std::shared_ptr<AstBase> node, SourceCursor& cursor, std::optional<ParseError>& error);
 };
 
-ParserVariable::ParserVariable()
+ParserVariable::ParserVariable(bool forseNeedValue)
 : d(std::make_unique<Private>(this)) {
+	d->forseNeedValue = forseNeedValue;
 }
 
 ParserVariable::~ParserVariable() = default;
@@ -35,7 +37,7 @@ bool ParserVariable::Private::tryPopulateType(std::shared_ptr<AstBase> node, Sou
 		needRVal = true;
 	}
 
-	node->setParameter("need-rvalue", needRVal);
+	node->setParameter("need-rvalue", needRVal, false);
 	node->setParameter("type", typeName);
 
 	return true;
@@ -101,6 +103,10 @@ IAstPtr ParserVariable::parse(SourceCursor& cursor, std::optional<ParseError>& e
 
 	auto node = std::make_shared<AstBase>();
 	node->setLocation(cursor.currentLocation());
+
+	if (d->forseNeedValue) {
+		node->setParameter("need-rvalue", true, false);
+	}
 
 	if (!d->tryPopulateType(node, cursor, error)) {
 		return nullptr;

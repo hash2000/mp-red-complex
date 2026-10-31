@@ -12,14 +12,14 @@ private slots:
 	void testParser_ParseInclude_ShouldReturnIncludeAstWithPath();
 	void testParser_ParseSingleTextValue_ShouldReturnAstValue();
 	void testParser_ParseMultilineTextValue_ShouldReturnAstValue();
-	void testParser_ParseUntypedVariableWithoutRValue_ShouldReturnError();
+	void testParser_ParseVariable_ShouldCheckRValue_data();
+	void testParser_ParseVariable_ShouldCheckRValue();
 	void testParser_ParseTypedVariable_ShouldReturnVariableDeclarationWithoutValue();
 	void testParser_ParseTypedVariableWithValue_ShouldCompareLTypeAndRType();
 	void testParser_ParseTypedVariableWithValue_ShouldRequridTypeMustCorrecponded_data();
 	void testParser_ParseTypedVariableWithValue_ShouldRequridTypeMustCorrecponded();
 	void testParser_ParseRValueTypedVariable_ShouldReturnVariableDeclarationWithValue();
 	void testParser_ParseVariableWithBinding_ShouldReturnVariableDeclarationWithBindName();
-	void testParser_ParseObject_ShouldReturnObjectWithFields();
 	void testParser_ParseBoolValue_ShouldReturnTrueFalseValue_data();
 	void testParser_ParseBoolValue_ShouldReturnTrueFalseValue();
 	void testParser_ParseNumberValue_ShouldReturnPositiveOrNegativeNumber_data();

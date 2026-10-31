@@ -24,7 +24,10 @@ SourceLocation AstBase::location() const {
 	return d->location;
 }
 
-void AstBase::setParameter(const QString& name, const QVariant& value) {
+void AstBase::setParameter(const QString& name, const QVariant& value, bool reset) {
+	if (!reset && (d->parameters.find(name) != d->parameters.end()) ) {
+		return;
+	}
 	d->parameters[name] = value;
 }
 

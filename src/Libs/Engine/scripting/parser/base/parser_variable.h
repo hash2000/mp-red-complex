@@ -3,7 +3,7 @@
 
 class ParserVariable: public IParser {
 public:
-	ParserVariable();
+	ParserVariable(bool forseNeedValue = false);
 	~ParserVariable() override;
 	QString name() const override;
 	IAstPtr parse(SourceCursor& cursor, std::optional<ParseError>& error) override;

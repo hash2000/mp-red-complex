@@ -112,43 +112,45 @@ var variable_bind: {{.variable_source1 | .variable_source2}}
 
 ```
 // theme-dark.script
-stream palette {
-  // Базовые цвета
-  vec[rgb] button: (35, 35, 35)
-  vec[rgb] window: (50, 50, 50)
-  vec[rgb] text: (207, 207, 207)
+processor application.palette {
+	mapping states.ui[
+		palette,
+		name="dark"
+		version="0.0.1",
+	] {
+		// Build an initial palette based 
+		Extends				[ rgb														]:		(35, 35, 35)
 
-  // Производные цвета (вычисляются рантаймом по атрибуту darker)
-  vec[rgb, darker=200] buttonDark: {{.button}}
-  vec[rgb, darker=200] windowDark: {{.window}}
-  vec[rgb, darker=200] textDark: {{.text}}
-}
-```
+		// List box backgrounds, text entry backgrounds, menu backgrounds
+		Base					[ rgb,	darker=130							]:		(35, 35, 35)
 
-```
-// palette-mapper.processor
-processor generate-palette {
-  use {
-    // Принимаем на вход поток с именем palette
-    palette input
-  }
+		// Window colors
+		Window				[ rgb,								Active		]:		(50, 50, 50)
+		Window				[ rgb,								Inactive	]:		(40, 40, 40)
+		Window				[ rgb,	darker=200,		Disabled	]:		(50, 50, 50)
 
-  export {
-    // Отдаём поток с маппингом состояний
-    mapping ui-states
-  }
+		// Button text
+		ButtonText		[ rgb,								Active		]:		(207, 207, 207)
+		ButtonText		[ rgb,								Inactive	]:		(207, 207, 207)
+		ButtonText		[ rgb,	darker=200,		Disabled	]:		(207, 207, 207)
 
-  // Логика маппинга
-  mapping ui-states {
-    Window[Active]: {{.input.window}}
-    Window[Disabled]: {{.input.windowDark}}
-    Window[Inactive]: (40, 40, 40)  // Хардкод для специфичного состояния
+		// WindowText is supposed to be against QPalette::Window
+		WindowText		[ rgb,								Active		]:		(207, 207, 207)
+		WindowText		[ rgb,								Inactive	]:		(207, 207, 207)
+		WindowText		[ rgb,	darker=200,		Disabled	]:		(207, 207, 207)
 
-    Base: {{.input.buttonDark}}
+		// Menu text, text edit text, table cell text
+		Text					[ rgb,	darker=115,		Active		]:		(207, 207, 207)
+		Text					[ rgb,	darker=115,		Inactive	]:		(207, 207, 207)
+		Text					[ rgb,								Disabled	]:		(102, 102, 102)
 
-    ButtonText[Active]: {{.input.text}}
-    ButtonText[Inactive]: {{.input.text}}
-    ButtonText[Disabled]: {{.input.textDark}}
-  }
+		// Disabled menu item text shadow
+		Light					[ rgb,	darker=200,		Disabled	]:		(35, 35, 35)
+
+		// Highlight (selected list box row, selected grid cell background, selected tab text
+		Highlight			[ rgb,								Active		]:		(62, 112, 205)
+		Highlight			[ rgb,								Inactive	]:		(62, 112, 205)
+		Highlight			[ rgb,								Disabled	]:		(62, 112, 205)
+	}
 }
 ```

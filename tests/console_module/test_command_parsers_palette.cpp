@@ -1,5 +1,5 @@
 #include "test_command.h"
-#include "Libs/Engine/scripting/parser/stylesheets/parser_palette.h"
+#include "Libs/Engine/scripting/parser/base/parser_processor.h"
 
 void TestCommandModule::testPalette_ParsePalette_ShouldReturnPaletteOptions() {
 	// Given
@@ -11,38 +11,38 @@ processor application.palette {
 		version="0.0.1",
 	] {
 		// Build an initial palette based 
-		Extends				[ rgb														]:		(35, 35, 35)
+		vec[ rgb,							Extends										]	_:		(35, 35, 35)
 
 		// List box backgrounds, text entry backgrounds, menu backgrounds
-		Base					[ rgb,	darker=130							]:		(35, 35, 35)
+		vec[ rgb							Base											]	_:		(35, 35, 35)
 
 		// Window colors
-		Window				[ rgb,								Active		]:		(50, 50, 50)
-		Window				[ rgb,								Inactive	]:		(40, 40, 40)
-		Window				[ rgb,	darker=200,		Disabled	]:		(50, 50, 50)
+		vec[ rgb,							Window,					Active		]	_:		(50, 50, 50)
+		vec[ rgb,							Window,					nactive		]	_:		(40, 40, 40)
+		vec[ rgb,	darker=200, Window,					isabled		]	_:		(50, 50, 50)
 
 		// Button text
-		ButtonText		[ rgb,								Active		]:		(207, 207, 207)
-		ButtonText		[ rgb,								Inactive	]:		(207, 207, 207)
-		ButtonText		[ rgb,	darker=200,		Disabled	]:		(207, 207, 207)
+		vec[ rgb,							ButtonText,			Active		]	_:		(207, 207, 207)
+		vec[ rgb,							ButtonText,			Inactive	]	_:		(207, 207, 207)
+		vec[ rgb, darker=200,	ButtonText,			Disabled	]	_:		(207, 207, 207)
 
 		// WindowText is supposed to be against QPalette::Window
-		WindowText		[ rgb,								Active		]:		(207, 207, 207)
-		WindowText		[ rgb,								Inactive	]:		(207, 207, 207)
-		WindowText		[ rgb,	darker=200,		Disabled	]:		(207, 207, 207)
+		vec[ rgb,							WindowText,			Active		]	_:		(207, 207, 207)
+		vec[ rgb,							WindowText,			Inactive	]	_:		(207, 207, 207)
+		vec[ rgb,							WindowText,			Disabled	]	_:		(207, 207, 207)
 
 		// Menu text, text edit text, table cell text
-		Text					[ rgb,	darker=115,		Active		]:		(207, 207, 207)
-		Text					[ rgb,	darker=115,		Inactive	]:		(207, 207, 207)
-		Text					[ rgb,								Disabled	]:		(102, 102, 102)
+		vec[ rgb,	darker=115,	Text,						Active		]	_:		(207, 207, 207)
+		vec[ rgb,	darker=115,	Text,						Inactive	]	_:		(207, 207, 207)
+		vec[ rgb,							Text,						Disabled	]	_:		(102, 102, 102)
 
 		// Disabled menu item text shadow
-		Light					[ rgb,	darker=200,		Disabled	]:		(35, 35, 35)
+		vec[ rgb,							Light,					Disabled	]	_:		(35, 35, 35)
 
 		// Highlight (selected list box row, selected grid cell background, selected tab text
-		Highlight			[ rgb,								Active		]:		(62, 112, 205)
-		Highlight			[ rgb,								Inactive	]:		(62, 112, 205)
-		Highlight			[ rgb,								Disabled	]:		(62, 112, 205)
+		vec[ rgb,	darker=200,	Highlight,			Active		]	_:		(62, 112, 205)
+		vec[ rgb							Highlight,			Inactive	]	_:		(62, 112, 205)
+		vec[ rgb							Highlight,			Disabled	]	_:		(62, 112, 205)
 	}
 }
 )";
@@ -51,7 +51,7 @@ processor application.palette {
 	std::optional<ParseError> error;
 
 	// When
-	auto result = ParserPalette().parse(source, error);
+	auto result = ParserProcessor().parse(source, error);
 
 	//// Then
 	//QCOMPARE(error.has_value(), false);

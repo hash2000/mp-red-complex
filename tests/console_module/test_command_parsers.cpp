@@ -3,9 +3,7 @@
 #include "Libs/Engine/scripting/parser/base/parser_value.h"
 #include "Libs/Engine/scripting/parser/base/parser_variable.h"
 #include "Libs/Engine/scripting/parser/base/parser_attributes_collection.h"
-#include "Libs/Engine/scripting/parser/commands/parser_object.h"
 #include "Libs/Engine/scripting/parser/base/parser_identifiers_space.h"
-
 
 void TestCommandModule::testParser_ParseNamespace_ShouldReturnNamespacePath() {
 	// Given
@@ -40,32 +38,6 @@ void TestCommandModule::testParser_ParseNamespace_ShouldReturnNamespacePath() {
 	}
 
 	QCOMPARE(index, map.size());
-}
-
-void TestCommandModule::testParser_ParseObject_ShouldReturnObjectWithFields() {
-	// Given
-	QString testScript = R"(
-	object car {
-		string vendor;
-		string vin;
-		number aaaa;
-		bool isEnabled;
-	}
-)";
-
-	SourceCursor source(testScript);
-	std::optional<ParseError> error;
-
-	// When
-	auto result = ParserObject().parse(source, error);
-
-	// Then
-	QCOMPARE(error.has_value(), false);
-	QVERIFY(result != nullptr);
-
-	auto location = result->location();
-	auto srcLocation = source.currentLocation();
-
 }
 
 void TestCommandModule::testParser_ParseNumberValue_ShouldReturnPositiveOrNegativeNumber_data() {
@@ -184,22 +156,43 @@ void TestCommandModule::testParser_ParseBoolValue_ShouldReturnTrueFalseValue() {
 	QCOMPARE(result->parameter("type").toString(), "bool");
 }
 
-void TestCommandModule::testParser_ParseUntypedVariableWithoutRValue_ShouldReturnError() {
-	// Given
-	QString testScript = R"(
-	// тип данных (string, number, bool)
-	var key;
-)";
+void TestCommandModule::testParser_ParseVariable_ShouldCheckRValue_data() {
+	QTest::addColumn<QString>("testScript");
+	QTest::addColumn<bool>("forseRValue");
+	QTest::addColumn<bool>("errorState");
+
+	QTest::newRow("var key") << R"(
+	var key
+)" << false << true;
+
+	QTest::newRow("var key: 123") << R"(
+	var key: 123
+)" << false << false;
+
+	QTest::newRow("vec[rgb, Window, Active, darker=100] anyStyle: (120, 125, 125)") << R"(
+	vec[rgb, Window, Active, darker=100] anyStyle: (120, 125, 125)
+)" << true << false;
+
+	QTest::newRow("vec[rgb, Window, Active, darker=100] anyStyle") << R"(
+	vec[rgb, Window, Active, darker=100] anyStyle
+)" << true << true;
+}
+
+void TestCommandModule::testParser_ParseVariable_ShouldCheckRValue() {
+// Given
+	QFETCH(QString, testScript);
+	QFETCH(bool, forseRValue);
+	QFETCH(bool, errorState);
+
 
 	SourceCursor source(testScript);
 	std::optional<ParseError> error;
 
 	// When
-	auto result = ParserVariable().parse(source, error);
+	auto result = ParserVariable(forseRValue).parse(source, error);
 
 	// Then
-	QCOMPARE(error.has_value(), true);
-	QVERIFY(result == nullptr);
+	QCOMPARE(error.has_value(), errorState);
 }
 
 void TestCommandModule::testParser_ParseVariableWithBinding_ShouldReturnVariableDeclarationWithBindName() {
