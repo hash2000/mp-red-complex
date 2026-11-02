@@ -24,6 +24,8 @@ target_link_libraries(RedComplexEngine
 		Qt6::Widgets
 		Qt6::Xml
 
+		yaml-cpp::yaml-cpp
+
 		RedComplexBase
 		RedComplexGraphics
 )

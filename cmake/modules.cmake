@@ -27,3 +27,4 @@ find_package(OpenSSL REQUIRED)
 
 find_package(unofficial-sodium CONFIG REQUIRED)
 
+find_package(yaml-cpp CONFIG REQUIRED)

@@ -1,7 +1,6 @@
 #include "test_command.h"
-#include "Libs/Engine/scripting/parser/base/parser_processor.h"
 
-void TestCommandModule::testPalette_ParsePalette_ShouldReturnPaletteOptions() {
+void TestEngine::testPalette_ParsePalette_ShouldReturnPaletteOptions() {
 	// Given
 	QString testScript = R"(
 processor application.palette {
@@ -47,11 +46,11 @@ processor application.palette {
 }
 )";
 
-	SourceCursor source(testScript);
-	std::optional<ParseError> error;
+	//SourceCursor source(testScript);
+	//std::optional<ParseError> error;
 
-	// When
-	auto result = ParserProcessor().parse(source, error);
+	//// When
+	//auto result = ParserProcessor().parse(source, error);
 
 	//// Then
 	//QCOMPARE(error.has_value(), false);

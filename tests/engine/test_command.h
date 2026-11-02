@@ -2,7 +2,7 @@
 
 #include <QtTest/QtTest>
 
-class TestCommandModule : public QObject {
+class TestEngine : public QObject {
 	Q_OBJECT
 
 private slots:

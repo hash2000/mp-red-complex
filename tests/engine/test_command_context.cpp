@@ -23,7 +23,7 @@ private:
 };
 }
 
-void TestCommandModule::testContext_BuildChildContext() {
+void TestEngine::testContext_BuildChildContext() {
 	// Given
 	auto ctl = std::make_unique<TestCommandController>();
 	auto glob = ctl->globalContext();
