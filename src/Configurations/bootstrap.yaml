@@ -1,0 +1,7 @@
+version: "0.0.1"
+name: Entrypoint configuration
+description: Стартовые настройки начинаются тут.
+
+appearance:
+  theme: dark
+  processor: dataflow/palette.yaml

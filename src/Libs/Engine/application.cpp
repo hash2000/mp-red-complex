@@ -1,5 +1,6 @@
 #include "Libs/Engine/application.h"
 #include "Libs/Engine/main_frame.h"
+#include "Libs/Engine/bootstrap/bootstrap_manager.h"
 #include "Libs/Resources/resources.h"
 #include "Libs/Resources/resources/model/assets_model.h"
 #include "Libs/DataFormat/proto/procedure.h"
@@ -7,8 +8,6 @@
 #include <QApplication>
 #include <QStyleHints>
 #include <QSettings>
-#include <QDirIterator>
-#include <QFileInfo>
 
 class Application::Private {
 public:
@@ -22,11 +21,7 @@ public:
 private:
 	void registerTypes();
 	bool setupResources();
-	bool setupAppearance();
-	bool setupScriptsSubsystem();
 	void installMessageHandler();
-	bool installStylesheets();
-	QPalette loadPalette();
 };
 
 Application::Application()
@@ -106,58 +101,11 @@ bool Application::Private::setupResources() {
 
 	registerTypes();
 
-	if (!setupScriptsSubsystem()) {
+	BootstrapManager bootstrap(resources.get());
+	if (!bootstrap.reload()) {
 		return false;
 	}
 
-	setupAppearance();
-	return true;
-}
-
-bool Application::Private::setupScriptsSubsystem() {
-
-
-	return true;
-}
-
-bool Application::Private::setupAppearance() {
-
-	if (!installStylesheets()) {
-		return false;
-	}
-
-	QApplication::setPalette(loadPalette());
-	QApplication::styleHints()->setColorScheme(Qt::ColorScheme::Dark);
-
-	return true;
-}
-
-bool Application::Private::installStylesheets() {
-	const auto pathVar = resources->Directories.get("path.profile");
-	if (!pathVar.has_value()) {
-		qDebug() << "Variable 'path.profile' is not exists";
-		return false;
-	}
-
-	QDir path(pathVar.value().filePath("stylesheets/"));
-	if (!path.exists()) {
-		qDebug() << "Stylesheet directory is not exists:" << path;
-		return false;
-	}
-
-	QDirIterator it(path.path(), QStringList() << "*.qss", QDir::Files, QDirIterator::Subdirectories);
-	while (it.hasNext()) {
-		const auto styleFilePath = it.next();
-		if (auto file = QFile{ styleFilePath }; file.exists() && file.open(QFile::ReadOnly | QFile::Text)) {
-			qApp->setStyleSheet(QTextStream{ &file }.readAll());
-			qDebug() << "Loaded style:" << file.fileName();
-		}
-		else {
-			qWarning() << "Load style:" << file.fileName();
-		}
-	}
-
-	qDebug() << "Stylesheets loaded";
 	return true;
 }
 
@@ -178,48 +126,4 @@ void Application::Private::installMessageHandler() {
 void Application::Private::registerTypes() {
 	qRegisterMetaType<AssetsViewItemType>("AssetsViewItemType");
 	qRegisterMetaType<ProgramOpCode>("OpCode");
-}
-
-QPalette Application::Private::loadPalette() {
-	const auto button = QColor{ 35, 35, 35 };
-	const auto text = QColor{ 207, 207, 207 };
-	const auto highlight = QColor{ 62, 112, 205 };
-
-	// Build an initial palette based on the button color
-	auto palette = QPalette{ button };
-
-	// Window colors
-	palette.setColor(QPalette::Active, QPalette::Window, QColor{ 50, 50, 50 });
-	palette.setColor(QPalette::Inactive, QPalette::Window, QColor{ 40, 40, 40 });
-	palette.setColor(QPalette::Disabled, QPalette::Window, QColor{ 50, 50, 50 }.darker(200));
-
-	// List box backgrounds, text entry backgrounds, menu backgrounds
-	palette.setColor(QPalette::Base, button.darker(130));
-
-	// Button text
-	palette.setColor(QPalette::Active, QPalette::ButtonText, text);
-	palette.setColor(QPalette::Inactive, QPalette::ButtonText, text);
-	palette.setColor(QPalette::Disabled, QPalette::ButtonText, text.darker(200));
-
-	// WindowText is supposed to be against QPalette::Window
-	palette.setColor(QPalette::Active, QPalette::WindowText, text);
-	palette.setColor(QPalette::Inactive, QPalette::WindowText, text);
-	palette.setColor(QPalette::Disabled, QPalette::WindowText, text.darker(200));
-
-	// Menu text, text edit text, table cell text
-	palette.setColor(QPalette::Active, QPalette::Text, text.darker(115));
-	palette.setColor(QPalette::Inactive, QPalette::Text, text.darker(115));
-
-	// Disabled menu item text color
-	palette.setColor(QPalette::Disabled, QPalette::Text, QColor{ 102, 102, 102 });
-
-	// Disabled menu item text shadow
-	palette.setColor(QPalette::Disabled, QPalette::Light, button.darker(200));
-
-	// Highlight (selected list box row, selected grid cell background, selected tab text
-	palette.setColor(QPalette::Active, QPalette::Highlight, highlight);
-	palette.setColor(QPalette::Inactive, QPalette::Highlight, highlight);
-	palette.setColor(QPalette::Disabled, QPalette::Highlight, highlight);
-
-	return palette;
 }

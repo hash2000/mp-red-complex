@@ -17,53 +17,53 @@
 
 class FetchApiQueriesTreeWindow::Private {
 public:
-	Private(FetchApiQueriesTreeWindow* parent) : q(parent) {}
-	FetchApiQueriesTreeWindow* q;
+  Private(FetchApiQueriesTreeWindow* parent) : q(parent) {}
+  FetchApiQueriesTreeWindow* q;
 
-	FetchQueriesTreeWidget* tree = nullptr;
+  FetchQueriesTreeWidget* tree = nullptr;
 
-	bool applyInstructionCreate(const std::shared_ptr<Instruction> instruction);
+  bool applyInstructionCreate(const std::shared_ptr<Instruction> instruction);
 };
 
 FetchApiQueriesTreeWindow::FetchApiQueriesTreeWindow(const QString& id, std::shared_ptr<CommandContext> context, QWidget* parent)
-	: MdiChildWindow(id, context, parent)
-	, d(std::make_unique<Private>(this)) {}
+  : MdiChildWindow(id, context, parent)
+  , d(std::make_unique<Private>(this)) {}
 
 FetchApiQueriesTreeWindow::~FetchApiQueriesTreeWindow() = default;
 
 QString FetchApiQueriesTreeWindow::help() const {
-	return "fetch-api-queries-tree";
+  return "fetch-api-queries-tree";
 }
 
 QString FetchApiQueriesTreeWindow::windowTitle() const {
-	return "fetch-api-queries-tree";
+  return "fetch-api-queries-tree";
 }
 
 bool FetchApiQueriesTreeWindow::handleCommand(const std::shared_ptr<Instruction> instruction) {
-	const auto action = instruction->text("action");
-	if (action.isEmpty()) {
-		return false;
-	}
+  const auto action = instruction->text("action");
+  if (action.isEmpty()) {
+    return false;
+  }
 
-	if (action == "create") {
-		return d->applyInstructionCreate(instruction);
-	}
+  if (action == "create") {
+    return d->applyInstructionCreate(instruction);
+  }
 
-	return false;
+  return false;
 }
 
 bool FetchApiQueriesTreeWindow::Private::applyInstructionCreate(const std::shared_ptr<Instruction> instruction) {
-	const auto context = q->currentContext();
-	const auto services = context->commandController()->services();
+  const auto context = q->currentContext();
+  const auto services = context->commandController()->services();
 
-	if (tree) {
-		tree->deleteLater();
-	}
+  if (tree) {
+    tree->deleteLater();
+  }
 
-	tree = new FetchQueriesTreeWidget(services->get<FetchStoreDbService>());
-	tree->setWindowFlags(Qt::Popup | Qt::FramelessWindowHint);
-	tree->setStyleSheet("border: 1px solid #cccccc; border-radius: 5px;");
-	q->setWidget(tree);
+  tree = new FetchQueriesTreeWidget(services->get<FetchStoreDbService>());
+  tree->setWindowFlags(Qt::Popup | Qt::FramelessWindowHint);
+  tree->setStyleSheet("border: 1px solid #cccccc; border-radius: 5px;");
+  q->setWidget(tree);
 
-	return true;
+  return true;
 }
