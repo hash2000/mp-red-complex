@@ -1,4 +1,4 @@
-#include "Libs/Engine/bootstrap/bootstrap_config.h"
+#include "Libs/Engine/scripting/bootstrap/bootstrap_config.h"
 #include <yaml-cpp/yaml.h>
 #include <QFile>
 #include <QDir>

@@ -4,6 +4,9 @@
 #include <mutex>
 
 class IServicesFactory {
+public:
+	virtual ~IServicesFactory() = default;
+
 protected:
 	template<typename T>
 	class LazyPtr {

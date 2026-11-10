@@ -1,6 +1,7 @@
 #include "Libs/Engine/application.h"
 #include "Libs/Engine/main_frame.h"
-#include "Libs/Engine/bootstrap/bootstrap_manager.h"
+#include "Libs/Engine/scripting/bootstrap/bootstrap_manager.h"
+#include "Libs/Engine/ui/main_window.h"
 #include "Libs/Resources/resources.h"
 #include "Libs/Resources/resources/model/assets_model.h"
 #include "Libs/DataFormat/proto/procedure.h"
@@ -89,6 +90,10 @@ int Application::Private::tryRun(int& argc, char** argv) {
 	//auto mainFrame = q->createMainFrame(pRes);
 	//mainFrame->configure(pCfg);
 	//engine.setupMainFrame(std::move(mainFrame));
+
+	auto mainWindow = std::make_unique<MainWindow>();
+	mainWindow->resize(1400, 900);
+	mainWindow->show();
 
 	qDebug() << "Start application";
 	return QApplication::exec();

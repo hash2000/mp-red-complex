@@ -1,6 +1,5 @@
 #pragma once
 #include <QString>
-#include <QByteArray>
 
 class ThemeManager {
 public:
@@ -11,6 +10,8 @@ public:
 
 	// Возвращает путь к файлу палитры внутри темы
 	QString getPaletteFilePath() const;
+
+	Qt::ColorScheme getColorScheme(const QString& themeName);
 
 private:
 	QString _themeDir;

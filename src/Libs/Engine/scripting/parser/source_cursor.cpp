@@ -36,7 +36,7 @@ QChar SourceCursor::advance(size_t len) {
 		return peek();
 	}
 	QChar lastChar = QChar::Null;
-	for (size_t i = 0; i < len; ++i) {
+	for (size_t i = 0; i < len; i++) {
 		if (_pos >= _text.length()) {
 			// Достигли конца текста, дальше двигаться некуда.
 			// Возвращаем Null, чтобы сигнализировать о неполном продвижении / EOF.
@@ -201,7 +201,7 @@ QStringView SourceCursor::readRegex(const QRegularExpression& regex) {
 		QStringView matched = match.capturedView();
 
 		// Продвигаем курсор на длину совпадения, обновляя координаты
-		for (int i = 0; i < matched.length(); ++i) {
+		for (int i = 0; i < matched.length(); i++) {
 			if (matched[i] == '\n') {
 				_line++;
 				_column = 1;

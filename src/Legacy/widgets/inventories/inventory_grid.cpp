@@ -344,12 +344,12 @@ void InventoryGrid::paintEvent(QPaintEvent* event) {
 	painter.fillRect(rect(), QColor(30, 41, 59));
 
 	// Сетка
-	for (int col = 0; col <= d->inventory->cols(); ++col) {
+	for (int col = 0; col <= d->inventory->cols(); col++) {
 		int x = col * ItemsStyles::CELL_SIZE;
 		painter.setPen(QColor(66, 73, 83));
 		painter.drawLine(x, 0, x, height());
 	}
-	for (int row = 0; row <= d->inventory->rows(); ++row) {
+	for (int row = 0; row <= d->inventory->rows(); row++) {
 		int y = row * ItemsStyles::CELL_SIZE;
 		painter.setPen(QColor(66, 73, 83));
 		painter.drawLine(0, y, width(), y);

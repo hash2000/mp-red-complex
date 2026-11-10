@@ -1,10 +1,11 @@
-#include "Libs/Engine/bootstrap/bootstrap_manager.h"
-#include "Libs/Engine/bootstrap/bootstrap_config.h"
+#include "Libs/Engine/scripting/bootstrap/bootstrap_manager.h"
+#include "Libs/Engine/scripting/bootstrap/bootstrap_config.h"
 #include "Libs/Engine/themes/theme_manager.h"
 #include "Libs/Engine/themes/palette_parser.h"
 #include "Libs/Resources/resources.h"
 #include <QApplication>
 #include <QMainWindow>
+#include <QStyleHints>
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QWidget>
@@ -71,6 +72,7 @@ bool BootstrapManager::reload() {
 
 		QPalette palette = PaletteParser::parseFromFile(paletteFile);
 		qApp->setPalette(palette);
+		qApp->styleHints()->setColorScheme(themeMgr.getColorScheme(config.themeName));
 		qDebug() << "Palette applied.";
 	}
 	catch (const std::exception& e) {

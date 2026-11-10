@@ -73,9 +73,9 @@ public:
         QJsonArray gridArray;
         const int width = chunkData.chunkSize.width();
         const int height = chunkData.chunkSize.height();
-        for (int z = 0; z < height; ++z) {
+        for (int z = 0; z < height; z++) {
             QJsonArray row;
-            for (int x = 0; x < width; ++x) {
+            for (int x = 0; x < width; x++) {
                 const int index = z * width + x;
                 row.append(chunkData.tileGrid.value(index, -1));
             }
@@ -104,10 +104,10 @@ public:
 
         if (obj.contains("tileGrid") && obj["tileGrid"].isArray()) {
             const QJsonArray gridArray = obj["tileGrid"].toArray();
-            for (int z = 0; z < qMin(height, static_cast<int>(gridArray.size())); ++z) {
+            for (int z = 0; z < qMin(height, static_cast<int>(gridArray.size())); z++) {
                 if (gridArray[z].isArray()) {
                     const QJsonArray row = gridArray[z].toArray();
-                    for (int x = 0; x < qMin(width, static_cast<int>(row.size())); ++x) {
+                    for (int x = 0; x < qMin(width, static_cast<int>(row.size())); x++) {
                         const int index = z * width + x;
                         chunkData.tileGrid[index] = row[x].toInt(-1);
                     }

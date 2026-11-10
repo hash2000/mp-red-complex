@@ -114,7 +114,7 @@ QStringList Bip39::generateMnemonic(int strengthBits) {
 	QStringList words;
 	for (size_t i = 0; i < bits.size(); i += 11) {
 		int index = 0;
-		for (int j = 0; j < 11; ++j) {
+		for (int j = 0; j < 11; j++) {
 			index = (index << 1) | (bits[i + j] ? 1 : 0);
 		}
 		words.append(d->wordlist.at(index));
@@ -231,7 +231,7 @@ QByteArray Bip39::Private::pbkdf2_hmac_sha512(const QByteArray& password,
 			u = hmacIter.result();
 
 			// t = t XOR u
-			for (int j = 0; j < t.size(); ++j) {
+			for (int j = 0; j < t.size(); j++) {
 				t[j] = t[j] ^ u[j];
 			}
 		}

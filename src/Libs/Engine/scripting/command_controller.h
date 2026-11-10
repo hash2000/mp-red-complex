@@ -1,5 +1,4 @@
 #pragma once
-#include "Libs/Engine/services/services_registry.h"
 
 #include <QObject>
 #include <QMap>
@@ -7,6 +6,7 @@
 
 class CommandProcessor;
 class CommandContext;
+class ServicesRegistry;
 class Resources;
 class ConsoleTable;
 class ConsoleJson;

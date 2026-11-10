@@ -142,13 +142,13 @@ void ZoomableImageView::paintEvent(QPaintEvent* /*event*/) {
 	if (d->gridEnabled) {
 		painter.setRenderHint(QPainter::Antialiasing, false);
 		// Вертикальные линии
-		for (int x = 0; x <= d->gridSizeX; ++x) {
+		for (int x = 0; x <= d->gridSizeX; x++) {
 			const qreal xPos = topLeft.x() + x * tileWidth;
 			painter.drawLine(QLineF(xPos, topLeft.y(), xPos, topLeft.y() + scaledSize.height()));
 		}
 
 		// Горизонтальные линии
-		for (int y = 0; y <= d->gridSizeY; ++y) {
+		for (int y = 0; y <= d->gridSizeY; y++) {
 			const qreal yPos = topLeft.y() + y * tileHeight;
 			painter.drawLine(QLineF(topLeft.x(), yPos, topLeft.x() + scaledSize.width(), yPos));
 		}

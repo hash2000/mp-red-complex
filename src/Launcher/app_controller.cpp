@@ -2,6 +2,7 @@
 #include "Libs/Engine/scripting/i_command.h"
 #include "Libs/Engine/scripting/command_processor.h"
 #include "Libs/Engine/scripting/command_context.h"
+#include "Libs/Engine/services/services_registry.h"
 #include "Launcher/controllers.h"
 #include "Launcher/services.h"
 

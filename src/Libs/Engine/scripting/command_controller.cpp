@@ -4,14 +4,12 @@
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/console/console_table.h"
 #include "Libs/Engine/console/console_json.h"
+#include "Libs/Engine/services/services_registry.h"
 
 #include <QUuid>
 
 class CommandController::Private {
 public:
-	Private(CommandController* parent) : q(parent) {}
-	CommandController* q;
-
 	std::shared_ptr<CommandContext> globalContext;
 	Resources* resources;
 
@@ -20,7 +18,7 @@ public:
 
 CommandController::CommandController(Resources* resources, QObject* parent)
 	: QObject(parent)
-	, d(std::make_unique<Private>(this)) {
+	, d(std::make_unique<Private>()) {
 
 	d->resources = resources;
 	d->globalContext = std::make_shared<CommandContext>(this, std::shared_ptr<CommandContext>() /*is global context*/, "");

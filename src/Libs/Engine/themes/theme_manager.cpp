@@ -53,3 +53,10 @@ QByteArray ThemeManager::loadStylesheet() {
 	out.flush();
 	return fullSheet;
 }
+
+Qt::ColorScheme ThemeManager::getColorScheme(const QString& themeName) {
+	if (themeName == "dark") return Qt::ColorScheme::Dark;
+	if (themeName == "light") return Qt::ColorScheme::Light;
+
+	return Qt::ColorScheme::Dark;
+}
