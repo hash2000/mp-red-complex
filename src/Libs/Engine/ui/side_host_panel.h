@@ -13,11 +13,7 @@ public:
 	QString currentPanel() const;
 	QWidget* panel(const QString& id) const;
 
-	void setPinned(bool pinned);
-	bool isPinned() const;
-
 signals:
-	void pinToggled(bool pinned);
 	void closeRequested();
 
 private:

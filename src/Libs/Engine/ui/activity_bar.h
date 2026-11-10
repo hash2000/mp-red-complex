@@ -20,6 +20,7 @@ public:
 	bool autoHide() const;
 
 signals:
+	void pinToggled(bool pinned);
 	void buttonClicked(const QString& id);
 
 protected:

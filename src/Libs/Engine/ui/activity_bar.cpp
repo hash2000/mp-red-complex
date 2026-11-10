@@ -11,6 +11,8 @@
 namespace {
 constexpr int kExpandedWidth = 48;
 constexpr int kCollapsedWidth = 6;
+constexpr int kPinTabWidth = 14;
+constexpr int kPinTabHeight = 28;
 }
 
 struct ActivityBar::Private {
@@ -18,6 +20,7 @@ struct ActivityBar::Private {
 	QVBoxLayout* topLayout = nullptr;
 	QVBoxLayout* bottomLayout = nullptr;
 	QHash<QString, QToolButton*> buttons;
+	QToolButton* pinButton = nullptr;
 	bool autoHide = false;
 	bool expanded = true;
 	QTimer collapseTimer;
@@ -49,6 +52,19 @@ ActivityBar::ActivityBar(QWidget* parent)
 	auto* cl = new QVBoxLayout(d->content);
 	cl->setContentsMargins(0, 0, 0, 0);
 	cl->setSpacing(0);
+	d->pinButton = new QToolButton(this);
+	d->pinButton->setObjectName(QStringLiteral("pinButton"));
+	d->pinButton->setFixedSize(kPinTabWidth, kPinTabHeight);
+	d->pinButton->setAutoRaise(true);
+	d->pinButton->setArrowType(Qt::RightArrow);
+	d->pinButton->setToolTip(tr("Свернуть"));
+
+	auto* pinLayout = new QVBoxLayout;
+	pinLayout->setContentsMargins(0, 0, 0, 0);
+	pinLayout->addStretch(1);
+	pinLayout->addWidget(d->pinButton);
+	pinLayout->addStretch(1);
+
 	d->topLayout = new QVBoxLayout;
 	d->topLayout->setSpacing(0);
 	d->bottomLayout = new QVBoxLayout;
@@ -56,12 +72,17 @@ ActivityBar::ActivityBar(QWidget* parent)
 	cl->addLayout(d->topLayout);
 	cl->addStretch(1);
 	cl->addLayout(d->bottomLayout);
-	outer->addWidget(d->content);
+	outer->addWidget(d->content, 1);
+	outer->addLayout(pinLayout);
 
 	d->collapseTimer.setSingleShot(true);
 	d->collapseTimer.setInterval(400);
 	connect(&d->collapseTimer, &QTimer::timeout, this, [this] {
 		d->setExpanded(this, false);
+	});
+
+	connect(d->pinButton, &QToolButton::clicked, this, [this]() {
+		setAutoHide(!d->autoHide);
 	});
 
 	d->setExpanded(this, true);
@@ -92,6 +113,10 @@ void ActivityBar::setAutoHide(bool on) {
 	d->autoHide = on;
 	d->collapseTimer.stop();
 	d->setExpanded(this, !on);
+
+	d->pinButton->setArrowType(on ? Qt::LeftArrow : Qt::RightArrow);
+	d->pinButton->setToolTip(on ? tr("Закрепить") : tr("Свернуть"));
+	emit pinToggled(on);
 }
 
 bool ActivityBar::autoHide() const {

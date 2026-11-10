@@ -84,13 +84,6 @@ int Application::Private::tryRun(int& argc, char** argv) {
 		return 1;
 	}
 
-
-	//installMessageHandler();
-
-	//auto mainFrame = q->createMainFrame(pRes);
-	//mainFrame->configure(pCfg);
-	//engine.setupMainFrame(std::move(mainFrame));
-
 	auto mainWindow = std::make_unique<MainWindow>();
 	mainWindow->resize(1400, 900);
 	mainWindow->show();

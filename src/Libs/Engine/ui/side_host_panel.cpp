@@ -9,7 +9,6 @@
 
 struct SideHostPanel::Private {
 	QLabel* title = nullptr;
-	GlyphToolButton* pin = nullptr;
 	QStackedWidget* stack = nullptr;
 	QHash<QString, QWidget*> panels;
 	QHash<QString, QString> titles;
@@ -37,16 +36,10 @@ SideHostPanel::SideHostPanel(QWidget* parent)
 	d->title = new QLabel(header);
 	d->title->setObjectName(QStringLiteral("PanelTitle"));
 
-	d->pin = new GlyphToolButton(QStringLiteral("📌"),
-		tr("Открепить (автоскрытие панели кнопок)"), header);
-	d->pin->setCheckable(true);
-	d->pin->setChecked(true);
-
 	auto* close = new GlyphToolButton(QStringLiteral("✕"), tr("Скрыть панель"), header);
 
 	hl->addWidget(d->title);
 	hl->addStretch();
-	hl->addWidget(d->pin);
 	hl->addWidget(close);
 
 	d->stack = new QStackedWidget(this);
@@ -54,11 +47,6 @@ SideHostPanel::SideHostPanel(QWidget* parent)
 	root->addWidget(header);
 	root->addWidget(d->stack, 1);
 
-	connect(d->pin, &QToolButton::toggled, this, [this](bool pinned) {
-		d->pin->setToolTip(pinned ? tr("Открепить (автоскрытие панели кнопок)")
-			: tr("Закрепить панель кнопок"));
-		emit pinToggled(pinned);
-	});
 	connect(close, &QToolButton::clicked, this, &SideHostPanel::closeRequested);
 }
 
@@ -85,11 +73,4 @@ QString SideHostPanel::currentPanel() const {
 }
 QWidget* SideHostPanel::panel(const QString& id) const {
 	return d->panels.value(id);
-}
-
-void SideHostPanel::setPinned(bool pinned) {
-	d->pin->setChecked(pinned);
-}
-bool SideHostPanel::isPinned() const {
-	return d->pin->isChecked();
 }

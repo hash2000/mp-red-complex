@@ -79,18 +79,24 @@ void MainWindow::Private::buildUi() {
 	mainSplitter->setHandleWidth(1);
 	mainSplitter->setChildrenCollapsible(false);
 
+	// левая панель
 	tabs = new DocumentTabsPanel;
 
 	centerSplitter = new QSplitter(Qt::Vertical);
 	centerSplitter->setHandleWidth(1);
 	centerSplitter->setChildrenCollapsible(false);
+
+	// центральная панель, область открытого документа
 	area = new DocumentArea;
+
+	// информационная панель снизу
 	bottom = new BottomPanel;
 	centerSplitter->addWidget(area);
 	centerSplitter->addWidget(bottom);
 	centerSplitter->setStretchFactor(0, 1);
 	centerSplitter->setStretchFactor(1, 0);
 
+	// область панелей справа
 	side = new SideHostPanel;
 
 	mainSplitter->addWidget(tabs);
@@ -102,6 +108,7 @@ void MainWindow::Private::buildUi() {
 	mainSplitter->setSizes({ 220, 900, lastSideWidth });
 	centerSplitter->setSizes({ 600, lastBottomHeight });
 
+	// область кнопок панелей справа
 	activity = new ActivityBar(central);
 
 	h->addWidget(mainSplitter, 1);
@@ -118,9 +125,12 @@ void MainWindow::Private::buildUi() {
 
 void MainWindow::Private::buildMenus() {
 	auto* file = q->menuBar()->addMenu(MainWindow::tr("&Файл"));
-	file->addAction(MainWindow::tr("Новый документ"), QKeySequence::New, q, [this] { newDocument(); });
+	file->addAction(MainWindow::tr("Новый документ"), QKeySequence::New, q, [this] {
+		newDocument();
+	});
 	file->addAction(MainWindow::tr("Сохранить"), QKeySequence::Save, q, [this] {
-		if (auto* doc = area->currentDocument()) doc->save();
+		if (auto* doc = area->currentDocument())
+			doc->save();
 	});
 	file->addAction(MainWindow::tr("Закрыть документ"), QKeySequence(Qt::CTRL | Qt::Key_W), q, [this] {
 		area->closeDocument(area->currentDocument());
@@ -136,7 +146,10 @@ void MainWindow::Private::buildMenus() {
 	pinAction = viewMenu->addAction(MainWindow::tr("📌 Закрепить панель кнопок"));
 	pinAction->setCheckable(true);
 	pinAction->setChecked(true);
-	QObject::connect(pinAction, &QAction::toggled, side, &SideHostPanel::setPinned);
+	QObject::connect(pinAction, &QAction::toggled, side, [this](bool pinned) {
+		activity->setAutoHide(!pinned);
+		pinAction->setChecked(pinned);
+	});
 }
 
 void MainWindow::Private::wireSignals() {
@@ -180,10 +193,6 @@ void MainWindow::Private::wireSignals() {
 		q->toggleSidePanel(id);
 	});
 	QObject::connect(side, &SideHostPanel::closeRequested, q, [this] { q->hideSidePanel(); });
-	QObject::connect(side, &SideHostPanel::pinToggled, q, [this](bool pinned) {
-		activity->setAutoHide(!pinned);
-		pinAction->setChecked(pinned);
-	});
 
 	// Нижняя панель
 	QObject::connect(bottom, &BottomPanel::closeRequested, bottom, &QWidget::hide);
@@ -231,7 +240,7 @@ void MainWindow::Private::buildDefaultPanels() {
 	q->registerSidePanel(QStringLiteral("properties"), QStringLiteral("🛠"), MainWindow::tr("Свойства"), properties);
 
 	activity->addButton(QStringLiteral("settings"), QStringLiteral("⚙"), MainWindow::tr("Настройки"),
-		ActivityBar::Position::Bottom, /*checkable*/ false);
+		ActivityBar::Position::Bottom, /*checkable*/ true);
 
 	// --- Нижние панели ---
 	output = new QPlainTextEdit;
@@ -357,6 +366,7 @@ void MainWindow::showSidePanel(const QString& id) {
 			d->mainSplitter->setSizes(sizes);
 		}
 	}
+
 	d->activity->setActive(id);
 }
 
