@@ -1,3 +1,2 @@
 items:
   - base # основной набор стилей 
-  - tree_view # стили для QTreeView

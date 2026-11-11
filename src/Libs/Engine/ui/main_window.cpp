@@ -197,11 +197,14 @@ void MainWindow::Private::wireSignals() {
 	// Нижняя панель
 	QObject::connect(bottom, &BottomPanel::closeRequested, bottom, &QWidget::hide);
 	QObject::connect(bottom, &BottomPanel::collapsedChanged, q, [this](bool collapsed) {
-		if (collapsed)
-			return;
 		const auto s = centerSplitter->sizes();
-		const int total = s.value(0) + s.value(1);
-		centerSplitter->setSizes({ total - lastBottomHeight, lastBottomHeight });
+		const auto total = s.value(0) + s.value(1);
+		const auto height = collapsed ? QWIDGETSIZE_MAX : lastBottomHeight;
+		const int panelHeight = collapsed
+			? bottom->height() // уже равна высоте заголовка
+			: lastBottomHeight; // вернуть прежнюю высоту
+
+		centerSplitter->setSizes({ total - panelHeight, panelHeight });
 	});
 
 	// Запоминаем размеры, выставленные пользователем
