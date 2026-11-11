@@ -13,7 +13,7 @@ public:
 
 	CommandController* commandController = nullptr;
 	QList<std::weak_ptr<CommandContext>> scopedList;
-	QMap<const QString, std::weak_ptr<CommandContext>> contexts;
+	QMap<QString, std::weak_ptr<CommandContext>> contexts;
 	std::shared_ptr<CommandContext> parentContext;
 	QString name;
 	QString nameSpace;
@@ -103,4 +103,15 @@ std::shared_ptr<CommandContext> CommandContext::context(const QString& ns) const
 	}
 
 	return globalContext()->context(ns);
+}
+
+QStringList CommandContext::nameSpaces() const {
+	if (isGlobalContext()) {
+		QStringList result;
+		result << ".";
+		result << d->contexts.keys();
+		return result;
+	}
+
+	return globalContext()->nameSpaces();
 }

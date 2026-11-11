@@ -1,6 +1,7 @@
 #pragma once
 #include <QObject>
 #include <QString>
+#include <QStringList>
 #include <memory>
 
 class CommandController;
@@ -17,6 +18,7 @@ public:
 
 	QString name() const;
 	QString nameSpace() const;
+	QStringList nameSpaces() const;
 
 	bool isGlobalContext() const;
 	std::shared_ptr<CommandContext> parentContext() const;

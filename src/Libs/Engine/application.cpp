@@ -87,6 +87,14 @@ int Application::Private::tryRun(int& argc, char** argv) {
 	}
 
 	auto commandController = q->buildCommandController(resources.get());
+	auto n1 = commandController->globalContext()->createScopedContext("test1");
+	auto n2 = commandController->globalContext()->createScopedContext("test2");
+	auto n21 = n2->createScopedContext("test2n2");
+	auto n22 = n21->createScopedContext("test2n21");
+	auto n23 = n1->createScopedContext("test2n11");
+	auto n24 = n1->createScopedContext("test2n12");
+
+
 	auto mainWindow = std::make_unique<MainWindow>(commandController->globalContext());
 	mainWindow->resize(1400, 900);
 	mainWindow->show();

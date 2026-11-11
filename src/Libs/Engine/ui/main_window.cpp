@@ -7,6 +7,8 @@
 #include "Libs/Engine/ui/side_host_panel.h"
 #include "Libs/Engine/ui/properties_panel.h"
 #include "Libs/Engine/ui/text_document.h"
+#include "Libs/Engine/ui/command_console.h"
+#include "Libs/Engine/scripting/command_context.h"
 
 #include <QAction>
 #include <QCloseEvent>
@@ -257,13 +259,13 @@ void MainWindow::Private::buildDefaultPanels() {
 	errors->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
 	errors->verticalHeader()->hide();
 
+	auto* commandConsole = new CommandConsole(context->commandController());
+	q->registerBottomPanel(QStringLiteral("console"), QStringLiteral("🖥"), MainWindow::tr("Консоль"), commandConsole);
 	q->registerBottomPanel(QStringLiteral("output"), QStringLiteral("📤"), MainWindow::tr("Вывод"), output);
 	q->registerBottomPanel(QStringLiteral("errors"), QStringLiteral("⚠"), MainWindow::tr("Список ошибок"), errors);
-	q->registerBottomPanel(QStringLiteral("terminal"), QStringLiteral("🖥"), MainWindow::tr("Терминал"),
-		makePlaceholder(MainWindow::tr("Здесь будет терминал")));
 
 	q->showSidePanel(QStringLiteral("explorer"));
-	bottom->setCurrentPanel(QStringLiteral("output"));
+	bottom->setCurrentPanel(QStringLiteral("console"));
 }
 
 // ------------------------------------------------------------------ actions

@@ -30,6 +30,7 @@ private slots:
 	void onHistoryDown();
 	void onOutputRequested(const QString& message, const QString& styleClass, const QString& type);
 	void onOutputClear();
+	void onSelectContext();
 
 private:
 	class Private;

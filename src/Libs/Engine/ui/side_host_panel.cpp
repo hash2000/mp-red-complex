@@ -62,7 +62,8 @@ void SideHostPanel::addPanel(const QString& id, const QString& title, QWidget* p
 
 void SideHostPanel::setCurrentPanel(const QString& id) {
 	auto* p = d->panels.value(id);
-	if (!p) return;
+	if (!p)
+		return;
 	d->current = id;
 	d->stack->setCurrentWidget(p);
 	d->title->setText(d->titles.value(id));

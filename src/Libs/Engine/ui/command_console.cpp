@@ -1,4 +1,5 @@
-#include "Content/ConsoleModule/widgets/command_console.h"
+#include "Libs/Engine/ui/command_console.h"
+#include "Libs/Engine/ui/name_select_dialog.h"
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/scripting/command_processor.h"
 #include "Libs/Engine/scripting/command_controller.h"
@@ -19,6 +20,7 @@
 #include <QToolButton>
 #include <QStringListModel>
 #include <QSplitter>
+#include <QMessageBox>
 
 namespace {
 // Настройка стилей окна вывода
@@ -170,11 +172,14 @@ public:
 	QWidget* buttonsContainer = nullptr;
 	QHBoxLayout* mainLayout = nullptr;
 	QWidget* consoleWidget = nullptr;
+	QToolButton* selectNamespaceButton = nullptr;
 
 	// История команд
 	QStringList commandHistory;
 	int historyIndex = -1; // -1 = после последней команды
 	int maxBlocks = 1000;
+
+	QString currentNamespace = ".";
 
 	void appendTable(const QString& message, const QString& styleClass);
 	void appendJson(const QString& message, const QString& styleClass);
@@ -215,7 +220,8 @@ CommandConsole::CommandConsole(CommandController* controller, QWidget* parent)
 CommandConsole::~CommandConsole() = default;
 
 void CommandConsole::Private::setupButtons() {
-	connect(addButton("⎚", "Очистить консоль"), &QToolButton::clicked, q, &CommandConsole::onOutputClear);
+	connect(addButton("⎚", tr("Очистить консоль")), &QToolButton::clicked, q, &CommandConsole::onOutputClear);
+	connect((selectNamespaceButton = addButton("⛏", tr("Выбрать контекст"))), &QToolButton::clicked, q, &CommandConsole::onSelectContext);
 	//connect(addButton("📥", "Загрузить"), &QToolButton::clicked, q, &CodeEditorWindow::onOpenDocumentClick);
 }
 
@@ -355,7 +361,14 @@ void CommandConsole::Private::executeCommand(const QString& command) {
 
 	// Выполнение
 	if (controller && controller->commandProcessor()) {
-		controller->commandProcessor()->execute(command, controller->globalContext());
+		auto ns = controller->globalContext()->context(currentNamespace);
+		if (!ns) {
+			controller->printError(QString("Unknown context name [%1]")
+				.arg(currentNamespace));
+			return;
+		}
+
+		controller->commandProcessor()->execute(command, ns);
 	}
 	else {
 		q->appendMessage("Error: Command processor not available", "error");
@@ -518,5 +531,31 @@ void CommandConsole::Private::focusInput() {
 }
 
 void CommandConsole::onOutputClear() {
+	const auto questionResult = QMessageBox::question(this, "Подтверждение", "Вы уверены, что хотите удалить лог консоли?",
+		QMessageBox::Yes | QMessageBox::No);
+	if (questionResult == QMessageBox::No) {
+		return;
+	}
 	d->outputArea->clear();
+}
+
+void CommandConsole::onSelectContext() {
+	const auto names = d->controller->globalContext()->nameSpaces();
+	NameSelectDialog dialog(names, this);
+	// Позиционируем диалог прямо под кнопкой
+	QPoint buttonBottomLeft = d->selectNamespaceButton->mapToGlobal(QPoint(0, d->selectNamespaceButton->height()));
+	dialog.move(buttonBottomLeft);
+
+	// Опционально: задаем ширину диалога равной ширине кнопки (если список длинный, лучше оставить фиксированную или побольше)
+	// dialog.setFixedWidth(m_selectButton->width()); 
+
+	if (dialog.exec() == QDialog::Accepted) {
+		QString selectedVar = dialog.selectedName();
+
+		// Обновляем UI
+		d->selectNamespaceButton->setToolTip(selectedVar);
+		d->currentNamespace = selectedVar;
+		d->controller->printSystem(QString("use namespace [%1]")
+			.arg(selectedVar));
+	}
 }

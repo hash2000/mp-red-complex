@@ -1,5 +1,5 @@
 #include "Launcher/main_frame.h"
-#include "Content/ConsoleModule/widgets/command_console.h"
+#include "Libs/Engine/ui/command_console.h"
 #include "Libs/Engine/scripting/command_processor.h"
 #include "Libs/Engine/scripting/command_context.h"
 #include "Launcher/app_controller.h"
