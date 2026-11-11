@@ -1,7 +1,9 @@
 #include "Libs/Engine/application.h"
 #include "Libs/Engine/main_frame.h"
+#include "Libs/Engine/scripting/command_controller.h"
 #include "Libs/Engine/scripting/bootstrap/bootstrap_manager.h"
 #include "Libs/Engine/ui/main_window.h"
+#include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Resources/resources.h"
 #include "Libs/Resources/resources/model/assets_model.h"
 #include "Libs/DataFormat/proto/procedure.h"
@@ -84,7 +86,8 @@ int Application::Private::tryRun(int& argc, char** argv) {
 		return 1;
 	}
 
-	auto mainWindow = std::make_unique<MainWindow>();
+	auto commandController = q->buildCommandController(resources.get());
+	auto mainWindow = std::make_unique<MainWindow>(commandController->globalContext());
 	mainWindow->resize(1400, 900);
 	mainWindow->show();
 

@@ -1,17 +1,29 @@
+#include "Launcher/app_controller.h"
 #include "Libs/Engine/application.h"
+
 #include <QCoreApplication>
 
 class LauncherApplication : public Application {
 protected:
-	QString organizationName() const {
+	QString organizationName() const override {
 		return "Hash2000";
 	}
-	QString organizationDomain() const {
+	QString organizationDomain() const override {
 		return "ru.hash2000";
 	}
-	QString applicationName() const {
+	QString applicationName() const override {
 		return "red-complex";
 	}
+
+	CommandController* buildCommandController(Resources* resources) override {
+		appController = std::make_unique<ApplicationController>(resources);
+		appController->init();
+
+		return appController.get();
+	}
+
+private:
+	std::unique_ptr<ApplicationController> appController;
 };
 
 

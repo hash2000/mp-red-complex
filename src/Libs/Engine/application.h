@@ -6,6 +6,7 @@
 class MainFrame;
 class Resources;
 class Config;
+class CommandController;
 
 class Application {
 public:
@@ -16,6 +17,7 @@ protected:
 	virtual QString organizationName() const = 0;
 	virtual QString organizationDomain() const = 0;
 	virtual QString applicationName() const = 0;
+	virtual CommandController* buildCommandController(Resources* resources) = 0;
 
 public:
 	int run(int &argc, char **argv);

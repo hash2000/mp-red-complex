@@ -54,6 +54,8 @@ struct MainWindow::Private {
 
 	QHash<QString, QAction*> bottomActions;
 
+	std::shared_ptr<CommandContext> context;
+
 	int untitledCounter = 0;
 	int lastSideWidth = 280;
 	int lastBottomHeight = 220;
@@ -304,8 +306,9 @@ void MainWindow::Private::updateWindowTitle(DocumentWidget* doc) {
 	statusDoc->setText(doc ? doc->title() : QString());
 }
 
-MainWindow::MainWindow(QWidget* parent)
+MainWindow::MainWindow(std::shared_ptr<CommandContext> context, QWidget* parent)
 	: QMainWindow(parent), d(std::make_unique<Private>(this)) {
+	d->context = context;
 	d->buildUi();
 	d->buildMenus();
 	d->wireSignals();

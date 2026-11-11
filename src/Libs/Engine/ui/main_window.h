@@ -4,11 +4,13 @@
 
 class DocumentArea;
 class DocumentWidget;
+class CommandContext;
+
 
 class MainWindow : public QMainWindow {
 	Q_OBJECT
 public:
-	explicit MainWindow(QWidget* parent = nullptr);
+	explicit MainWindow(std::shared_ptr<CommandContext> context, QWidget* parent = nullptr);
 	~MainWindow() override;
 
 	DocumentArea* documentArea() const;
