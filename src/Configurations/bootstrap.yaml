@@ -4,4 +4,7 @@ description: Стартовые настройки начинаются тут.
 
 appearance:
   theme: dark
-  processor: dataflow/palette.yaml
+  application:
+    name: base
+    viewport:
+      xtype: BaseViewport

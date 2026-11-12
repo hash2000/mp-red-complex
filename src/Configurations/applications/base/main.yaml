@@ -1,0 +1,11 @@
+define:
+  extends: Viewport.MainForm
+	xtype: BaseViewport
+  title: Base
+
+  items:
+    - bbar:
+			items:
+			  - xtype: console
+				- xtype: errors
+				- xtype: output

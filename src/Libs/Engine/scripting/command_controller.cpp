@@ -5,12 +5,14 @@
 #include "Libs/Engine/console/console_table.h"
 #include "Libs/Engine/console/console_json.h"
 #include "Libs/Engine/services/services_registry.h"
+#include "Libs/Engine/ui/widget_registry.h"
 
 #include <QUuid>
 
 class CommandController::Private {
 public:
 	std::shared_ptr<CommandContext> globalContext;
+	std::unique_ptr<WidgetRegistry> widgetRegistry;
 	Resources* resources;
 
 	std::shared_ptr<CommandContext> createLocalContext();
@@ -22,6 +24,7 @@ CommandController::CommandController(Resources* resources, QObject* parent)
 
 	d->resources = resources;
 	d->globalContext = std::make_shared<CommandContext>(this, std::shared_ptr<CommandContext>() /*is global context*/, "");
+	d->widgetRegistry = std::make_unique<WidgetRegistry>();
 }
 
 CommandController::~CommandController() {
@@ -34,6 +37,10 @@ void CommandController::init() {
 	const auto controller = d->globalContext->commandController();
 	controller->printSuccess(QString("CommandController initialized with %1 available commands")
 		.arg(commandProcessor()->availableCommands().size()));
+}
+
+WidgetRegistry* CommandController::widgets() const {
+	return d->widgetRegistry.get();
 }
 
 Resources* CommandController::resources() const {

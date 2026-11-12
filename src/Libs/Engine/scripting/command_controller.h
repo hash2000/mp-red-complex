@@ -7,6 +7,7 @@
 class CommandProcessor;
 class CommandContext;
 class ServicesRegistry;
+class WidgetRegistry;
 class Resources;
 class ConsoleTable;
 class ConsoleJson;
@@ -25,9 +26,10 @@ public:
 
 	virtual CommandProcessor* commandProcessor() const = 0;
 	virtual ServicesRegistry* services() const = 0;
+	WidgetRegistry* widgets() const;
+	Resources* resources() const;
 
 	std::shared_ptr<CommandContext> globalContext();
-	Resources* resources() const;
 
 	bool execute(const QString& commandText, QObject* requester = nullptr);
 	bool executeCommand(const QString& commandName, const QMap<QString, QString>& args, QObject* requester = nullptr);

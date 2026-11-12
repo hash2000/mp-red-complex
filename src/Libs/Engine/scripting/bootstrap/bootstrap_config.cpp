@@ -18,10 +18,25 @@ Config loadBootstrap(const QString& path) {
 		if (root["appearance"]["theme"]) {
 			cfg.themeName = QString::fromStdString(root["appearance"]["theme"].as<std::string>());
 		}
-		if (root["appearance"]["processor"]) {
-			cfg.processorPath = QString::fromStdString(root["appearance"]["processor"].as<std::string>());
+		else {
+			cfg.themeName = "dark";
+		}
+
+		if (root["appearance"]["application"]) {
+			const auto& app = root["appearance"]["application"];
+			if (!app["name"]) {
+				throw std::runtime_error("Need Bootstrap parameter: appearance.application.name");
+			}
+
+			if (!app["viewport"] || !app["viewport"]["xtype"]) {
+				throw std::runtime_error("Need Bootstrap parameter: appearance.application.viewport.xtype");
+			}
+
+			cfg.application.name = QString::fromStdString(app["name"].as<std::string>());
+			cfg.application.viewport = QString::fromStdString(app["viewport"]["xtype"].as<std::string>());
 		}
 	}
+
 	return cfg;
 }
 }

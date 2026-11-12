@@ -1,5 +1,6 @@
 #include "Libs/Engine/scripting/bootstrap/bootstrap_manager.h"
 #include "Libs/Engine/scripting/bootstrap/bootstrap_config.h"
+#include "Libs/Engine/scripting/application/class_manager.h"
 #include "Libs/Engine/themes/theme_manager.h"
 #include "Libs/Engine/themes/palette_parser.h"
 #include "Libs/Resources/resources.h"
@@ -74,6 +75,11 @@ bool BootstrapManager::reload() {
 		qApp->setPalette(palette);
 		qApp->styleHints()->setColorScheme(themeMgr.getColorScheme(config.themeName));
 		qDebug() << "Palette applied.";
+
+		ClassManager classes(d->resources, config.application);
+
+
+		qDebug() << "Load application:" << config.application.name << ". Ok";
 	}
 	catch (const std::exception& e) {
 		qCritical() << "Fatal error during startup:" << e.what();

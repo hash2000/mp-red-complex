@@ -2,9 +2,15 @@
 #include <QString>
 
 namespace BootstrapConfig {
+
+struct Application {
+	QString name;
+	QString viewport;
+};
+
 struct Config {
 	QString themeName;
-	QString processorPath;
+	Application application;
 };
 
 Config loadBootstrap(const QString& path);
