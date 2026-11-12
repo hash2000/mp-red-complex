@@ -4,8 +4,30 @@ define:
   title: Base
 
   items:
-    - bbar:
+    - bottombar:
+		  default: console
 			items:
 			  - xtype: console
+				  glyph: 🖥
+          title: Консоль
 				- xtype: errors
+				  glyph: 📤
+          title: Вывод
 				- xtype: output
+				  glyph: ⚠
+          title: Список ошибок
+		- sidebar:
+		  default: explorer
+			items:
+			  - xtype: explorer
+				  glyph: 📁
+					title: Проводник
+			  - xtype: search
+				  glyph: 🔍
+					title: Поиск
+			  - xtype: git
+				  glyph: 🔀
+					title: Система контроля версий
+			  - xtype: properties
+				  glyph: 🛠
+					title: Свойства
