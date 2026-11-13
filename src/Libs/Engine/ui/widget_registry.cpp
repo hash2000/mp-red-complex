@@ -3,7 +3,8 @@
 
 class WidgetRegistry::Private {
 public:
-	std::map<QString, WidgetFactory> factory;
+	std::map<QString, WidgetFactory> factoryByXtype;
+	std::map<QString, WidgetFactory> factoryByClass;
 };
 
 WidgetRegistry::WidgetRegistry() : d(std::make_unique<Private>()) {
@@ -11,21 +12,32 @@ WidgetRegistry::WidgetRegistry() : d(std::make_unique<Private>()) {
 
 WidgetRegistry::~WidgetRegistry() = default;
 
-void WidgetRegistry::registerFactory(const QString& type, WidgetFactory factory) {
-	if (d->factory.find(type) != d->factory.end()) {
-		qWarning() << "WidgetRegistry: Widget type" << type << "allready registered";
+void WidgetRegistry::registerFactory(const WidgetTypeHandler& type, WidgetFactory factory) {
+	if (d->factoryByXtype.find(type.xtype) != d->factoryByXtype.end()) {
+		qWarning() << "WidgetRegistry: Widget xtype" << type.xtype << "allready registered";
 		return;
 	}
 
-	d->factory.emplace(type, factory);
-}
-
-QWidget* WidgetRegistry::build(const QString& type, const WidgetTypeHandler& handler) {
-	const auto& it = d->factory.find(type);
-	if (it == d->factory.end()) {
-		return nullptr;
+	if (d->factoryByClass.find(type.className) != d->factoryByClass.end()) {
+		qWarning() << "WidgetRegistry: Widget class" << type.xtype << "allready registered";
+		return;
 	}
 
-	return it->second(type, handler);
+	d->factoryByXtype.emplace(type.xtype, factory);
+	d->factoryByXtype.emplace(type.className, factory);
+}
+
+QWidget* WidgetRegistry::build(const QString& type, const WidgetBuildHandler& handler) {
+	const auto& itxtype = d->factoryByXtype.find(type);
+	if (itxtype != d->factoryByXtype.end()) {
+		return itxtype->second(type, handler);
+	}
+
+	const auto& itclass = d->factoryByClass.find(type);
+	if (itclass != d->factoryByClass.end()) {
+		return itclass->second(type, handler);
+	}
+
+	return nullptr;
 }
 

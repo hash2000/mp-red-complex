@@ -1,33 +1,41 @@
 define:
+	name: BaseViewportForm
   extends: Viewport.MainForm
 	xtype: BaseViewport
   title: Base
 
-  items:
+  content:
     - bottombar:
 		  default: console
-			items:
+			content:
 			  - xtype: console
+			    name:  console
 				  glyph: 🖥
           title: Консоль
-				- xtype: errors
+				- xtype: panel
+			    name:  errors
 				  glyph: 📤
           title: Вывод
-				- xtype: output
+				- xtype: panel
+			    name:  output
 				  glyph: ⚠
           title: Список ошибок
 		- sidebar:
 		  default: explorer
-			items:
+			content:
 			  - xtype: explorer
+			    name:  explorer
 				  glyph: 📁
 					title: Проводник
-			  - xtype: search
+			  - xtype: panel
+			    name:  search
 				  glyph: 🔍
 					title: Поиск
-			  - xtype: git
+			  - xtype: panel
+			    name:  git
 				  glyph: 🔀
 					title: Система контроля версий
 			  - xtype: properties
+			    name:  properties
 				  glyph: 🛠
 					title: Свойства
