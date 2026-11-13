@@ -2,12 +2,11 @@
 #include "Libs/Engine/main_frame.h"
 #include "Libs/Engine/scripting/command_controller.h"
 #include "Libs/Engine/scripting/bootstrap/bootstrap_manager.h"
+#include "Libs/Engine/scripting/bootstrap/bootstrap_context_builder.h"
 #include "Libs/Engine/scripting/application/class_manager.h"
 #include "Libs/Engine/ui/main_window.h"
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Resources/resources.h"
-#include "Libs/Resources/resources/model/assets_model.h"
-#include "Libs/DataFormat/proto/procedure.h"
 #include <QSurfaceFormat>
 #include <QApplication>
 #include <QStyleHints>
@@ -19,6 +18,7 @@ public:
 	Private(Application* parent) : q(parent) { }
 	Application* q;
 	std::unique_ptr<Resources> resources;
+	std::unique_ptr<BootstrapContextBuilder> contextBuilder;
 	BootstrapConfig::Config bootstrapConfig;
 
 public:
@@ -80,9 +80,8 @@ int Application::Private::tryRun(int& argc, char** argv) {
 	QGuiApplication::setAttribute(Qt::AA_DontShowIconsInMenus);
 	QSettings::setDefaultFormat(QSettings::IniFormat);
 
-	auto test1 = qgetenv("QT_PLUGIN_PATH");
-	auto test2 = qgetenv("QT_QPA_PLATFORM");
-	qDebug() << "QT_PLUGIN_PATH" << test1 << test2;
+	qDebug() << "Plugin path:" << qgetenv("QT_PLUGIN_PATH");
+	qDebug() << "Current platform:" << qgetenv("QT_QPA_PLATFORM");
 
 	QApplication app(argc, argv);
 
@@ -91,6 +90,10 @@ int Application::Private::tryRun(int& argc, char** argv) {
 	}
 
 	auto commandController = q->buildCommandController(resources.get());
+
+	contextBuilder = std::make_unique<BootstrapContextBuilder>(commandController);
+	contextBuilder->reload(bootstrapConfig);
+
 	std::unique_ptr<QWidget> viewport;
 	{
 		ClassManager classManager(resources.get(), commandController);
@@ -140,6 +143,5 @@ void Application::Private::installMessageHandler() {
 }
 
 void Application::Private::registerTypes() {
-	qRegisterMetaType<AssetsViewItemType>("AssetsViewItemType");
-	qRegisterMetaType<ProgramOpCode>("OpCode");
+
 }
