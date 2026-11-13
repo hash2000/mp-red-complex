@@ -124,6 +124,10 @@ void MainWindow::Private::buildUi() {
 	statusDoc = new QLabel;
 	q->statusBar()->addPermanentWidget(statusDoc);
 
+	// Панель свойств создаётся всегда: к ней привязан активный документ,
+	// а регистрируется она либо по умолчанию, либо из yaml-описания.
+	properties = new PropertiesPanel;
+
 	updateWindowTitle(nullptr);
 }
 
@@ -237,15 +241,6 @@ void MainWindow::Private::buildDefaultPanels() {
 			openFile(model->filePath(idx));
 	});
 
-	properties = new PropertiesPanel;
-
-	q->registerSidePanel(QStringLiteral("explorer"), QStringLiteral("📁"), MainWindow::tr("Проводник"), tree);
-	q->registerSidePanel(QStringLiteral("search"), QStringLiteral("🔍"), MainWindow::tr("Поиск"),
-		makePlaceholder(MainWindow::tr("Здесь будет поиск")));
-	q->registerSidePanel(QStringLiteral("git"), QStringLiteral("🔀"), MainWindow::tr("Система контроля версий"),
-		makePlaceholder(MainWindow::tr("Здесь будет Git")));
-	q->registerSidePanel(QStringLiteral("properties"), QStringLiteral("🛠"), MainWindow::tr("Свойства"), properties);
-
 	activity->addButton(QStringLiteral("settings"), QStringLiteral("⚙"), MainWindow::tr("Настройки"),
 		ActivityBar::Position::Bottom, /*checkable*/ true);
 
@@ -258,11 +253,6 @@ void MainWindow::Private::buildDefaultPanels() {
 		MainWindow::tr("Файл"), MainWindow::tr("Строка") });
 	errors->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
 	errors->verticalHeader()->hide();
-
-	auto* commandConsole = new CommandConsole(context->commandController());
-	q->registerBottomPanel(QStringLiteral("console"), QStringLiteral("🖥"), MainWindow::tr("Консоль"), commandConsole);
-	q->registerBottomPanel(QStringLiteral("output"), QStringLiteral("📤"), MainWindow::tr("Вывод"), output);
-	q->registerBottomPanel(QStringLiteral("errors"), QStringLiteral("⚠"), MainWindow::tr("Список ошибок"), errors);
 
 	q->showSidePanel(QStringLiteral("explorer"));
 	bottom->setCurrentPanel(QStringLiteral("console"));
@@ -308,13 +298,17 @@ void MainWindow::Private::updateWindowTitle(DocumentWidget* doc) {
 	statusDoc->setText(doc ? doc->title() : QString());
 }
 
-MainWindow::MainWindow(std::shared_ptr<CommandContext> context, QWidget* parent)
+MainWindow::MainWindow(std::shared_ptr<CommandContext> context, QWidget* parent, bool buildDefaultPanels)
 	: QMainWindow(parent), d(std::make_unique<Private>(this)) {
 	d->context = context;
 	d->buildUi();
 	d->buildMenus();
 	d->wireSignals();
-	d->buildDefaultPanels();
+
+	if (buildDefaultPanels) {
+		d->buildDefaultPanels();
+	}
+
 	log(tr("Приложение запущено"));
 }
 
@@ -328,10 +322,18 @@ void MainWindow::addDocument(DocumentWidget* doc) {
 	d->area->addDocument(doc);
 }
 
+PropertiesPanel* MainWindow::propertiesPanel() const {
+	return d->properties;
+}
+
+void MainWindow::openFile(const QString& path) {
+	d->openFile(path);
+}
+
 void MainWindow::registerSidePanel(const QString& id, const QString& glyph,
-	const QString& title, QWidget* panel) {
+	const QString& title, QWidget* panel, const QString& tooltip) {
 	d->side->addPanel(id, title, panel);
-	d->activity->addButton(id, glyph, title);
+	d->activity->addButton(id, glyph, tooltip.isEmpty() ? title : tooltip);
 
 	auto* act = new QAction(glyph + QLatin1Char(' ') + title, this);
 	connect(act, &QAction::triggered, this, [this, id] { showSidePanel(id); });
@@ -339,13 +341,18 @@ void MainWindow::registerSidePanel(const QString& id, const QString& glyph,
 }
 
 void MainWindow::registerBottomPanel(const QString& id, const QString& glyph,
-	const QString& title, QWidget* panel) {
+	const QString& title, QWidget* panel, const QString& tooltip) {
 	d->bottom->addPanel(id, glyph, title, panel);
 
 	auto* act = new QAction(glyph + QLatin1Char(' ') + title, this);
+	act->setStatusTip(tooltip);
 	connect(act, &QAction::triggered, this, [this, id] { showBottomPanel(id); });
 	d->viewMenu->insertAction(d->sidePanelsSeparator, act);
 	d->bottomActions.insert(id, act);
+
+	if (!tooltip.isEmpty()) {
+		panel->setToolTip(tooltip);
+	}
 }
 
 void MainWindow::unregisterBottomPanel(const QString& id) {

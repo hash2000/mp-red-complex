@@ -1,4 +1,6 @@
 #pragma once
+#include "Libs/Engine/scripting/bootstrap/bootstrap_config.h"
+
 #include <memory>
 
 class Resources;
@@ -9,6 +11,9 @@ public:
 	virtual ~BootstrapManager();
 
 	bool reload();
+
+	/// Конфигурация, загруженная из bootstrap.yaml (тема и описываемое приложение).
+	const BootstrapConfig::Config& config() const;
 
 private:
 	class Private;

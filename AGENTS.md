@@ -278,12 +278,13 @@ Launcher              точка входа и композиция: main.cpp, A
 2. `Application::run()` (`src/Libs/Engine/application.cpp`) оборачивает запуск в try/catch: любое `std::exception` приводит к `qFatal()`.
 3. `Application::Private::tryRun()` выполняет инициализацию:
    - создаёт `Resources`, настраивает `QSurfaceFormat` (OpenGL 3.3 Core, depth 24, MSAA 4, double buffering), атрибуты Qt (HighDPI, `AA_ShareOpenGLContexts`, `QSettings::IniFormat`) и создаёт `QApplication`;
-   - `setupResources()`: `Resources::load()` → `registerTypes()` (`AssetsViewItemType`, `ProgramOpCode`) → `BootstrapManager::reload()`;
+   - `setupResources()`: `Resources::load()` → `registerTypes()` (`AssetsViewItemType`, `ProgramOpCode`) → `BootstrapManager::reload()` (тема + сохранение конфигурации `bootstrap.yaml`);
    - вызывает `buildCommandController(resources)` — точку расширения приложения; `LauncherApplication` создаёт здесь `ApplicationController` и вызывает `init()`;
-   - создаёт `MainWindow` (оболочка из Engine) с глобальным `CommandContext`, показывает окно и уходит в `QApplication::exec()`.
-4. `ApplicationController::init()` (это `CommandController::init()` + `initContext()`) создаёт `CommandProcessor`, `Controllers` (`WindowsController`, `ActionPanelController`) и `Services` (фабрику), затем регистрирует команды `help`, `echo`, `windows`, `users`, `fetch-api`.
-5. `BootstrapManager::reload()` читает `bootstrap.yaml` из `path.profile`, применяет тему (`ThemeManager` + `PaletteParser`), затем передаёт описание приложения в `ClassManager`.
-6. Главное окно создаётся в `tryRun()` напрямую; виртуального `createMainFrame()` в текущем коде нет. `LauncherMainFrame` (`src/Launcher/main_frame.*`) — предыдущая оболочка на `MdiArea`, в текущем запуске не инстанцируется, но компилируется.
+   - создаёт `ClassManager(resources, commandController)` и вызывает `createViewport(config.application)` — оболочка строится по `applications/{name}/main.yaml`; если описание недоступно, берётся `MainWindow` со встроенными панелями (fallback);
+   - показывает вьюпорт и уходит в `QApplication::exec()`.
+4. `ApplicationController::init()` (это `CommandController::init()` + `initContext()`) создаёт `CommandProcessor`, `Controllers` (`WindowsController`, `ActionPanelController`) и `Services` (фабрику), регистрирует команды `help`, `echo`, `windows`, `users`, `fetch-api`, а `WidgetsBuilder` заполняет `WidgetRegistry` нативными классами виджетов.
+5. `BootstrapManager::reload()` читает `bootstrap.yaml` из `path.profile`, применяет тему (`ThemeManager` + `PaletteParser`) и отдаёт конфигурацию через `config()`; декларативный UI грузит уже `ClassManager`.
+6. Виртуального `createMainFrame()` в текущем коде нет. `LauncherMainFrame` (`src/Launcher/main_frame.*`) — предыдущая оболочка на `MdiArea`, в текущем запуске не инстанцируется, но компилируется.
 
 #### Команды, контексты и инструкции
 
@@ -343,7 +344,13 @@ Launcher              точка входа и композиция: main.cpp, A
 
 - `bootstrap.yaml`: `appearance.theme`, `appearance.application.name`, `appearance.application.viewport.xtype`; парсится `BootstrapConfig::loadBootstrap()`.
 - Тема: `assets/themes/{theme}/palette.yaml` (иерархия `QPalette`: `palette`, `base`, `colors.{Role}.{Active|Inactive|Disabled}.value` + `modifiers`) и `stylesheets/index.yaml` (список qss, например `base.qss`). `ThemeManager` объединяет qss и определяет схему, `PaletteParser` строит `QPalette`.
-- `applications/{name}/main.yaml` — декларация UI (`define`, `extends`, `xtype`, `items`: `bottombar`/`sidebar` с `glyph`/`title`). Сейчас `ClassManager` только читает файл, создание виджетов по `xtype` ещё не реализовано, и оболочка строится кодом `MainWindow`.
+- `applications/{name}/main.yaml` — декларация UI приложения. Правила загрузки (`ClassManager`):
+  - `define` — объявление класса виджета: `name` (полное имя), `extends` (базовый класс), `xtype` (псевдоним), `title`, `content`;
+  - `requires` (массив) — подключаемые yaml-классы: путь строится по полному имени (`Common.Viewport.MapsForm` → `applications/{name}/Common/Viewport/MapsForm.yaml`), их `xtype` видны в текущем описании;
+  - если файл базового/запрошенного класса не найден, имя считается нативным классом из `WidgetRegistry` (`Viewport.MainForm`, `console`, `explorer` и т.п.);
+  - наследование: блоки дочернего класса перетирают базовые; мапы сливаются по ключам, последовательности — по идентичности элемента (ключ одноэлементной мапы, иначе `name`, иначе `xtype`), лишние элементы базы сохраняются;
+  - `content` вьюпорта: блоки `bottombar`/`sidebar` с `default` и списком `content`; элемент панели — `xtype`, `name`, `glyph`, `title`, `tooltip`; панели создаются через `WidgetRegistry::build()` и регистрируются `MainWindow::registerSidePanel`/`registerBottomPanel`;
+  - `ClassManager::createViewport()` строит вьюпорт по `appearance.application.viewport.xtype`; если описание не читается или класс не зарегистрирован, `Application` откатывается на `MainWindow` со встроенными панелями.
 - `dataflow/*.yaml` и `Libs/Engine/scripting/dataflow/README.DataFlow.md` — спецификация DSL графов обработки данных (реестр процессоров, `entrypoints`, `nodes`/`inputs`/`outputs`, `policy`: executor/backpressure/priority). Реализации нет, `Configurations/dataflow/palette.yaml` пуст.
 
 #### Точки расширения
@@ -355,6 +362,7 @@ Launcher              точка входа и композиция: main.cpp, A
 5. Модуль: каталог `src/Content/{Module}` с целью `RedComplex<Module>` по образцу существующих → `add_subdirectory` в `src/Content/CMakeLists.txt` → линковка в `src/Launcher/CMakeLists.txt`.
 6. Тема: каталог `assets/themes/{name}` с `palette.yaml` и `stylesheets/index.yaml`, имя — в `bootstrap.yaml`.
 7. Подсветка/форматтер: наследник `HighlightingPlugin` или `FormatterPlugin`/`FormatterPluginAsync` → регистрация в `HighlightingPluginManager`/`FormatterPluginManager`.
+8. Класс виджета для yaml: `WidgetsBuilder` (`src/Launcher/widgets_builder.cpp`) → `registry->registerFactory({className, xtype}, factory)`; фабрика получает `WidgetBuildHandler` (`name`, `title`, `glyph`, `parent`, `context`) и возвращает `QWidget*`.
 
 #### Соглашения по слоям
 
@@ -370,7 +378,7 @@ Launcher              точка входа и композиция: main.cpp, A
 - `Libs/DataFormat` и `Libs/DataStream` — legacy-слой чтения форматов Fallout 2 (`.dat`, `.frm`, `.pro`, `.int`, `.msg`, `.map`, `.pal` и др.); новый код на них не опирается, планируется вынос в отдельный модуль.
 - `DatabasesService::reloadAliases()` сейчас не добавляет псевдонимы (вызовы `appendAlias` закомментированы), поэтому `connection("accounts")` вернёт ошибку «Undefined database alias»; псевдонимы нужно включать здесь.
 - В `Application::Private::tryRun()` создаются отладочные контексты `test1`/`test2` — временный код проверки дерева контекстов.
-- `ClassManager` и `DataFlow` — заготовки; декларативный UI и графы обработки ещё не исполняются.
+- `DataFlow` — только спецификация; графы обработки ещё не исполняются. `ClassManager` применяет `content` только к `MainWindow` (`bottombar`/`sidebar`); вложенный `content` произвольных виджетов пока не разбирается.
 
 #### Ключевые компоненты
 
@@ -398,8 +406,13 @@ Launcher              точка входа и композиция: main.cpp, A
 - `IDatabaseSettingsDataProvider` + `DatabaseSettingsDataProviderJsonImpl` (`Content/DatabaseModule/data_providers`).
 
 **Bootstrap и темы**
-- `BootstrapManager` (`scripting/bootstrap/bootstrap_manager.*`), `BootstrapConfig::loadBootstrap()` (`bootstrap_config.h`), `ClassManager` (`scripting/application/class_manager.*`).
+- `BootstrapManager` (`scripting/bootstrap/bootstrap_manager.*`) — тема, палитра и `config()` (загруженный `bootstrap.yaml`); `BootstrapConfig::loadBootstrap()` (`bootstrap_config.h`).
 - `ThemeManager`, `PaletteParser` (`Libs/Engine/themes/*`).
+
+**Декларативный UI**
+- `ClassManager` (`scripting/application/class_manager.*`) — загрузка `main.yaml`, разрешение `extends`/`requires`, слияние `content`, создание вьюпорта и панелей.
+- `WidgetsBuilder` (`src/Launcher/widgets_builder.*`) — регистрация нативных классов: `Viewport.MainForm`/`mainform`, `ConsolePanel`/`console`, `PropertiesPanel`/`properties`, `ExplorerPanel`/`explorer`, `Panel`/`panel`.
+- `WidgetRegistry` (`ui/widget_registry.*`) — `registerFactory(WidgetTypeHandler{className, xtype}, factory)` и `build(type, WidgetBuildHandler)`; `WidgetBuildHandler` передаёт `name`, `title`, `glyph`, `parent`, `context`.
 
 **Оболочка**
 - `MainWindow`, `ActivityBar`, `SideHostPanel`, `DocumentTabsPanel`, `DocumentArea`, `DocumentWidget`, `TextDocument`, `PropertiesPanel`, `BottomPanel`, `CommandConsole`, `WidgetRegistry`, `GlyphToolButton`, `NameSelectDialog` (`Libs/Engine/ui/*`).

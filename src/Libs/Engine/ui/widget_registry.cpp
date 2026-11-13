@@ -19,12 +19,12 @@ void WidgetRegistry::registerFactory(const WidgetTypeHandler& type, WidgetFactor
 	}
 
 	if (d->factoryByClass.find(type.className) != d->factoryByClass.end()) {
-		qWarning() << "WidgetRegistry: Widget class" << type.xtype << "allready registered";
+		qWarning() << "WidgetRegistry: Widget class" << type.className << "allready registered";
 		return;
 	}
 
 	d->factoryByXtype.emplace(type.xtype, factory);
-	d->factoryByXtype.emplace(type.className, factory);
+	d->factoryByClass.emplace(type.className, factory);
 }
 
 QWidget* WidgetRegistry::build(const QString& type, const WidgetBuildHandler& handler) {

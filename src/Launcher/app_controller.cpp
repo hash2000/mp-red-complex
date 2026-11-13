@@ -1,10 +1,11 @@
 #include "Launcher/app_controller.h"
+#include "Launcher/controllers.h"
+#include "Launcher/services.h"
+#include "Launcher/widgets_builder.h"
 #include "Libs/Engine/scripting/i_command.h"
 #include "Libs/Engine/scripting/command_processor.h"
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/services/services_registry.h"
-#include "Launcher/controllers.h"
-#include "Launcher/services.h"
 
 #include "Launcher/commands/windows_cmd.h"
 #include "Content/ConsoleModule/commands/help_cmd.h"
@@ -20,6 +21,7 @@ public:
 	std::unique_ptr<CommandProcessor> commandProcessor;
 	std::unique_ptr<Controllers> controllers;
 	std::unique_ptr<Services> servicesBuilder;
+	std::unique_ptr<WidgetsBuilder> widgetsBuilder;
 	std::unique_ptr<ServicesRegistry> services;
 };
 
@@ -29,6 +31,7 @@ ApplicationController::ApplicationController(Resources* resources, QObject* pare
 	d->commandProcessor = std::make_unique<CommandProcessor>(resources);
 	d->controllers = std::make_unique<Controllers>(this);
 	d->servicesBuilder = std::make_unique<Services>(resources);
+	d->widgetsBuilder = std::make_unique<WidgetsBuilder>(this);
 }
 
 ApplicationController::~ApplicationController() = default;

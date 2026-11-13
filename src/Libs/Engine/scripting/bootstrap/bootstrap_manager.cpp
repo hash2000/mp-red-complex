@@ -1,15 +1,11 @@
 #include "Libs/Engine/scripting/bootstrap/bootstrap_manager.h"
 #include "Libs/Engine/scripting/bootstrap/bootstrap_config.h"
-#include "Libs/Engine/scripting/application/class_manager.h"
 #include "Libs/Engine/themes/theme_manager.h"
 #include "Libs/Engine/themes/palette_parser.h"
 #include "Libs/Resources/resources.h"
 #include <QApplication>
-#include <QMainWindow>
+#include <QPalette>
 #include <QStyleHints>
-#include <QPushButton>
-#include <QVBoxLayout>
-#include <QWidget>
 #include <QDebug>
 
 class BootstrapManager::Private {
@@ -17,6 +13,7 @@ public:
 	Private(BootstrapManager* parent) : q(parent) {}
 	BootstrapManager* q;
 	Resources* resources;
+	BootstrapConfig::Config config;
 };
 
 BootstrapManager::BootstrapManager(Resources* resources)
@@ -25,6 +22,10 @@ BootstrapManager::BootstrapManager(Resources* resources)
 }
 
 BootstrapManager::~BootstrapManager() = default;
+
+const BootstrapConfig::Config& BootstrapManager::config() const {
+	return d->config;
+}
 
 bool BootstrapManager::reload() {
 
@@ -39,15 +40,15 @@ bool BootstrapManager::reload() {
 		auto bootstrapPath = basePath->filePath("bootstrap.yaml");
 
 		qDebug() << "Loading bootstrap from:" << bootstrapPath;
-		BootstrapConfig::Config config = BootstrapConfig::loadBootstrap(bootstrapPath);
+		d->config = BootstrapConfig::loadBootstrap(bootstrapPath);
 
-		if (config.themeName.isEmpty()) {
+		if (d->config.themeName.isEmpty()) {
 			throw std::runtime_error("Theme name not specified in bootstrap");
 		}
 
 		// 2. Инициализация менеджера темы
 		// Путь к теме: assets/themes/{theme_name}/
-		QString themeDir = basePath->filePath("assets/themes/" + config.themeName);
+		QString themeDir = basePath->filePath("assets/themes/" + d->config.themeName);
 		ThemeManager themeMgr(themeDir);
 
 		qDebug() << "Using theme directory:" << themeDir;
@@ -73,13 +74,8 @@ bool BootstrapManager::reload() {
 
 		QPalette palette = PaletteParser::parseFromFile(paletteFile);
 		qApp->setPalette(palette);
-		qApp->styleHints()->setColorScheme(themeMgr.getColorScheme(config.themeName));
+		qApp->styleHints()->setColorScheme(themeMgr.getColorScheme(d->config.themeName));
 		qDebug() << "Palette applied.";
-
-		ClassManager classes(d->resources, config.application);
-
-
-		qDebug() << "Load application:" << config.application.name << ". Ok";
 	}
 	catch (const std::exception& e) {
 		qCritical() << "Fatal error during startup:" << e.what();
