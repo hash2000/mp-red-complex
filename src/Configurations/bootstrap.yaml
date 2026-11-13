@@ -8,3 +8,18 @@ appearance:
     name: base
     viewport:
       xtype: BaseViewport
+
+stores:
+  items:
+    fetch_api:
+      wal:
+        checkInterval: 60000
+        maxSizeMb: 40
+    messages:
+      wal:
+        checkInterval: 60000
+        maxSizeMb: 40
+    accounts:
+      wal:
+        checkInterval: 120000
+        maxSizeMb: 20

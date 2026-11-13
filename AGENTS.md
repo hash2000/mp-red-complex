@@ -36,6 +36,10 @@ cmake --build build --target Launcher
 # ./build/x64-Clang-Debug/Launcher
 ```
 
+Для запуска в отладочном режиме требуется указать переменную среды `QT_PLUGIN_PATH`, если для x64 windows, и проект собран через Clang, то
+`QT_PLUGIN_PATH`='build\x64-Clang-Debug\vcpkg_installed\x64-windows\debug\Qt6\plugins'
+
+
 ### Запуск тестов
 ```bash
 # Сборка тестов

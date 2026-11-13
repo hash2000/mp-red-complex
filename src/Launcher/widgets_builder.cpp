@@ -13,7 +13,7 @@
 
 namespace {
 
-constexpr const char* kMainViewportClass = "Viewport.MainForm";
+constexpr const char* kMainViewportClass = "System.Viewport.MainForm";
 constexpr const char* kMainViewportXtype = "mainform";
 
 /// Заглушка для панелей, у которых пока нет собственного виджета.
@@ -65,7 +65,7 @@ void WidgetsBuilder::Private::registerAll() {
 		});
 
 	// Консоль команд: для неё нужен CommandController.
-	registry->registerFactory({ "ConsolePanel", "console" },
+	registry->registerFactory({ "System.Panels.ConsolePanel", "console" },
 		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 			if (!handler.context) {
 				return nullptr;
@@ -80,7 +80,7 @@ void WidgetsBuilder::Private::registerAll() {
 		});
 
 	// Панель свойств уже создана внутри MainWindow и привязана к документам.
-	registry->registerFactory({ "PropertiesPanel", "properties" },
+	registry->registerFactory({ "System.Panels.Properties", "properties" },
 		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 			if (auto* window = qobject_cast<MainWindow*>(handler.parent)) {
 				if (auto* properties = window->propertiesPanel()) {
@@ -92,7 +92,7 @@ void WidgetsBuilder::Private::registerAll() {
 		});
 
 	// Проводник по файловой системе; двойной клик открывает документ в окне.
-	registry->registerFactory({ "ExplorerPanel", "explorer" },
+	registry->registerFactory({ "System.Panels.Explorer", "explorer" },
 		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* tree = new QTreeView;
 			auto* model = new QFileSystemModel(tree);
@@ -121,7 +121,7 @@ void WidgetsBuilder::Private::registerAll() {
 		});
 
 	// Универсальная панель-заглушка (вывод, ошибки, поиск, git и т.п.).
-	registry->registerFactory({ "Panel", "panel" },
+	registry->registerFactory({ "System.Panels.Panel", "panel" },
 		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 			return makePlaceholderPanel(handler);
 		});

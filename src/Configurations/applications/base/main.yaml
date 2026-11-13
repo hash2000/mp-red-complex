@@ -6,9 +6,12 @@
 
 define:
   name: BaseViewportForm
-  extends: Viewport.MainForm
+  extends: System.Viewport.MainForm
   xtype: BaseViewport
   title: Red Complex (mp)
+
+  requires:
+    - Views.FetchApi
 
   content:
     - bottombar:

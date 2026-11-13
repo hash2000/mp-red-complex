@@ -73,15 +73,16 @@ int Application::Private::tryRun(int& argc, char** argv) {
 
 	QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
 
-	QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+	//QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 	QGuiApplication::setAttribute(Qt::AA_ShareOpenGLContexts);  // Общий OpenGL контекст для всех виджетов
 	QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
 	QGuiApplication::setAttribute(Qt::AA_UseStyleSheetPropagationInWidgetStyles);
 	QGuiApplication::setAttribute(Qt::AA_DontShowIconsInMenus);
 	QSettings::setDefaultFormat(QSettings::IniFormat);
 
-	qputenv("QT_MAC_DONT_OVERRIDE_CTRL_LMB", "1");
-	qputenv("QT_OPENGL_BUGLIST", ":/opengl_buglist.json");
+	auto test1 = qgetenv("QT_PLUGIN_PATH");
+	auto test2 = qgetenv("QT_QPA_PLATFORM");
+	qDebug() << "QT_PLUGIN_PATH" << test1 << test2;
 
 	QApplication app(argc, argv);
 
@@ -97,8 +98,8 @@ int Application::Private::tryRun(int& argc, char** argv) {
 	}
 
 	if (!viewport) {
-		qWarning() << "Declarative viewport is not available. Using default MainWindow.";
-		viewport = std::make_unique<MainWindow>(commandController->globalContext());
+		qWarning() << "Declarative viewport is not available.";
+		return -1;
 	}
 
 	viewport->resize(1400, 900);
