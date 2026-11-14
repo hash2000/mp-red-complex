@@ -284,6 +284,7 @@ Launcher              точка входа и композиция: main.cpp, A
    - создаёт `Resources`, настраивает `QSurfaceFormat` (OpenGL 3.3 Core, depth 24, MSAA 4, double buffering), атрибуты Qt (HighDPI, `AA_ShareOpenGLContexts`, `QSettings::IniFormat`) и создаёт `QApplication`;
    - `setupResources()`: `Resources::load()` → `registerTypes()` (`AssetsViewItemType`, `ProgramOpCode`) → `BootstrapManager::reload()` (тема + сохранение конфигурации `bootstrap.yaml`);
    - вызывает `buildCommandController(resources)` — точку расширения приложения; `LauncherApplication` создаёт здесь `ApplicationController` и вызывает `init()`;
+   - создаёт `BootstrapContextBuilder(commandController)` и вызывает `reload(bootstrapConfig)` — появляются контексты `.store.<name>` с переменными из `bootstrap.yaml`;
    - создаёт `ClassManager(resources, commandController)` и вызывает `createViewport(config.application)` — оболочка строится по `applications/{name}/main.yaml`; если описание недоступно, берётся `MainWindow` со встроенными панелями (fallback);
    - показывает вьюпорт и уходит в `QApplication::exec()`.
 4. `ApplicationController::init()` (это `CommandController::init()` + `initContext()`) создаёт `CommandProcessor`, `Controllers` (`WindowsController`, `ActionPanelController`) и `Services` (фабрику), регистрирует команды `help`, `echo`, `windows`, `users`, `fetch-api`, а `WidgetsBuilder` заполняет `WidgetRegistry` нативными классами виджетов.
@@ -293,7 +294,10 @@ Launcher              точка входа и композиция: main.cpp, A
 #### Команды, контексты и инструкции
 
 - `CommandController` (`Libs/Engine/scripting/command_controller.*`) — владелец `globalContext()`, `WidgetRegistry` и `Resources`. `execute(text)` и `executeCommand(name, args)` создают локальный дочерний контекст и передают его в `CommandProcessor`. Вывод — только через `print*`, которые эмитят `outputRequested` через `QMetaObject::invokeMethod(..., Qt::QueuedConnection)`, поэтому печатать можно из любого потока.
-- `CommandContext` (`scripting/command_context.*`) — узел дерева контекстов: глобальный имеет пустое имя и namespace `.`; `createScopedContext(name)` создаёт дочерний и регистрирует его в глобальном контексте по namespace (`.`-цепочка, например `.test1.test2`); `context(ns)` ищет по namespace, `nameSpaces()` перечисляет все. Владение — `std::shared_ptr`, ссылки на детей — слабые.
+- `CommandContext` (`scripting/command_context.*`) — узел дерева контекстов: глобальный имеет пустое имя и namespace `.`; `createScopedContext(name)` создаёт дочерний и регистрирует его в глобальном контексте по namespace (`.`-цепочка, например `.test1.test2`); `context(ns)` ищет по namespace, `nameSpaces()` перечисляет все. Владение — `std::shared_ptr`, ссылки на детей — слабые (поэтому владелец контекста обязан держать `shared_ptr`, иначе узел исчезает).
+- Переменные контекста: имя — произвольная строка, точки допустимы (`wal.checkInterval`). API: `setVariable`, `variable`, `hasVariable`, `variables`, `variableNames`; значения — `QVariant`.
+- `CommandContext::VariablesMode` задаёт отношение переменных к базовому контексту и может меняться в любой момент: `Lazy` — читает базовое значение, при записи делает свою копию; `Mutable` — читает и пишет общую переменную базового контекста; `ReadOnly` — запись запрещена (`setVariable` возвращает `false`); `Atomic` — при переключении получает копию видимых переменных и дальше живёт отдельно. Собственные переменные контекста изолированы в любом режиме.
+- `BootstrapContextBuilder` (`scripting/bootstrap/bootstrap_context_builder.*`) — создаёт по `bootstrap.yaml` контексты `.store.<name>` (`fetch_api`, `messages`, `accounts`) с переменными `wal.checkInterval` и `wal.maxSizeMb`; режим хранилищ — `ReadOnly`, `reload()` идемпотентен и обновляет значения.
 - `CommandProcessor` (`scripting/command_processor.*`) — реестр `std::map<QString, std::unique_ptr<ICommand>>` (имена в нижнем регистре), разбор строки, проверка `minArgs`/`maxArgs`, `try/catch` вокруг `ICommand::execute`, замер времени и сигналы `commandExecuted`/`commandError`.
 - `Instruction` (`scripting/instruction.h`) — имя команды, `QMap<QString, QVariant>` параметров и карта mime-типов; хелперы `text()`, `json()`, `xml()`, `ini()`, `hasParameter()`.
 - `ICommand` (`scripting/i_command.h`) — `name()`, `description()`, `help()`, `minArgs()`, `maxArgs()`, `execute(instruction, context)`. Команда не знает, откуда вызвана: доступ к приложению — через контекст.
@@ -346,7 +350,7 @@ Launcher              точка входа и композиция: main.cpp, A
 
 #### Конфигурации, темы и декларативный UI
 
-- `bootstrap.yaml`: `appearance.theme`, `appearance.application.name`, `appearance.application.viewport.xtype`; парсится `BootstrapConfig::loadBootstrap()`.
+- `bootstrap.yaml`: `appearance.theme`, `appearance.application.name`, `appearance.application.viewport.xtype`, `stores.items.<name>.wal.{checkInterval,maxSizeMb}`; парсится `BootstrapConfig::loadBootstrap()`, хранилища — в `Config::stores` (`Store`). Секция `stores` превращается в контексты `.store.<name>` через `BootstrapContextBuilder`.
 - Тема: `assets/themes/{theme}/palette.yaml` (иерархия `QPalette`: `palette`, `base`, `colors.{Role}.{Active|Inactive|Disabled}.value` + `modifiers`) и `stylesheets/index.yaml` (список qss, например `base.qss`). `ThemeManager` объединяет qss и определяет схему, `PaletteParser` строит `QPalette`.
 - `applications/{name}/main.yaml` — декларация UI приложения. Правила загрузки (`ClassManager`):
   - `define` — объявление класса виджета: `name` (полное имя), `extends` (базовый класс), `xtype` (псевдоним), `title`, `content`;
@@ -383,6 +387,8 @@ Launcher              точка входа и композиция: main.cpp, A
 - `DatabasesService::reloadAliases()` сейчас не добавляет псевдонимы (вызовы `appendAlias` закомментированы), поэтому `connection("accounts")` вернёт ошибку «Undefined database alias»; псевдонимы нужно включать здесь.
 - В `Application::Private::tryRun()` создаются отладочные контексты `test1`/`test2` — временный код проверки дерева контекстов.
 - `DataFlow` — только спецификация; графы обработки ещё не исполняются. `ClassManager` применяет `content` только к `MainWindow` (`bottombar`/`sidebar`); вложенный `content` произвольных виджетов пока не разбирается.
+- Команды пока принимают `ICommand::execute(instruction, context)`; запланирован переход на контекст-единственный интерфейс (параметры и состояние — в `CommandContext`). Отдельные контексты для документов/виджетов (например, свой контекст на копию `FetchApiWidget`) ещё не создаются — сейчас контекст создаётся на вызов команды.
+- `BootstrapContextBuilder::reload()` идемпотентен: при повторном вызове переиспользует существующие контексты `.store.*` и обновляет значения переменных. Тесты не покрывают сценарий удаления хранилища из конфигурации (старые контексты останутся в реестре CommandController без владельца в builder, но их можно найти через `context(".store.<name")`); потребуется явный механизм очистки при необходимости.
 
 #### Ключевые компоненты
 
@@ -411,6 +417,7 @@ Launcher              точка входа и композиция: main.cpp, A
 
 **Bootstrap и темы**
 - `BootstrapManager` (`scripting/bootstrap/bootstrap_manager.*`) — тема, палитра и `config()` (загруженный `bootstrap.yaml`); `BootstrapConfig::loadBootstrap()` (`bootstrap_config.h`).
+- `BootstrapContextBuilder` (`scripting/bootstrap/bootstrap_context_builder.*`) — контексты `.store.<name>` с переменными WAL; владеет ими через `shared_ptr`.
 - `ThemeManager`, `PaletteParser` (`Libs/Engine/themes/*`).
 
 **Декларативный UI**

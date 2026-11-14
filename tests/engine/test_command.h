@@ -28,6 +28,12 @@ private slots:
 
 	// test_command_context
 	void testContext_BuildChildContext();
+	void testContext_VariablesLazyMode();
+	void testContext_VariablesMutableMode();
+	void testContext_VariablesReadOnlyMode();
+	void testContext_VariablesAtomicMode();
+	void testContext_ScopeIsolation();
+	void testContext_BootstrapContextBuilder();
 
 	// palette
 	void testPalette_ParsePalette_ShouldReturnPaletteOptions();

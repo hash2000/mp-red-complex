@@ -4,6 +4,7 @@
 #include "Libs/Engine/scripting/parser/base/parser_attributes_collection.h"
 #include "Libs/Engine/scripting/parser/base/parser_bindings.h"
 #include "Libs/Engine/scripting/parser/base/ast_base.h"
+
 class ParserVariable::Private {
 public:
 	Private(ParserVariable* parent) : q(parent) { }

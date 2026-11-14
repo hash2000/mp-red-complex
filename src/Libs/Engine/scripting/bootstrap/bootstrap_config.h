@@ -26,4 +26,3 @@ struct Config {
 
 Config loadBootstrap(const QString& path);
 }
-

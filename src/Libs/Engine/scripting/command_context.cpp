@@ -12,11 +12,13 @@ public:
 	CommandContext* q;
 
 	CommandController* commandController = nullptr;
-	QList<std::weak_ptr<CommandContext>> scopedList;
 	QMap<QString, std::weak_ptr<CommandContext>> contexts;
 	std::shared_ptr<CommandContext> parentContext;
 	QString name;
 	QString nameSpace;
+
+	QMap<QString, QVariant> variables;
+	CommandContext::VariablesMode variablesMode = CommandContext::VariablesMode::Lazy;
 };
 
 CommandContext::CommandContext(CommandController* commandController, std::shared_ptr<CommandContext> parentContext, const QString& name, QObject* parent)
@@ -66,7 +68,6 @@ void CommandContext::registerContext(const QString& ns, std::weak_ptr<CommandCon
 std::shared_ptr<CommandContext> CommandContext::createScopedContext(const QString& name) {
 	auto self = shared_from_this();
 	auto scoped = std::make_shared<CommandContext>(d->commandController, self, name);
-	d->scopedList.push_back(scoped->weak_from_this());
 	d->commandController->globalContext()->registerContext(scoped->nameSpace(), scoped);
 	return scoped;
 }
@@ -114,4 +115,95 @@ QStringList CommandContext::nameSpaces() const {
 	}
 
 	return globalContext()->nameSpaces();
+}
+
+void CommandContext::setVariablesMode(VariablesMode mode) {
+	if (d->variablesMode == mode) {
+		return;
+	}
+
+	d->variablesMode = mode;
+
+	if (mode == VariablesMode::Atomic) {
+		snapshotParentVariables();
+	}
+}
+
+CommandContext::VariablesMode CommandContext::variablesMode() const {
+	return d->variablesMode;
+}
+
+bool CommandContext::setVariable(const QString& name, const QVariant& value) {
+	if (d->variablesMode == VariablesMode::ReadOnly) {
+		qWarning() << "CommandContext::setVariable: variable" << name
+			<< "is read-only in" << d->nameSpace;
+		return false;
+	}
+
+	// mutable: меняем общую переменную базового контекста, если она там есть.
+	if (d->variablesMode == VariablesMode::Mutable &&
+		!d->variables.contains(name) &&
+		d->parentContext &&
+		d->parentContext->hasVariable(name)) {
+		return d->parentContext->setVariable(name, value);
+	}
+
+	d->variables.insert(name, value);
+	return true;
+}
+
+bool CommandContext::hasVariable(const QString& name) const {
+	if (d->variables.contains(name)) {
+		return true;
+	}
+
+	if (d->variablesMode == VariablesMode::Atomic || !d->parentContext) {
+		return false;
+	}
+
+	return d->parentContext->hasVariable(name);
+}
+
+QVariant CommandContext::variable(const QString& name, const QVariant& defaultValue) const {
+	const auto it = d->variables.constFind(name);
+	if (it != d->variables.constEnd()) {
+		return it.value();
+	}
+
+	if (d->variablesMode == VariablesMode::Atomic || !d->parentContext) {
+		return defaultValue;
+	}
+
+	return d->parentContext->variable(name, defaultValue);
+}
+
+QVariantMap CommandContext::variables() const {
+	QVariantMap result;
+
+	if (d->variablesMode != VariablesMode::Atomic && d->parentContext) {
+		result = d->parentContext->variables();
+	}
+
+	for (auto it = d->variables.cbegin(); it != d->variables.cend(); ++it) {
+		result.insert(it.key(), it.value());
+	}
+
+	return result;
+}
+
+QStringList CommandContext::variableNames() const {
+	return variables().keys();
+}
+
+void CommandContext::snapshotParentVariables() {
+	if (!d->parentContext) {
+		return;
+	}
+
+	const auto inherited = d->parentContext->variables();
+	for (auto it = inherited.cbegin(); it != inherited.cend(); ++it) {
+		if (!d->variables.contains(it.key())) {
+			d->variables.insert(it.key(), it.value());
+		}
+	}
 }

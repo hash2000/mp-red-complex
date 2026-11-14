@@ -6,8 +6,9 @@ namespace BootstrapConfig {
 struct Config;
 }
 
+/// Создаёт контексты приложения по bootstrap.yaml:
+/// .store.<name> с переменными wal.checkInterval и wal.maxSizeMb.
 class BootstrapContextBuilder {
-public:
 public:
 	explicit BootstrapContextBuilder(CommandController* commandController);
 	~BootstrapContextBuilder();

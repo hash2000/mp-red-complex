@@ -70,10 +70,6 @@ void loadStores(const YAML::Node& root, Config& cfg) {
 			store.wal.maxSizeMb = wal["maxSizeMb"].as<int>();
 		}
 
-		qDebug() << "Bootstrap store:" << store.name
-			<< "wal checkInterval:" << store.wal.checkInterval
-			<< "maxSizeMb:" << store.wal.maxSizeMb;
-
 		cfg.stores.push_back(std::move(store));
 	}
 }
