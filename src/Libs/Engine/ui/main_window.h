@@ -39,6 +39,8 @@ public:
 	void toggleSidePanel(const QString& id);
 	void showBottomPanel(const QString& id);
 
+	void buildDefaultPanels();
+
 	void log(const QString& message);
 
 protected:

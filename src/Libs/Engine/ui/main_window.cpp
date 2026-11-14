@@ -65,7 +65,6 @@ struct MainWindow::Private {
 	void buildUi();
 	void buildMenus();
 	void wireSignals();
-	void buildDefaultPanels();
 
 	void newDocument();
 	void openFile(const QString& path);
@@ -226,36 +225,9 @@ void MainWindow::Private::wireSignals() {
 	});
 }
 
-void MainWindow::Private::buildDefaultPanels() {
-	// --- Правые панели (ваши виджеты подставляются сюда) ---
-	auto* model = new QFileSystemModel(q);
-	model->setRootPath(QDir::currentPath());
-	auto* tree = new QTreeView;
-	tree->setModel(model);
-	tree->setRootIndex(model->index(QDir::currentPath()));
-	tree->setHeaderHidden(true);
-	for (int c = 1; c < model->columnCount(); c++)
-		tree->hideColumn(c);
-	QObject::connect(tree, &QTreeView::doubleClicked, q, [this, model](const QModelIndex& idx) {
-		if (!model->isDir(idx))
-			openFile(model->filePath(idx));
-	});
-
-	activity->addButton(QStringLiteral("settings"), QStringLiteral("⚙"), MainWindow::tr("Настройки"),
+void MainWindow::buildDefaultPanels() {
+	d->activity->addButton(QStringLiteral("settings"), QStringLiteral("⚙"), MainWindow::tr("Настройки"),
 		ActivityBar::Position::Bottom, /*checkable*/ true);
-
-	// --- Нижние панели ---
-	output = new QPlainTextEdit;
-	output->setReadOnly(true);
-
-	auto* errors = new QTableWidget(0, 4);
-	errors->setHorizontalHeaderLabels({ MainWindow::tr("Код"), MainWindow::tr("Описание"),
-		MainWindow::tr("Файл"), MainWindow::tr("Строка") });
-	errors->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
-	errors->verticalHeader()->hide();
-
-	q->showSidePanel(QStringLiteral("explorer"));
-	bottom->setCurrentPanel(QStringLiteral("console"));
 }
 
 // ------------------------------------------------------------------ actions
@@ -304,10 +276,6 @@ MainWindow::MainWindow(std::shared_ptr<CommandContext> context, QWidget* parent,
 	d->buildUi();
 	d->buildMenus();
 	d->wireSignals();
-
-	if (buildDefaultPanels) {
-		d->buildDefaultPanels();
-	}
 
 	log(tr("Приложение запущено"));
 }

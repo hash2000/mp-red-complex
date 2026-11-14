@@ -277,6 +277,8 @@ QWidget* ClassManager::Private::buildViewport(Declaration& declaration) {
 		else if (window->windowTitle().isEmpty()) {
 			window->setWindowTitle(QStringLiteral("Red Complex (mp)"));
 		}
+
+		window->buildDefaultPanels();
 	}
 
 	return widget;
