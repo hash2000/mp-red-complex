@@ -76,3 +76,16 @@ var variable_bind: {{.variable_source1 | .variable_source2}}
 ```
 #include "base/utils.script"
 ```
+
+### Команды
+Строка вызова команды разбирается `ParserCommand` (`parser/commands/`).
+Формат: имя команды, затем параметры `имя=значение`, разделённые запятой.
+
+```
+echo name="текст с пробелами", count=3, enabled=true
+windows action=create, target=fetch-api
+```
+
+* имя команды и имя параметра — буква или `_`, далее буквы, цифры, `_`, `.`, `-`;
+* значение без кавычек читается до пробела или запятой и считается строкой (`text/plane`);
+* значения в кавычках, числа, `true`/`false` и блоки `<<json>>…<</json>>`, `<<xml>>…<</xml>>`, `<<ini>>…<</ini>>`, `<<text>>…<</text>>` разбираются `ParserValue`.

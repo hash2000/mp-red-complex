@@ -2,19 +2,20 @@
 #include <QObject>
 #include <QString>
 #include <QStringList>
-#include <QVariantMap>
 #include <memory>
 
 class CommandContext;
-class Instruction;
 
 class ICommand : public QObject {
 public:
 	explicit ICommand(QObject* parent = nullptr) : QObject(parent) {}
 	virtual ~ICommand() = default;
 
-	// Выполнение команды
-	virtual bool execute(const std::shared_ptr<Instruction> instruction, std::shared_ptr<CommandContext> context) = 0;
+	/// Выполнение команды.
+	///
+	/// Параметры вызова приходят переменными контекста команды: контекст создаётся
+	/// от контекста вызывающей стороны, имеет имя команды и режим Mutable.
+	virtual bool execute(std::shared_ptr<CommandContext> context) = 0;
 
 	// Название команды (для вызова из консоли)
 	virtual QString name() const = 0;

@@ -89,6 +89,6 @@ void MdiChildWindow::setupMdiArea() {
 	update();
 }
 
-bool MdiChildWindow::handleCommand(const std::shared_ptr<Instruction> cmd) {
+bool MdiChildWindow::handleCommand(std::shared_ptr<CommandContext> context) {
 	return false;
 }

@@ -4,7 +4,6 @@
 #include "Libs/Engine/scripting/command_controller.h"
 #include "Libs/Engine/console/console_table.h"
 #include "Libs/Engine/console/console_image.h"
-#include "Libs/Engine/scripting/instruction.h"
 #include "Libs/Engine/services/services_registry.h"
 
 #include "Libs/Engine/mdi_child_window.h"
@@ -12,12 +11,11 @@
 #include "Launcher/controllers/windows_controller.h"
 
 namespace WindowsNs {
-bool handleInvoke(const std::shared_ptr<Instruction> instruction, std::shared_ptr<CommandContext> context, Controllers* controllers) {
+bool handleInvoke(std::shared_ptr<CommandContext> context, Controllers* controllers) {
 	const auto wndController = controllers->windowsController();
 	const auto cmdController = context->commandController();
-	const auto services = cmdController->services();
 
-	const auto cmd = instruction->text("cmd");
+	const auto cmd = context->variable("cmd").toString();
 	if (cmd.isEmpty()) {
 		cmdController->printError(QString("Need parameter 'cmd'."));
 		return false;
@@ -25,7 +23,7 @@ bool handleInvoke(const std::shared_ptr<Instruction> instruction, std::shared_pt
 
 	MdiChildWindow* targetEntry;
 
-	const auto target = instruction->text("target");
+	const auto target = context->variable("target").toString();
 	if (target.isEmpty()) {
 		auto activeEntry = wndController->activeWindowEntry();
 		targetEntry = activeEntry.first.data();
@@ -39,7 +37,7 @@ bool handleInvoke(const std::shared_ptr<Instruction> instruction, std::shared_pt
 		return false;
 	}
 
-	if (!targetEntry->handleCommand(instruction)) {
+	if (!targetEntry->handleCommand(context)) {
 		cmdController->printError(QString("Method '%1' returned false. target  title '%2'")
 			.arg(cmd)
 			.arg(target));

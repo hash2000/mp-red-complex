@@ -18,6 +18,7 @@ public:
 	QString nameSpace;
 
 	QMap<QString, QVariant> variables;
+	QMap<QString, QString> variableMimeTypes;
 	CommandContext::VariablesMode variablesMode = CommandContext::VariablesMode::Lazy;
 };
 
@@ -195,6 +196,32 @@ QStringList CommandContext::variableNames() const {
 	return variables().keys();
 }
 
+QVariantMap CommandContext::ownVariables() const {
+	return d->variables;
+}
+
+void CommandContext::setVariableMimeType(const QString& name, const QString& mimeType) {
+	if (mimeType.isEmpty()) {
+		d->variableMimeTypes.remove(name);
+		return;
+	}
+
+	d->variableMimeTypes.insert(name, mimeType);
+}
+
+QString CommandContext::variableMimeType(const QString& name, const QString& defaultValue) const {
+	const auto it = d->variableMimeTypes.constFind(name);
+	if (it != d->variableMimeTypes.constEnd()) {
+		return it.value();
+	}
+
+	if (d->variablesMode == VariablesMode::Atomic || !d->parentContext) {
+		return defaultValue;
+	}
+
+	return d->parentContext->variableMimeType(name, defaultValue);
+}
+
 void CommandContext::snapshotParentVariables() {
 	if (!d->parentContext) {
 		return;
@@ -204,6 +231,15 @@ void CommandContext::snapshotParentVariables() {
 	for (auto it = inherited.cbegin(); it != inherited.cend(); ++it) {
 		if (!d->variables.contains(it.key())) {
 			d->variables.insert(it.key(), it.value());
+		}
+
+		if (d->variableMimeTypes.contains(it.key())) {
+			continue;
+		}
+
+		const auto mimeType = d->parentContext->variableMimeType(it.key());
+		if (!mimeType.isEmpty()) {
+			d->variableMimeTypes.insert(it.key(), mimeType);
 		}
 	}
 }

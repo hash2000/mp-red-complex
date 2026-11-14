@@ -3,7 +3,6 @@
 #include "Content/FetchApiModule/services/fetch_store_db_service.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
 #include "Libs/Engine/scripting/command_context.h"
-#include "Libs/Engine/scripting/instruction.h"
 
 #include "Libs/Engine/services/services_registry.h"
 
@@ -22,7 +21,7 @@ public:
 
   FetchQueriesTreeWidget* tree = nullptr;
 
-  bool applyInstructionCreate(const std::shared_ptr<Instruction> instruction);
+  bool applyCommandCreate();
 };
 
 FetchApiQueriesTreeWindow::FetchApiQueriesTreeWindow(const QString& id, std::shared_ptr<CommandContext> context, QWidget* parent)
@@ -39,20 +38,20 @@ QString FetchApiQueriesTreeWindow::windowTitle() const {
   return "fetch-api-queries-tree";
 }
 
-bool FetchApiQueriesTreeWindow::handleCommand(const std::shared_ptr<Instruction> instruction) {
-  const auto action = instruction->text("action");
+bool FetchApiQueriesTreeWindow::handleCommand(std::shared_ptr<CommandContext> context) {
+  const auto action = context->variable("action").toString();
   if (action.isEmpty()) {
     return false;
   }
 
   if (action == "create") {
-    return d->applyInstructionCreate(instruction);
+    return d->applyCommandCreate();
   }
 
   return false;
 }
 
-bool FetchApiQueriesTreeWindow::Private::applyInstructionCreate(const std::shared_ptr<Instruction> instruction) {
+bool FetchApiQueriesTreeWindow::Private::applyCommandCreate() {
   const auto context = q->currentContext();
   const auto services = context->commandController()->services();
 

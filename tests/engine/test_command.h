@@ -35,6 +35,15 @@ private slots:
 	void testContext_ScopeIsolation();
 	void testContext_BootstrapContextBuilder();
 
+	// test_command_parser_command
+	void testParser_ParseCommand_ShouldReturnNameAndParameters();
+	void testParser_ParseCommand_ShouldParseQuotedAndBlockValues();
+	void testParser_ParseCommand_ShouldRejectLegacyBlockValues();
+	void testParser_ParseCommand_ShouldFailWithoutEquals();
+	void testParser_ParseCommand_ShouldRequireCommaSeparator();
+	void testCommandProcessor_Execute_CreatesMutableCommandContext();
+	void testCommandProcessor_Execute_KeepsParentVariables();
+
 	// palette
 	void testPalette_ParsePalette_ShouldReturnPaletteOptions();
 };

@@ -19,7 +19,7 @@ public:
 
 	bool NeedFixedSize() const override { return true; }
 
-	bool handleCommand(const std::shared_ptr<Instruction> cmd) override;
+	bool handleCommand(std::shared_ptr<CommandContext> context) override;
 
 private slots:
 	void onLoginSuccess();

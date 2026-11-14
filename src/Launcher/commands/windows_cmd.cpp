@@ -12,7 +12,6 @@
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/console/console_table.h"
 #include "Libs/Engine/console/console_image.h"
-#include "Libs/Engine/scripting/instruction.h"
 #include "Libs/Engine/services/services_registry.h"
 
 class WindowsCommand::Private {
@@ -32,35 +31,35 @@ WindowsCommand::WindowsCommand(Controllers* controllers, QObject* parent)
 WindowsCommand::~WindowsCommand() = default;
 
 QString WindowsCommand::help() const {
-	return R"(windows action:
-	close id:{id | active | all}
+	return R"(windows action=<command>[, param=<value>]
+	close id=<id | active | all>
 	list
-	create target:{window type} id:{id}(optional) title:{title}(optional)
-	invoke id:{id | active} cmd:{window command}
+	create target=<window type>[, id=<id>][, title=<title>]
+	invoke id=<id | active>, cmd=<window command>
 		Example:
-		window action:invoke cmd:"style word-wrap:true font:Sans"
+		windows action=invoke, cmd="style word-wrap=true"
 	)";
 }
 
-bool WindowsCommand::execute(const std::shared_ptr<Instruction> instruction, std::shared_ptr<CommandContext> context) {
+bool WindowsCommand::execute(std::shared_ptr<CommandContext> context) {
 	const auto controller = context->commandController();
-	const auto action = instruction->text("action");
+	const auto action = context->variable("action").toString();
 	if (action.isEmpty()) {
 		controller->printError(QString("Usage: %1").arg(help()));
 		return false;
 	}
 
 	if (action == "close") {
-		return WindowsNs::handleClose(instruction->text("id"), context, d->controllers);
+		return WindowsNs::handleClose(context->variable("id").toString(), context, d->controllers);
 	}
 	else if (action == "create") {
-		return WindowsNs::handleCreate(instruction, context, d->controllers);
+		return WindowsNs::handleCreate(context, d->controllers);
 	}
 	else if (action == "list") {
 		return WindowsNs::handleList(context, d->controllers);
 	}
 	else if (action == "invoke") {
-		return WindowsNs::handleInvoke(instruction, context, d->controllers);
+		return WindowsNs::handleInvoke(context, d->controllers);
 	}
 
 	controller->printError(QString("Usage: %1").arg(help()));

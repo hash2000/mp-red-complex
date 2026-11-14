@@ -1,7 +1,6 @@
 #include "Launcher/windows/user/login_window.h"
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/scripting/command_controller.h"
-#include "Libs/Engine/scripting/instruction.h"
 #include "Content/UsersModule/widgets/login_widget.h"
 #include "Content/UsersModule/models/user_view.h"
 #include "Content/UsersModule/services/users_service.h"
@@ -25,11 +24,11 @@ LoginWindow::LoginWindow(const QString& id, std::shared_ptr<CommandContext> cont
 
 LoginWindow::~LoginWindow() = default;
 
-bool LoginWindow::handleCommand(const std::shared_ptr<Instruction> cmd) {
-	const auto action = cmd->parameters.value("action");
+bool LoginWindow::handleCommand(std::shared_ptr<CommandContext> context) {
+	const auto action = context->variable("action").toString();
 	if (action == "create") {
-		const auto context = currentContext();
-		const auto services = context->commandController()->services();
+		const auto windowContext = currentContext();
+		const auto services = windowContext->commandController()->services();
 		d->usersService = services->get<UsersService>();
 		d->loginWidget = new LoginWidget(d->usersService, this);
 

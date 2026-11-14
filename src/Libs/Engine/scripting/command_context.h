@@ -46,6 +46,12 @@ public:
 	/// Видимые переменные: базовые (с учётом режима) и собственные.
 	QVariantMap variables() const;
 	QStringList variableNames() const;
+	/// Только собственные переменные контекста, без унаследованных.
+	QVariantMap ownVariables() const;
+
+	/// Mime-тип значения переменной (используется командами для разбора параметров).
+	void setVariableMimeType(const QString& name, const QString& mimeType);
+	QString variableMimeType(const QString& name, const QString& defaultValue = QString()) const;
 
 private:
 	void registerContext(const QString& ns, std::weak_ptr<CommandContext> context);

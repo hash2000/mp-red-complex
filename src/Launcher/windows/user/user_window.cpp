@@ -1,7 +1,6 @@
 #include "Launcher/windows/user/user_window.h"
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/scripting/command_controller.h"
-#include "Libs/Engine/scripting/instruction.h"
 #include "Content/UsersModule/widgets/user_widget.h"
 #include "Content/UsersModule/services/users_service.h"
 //#include "Content/TexturesModule/services/images_service.h"
@@ -41,10 +40,10 @@ UserWindow::~UserWindow() = default;
 //		fullTarget, itemIdStr, title });
 //}
 
-bool UserWindow::handleCommand(const std::shared_ptr<Instruction> cmd) {
-	const auto context = currentContext();
-	const auto controller = context->commandController();
-	const auto action = cmd->parameters.value("action");
+bool UserWindow::handleCommand(std::shared_ptr<CommandContext> context) {
+	const auto windowContext = currentContext();
+	const auto controller = windowContext->commandController();
+	const auto action = context->variable("action").toString();
 	//if (action == "create") {
 	//	auto services = currentContext()->commandController()->services();
 	//	d->usersService = services->get<UsersService>();

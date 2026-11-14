@@ -8,6 +8,7 @@ add_executable(TestEngine
     test_command.h
     test_command.cpp
 		test_command_context.cpp
+    test_command_parser_command.cpp
     test_command_parsers.cpp
     test_command_parsers_palette.cpp
 )

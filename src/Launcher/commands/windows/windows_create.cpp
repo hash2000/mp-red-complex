@@ -4,7 +4,6 @@
 #include "Libs/Engine/scripting/command_controller.h"
 #include "Libs/Engine/console/console_table.h"
 #include "Libs/Engine/console/console_image.h"
-#include "Libs/Engine/scripting/instruction.h"
 #include "Libs/Engine/services/services_registry.h"
 
 #include "Libs/Engine/mdi_child_window.h"
@@ -15,13 +14,13 @@
 #include <QUuid>
 
 namespace WindowsNs {
-bool handleCreate(const std::shared_ptr<Instruction> instruction, std::shared_ptr<CommandContext> context, Controllers* controllers) {
+bool handleCreate(std::shared_ptr<CommandContext> context, Controllers* controllers) {
 	const auto wndController = controllers->windowsController();
 	const auto cmdController = context->commandController();
 	auto mdiArea = wndController->mdiArea();
-	auto id = instruction->text("id");
-	const auto target = instruction->text("target");
-	const auto alternateTitle = instruction->text("title");
+	auto id = context->variable("id").toString();
+	const auto target = context->variable("target").toString();
+	const auto alternateTitle = context->variable("title").toString();
 
 	if (id.isEmpty()) {
 		id = QUuid::createUuid()
@@ -34,14 +33,15 @@ bool handleCreate(const std::shared_ptr<Instruction> instruction, std::shared_pt
 	}
 
 	WindowsBuilder builder;
-	auto widget = builder.build(target, id, context, nullptr);
+	// Окно получает контекст вызывающей стороны: контекст команды живёт только на время вызова.
+	auto widget = builder.build(target, id, context->parentContext(), nullptr);
 	if (!widget) {
 		cmdController->printError(QString("Can't find target window %1")
 			.arg(target));
 		return false;
 	}
 
-	if (!widget->handleCommand(instruction)) {
+	if (!widget->handleCommand(context)) {
 		cmdController->printError(QString("Method create returned false. %1")
 			.arg(target));
 		delete widget;

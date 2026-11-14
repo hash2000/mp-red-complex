@@ -291,18 +291,17 @@ Launcher              точка входа и композиция: main.cpp, A
 5. `BootstrapManager::reload()` читает `bootstrap.yaml` из `path.profile`, применяет тему (`ThemeManager` + `PaletteParser`) и отдаёт конфигурацию через `config()`; декларативный UI грузит уже `ClassManager`.
 6. Виртуального `createMainFrame()` в текущем коде нет. `LauncherMainFrame` (`src/Launcher/main_frame.*`) — предыдущая оболочка на `MdiArea`, в текущем запуске не инстанцируется, но компилируется.
 
-#### Команды, контексты и инструкции
+#### Команды и контексты
 
 - `CommandController` (`Libs/Engine/scripting/command_controller.*`) — владелец `globalContext()`, `WidgetRegistry` и `Resources`. `execute(text)` и `executeCommand(name, args)` создают локальный дочерний контекст и передают его в `CommandProcessor`. Вывод — только через `print*`, которые эмитят `outputRequested` через `QMetaObject::invokeMethod(..., Qt::QueuedConnection)`, поэтому печатать можно из любого потока.
 - `CommandContext` (`scripting/command_context.*`) — узел дерева контекстов: глобальный имеет пустое имя и namespace `.`; `createScopedContext(name)` создаёт дочерний и регистрирует его в глобальном контексте по namespace (`.`-цепочка, например `.test1.test2`); `context(ns)` ищет по namespace, `nameSpaces()` перечисляет все. Владение — `std::shared_ptr`, ссылки на детей — слабые (поэтому владелец контекста обязан держать `shared_ptr`, иначе узел исчезает).
 - Переменные контекста: имя — произвольная строка, точки допустимы (`wal.checkInterval`). API: `setVariable`, `variable`, `hasVariable`, `variables`, `variableNames`; значения — `QVariant`.
 - `CommandContext::VariablesMode` задаёт отношение переменных к базовому контексту и может меняться в любой момент: `Lazy` — читает базовое значение, при записи делает свою копию; `Mutable` — читает и пишет общую переменную базового контекста; `ReadOnly` — запись запрещена (`setVariable` возвращает `false`); `Atomic` — при переключении получает копию видимых переменных и дальше живёт отдельно. Собственные переменные контекста изолированы в любом режиме.
 - `BootstrapContextBuilder` (`scripting/bootstrap/bootstrap_context_builder.*`) — создаёт по `bootstrap.yaml` контексты `.store.<name>` (`fetch_api`, `messages`, `accounts`) с переменными `wal.checkInterval` и `wal.maxSizeMb`; режим хранилищ — `ReadOnly`, `reload()` идемпотентен и обновляет значения.
-- `CommandProcessor` (`scripting/command_processor.*`) — реестр `std::map<QString, std::unique_ptr<ICommand>>` (имена в нижнем регистре), разбор строки, проверка `minArgs`/`maxArgs`, `try/catch` вокруг `ICommand::execute`, замер времени и сигналы `commandExecuted`/`commandError`.
-- `Instruction` (`scripting/instruction.h`) — имя команды, `QMap<QString, QVariant>` параметров и карта mime-типов; хелперы `text()`, `json()`, `xml()`, `ini()`, `hasParameter()`.
-- `ICommand` (`scripting/i_command.h`) — `name()`, `description()`, `help()`, `minArgs()`, `maxArgs()`, `execute(instruction, context)`. Команда не знает, откуда вызвана: доступ к приложению — через контекст.
-- `ScriptProgram` (`scripting/program.h`) — контейнер инструкций, заготовка исполняемого скрипта.
-- Синтаксис строки: `command param:value param2:"текст с пробелами"`; параметры разделяются пробелами, `\` экранирует символ; блочные значения — `param:<json>{...}</json>`, `param:<xml>...</xml>`, `param:<ini>k=v</ini>`, `param:<text>...</text>`. Эквивалент из кода — `executeCommand(name, QMap<QString, QString>)`.
+- `CommandProcessor` (`scripting/command_processor.*`) — реестр `std::map<QString, std::unique_ptr<ICommand>>` (имена в нижнем регистре). Строка команды разбирается `ParserCommand`, после чего создаётся контекст команды (см. ниже), проверяются `minArgs`/`maxArgs`, вызывается `ICommand::execute(context)`, замеряется время и эмитятся сигналы `commandExecuted`/`commandError`.
+- `CommandContext` команды: дочерний к контексту вызывающей стороны, имя — имя команды, режим — `Mutable`. Параметры разбора записываются в него собственными переменными (до переключения в `Mutable`, поэтому базовые переменные не перезаписываются), mime-тип значения доступен через `variableMimeType()`. Контекст живёт только на время вызова и не регистрируется в глобальном дереве.
+- `ICommand` (`scripting/i_command.h`) — `name()`, `description()`, `help()`, `minArgs()`, `maxArgs()`, `execute(std::shared_ptr<CommandContext> context)`. Параметры команда читает из переменных своего контекста, имя команды — `context->name()`; доступ к приложению — через тот же контекст.
+- Синтаксис строки: `command param=value, param2="текст с пробелами"`; параметры разделяются запятой, `\` экранирует символ внутри строки в кавычках. Значения читаются парсерами DSL (`ParserValue`): строка в кавычках, число, `true`/`false`, блоки `<<json>>…<</json>>`, `<<xml>>…<</xml>>`, `<<ini>>…<</ini>>`, `<<text>>…<</text>>`; обычный текст (`action=create`, `target=fetch-api`) — строка с mime-типом `text/plane`. Эквивалент из кода — `executeCommand(name, QMap<QString, QString>)` (значения получают mime-тип `text/plane`).
 
 #### Парсер DSL
 
@@ -310,8 +309,9 @@ Launcher              точка входа и композиция: main.cpp, A
 - `IParser` (`parser/i_parser.h`) — `parse(SourceCursor&, std::optional<ParseError>&)` возвращает `IAstPtr` либо `nullptr` (не подошло или ошибка), `tokens()` отдаёт статические токены.
 - `IAst`/`AstBase` (`parser/i_ast.h`, `parser/base/ast_base.*`) — узел AST: параметры, типизированные дети (`setChild`/`children`) и локация.
 - Реализации в `parser/base`: `ParserValue`, `ParserNumber`, `ParserVariable`, `ParserAttributesCollection`, `ParserAttribute`, `ParserInclude`, `ParserBindings`, `ParserIdentifiersSpace`, `ParserPass` — собираются композицией по принципу «первый подходящий парсер».
+- `ParserCommand` (`parser/commands/parser_command.*`) — разбор строки вызова команды: имя команды (`name`), дети типа `parameter` с параметрами `name`, `value`, `mime-type`; параметры пишутся как `имя=значение` и разделяются запятой, значения читает `ParserValue` (блоки только в формате `<<json>>…<</json>>`), обычный текст — до пробела или запятой.
 - Поддерживаемый синтаксис описан в `parser/README.md`: типы `var`/`string`/`bool`/`vec`/`number`, атрибуты в `[...]`, биндинги `{{.var}}`, директива `#include "..."`, namespace-пути через `.`.
-- Тесты парсера: `tests/engine/test_command_parsers.cpp`, `test_command_parsers_palette.cpp`, `test_command_context.cpp`.
+- Тесты парсера: `tests/engine/test_command_parsers.cpp`, `test_command_parsers_palette.cpp`, `test_command_context.cpp`, `test_command_parser_command.cpp`.
 
 #### Ресурсы, профиль и базы данных
 
@@ -341,11 +341,11 @@ Launcher              точка входа и композиция: main.cpp, A
 
 #### Окна MDI и команда windows (Legacy)
 
-- `MdiChildWindow` (`Libs/Engine/mdi_child_window.*`) — наследник `QMdiSubWindow`: `windowType()`, `windowTitle()`, `windowId()`, `windowDefaultSizes()`, `handleCommand(instruction)`, `currentContext()`. Создаётся с `CommandContext` и id.
+- `MdiChildWindow` (`Libs/Engine/mdi_child_window.*`) — наследник `QMdiSubWindow`: `windowType()`, `windowTitle()`, `windowId()`, `windowDefaultSizes()`, `handleCommand(context)`, `currentContext()`. Создаётся с `CommandContext` и id.
 - `WindowsBuilder` (`src/Launcher/windows_builder.*`) — карта `target → lambda`: `user-login`, `user-profile`, `warmup`, `code-editor`, `fetch-api`, `fetch-api-queries-tree`.
 - `WindowsController` (`src/Launcher/controllers/windows_controller.*`) — реестр окон по строковому id, поиск, активное окно, закрытие; сигналы `windowCreated`, `windowDestroyed`, `activeWindowChanged`; привязывается к `MdiArea`.
 - `Controllers` — агрегатор `WindowsController` + `ActionPanelController`; доступ — `ApplicationController::controllers()`.
-- Команда `windows` (`src/Launcher/commands/windows_cmd.*` и `commands/windows/*`): `action: create | close | list | invoke`, `target: <тип окна>`, `id: <id>` (по умолчанию UUID), `title: <заголовок>`. `create` строит окно, вызывает `handleCommand(instruction)`, добавляет его в `MdiArea` и регистрирует в контроллере.
+- Команда `windows` (`src/Launcher/commands/windows_cmd.*` и `commands/windows/*`): `action=create | close | list | invoke`, `target=<тип окна>`, `id=<id>` (по умолчанию UUID), `title=<заголовок>`; параметры разделяются запятой. `create` строит окно, вызывает `handleCommand(context)` (контекст команды `windows` с переменными `action`/`target`/`id`/`title`), добавляет его в `MdiArea` и регистрирует в контроллере. `invoke` пока передаёт окну тот же контекст и не разбирает `cmd` в отдельный контекст.
 - `MdiArea` (`Libs/BaseWidgets/mdi_area.*`) — `QMdiArea` с вкладками (document mode, закрытие, перемещение, история активации).
 
 #### Конфигурации, темы и декларативный UI
@@ -365,7 +365,7 @@ Launcher              точка входа и композиция: main.cpp, A
 
 1. Команда: наследник `ICommand` → регистрация в `ApplicationController::initContext()`.
 2. Сервис/провайдер: интерфейс `I*` в модуле → фабрика в `ServicesFactory` (`src/Launcher/services.cpp`).
-3. Окно: наследник `MdiChildWindow` → фабрика в `WindowsBuilder` → вызов через `windows action: create target: <тип>`.
+3. Окно: наследник `MdiChildWindow` → фабрика в `WindowsBuilder` → вызов через `windows action=create, target=<тип>`.
 4. Панель: `MainWindow::registerSidePanel` / `MainWindow::registerBottomPanel`.
 5. Модуль: каталог `src/Content/{Module}` с целью `RedComplex<Module>` по образцу существующих → `add_subdirectory` в `src/Content/CMakeLists.txt` → линковка в `src/Launcher/CMakeLists.txt`.
 6. Тема: каталог `assets/themes/{name}` с `palette.yaml` и `stylesheets/index.yaml`, имя — в `bootstrap.yaml`.
@@ -377,7 +377,7 @@ Launcher              точка входа и композиция: main.cpp, A
 - `Libs/Base`, `Libs/Resources`, `Libs/Graphics` не зависят от `Engine` и `Content`.
 - `Engine` не знает о конкретных модулях: команды, сервисы и окна связываются в `Launcher`.
 - Модуль предоставляет команды и сервисы, но не строит главное окно и не создаёт чужие сервисы.
-- Межмодульное взаимодействие — через `ServicesRegistry` (типы) и `Instruction` (поведение), а не прямыми включениями чужих реализаций.
+- Межмодульное взаимодействие — через `ServicesRegistry` (типы) и `CommandContext` (параметры и состояние), а не прямыми включениями чужих реализаций.
 
 #### Переходные состояния и ограничения
 
@@ -387,7 +387,7 @@ Launcher              точка входа и композиция: main.cpp, A
 - `DatabasesService::reloadAliases()` сейчас не добавляет псевдонимы (вызовы `appendAlias` закомментированы), поэтому `connection("accounts")` вернёт ошибку «Undefined database alias»; псевдонимы нужно включать здесь.
 - В `Application::Private::tryRun()` создаются отладочные контексты `test1`/`test2` — временный код проверки дерева контекстов.
 - `DataFlow` — только спецификация; графы обработки ещё не исполняются. `ClassManager` применяет `content` только к `MainWindow` (`bottombar`/`sidebar`); вложенный `content` произвольных виджетов пока не разбирается.
-- Команды пока принимают `ICommand::execute(instruction, context)`; запланирован переход на контекст-единственный интерфейс (параметры и состояние — в `CommandContext`). Отдельные контексты для документов/виджетов (например, свой контекст на копию `FetchApiWidget`) ещё не создаются — сейчас контекст создаётся на вызов команды.
+- Команды получают параметры только из контекста: `ICommand::execute(std::shared_ptr<CommandContext>)`. Контекст команды создаётся `CommandProcessor` на каждый вызов (см. «Команды и контексты»); отдельные долгоживущие контексты для документов/виджетов (например, свой контекст на копию `FetchApiWidget`) ещё не создаются. `Instruction` и `ScriptProgram` удалены: их заменили контекст команды и `ParserCommand`.
 - `BootstrapContextBuilder::reload()` идемпотентен: при повторном вызове переиспользует существующие контексты `.store.*` и обновляет значения переменных. Тесты не покрывают сценарий удаления хранилища из конфигурации (старые контексты останутся в реестре CommandController без владельца в builder, но их можно найти через `context(".store.<name")`); потребуется явный механизм очистки при необходимости.
 
 #### Ключевые компоненты
@@ -397,11 +397,11 @@ Launcher              точка входа и композиция: main.cpp, A
 - `LauncherApplication` (`src/Launcher/main.cpp`) — метаданные приложения (`Hash2000` / `ru.hash2000` / `red-complex`) и сборка `ApplicationController` в `buildCommandController()`.
 - `ApplicationController` (`src/Launcher/app_controller.*`) — реализация `CommandController`: `CommandProcessor`, `Controllers`, ленивая `ServicesRegistry`; `initContext()` регистрирует `help`, `echo`, `windows`, `users`, `fetch-api`.
 - `CommandController` (`Libs/Engine/scripting/command_controller.*`) — глобальный контекст, `WidgetRegistry`, `Resources`, `execute*`, `print*`, сигналы `outputRequested`, `commandExecuted`, `commandFailed`.
-- `CommandProcessor`, `CommandContext`, `Instruction`, `ICommand`, `ScriptProgram` — см. раздел «Команды, контексты и инструкции».
+- `CommandProcessor`, `CommandContext`, `ICommand`, `ParserCommand` — см. раздел «Команды и контексты».
 
 **Парсер**
 - `SourceCursor`, `IParser`, `IAst`/`AstBase` (`scripting/parser/`).
-- `parser/base/*`: `ParserValue`, `ParserNumber`, `ParserVariable`, `ParserAttributesCollection`, `ParserAttribute`, `ParserInclude`, `ParserBindings`, `ParserIdentifiersSpace`, `ParserPass`.
+- `parser/base/*`: `ParserValue`, `ParserNumber`, `ParserVariable`, `ParserAttributesCollection`, `ParserAttribute`, `ParserInclude`, `ParserBindings`, `ParserIdentifiersSpace`, `ParserPass`; `parser/commands/ParserCommand`.
 - `scripting/parser/README.md` — синтаксис DSL.
 
 **Сервисы**

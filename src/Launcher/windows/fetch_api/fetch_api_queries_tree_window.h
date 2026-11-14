@@ -18,7 +18,7 @@ public:
 	}
 	QString help() const;
 
-	bool handleCommand(const std::shared_ptr<Instruction> instruction) override;
+	bool handleCommand(std::shared_ptr<CommandContext> context) override;
 
 private:
 	class Private;

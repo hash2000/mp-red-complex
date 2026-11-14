@@ -4,7 +4,6 @@
 #include "Libs/Engine/scripting/command_controller.h"
 #include "Libs/Engine/console/console_table.h"
 #include "Libs/Engine/console/console_image.h"
-#include "Libs/Engine/scripting/instruction.h"
 #include "Libs/Engine/services/services_registry.h"
 
 #include "Libs/Engine/mdi_child_window.h"

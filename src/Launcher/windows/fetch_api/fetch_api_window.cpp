@@ -6,7 +6,6 @@
 #include "Content/FetchApiModule/services/fetch_service.h"
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/scripting/command_controller.h"
-#include "Libs/Engine/scripting/instruction.h"
 
 #include "Libs/Engine/services/services_registry.h"
 
@@ -28,7 +27,7 @@ public:
 	void showToolWidget(QToolButton* button);
 
 	// Команды
-	bool applyInstructionCreate(const std::shared_ptr<Instruction> instruction);
+	bool applyCommandCreate();
 };
 
 FetchApiWindow::FetchApiWindow(const QString& id, std::shared_ptr<CommandContext> context, QWidget* parent)
@@ -46,7 +45,7 @@ QString FetchApiWindow::windowTitle() const {
 	return "Fetch api";
 }
 
-bool FetchApiWindow::Private::applyInstructionCreate(const std::shared_ptr<Instruction> instruction) {
+bool FetchApiWindow::Private::applyCommandCreate() {
 	const auto context = q->currentContext();
 	const auto services = context->commandController()->services();
 
@@ -101,14 +100,14 @@ void FetchApiWindow::Private::showToolWidget(QToolButton* button) {
 	tree->raise();
 }
 
-bool FetchApiWindow::handleCommand(const std::shared_ptr<Instruction> instruction) {
-	const auto action = instruction->text("action");
+bool FetchApiWindow::handleCommand(std::shared_ptr<CommandContext> context) {
+	const auto action = context->variable("action").toString();
 	if (action.isEmpty()) {
 		return false;
 	}
 
 	if (action == "create") {
-		return d->applyInstructionCreate(instruction);
+		return d->applyCommandCreate();
 	}
 
 	return false;
