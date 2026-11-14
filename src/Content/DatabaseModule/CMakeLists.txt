@@ -20,6 +20,7 @@ target_link_libraries(RedComplexDatabaseModule
 		Qt6::Gui
 		Qt6::Widgets
 
+		RedComplexEngine
 		RedComplexBase
 		RedComplexResources
 )

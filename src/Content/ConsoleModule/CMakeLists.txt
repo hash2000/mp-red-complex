@@ -21,6 +21,7 @@ target_link_libraries(RedComplexConsoleModule
 		Qt6::Widgets
 		Qt6::Xml
 
+		RedComplexEngine
 		RedComplexBase
 		RedComplexEngine
 		RedComplexDataStream

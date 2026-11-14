@@ -26,6 +26,7 @@ target_link_libraries(RedComplexUsersModule
 
 		unofficial-sodium::sodium
 
+		RedComplexEngine
 		RedComplexBase
 		RedComplexDataStream
 		RedComplexResources
