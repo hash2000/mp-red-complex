@@ -80,6 +80,23 @@ ctest --output-on-failure
 - **Функции/Методы**: `camelCase` (например, `executeCommand`)
 - **Константы**: `kPascalCase`
 - **Файлы**: соответствуют имени класса (например, `app_controller.h` / `app_controller.cpp`)
+- **Переменные класса**:
+  - в `Private`-классе, спрятанном по pimpl, — без специального префикса, `camelCase` (например, `commandController`, `loginWidget`);
+  - в классе без pimpl — с префиксом `_`, далее `camelCase` (например, `_documentPath`, `_items`).
+
+```cpp
+class CommandProcessor::Private {
+public:
+	Resources* resources;                              // pimpl: без префикса, camelCase
+	std::map<QString, std::unique_ptr<ICommand>> commands;
+};
+
+class DocumentWidget : public QWidget {
+private:
+	QString _documentPath;                             // без pimpl: префикс `_`
+	QList<Document*> _documents;
+};
+```
 
 ### Форматирование
 - **Отступы**: 2 пробела (табы преобразуются в пробелы)
