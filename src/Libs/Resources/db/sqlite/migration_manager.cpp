@@ -10,7 +10,7 @@ public:
 		: q(parent) {}
 	MigrationManager* q;
 
-	std::map<int, std::unique_ptr<Migration>> migrations;
+	std::map<qint64, std::unique_ptr<Migration>> migrations;
 };
 
 MigrationManager::MigrationManager(QObject* parent)
@@ -21,11 +21,11 @@ MigrationManager::MigrationManager(QObject* parent)
 MigrationManager::~MigrationManager() = default;
 
 void MigrationManager::addMigration(std::unique_ptr<Migration> migration) {
-	int version = migration->version();
+	qint64 version = migration->version();
 	d->migrations[version] = std::move(migration);
 }
 
-void MigrationManager::addMigration(int version, const QString& description,
+void MigrationManager::addMigration(qint64 version, const QString& description,
 	std::function<bool(SQLiteConnection&)> up,
 	std::function<bool(SQLiteConnection&)> down) {
 	addMigration(std::make_unique<SimpleMigration>(version, description, up, down));
@@ -41,14 +41,17 @@ bool MigrationManager::initializeSchema(SQLiteConnection& db) {
     )");
 }
 
-bool MigrationManager::migrate(SQLiteConnection& db, int targetVersion) {
+bool MigrationManager::migrate(SQLiteConnection& db, qint64 targetVersion) {
+	if (d->migrations.empty() && targetVersion < 0) {
+		return true;
+	}
 	if (!initializeSchema(db)) {
 		qCritical() << "Failed to initialize migration schema";
 		return false;
 	}
 
-	int current = currentVersion(db);
-	int target = targetVersion >= 0 ? targetVersion : latestVersion();
+	qint64 current = currentVersion(db);
+	qint64 target = targetVersion >= 0 ? targetVersion : latestVersion();
 
 	qInfo() << "Current DB version:" << current << ", Target version:" << target;
 
@@ -84,10 +87,6 @@ bool MigrationManager::migrate(SQLiteConnection& db, int targetVersion) {
 			return false;
 		}
 
-		if (!recordMigration(db, migration.get())) {
-			return false;
-		}
-
 		emit migrationCompleted(version, migration->description());
 		qInfo() << "Migration" << version << migration->description() << "applied successfully";
 	}
@@ -117,7 +116,7 @@ bool MigrationManager::rollback(SQLiteConnection& db, int steps) {
 		auto it = d->migrations.find(record.version);
 		if (it == d->migrations.end()) {
 			qWarning() << "Migration" << record.version << "not found in registry";
-			continue;
+			return false;
 		}
 
 		qInfo() << "Rolling back migration" << record.version;
@@ -127,32 +126,36 @@ bool MigrationManager::rollback(SQLiteConnection& db, int steps) {
 			return false;
 		}
 
-		removeMigrationRecord(db, record.version);
 		rolled++;
 	}
 
 	return true;
 }
 
-bool MigrationManager::rollbackTo(SQLiteConnection& db, int version) {
-	int current = currentVersion(db);
-	int steps = current - version;
+bool MigrationManager::rollbackTo(SQLiteConnection& db, qint64 version) {
+	const auto applied = getAppliedMigrations(db);
+	int steps = 0;
+	for (const auto& record : applied) {
+		if (record.version > version) {
+			steps++;
+		}
+	}
 	return rollback(db, steps);
 }
 
-int MigrationManager::currentVersion(SQLiteConnection& db) const {
+qint64 MigrationManager::currentVersion(SQLiteConnection& db) const {
 	auto reader = db.executeQuery(
 		"SELECT MAX(version) as version FROM _migrations"
 	);
 
 	if (reader && reader->next()) {
-		return reader->value("version").toInt();
+		return reader->value("version").toLongLong();
 	}
 
 	return 0;
 }
 
-int MigrationManager::latestVersion() const {
+qint64 MigrationManager::latestVersion() const {
 	if (d->migrations.empty()) {
 		return 0;
 	}
@@ -168,7 +171,7 @@ QStringList MigrationManager::migrationHistory(SQLiteConnection& db) const {
 
 	while (reader && reader->next()) {
 		history << QString("v%1: %2 (applied at %3)")
-			.arg(reader->value("version").toInt())
+			.arg(reader->value("version").toLongLong())
 			.arg(reader->value("description").toString())
 			.arg(reader->value("applied_at").toString());
 	}
@@ -181,14 +184,15 @@ bool MigrationManager::needsMigration(SQLiteConnection& db) const {
 }
 
 bool MigrationManager::applyMigration(SQLiteConnection& db, Migration* migration) {
-	db.beginTransaction();
+	if (!db.beginTransaction()) {
+		return false;
+	}
 
 	try {
-		if (!migration->up(db)) {
+		if (!migration->up(db) || !recordMigration(db, migration) || !db.commit()) {
 			db.rollback();
 			return false;
 		}
-		db.commit();
 		return true;
 	}
 	catch (const std::exception& e) {
@@ -199,14 +203,15 @@ bool MigrationManager::applyMigration(SQLiteConnection& db, Migration* migration
 }
 
 bool MigrationManager::revertMigration(SQLiteConnection& db, Migration* migration) {
-	db.beginTransaction();
+	if (!db.beginTransaction()) {
+		return false;
+	}
 
 	try {
-		if (!migration->down(db)) {
+		if (!migration->down(db) || !removeMigrationRecord(db, migration->version()) || !db.commit()) {
 			db.rollback();
 			return false;
 		}
-		db.commit();
 		return true;
 	}
 	catch (const std::exception& e) {
@@ -225,7 +230,7 @@ QList<MigrationManager::MigrationRecord> MigrationManager::getAppliedMigrations(
 
 	while (reader && reader->next()) {
 		MigrationRecord mr;
-		mr.version = reader->value("version").toInt();
+		mr.version = reader->value("version").toLongLong();
 		mr.description = reader->value("description").toString();
 		mr.appliedAt = QDateTime::fromString(
 			reader->value("applied_at").toString(),
@@ -241,6 +246,9 @@ bool MigrationManager::recordMigration(SQLiteConnection& db, Migration* migratio
 	auto insert = db.prepare(
 		"INSERT INTO _migrations (version, description) VALUES (:version, :description)"
 	);
+	if (!insert) {
+		return false;
+	}
 	insert->bindValues({
 		{ ":version", migration->version() },
 		{ ":description", migration->description() }
@@ -248,8 +256,11 @@ bool MigrationManager::recordMigration(SQLiteConnection& db, Migration* migratio
 	return insert->exec();
 }
 
-void MigrationManager::removeMigrationRecord(SQLiteConnection& db, int version) {
+bool MigrationManager::removeMigrationRecord(SQLiteConnection& db, qint64 version) {
 	auto del = db.prepare("DELETE FROM _migrations WHERE version = :version");
+	if (!del) {
+		return false;
+	}
 	del->bindValue(":version", version);
-	del->exec();
+	return del->exec();
 }

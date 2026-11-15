@@ -71,6 +71,18 @@ void BootstrapContextBuilder::reload(const BootstrapConfig::Config& config) {
 		// Обновляем переменные из bootstrap.yaml: вначале открываем для записи (режим Lazy),
 		// устанавливаем значения, затем закрываем для дальнейших изменений (режим ReadOnly).
 		context->setVariablesMode(CommandContext::VariablesMode::Lazy);
+		context->setVariable("path", store.path);
+		context->setVariable("encrypted", store.encrypted);
+		QVariantList migrations;
+		for (const auto& migration : store.migrations) {
+			QVariantMap item;
+			item.insert("version", QVariant::fromValue(migration.version));
+			item.insert("description", migration.description);
+			item.insert("up", migration.up);
+			item.insert("down", migration.down);
+			migrations.append(item);
+		}
+		context->setVariable("migrations", migrations);
 		context->setVariable(QString::fromLatin1(kWalCheckIntervalVariable), store.wal.checkInterval);
 		context->setVariable(QString::fromLatin1(kWalMaxSizeMbVariable), store.wal.maxSizeMb);
 		context->setVariablesMode(CommandContext::VariablesMode::ReadOnly);

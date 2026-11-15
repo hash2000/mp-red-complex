@@ -1,5 +1,6 @@
 #pragma once
 #include <QString>
+#include <QtGlobal>
 #include <list>
 
 namespace BootstrapConfig {
@@ -9,8 +10,18 @@ struct Application {
 	QString viewport;
 };
 
+struct Migration {
+	qint64 version = 0;
+	QString description;
+	QString up;
+	QString down;
+};
+
 struct Store {
 	QString name;
+	QString path;
+	bool encrypted = false;
+	std::list<Migration> migrations;
 
 	struct {
 		int checkInterval = 60000;

@@ -25,8 +25,11 @@ public:
 	int tryRun(int& argc, char** argv);
 
 private:
-	void registerTypes();
+	void setupQt();
 	bool setupResources();
+	CommandController* initializeCommandController();
+	std::unique_ptr<QWidget> createViewport(CommandController* commandController);
+	void registerTypes();
 	void installMessageHandler();
 };
 
@@ -51,7 +54,33 @@ int Application::run(int &argc, char **argv) {
 int Application::Private::tryRun(int& argc, char** argv) {
 	qDebug() << "Bootstrap" << q->applicationName();
 	resources = std::make_unique<Resources>();
+	setupQt();
 
+	QApplication app(argc, argv);
+
+	if (!setupResources()) {
+		return 1;
+	}
+
+	auto commandController = initializeCommandController();
+	if (!commandController) {
+		return 1;
+	}
+
+	auto viewport = createViewport(commandController);
+	if (!viewport) {
+		qWarning() << "Declarative viewport is not available.";
+		return -1;
+	}
+
+	viewport->resize(1400, 900);
+	viewport->show();
+
+	qDebug() << "Start application";
+	return QApplication::exec();
+}
+
+void Application::Private::setupQt() {
 	QApplication::setApplicationName(q->applicationName());
 	QApplication::setOrganizationName(q->organizationName());
 
@@ -82,34 +111,24 @@ int Application::Private::tryRun(int& argc, char** argv) {
 
 	qDebug() << "Plugin path:" << qgetenv("QT_PLUGIN_PATH");
 	qDebug() << "Current platform:" << qgetenv("QT_QPA_PLATFORM");
+}
 
-	QApplication app(argc, argv);
-
-	if (!setupResources()) {
-		return 1;
-	}
-
+CommandController* Application::Private::initializeCommandController() {
 	auto commandController = q->buildCommandController(resources.get());
+	if (!commandController) {
+		qWarning() << "Command controller is not available.";
+		return nullptr;
+	}
 
 	contextBuilder = std::make_unique<BootstrapContextBuilder>(commandController);
 	contextBuilder->reload(bootstrapConfig);
+	commandController->init();
+	return commandController;
+}
 
-	std::unique_ptr<QWidget> viewport;
-	{
-		ClassManager classManager(resources.get(), commandController);
-		viewport.reset(classManager.createViewport(bootstrapConfig.application));
-	}
-
-	if (!viewport) {
-		qWarning() << "Declarative viewport is not available.";
-		return -1;
-	}
-
-	viewport->resize(1400, 900);
-	viewport->show();
-
-	qDebug() << "Start application";
-	return QApplication::exec();
+std::unique_ptr<QWidget> Application::Private::createViewport(CommandController* commandController) {
+	ClassManager classManager(resources.get(), commandController);
+	return std::unique_ptr<QWidget>(classManager.createViewport(bootstrapConfig.application));
 }
 
 bool Application::Private::setupResources() {

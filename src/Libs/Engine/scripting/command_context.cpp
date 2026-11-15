@@ -107,6 +107,21 @@ std::shared_ptr<CommandContext> CommandContext::context(const QString& ns) const
 	return globalContext()->context(ns);
 }
 
+QList<std::shared_ptr<CommandContext>> CommandContext::childContexts() const {
+	QList<std::shared_ptr<CommandContext>> result;
+	const auto global = globalContext();
+	if (!global) {
+		return result;
+	}
+	for (auto it = global->d->contexts.cbegin(); it != global->d->contexts.cend(); it++) {
+		const auto child = it.value().lock();
+		if (child && child->parentContext().get() == this) {
+			result.append(child);
+		}
+	}
+	return result;
+}
+
 QStringList CommandContext::nameSpaces() const {
 	if (isGlobalContext()) {
 		QStringList result;

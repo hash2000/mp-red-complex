@@ -3,10 +3,11 @@
 
 class ServicesRegistry;
 class Resources;
+class CommandContext;
 
 class Services {
 public:
-	explicit Services(Resources* resources);
+	Services(Resources* resources, std::shared_ptr<CommandContext> globalContext);
 	~Services();
 
 	std::unique_ptr<ServicesRegistry> create();

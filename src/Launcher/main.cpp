@@ -17,8 +17,6 @@ protected:
 
 	CommandController* buildCommandController(Resources* resources) override {
 		appController = std::make_unique<ApplicationController>(resources);
-		appController->init();
-
 		return appController.get();
 	}
 

@@ -61,7 +61,6 @@ bool Resources::Private::loadDefaults() {
 
 	q->Directories.set("path.tools", resourcesPath.value().filePath("tools"));
 	q->Directories.set("path.databases", resourcesPath.value().filePath("data"));
-	q->Directories.set("path.databases.settings.file", resourcesPath.value().filePath("data/databases.json"));
 	q->Directories.set("path.auth.words", resourcesPath.value().filePath("data/recovery/english.txt"));
 	q->Directories.set("path.users", resourcesPath.value().filePath("users"));
 	q->Directories.set("path.databases.accounts.file", resourcesPath.value().filePath("data/accounts.db"));

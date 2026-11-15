@@ -7,7 +7,7 @@ struct Config;
 }
 
 /// Создаёт контексты приложения по bootstrap.yaml:
-/// .store.<name> с переменными wal.checkInterval и wal.maxSizeMb.
+/// .store.<name> с настройками базы, WAL и списком SQL-миграций.
 class BootstrapContextBuilder {
 public:
 	explicit BootstrapContextBuilder(CommandController* commandController);

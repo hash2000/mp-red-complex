@@ -4,7 +4,12 @@
 #include "Libs/Engine/scripting/command_controller.h"
 #include "Libs/Engine/scripting/command_context.h"
 
+#include <QDir>
+#include <QFile>
+#include <QTemporaryDir>
+
 #include <memory>
+#include <stdexcept>
 
 namespace {
 class TestCommandController : public CommandController {
@@ -185,4 +190,134 @@ void TestEngine::testContext_BootstrapContextBuilder() {
 
 	// Then: значения обновлены
 	QCOMPARE(contextAfter->variable("wal.checkInterval").toInt(), 1234);
+}
+
+void TestEngine::testContext_ChildContexts() {
+	auto ctl = std::make_unique<TestCommandController>();
+	auto root = ctl->globalContext();
+	auto parent = root->createScopedContext("parent");
+	auto child = parent->createScopedContext("child");
+	auto grandchild = child->createScopedContext("grandchild");
+	QCOMPARE(root->childContexts().size(), 1);
+	QCOMPARE(parent->childContexts().size(), 1);
+	QCOMPARE(parent->childContexts().first().get(), child.get());
+	QCOMPARE(child->childContexts().first().get(), grandchild.get());
+	grandchild.reset();
+	QVERIFY(child->childContexts().isEmpty());
+}
+
+namespace {
+bool writeTestFile(const QString& path, const QByteArray& data) {
+	QFile file(path);
+	return file.open(QIODevice::WriteOnly) && file.write(data) == data.size();
+}
+}
+
+void TestEngine::testContext_BootstrapMigrations() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	QVERIFY(QDir(dir.path()).mkdir("sql"));
+	QVERIFY(writeTestFile(dir.filePath("sql/20251113181900-up-Initialize-database.sql"), "CREATE TABLE first(id INTEGER);"));
+	QVERIFY(writeTestFile(dir.filePath("sql/20251113181900-down.sql"), "DROP TABLE first;"));
+	QVERIFY(writeTestFile(dir.filePath("sql/20261113181900-up.sql"), "CREATE TABLE second(id INTEGER);"));
+	QVERIFY(writeTestFile(dir.filePath("sql/20261113181900-down.sql"), "DROP TABLE second;"));
+	// Неуказанный файл не должен загружаться.
+	QVERIFY(writeTestFile(dir.filePath("sql/20271113181900-up.sql"), "unexpected"));
+	const QByteArray yaml = R"(appearance:
+  application:
+    name: base
+    viewport: {xtype: Test}
+stores:
+  items:
+    accounts:
+      path: data/accounts.db
+      encrypted: true
+      wal: {checkInterval: 1234, maxSizeMb: 7}
+      migrations:
+        - {version: 20261113181900, up: sql/20261113181900-up.sql, down: sql/20261113181900-down.sql}
+        - {version: 20251113181900, description: Initialize, up: sql/20251113181900-up-Initialize-database.sql, down: sql/20251113181900-down.sql}
+    empty: {}
+    MixedCase: {path: data/mixed.db}
+)";
+	QVERIFY(writeTestFile(dir.filePath("bootstrap.yaml"), yaml));
+	const auto config = BootstrapConfig::loadBootstrap(dir.filePath("bootstrap.yaml"));
+	QCOMPARE(config.themeName, QString("dark"));
+	QCOMPARE(config.stores.size(), size_t(3));
+	auto ctl = std::make_unique<TestCommandController>();
+	BootstrapContextBuilder builder(ctl.get());
+	builder.reload(config);
+	auto account = ctl->globalContext()->context(".store.accounts");
+	QVERIFY(account);
+	QCOMPARE(account->variable("path").toString(), QString("data/accounts.db"));
+	QVERIFY(account->variable("encrypted").toBool());
+	QCOMPARE(account->variable("wal.checkInterval").toInt(), 1234);
+	QCOMPARE(account->variable("wal.maxSizeMb").toInt(), 7);
+	QCOMPARE(account->variablesMode(), CommandContext::VariablesMode::ReadOnly);
+	const auto migrations = account->variable("migrations").toList();
+	QCOMPARE(migrations.size(), 2);
+	const auto first = migrations.first().toMap();
+	QCOMPARE(first.value("version").toLongLong(), qint64(20251113181900));
+	QCOMPARE(first.value("description").toString(), QString("Initialize"));
+	QCOMPARE(first.value("up").toString(), QString("CREATE TABLE first(id INTEGER);"));
+	QCOMPARE(first.value("down").toString(), QString("DROP TABLE first;"));
+	const auto second = migrations.last().toMap();
+	QCOMPARE(second.value("version").toLongLong(), qint64(20261113181900));
+	QCOMPARE(second.value("up").toString(), QString("CREATE TABLE second(id INTEGER);"));
+	QCOMPARE(second.value("down").toString(), QString("DROP TABLE second;"));
+	auto empty = ctl->globalContext()->context(".store.empty");
+	QVERIFY(empty);
+	QVERIFY(empty->variable("path").toString().isEmpty());
+	QVERIFY(empty->variable("migrations").toList().isEmpty());
+	QVERIFY(!empty->variable("encrypted").toBool());
+	QCOMPARE(empty->variable("wal.checkInterval").toInt(), 60000);
+	QCOMPARE(empty->variable("wal.maxSizeMb").toInt(), 20);
+	// Псевдонимы хранилищ должны совпадать с нормализованными именами сервиса БД.
+	auto mixed = ctl->globalContext()->context(".store.mixedcase");
+	QVERIFY(mixed);
+	QCOMPARE(mixed->variable("path").toString(), QString("data/mixed.db"));
+
+	// Повторная загрузка обновляет прежний контекст, удаляя отсутствующее хранилище.
+	BootstrapConfig::Config reloaded;
+	BootstrapConfig::Store updated = config.stores.front();
+	updated.migrations.clear();
+	updated.path = "data/new.db";
+	updated.encrypted = false;
+	updated.wal.checkInterval = 4321;
+	reloaded.stores.push_back(updated);
+	empty.reset();
+	builder.reload(reloaded);
+	QCOMPARE(ctl->globalContext()->context(".store.accounts").get(), account.get());
+	QVERIFY(!ctl->globalContext()->context(".store.empty"));
+	QVERIFY(account->variable("migrations").toList().isEmpty());
+	QCOMPARE(account->variable("path").toString(), QString("data/new.db"));
+	QVERIFY(!account->variable("encrypted").toBool());
+	QCOMPARE(account->variable("wal.checkInterval").toInt(), 4321);
+	QCOMPARE(account->variablesMode(), CommandContext::VariablesMode::ReadOnly);
+}
+
+void TestEngine::testContext_BootstrapMigrationErrors() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const QByteArray prefix = "appearance:\n  application:\n    name: base\n    viewport: {xtype: Test}\nstores:\n  items:\n    test:\n      migrations:\n";
+	const auto path = dir.filePath("bootstrap.yaml");
+	QVERIFY(writeTestFile(path, prefix + "        - {version: 20251113181900, up: 20251113181900-up.sql, down: 20251113181900-down.sql}\n"));
+	QVERIFY_EXCEPTION_THROWN(BootstrapConfig::loadBootstrap(path), std::runtime_error);
+	QVERIFY(writeTestFile(dir.filePath("20251113181900-up.sql"), "up"));
+	// Отсутствие отдельного down-файла также приводит к ошибке.
+	QVERIFY_EXCEPTION_THROWN(BootstrapConfig::loadBootstrap(path), std::runtime_error);
+	QVERIFY(writeTestFile(dir.filePath("20251113181900-down.sql"), "down"));
+	QVERIFY(writeTestFile(path, prefix + "        - {version: 20251113181900, up: 20251113181900-up.sql, down: 20251113181900-down.sql}\n        - {version: 20251113181900, up: 20251113181900-up.sql, down: 20251113181900-down.sql}\n"));
+	QVERIFY_EXCEPTION_THROWN(BootstrapConfig::loadBootstrap(path), std::runtime_error);
+	QVERIFY(writeTestFile(path, prefix + "        - {version: 20251113181900, up: 20251113181900-up.sql, down: 20261113181900-down.sql}\n"));
+	QVERIFY_EXCEPTION_THROWN(BootstrapConfig::loadBootstrap(path), std::runtime_error);
+	QVERIFY(writeTestFile(path, prefix + "        - {version: 20251313181900, up: 20251313181900-up.sql, down: 20251313181900-down.sql}\n"));
+	QVERIFY_EXCEPTION_THROWN(BootstrapConfig::loadBootstrap(path), std::runtime_error);
+	QVERIFY(writeTestFile(path, prefix + "        - {version: 20251113181900, up: 20261113181900-up.sql, down: 20251113181900-down.sql}\n"));
+	QVERIFY_EXCEPTION_THROWN(BootstrapConfig::loadBootstrap(path), std::runtime_error);
+	QVERIFY(writeTestFile(path, prefix + "        - {version: 20251113181900, up: 20251113181900-up.sql, down: 20251113181900-down-extra.sql}\n"));
+	QVERIFY_EXCEPTION_THROWN(BootstrapConfig::loadBootstrap(path), std::runtime_error);
+	QVERIFY(writeTestFile(path, prefix + "        - {version: 20251113181900, up: 20251113181900-up.sql}\n"));
+	QVERIFY_EXCEPTION_THROWN(BootstrapConfig::loadBootstrap(path), std::runtime_error);
+	QVERIFY(writeTestFile(path, prefix + "        - {version: 20251113181900, down: 20251113181900-down.sql}\n"));
+	QVERIFY_EXCEPTION_THROWN(BootstrapConfig::loadBootstrap(path), std::runtime_error);
 }

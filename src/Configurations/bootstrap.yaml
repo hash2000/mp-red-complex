@@ -15,6 +15,11 @@ stores:
       wal:
         checkInterval: 60000
         maxSizeMb: 40
+      migrations:
+        - version: 20251113181900
+          description: Initialize database
+          up: stores/migrations/fetch_api/20251113181900-up-Initialize-database.sql
+          down: stores/migrations/fetch_api/20251113181900-down.sql
     messages:
       wal:
         checkInterval: 60000
@@ -23,3 +28,15 @@ stores:
       wal:
         checkInterval: 120000
         maxSizeMb: 20
+      migrations:
+        - version: 20251113181900
+          description: Initialize database
+          up: stores/migrations/accounts/20251113181900-up-Initialize-database.sql
+          down: stores/migrations/accounts/20251113181900-down.sql
+    game:
+      encrypted: true
+      migrations:
+        - version: 20251113181900
+          description: Initialize database
+          up: stores/migrations/game/20251113181900-up-Initialize-database.sql
+          down: stores/migrations/game/20251113181900-down.sql

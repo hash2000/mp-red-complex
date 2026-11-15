@@ -6,6 +6,7 @@
 #include <QDateTime>
 #include <memory>
 #include <map>
+#include <functional>
 
 class SQLiteConnection;
 class Migration;
@@ -19,7 +20,7 @@ public:
 
 	// Регистрация миграций
 	void addMigration(std::unique_ptr<Migration> migration);
-	void addMigration(int version, const QString& description,
+	void addMigration(qint64 version, const QString& description,
 		std::function<bool(SQLiteConnection&)> up,
 		std::function<bool(SQLiteConnection&)> down = nullptr);
 
@@ -27,26 +28,26 @@ public:
 	bool initializeSchema(SQLiteConnection& db);
 
 	// Запуск миграций до последней версии
-	bool migrate(SQLiteConnection& db, int targetVersion = -1);
+	bool migrate(SQLiteConnection& db, qint64 targetVersion = -1);
 
 	// Откат миграций
 	bool rollback(SQLiteConnection& db, int steps = 1);
-	bool rollbackTo(SQLiteConnection& db, int version);
+	bool rollbackTo(SQLiteConnection& db, qint64 version);
 
 	// Информация о миграциях
-	int currentVersion(SQLiteConnection& db) const;
-	int latestVersion() const;
+	qint64 currentVersion(SQLiteConnection& db) const;
+	qint64 latestVersion() const;
 	QStringList migrationHistory(SQLiteConnection& db) const;
 	bool needsMigration(SQLiteConnection& db) const;
 
 signals:
-	void migrationStarted(int version, const QString& description);
-	void migrationCompleted(int version, const QString& description);
-	void migrationFailed(int version, const QString& description, const QString& error);
+	void migrationStarted(qint64 version, const QString& description);
+	void migrationCompleted(qint64 version, const QString& description);
+	void migrationFailed(qint64 version, const QString& description, const QString& error);
 
 private:
 	struct MigrationRecord {
-		int version;
+		qint64 version;
 		QString description;
 		QDateTime appliedAt;
 	};
@@ -55,7 +56,7 @@ private:
 	bool revertMigration(SQLiteConnection& db, Migration* migration);
 	QList<MigrationRecord> getAppliedMigrations(SQLiteConnection& db) const;
 	bool recordMigration(SQLiteConnection& db, Migration* migration);
-	void removeMigrationRecord(SQLiteConnection& db, int version);
+	bool removeMigrationRecord(SQLiteConnection& db, qint64 version);
 
 private:
 	class Private;

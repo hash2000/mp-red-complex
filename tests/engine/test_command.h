@@ -34,6 +34,9 @@ private slots:
 	void testContext_VariablesAtomicMode();
 	void testContext_ScopeIsolation();
 	void testContext_BootstrapContextBuilder();
+	void testContext_ChildContexts();
+	void testContext_BootstrapMigrations();
+	void testContext_BootstrapMigrationErrors();
 
 	// test_command_parser_command
 	void testParser_ParseCommand_ShouldReturnNameAndParameters();

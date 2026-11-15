@@ -30,7 +30,6 @@
 //#include "Content/InventoriesModule/services/items_service.h"
 //
 // DatabasesService
-#include "Content/DatabaseModule/data_providers/databases_settings_data_provider_json_impl.h"
 #include "Content/DatabaseModule/services/databases_service.h"
 
 //// CharactersModule
@@ -47,15 +46,16 @@
 #include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
 
 #include <mutex>
+#include <utility>
 
 namespace {
 class ServicesFactory : public ServicesRegistry, public IServicesFactory {
 public:
 	~ServicesFactory() = default;
-	ServicesFactory(Resources* res)
+	ServicesFactory(Resources* res, std::shared_ptr<CommandContext> context)
 		// Data Providers
 		: resources(res)
-		, databaseSettingsDataProvider([this] { return std::make_unique<DatabaseSettingsDataProviderJsonImpl>(resources); })
+		, globalContext(std::move(context))
 		//, itemsDataProvider([this] { return std::make_unique<ItemsDataProviderDb>(databasesService.get()); })
 		//, entitiesDataProvider([this] { return std::make_unique<EntitiesDataProviderDb>(databasesService.get()); })
 		//, imagesDataProvider([this] {	return std::make_unique<ImagesDataProviderJsonImpl>(resources);	})
@@ -69,16 +69,16 @@ public:
 		, databasesService([this] {
 			return std::make_unique<DatabasesService>(
 				resources,
-				databaseSettingsDataProvider.get());
+				globalContext);
 		})
 	{}
 
 private:
 	Resources* resources;
+	std::shared_ptr<CommandContext> globalContext;
 
 private:
 	// Data Providers (остаются для обратной совместимости и writer'ов)
-	LazyPtr<DatabaseSettingsDataProviderJsonImpl> databaseSettingsDataProvider;
 	//LazyPtr<IItemsDataProvider> itemsDataProvider;
 	//LazyPtr<IEntitiesDataProvider> entitiesDataProvider;
 	LazyPtr<IUsersRegistryDataProvider> usersRegistryDataProvider;
@@ -175,17 +175,19 @@ public:
 	Private(Services* parent) : q(parent) {}
 	Services* q;
 	Resources* resources;
+	std::shared_ptr<CommandContext> globalContext;
 };
 
-Services::Services(Resources* resources)
+Services::Services(Resources* resources, std::shared_ptr<CommandContext> globalContext)
 	: d(std::make_unique<Private>(this)) {
 	d->resources = resources;
+	d->globalContext = std::move(globalContext);
 }
 
 Services::~Services() = default;
 
 std::unique_ptr<ServicesRegistry> Services::create() {
-	auto factory = std::make_unique<ServicesFactory>(d->resources);
+	auto factory = std::make_unique<ServicesFactory>(d->resources, d->globalContext);
 	factory->registerServices();
 	return factory;
 }

@@ -1,5 +1,6 @@
 #pragma once
 #include <QObject>
+#include <QList>
 #include <QString>
 #include <QStringList>
 #include <QVariant>
@@ -34,6 +35,8 @@ public:
 	std::shared_ptr<CommandContext> globalContext() const;
 	std::shared_ptr<CommandContext> createScopedContext(const QString& name);
 	std::shared_ptr<CommandContext> context(const QString& ns) const;
+	/// Живые зарегистрированные прямые потомки; без передачи постоянного владения.
+	QList<std::shared_ptr<CommandContext>> childContexts() const;
 
 	// Переменные контекста. Имя может содержать точки: "wal.checkInterval".
 	void setVariablesMode(VariablesMode mode);

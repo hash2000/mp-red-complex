@@ -26,17 +26,18 @@ public:
 };
 
 ApplicationController::ApplicationController(Resources* resources, QObject* parent)
-	: d(std::make_unique<Private>(this))
-	, CommandController(resources, parent) {
-	d->commandProcessor = std::make_unique<CommandProcessor>(resources);
-	d->controllers = std::make_unique<Controllers>(this);
-	d->servicesBuilder = std::make_unique<Services>(resources);
-	d->widgetsBuilder = std::make_unique<WidgetsBuilder>(this);
+	: CommandController(resources, parent)
+	, d(std::make_unique<Private>(this)) {
 }
 
 ApplicationController::~ApplicationController() = default;
 
 void ApplicationController::initContext() {
+	d->commandProcessor = std::make_unique<CommandProcessor>(resources());
+	d->servicesBuilder = std::make_unique<Services>(resources(), globalContext());
+	d->controllers = std::make_unique<Controllers>(this);
+	d->widgetsBuilder = std::make_unique<WidgetsBuilder>(this);
+
 	auto commands = commandProcessor();
 
 	commands->registerCommand(std::make_unique<HelpCommand>(this));

@@ -1,13 +1,3 @@
-#include "Content/DatabaseModule/migrations/game_migrations.h"
-#include "Libs/Resources/db/sqlite/migration_manager.h"
-#include "Libs/Resources/db/sqlite/sqlite_connection.h"
-
-
-namespace GameMigrations {
-void build(MigrationManager* migrator) {
-	migrator->addMigration(1, "Initialized database",
-		[](SQLiteConnection& db) -> bool {
-		return db.execute(R"(
 			-- Таблица типов сущностей
 			-- нужна для проверки на уровне базы, что тип у сущности указан верно
 			CREATE TABLE "item_entity_types" (
@@ -119,25 +109,5 @@ void build(MigrationManager* migrator) {
 				is_active INTEGER DEFAULT (1) NOT NULL,
 				created_at TEXT DEFAULT (datetime('now')) NOT NULL,
 				CONSTRAINT PK_user_characters PRIMARY KEY (id),
-				CONSTRAINT FK_user_characters_containers FOREIGN KEY (equipment_id) REFERENCES containers(item_id),
+				CONSTRAINT FK_user_characters_containers FOREIGN KEY (equipment_id) REFERENCES containers(item_id)
 			);
-
-		)");
-	},
-		[](SQLiteConnection& db) -> bool {
-		return db.execute(R"(
-			DROP TABLE IF EXISTS items;
-			DROP TABLE IF EXISTS entity_permissions_any;
-			DROP TABLE IF EXISTS entity_permissions_all;
-			DROP TABLE IF EXISTS entity_resource;
-			DROP TABLE IF EXISTS item_entities;
-			DROP TABLE IF EXISTS resources;
-			DROP TABLE IF EXISTS item_entity_equipment_type;
-			DROP TABLE IF EXISTS item_entity_types;
-			DROP TABLE IF EXISTS containers;
-			DROP TABLE IF EXISTS user_characters;
-		)");
-	});
-
-}
-};
