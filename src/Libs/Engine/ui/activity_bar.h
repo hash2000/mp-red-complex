@@ -14,6 +14,7 @@ public:
 
 	void addButton(const QString& id, const QString& glyph, const QString& toolTip,
 		Position pos = Position::Top, bool checkable = true);
+	void removeButton(const QString& id);
 	void setActive(const QString& id); // пустая строка — ни одна не активна
 
 	void setAutoHide(bool on); // true — свернуть в полоску, раскрывать по hover

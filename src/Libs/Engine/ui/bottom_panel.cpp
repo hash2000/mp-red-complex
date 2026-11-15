@@ -3,6 +3,7 @@
 
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QPointer>
 #include <QStackedWidget>
 #include <QTabBar>
 #include <QVBoxLayout>
@@ -15,6 +16,7 @@ struct BottomPanel::Private {
 	QTabBar* tabs = nullptr;
 	QStringList ids;
 	QStringList titles;
+	QList<QPointer<QWidget>> pages;
 	bool collapsed = false;
 };
 
@@ -87,6 +89,7 @@ BottomPanel::~BottomPanel() = default;
 void BottomPanel::addPanel(const QString& id, const QString& glyph, const QString& title, QWidget* panel) {
 	d->ids << id;
 	d->titles << title.toUpper();
+	d->pages.append(panel);
 	d->stack->addWidget(panel); // сначала в стек,
 	d->tabs->addTab(glyph + QLatin1Char(' ') + title); // потом вкладка (currentChanged)
 }
@@ -105,9 +108,7 @@ bool BottomPanel::removePanel(const QString& id) {
 	if (index < 0)
 		return false;
 
-	QWidget* page = d->stack->widget(index);
-	if (!page)
-		return false;
+	QPointer<QWidget> page = d->pages.value(index);
 
 	const int currentIndex = d->tabs->currentIndex();
 	const bool removedCurrent = (currentIndex == index);
@@ -117,10 +118,12 @@ bool BottomPanel::removePanel(const QString& id) {
 	d->stack->blockSignals(true);
 
 	d->tabs->removeTab(index);
-	d->stack->removeWidget(page);
+	if (page)
+		d->stack->removeWidget(page);
 
 	d->ids.removeAt(index);
 	d->titles.removeAt(index);
+	d->pages.removeAt(index);
 
 	if (!d->ids.isEmpty()) {
 		int newIndex = 0;
@@ -146,8 +149,13 @@ bool BottomPanel::removePanel(const QString& id) {
 	d->stack->blockSignals(false);
 	d->tabs->blockSignals(false);
 
-	page->hide();
-	page->deleteLater();
+	if (page) {
+		// removeWidget не снимает родителя: иначе страница доживёт до
+		// разрушения стека и уничтожится после его владельца.
+		page->setParent(nullptr);
+		page->hide();
+		page->deleteLater();
+	}
 
 	if (d->ids.isEmpty() && wasVisible)
 		hide();
@@ -157,7 +165,7 @@ bool BottomPanel::removePanel(const QString& id) {
 
 QWidget* BottomPanel::panel(const QString& id) const {
 	const int idx = d->ids.indexOf(id);
-	return idx >= 0 ? d->stack->widget(idx) : nullptr;
+	return idx >= 0 ? d->pages.value(idx).data() : nullptr;
 }
 
 void BottomPanel::setCollapsed(bool collapsed) {

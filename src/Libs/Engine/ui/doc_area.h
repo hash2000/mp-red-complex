@@ -21,6 +21,8 @@ public:
 signals:
 	void documentAdded(DocumentWidget* doc);
 	void documentAboutToClose(DocumentWidget* doc);
+	/// doc служит только идентификатором: объект уже уничтожен.
+	void documentDestroyed(DocumentWidget* doc);
 	void currentDocumentChanged(DocumentWidget* doc);   // может быть nullptr
 
 private:

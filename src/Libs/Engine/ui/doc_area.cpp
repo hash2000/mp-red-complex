@@ -42,12 +42,25 @@ DocumentArea::~DocumentArea() {
 	// т.е. ПОСЛЕ уничтожения d. QStackedWidget при удалении страниц может
 	// эмитить currentChanged -> наша лямбда обратится к уже удалённому d.
 	d->stack->disconnect(this);
+	for (auto* doc : d->docs)
+		doc->disconnect(this);
+	// Закрытые документы ждут deleteLater и до этого остаются дочерними
+	// виджетами стека: их сигнал destroyed тоже нельзя доставлять сюда.
+	for (auto* doc : d->stack->findChildren<DocumentWidget*>())
+		doc->disconnect(this);
 }
 
 void DocumentArea::addDocument(DocumentWidget* doc) {
 	if (!doc || d->docs.contains(doc))
 		return;
 	d->docs.append(doc);
+	connect(doc, &QObject::destroyed, this, [this, doc] {
+		if (!d->docs.removeOne(doc))
+			return;
+		emit documentDestroyed(doc);
+		if (d->docs.isEmpty())
+			d->stack->setCurrentWidget(d->emptyPage);
+	});
 	d->stack->addWidget(doc);
 	emit documentAdded(doc);
 	setCurrentDocument(doc);
@@ -69,6 +82,9 @@ bool DocumentArea::closeDocument(DocumentWidget* doc) {
 	emit documentAboutToClose(doc);
 	d->docs.removeAt(idx);
 	d->stack->removeWidget(doc);
+	// removeWidget не меняет родителя: иначе закрытый документ останется
+	// дочерним для стека и будет уничтожен вместе с ним после deleteLater.
+	doc->setParent(nullptr);
 	doc->deleteLater();                 // deleteLater: мы можем быть внутри его сигнала
 
 	if (wasCurrent) {

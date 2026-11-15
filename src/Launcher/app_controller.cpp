@@ -7,7 +7,8 @@
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/services/services_registry.h"
 
-#include "Launcher/commands/windows_cmd.h"
+#include "Libs/Engine/commands/widget_zone_command.h"
+
 #include "Content/ConsoleModule/commands/help_cmd.h"
 #include "Content/FetchApiModule/commands/fetch_api_cmd.h"
 #include "Content/UsersModule/commands/users_cmd.h"
@@ -42,7 +43,9 @@ void ApplicationController::initContext() {
 
 	commands->registerCommand(std::make_unique<HelpCommand>(this));
 	commands->registerCommand(std::make_unique<EchoCommand>(this));
-	commands->registerCommand(std::make_unique<WindowsCommand>(controllers(), this));
+	commands->registerCommand(std::make_unique<WidgetZoneCommand>("documents", MainWindow::WidgetKind::Document, this));
+	commands->registerCommand(std::make_unique<WidgetZoneCommand>("info-panels", MainWindow::WidgetKind::BottomPanel, this));
+	commands->registerCommand(std::make_unique<WidgetZoneCommand>("side-panels", MainWindow::WidgetKind::SidePanel, this));
 	commands->registerCommand(std::make_unique<UsersCommand>(this));
 	commands->registerCommand(std::make_unique<FetchApiCommand>(this));
 }

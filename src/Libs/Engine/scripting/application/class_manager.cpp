@@ -374,10 +374,10 @@ void ClassManager::Private::applyPanels(MainWindow* window, const YAML::Node& bl
 		}
 
 		if (bottom) {
-			window->registerBottomPanel(name, handler.glyph, title, panel, nodeString(item, "tooltip"));
+			window->registerBottomPanel(name, handler.glyph, title, panel, nodeString(item, "tooltip"), type);
 		}
 		else {
-			window->registerSidePanel(name, handler.glyph, title, panel, nodeString(item, "tooltip"));
+			window->registerSidePanel(name, handler.glyph, title, panel, nodeString(item, "tooltip"), type);
 		}
 
 		registered << name;

@@ -103,6 +103,11 @@ void ActivityBar::addButton(const QString& id, const QString& glyph, const QStri
 	d->buttons.insert(id, b);
 }
 
+void ActivityBar::removeButton(const QString& id) {
+	if (auto* button = d->buttons.take(id))
+		button->deleteLater();
+}
+
 void ActivityBar::setActive(const QString& id) {
 	for (auto it = d->buttons.cbegin(); it != d->buttons.cend(); it++)
 		if (it.value()->isCheckable())

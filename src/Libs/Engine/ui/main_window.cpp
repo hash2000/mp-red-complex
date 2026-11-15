@@ -9,6 +9,7 @@
 #include "Libs/Engine/ui/text_document.h"
 #include "Libs/Engine/ui/command_console.h"
 #include "Libs/Engine/scripting/command_context.h"
+#include "Libs/Engine/scripting/command_controller.h"
 
 #include <QAction>
 #include <QCloseEvent>
@@ -19,11 +20,18 @@
 #include <QLabel>
 #include <QMenuBar>
 #include <QPlainTextEdit>
+#include <QPointer>
+#include <QScopeGuard>
+#include <QSet>
 #include <QSplitter>
+#include <QThread>
+#include <QVBoxLayout>
 #include <QStatusBar>
 #include <QTableWidget>
 #include <QTime>
 #include <QTreeView>
+
+#include <exception>
 
 namespace {
 QWidget* makePlaceholder(const QString& text) {
@@ -33,6 +41,20 @@ QWidget* makePlaceholder(const QString& text) {
 	l->setWordWrap(true);
 	return l;
 }
+// Обычный QWidget получает вкладку и участвует в стандартном закрытии документов.
+class WidgetDocument final : public DocumentWidget {
+public:
+	explicit WidgetDocument(QWidget* content) : _content(content) {
+		auto* layout = new QVBoxLayout(this);
+		layout->setContentsMargins(0, 0, 0, 0);
+		layout->addWidget(content);
+	}
+	bool maybeClose() override {
+		return DocumentWidget::maybeClose() && (!_content || _content->close());
+	}
+private:
+	QPointer<QWidget> _content;
+};
 } // namespace
 
 struct MainWindow::Private {
@@ -55,8 +77,25 @@ struct MainWindow::Private {
 	QAction* pinAction = nullptr;
 
 	QHash<QString, QAction*> bottomActions;
+	QHash<QString, QAction*> sideActions;
+	struct Entry {
+		WidgetKind kind;
+		QPointer<QWidget> widget;
+		QPointer<DocumentWidget> document;
+		DocumentWidget* documentIdentity = nullptr; // только сравнение адресов
+		quint64 serial;
+		QString title;
+		QString type;
+	};
+	QHash<QString, Entry> entries;
+	QSet<QString> creating;
+	quint64 nextSerial = 0;
+	QPointer<CommandController> controller;
 
 	std::shared_ptr<CommandContext> context;
+	void track(const QString& id, WidgetKind kind, QWidget* widget, const QString& title,
+		const QString& type, DocumentWidget* document = nullptr);
+	void forgetDocument(DocumentWidget* doc);
 
 	int untitledCounter = 0;
 	int lastSideWidth = 280;
@@ -126,6 +165,7 @@ void MainWindow::Private::buildUi() {
 	// Панель свойств создаётся всегда: к ней привязан активный документ,
 	// а регистрируется она либо по умолчанию, либо из yaml-описания.
 	properties = new PropertiesPanel;
+	QObject::connect(properties, &QObject::destroyed, q, [this] { properties = nullptr; });
 
 	updateWindowTitle(nullptr);
 }
@@ -166,7 +206,8 @@ void MainWindow::Private::wireSignals() {
 	QObject::connect(tabs, &DocumentTabsPanel::newDocumentRequested, q, [this] { newDocument(); });
 	QObject::connect(tabs, &DocumentTabsPanel::propertiesRequested, q, [this](DocumentWidget* doc) {
 		area->setCurrentDocument(doc);
-		properties->setDocument(doc);
+		if (properties)
+			properties->setDocument(doc);
 		q->showSidePanel(QStringLiteral("properties"));
 	});
 
@@ -180,14 +221,20 @@ void MainWindow::Private::wireSignals() {
 		q->log(MainWindow::tr("Открыт документ: %1").arg(doc->title()));
 	});
 	QObject::connect(area, &DocumentArea::documentAboutToClose, q, [this](DocumentWidget* doc) {
+		forgetDocument(doc);
 		tabs->removeDocument(doc);
-		if (properties->document() == doc)
+		if (properties && properties->document() == doc)
 			properties->setDocument(nullptr);
 		q->log(MainWindow::tr("Закрыт документ: %1").arg(doc->title()));
 	});
+	QObject::connect(area, &DocumentArea::documentDestroyed, q, [this](DocumentWidget* doc) {
+		forgetDocument(doc);
+		tabs->removeDocument(doc);
+	});
 	QObject::connect(area, &DocumentArea::currentDocumentChanged, q, [this](DocumentWidget* doc) {
 		tabs->setActiveDocument(doc);
-		properties->setDocument(doc);   // как в VS: «Свойства» следуют за активным документом
+		if (properties)
+			properties->setDocument(doc);   // «Свойства» следуют за активным документом
 		updateWindowTitle(doc);
 	});
 
@@ -270,17 +317,200 @@ void MainWindow::Private::updateWindowTitle(DocumentWidget* doc) {
 	statusDoc->setText(doc ? doc->title() : QString());
 }
 
+void MainWindow::Private::forgetDocument(DocumentWidget* doc) {
+	for (auto it = entries.begin(); it != entries.end();) {
+		if (it->documentIdentity == doc)
+			it = entries.erase(it);
+		else
+			it++;
+	}
+}
+
+void MainWindow::Private::track(const QString& id, WidgetKind kind, QWidget* widget, const QString& title,
+	const QString& type, DocumentWidget* document) {
+	const auto serial = ++nextSerial;
+	entries.insert(id, Entry{kind, widget, document, document, serial, title, type});
+	QObject::connect(widget, &QObject::destroyed, q, [this, id, serial] {
+		auto it = entries.find(id);
+		if (it == entries.end() || it->serial != serial)
+			return;
+		const auto kind = it->kind;
+		QPointer<DocumentWidget> doc = it->document;
+		if (kind == WidgetKind::BottomPanel)
+			q->unregisterBottomPanel(id);
+		else if (kind == WidgetKind::SidePanel)
+			q->unregisterSidePanel(id);
+		else {
+			entries.erase(it);
+			if (doc)
+				area->closeDocument(doc);
+		}
+	});
+}
+
 MainWindow::MainWindow(std::shared_ptr<CommandContext> context, QWidget* parent, bool buildDefaultPanels)
 	: QMainWindow(parent), d(std::make_unique<Private>(this)) {
 	d->context = context;
 	d->buildUi();
 	d->buildMenus();
 	d->wireSignals();
+	if (context && context->commandController()) {
+		d->controller = context->commandController();
+		d->controller->setMainWindow(this);
+	}
 
 	log(tr("Приложение запущено"));
 }
 
-MainWindow::~MainWindow() = default;
+MainWindow::~MainWindow() {
+	if (d->controller && d->controller->mainWindow() == this)
+		d->controller->setMainWindow(nullptr);
+	for (const auto& entry : d->entries) {
+		if (entry.widget)
+			entry.widget->disconnect(this);
+	}
+	d->area->disconnect(this);
+	d->tabs->disconnect(this);
+	d->side->disconnect(this);
+	d->activity->disconnect(this);
+	d->bottom->disconnect(this);
+	if (d->properties) {
+		d->properties->disconnect(this);
+		if (!d->properties->parent())
+			delete d->properties;
+	}
+}
+
+QWidget* MainWindow::createWidget(const QString& id, WidgetKind kind, const QString& title,
+	const QString& glyph, const WidgetFactory& factory, const QString& tooltip,
+	const QString& type) {
+	if (QThread::currentThread() != thread() || id.isEmpty() ||
+		(kind != WidgetKind::Document && kind != WidgetKind::BottomPanel && kind != WidgetKind::SidePanel))
+		return nullptr;
+	if (auto* existing = widget(id)) {
+		showWidget(id);
+		return existing;
+	}
+	if (!factory || d->creating.contains(id))
+		return nullptr;
+	d->creating.insert(id);
+	auto guard = qScopeGuard([this, id] { d->creating.remove(id); });
+	QWidget* content = nullptr;
+	try {
+		content = factory();
+	}
+	catch (const std::exception& e) {
+		qWarning() << "MainWindow: widget factory failed for" << id << e.what();
+		return nullptr;
+	}
+	if (!content)
+		return nullptr;
+	for (const auto& entry : d->entries) {
+		if (entry.widget == content || entry.document == content)
+			return nullptr;
+	}
+	if (kind == WidgetKind::Document) {
+		auto* doc = qobject_cast<DocumentWidget*>(content);
+		if (!doc)
+			doc = new WidgetDocument(content);
+		doc->setTitle(title);
+		if (!glyph.isEmpty())
+			doc->setGlyph(glyph);
+		doc->setToolTip(tooltip);
+		d->track(id, kind, content, title, type, doc);
+		addDocument(doc);
+	}
+	else if (kind == WidgetKind::BottomPanel) {
+		registerBottomPanel(id, glyph, title, content, tooltip, type);
+		showBottomPanel(id);
+	}
+	else if (kind == WidgetKind::SidePanel) {
+		registerSidePanel(id, glyph, title, content, tooltip, type);
+		showSidePanel(id);
+	}
+	return content;
+}
+
+QWidget* MainWindow::widget(const QString& id) const {
+	return d->entries.value(id).widget.data();
+}
+
+std::optional<MainWindow::WidgetKind> MainWindow::widgetKind(const QString& id) const {
+	const auto it = d->entries.constFind(id);
+	if (it == d->entries.cend() || !it->widget)
+		return std::nullopt;
+	return it->kind;
+}
+
+QString MainWindow::widgetTitle(const QString& id) const {
+	const auto it = d->entries.constFind(id);
+	if (it == d->entries.cend() || !it->widget)
+		return {};
+	return it->document ? it->document->title() : it->title;
+}
+
+QString MainWindow::widgetType(const QString& id) const {
+	const auto it = d->entries.constFind(id);
+	if (it == d->entries.cend() || !it->widget)
+		return {};
+	return it->type;
+}
+
+QStringList MainWindow::widgetIds() const {
+	QStringList ids;
+	for (auto it = d->entries.cbegin(); it != d->entries.cend(); it++)
+		if (it->widget)
+			ids.append(it.key());
+	ids.sort();
+	return ids;
+}
+
+QStringList MainWindow::widgetIds(WidgetKind kind) const {
+	QStringList ids;
+	for (auto it = d->entries.cbegin(); it != d->entries.cend(); it++)
+		if (it->widget && it->kind == kind)
+			ids.append(it.key());
+	ids.sort();
+	return ids;
+}
+
+bool MainWindow::showWidget(const QString& id) {
+	if (QThread::currentThread() != thread())
+		return false;
+	const auto it = d->entries.constFind(id);
+	if (it == d->entries.cend() || !it->widget)
+		return false;
+	if (it->kind == WidgetKind::Document) {
+		if (!it->document)
+			return false;
+		d->area->setCurrentDocument(it->document);
+	}
+	else if (it->kind == WidgetKind::BottomPanel)
+		showBottomPanel(id);
+	else
+		showSidePanel(id);
+	return true;
+}
+
+bool MainWindow::closeWidget(const QString& id) {
+	if (QThread::currentThread() != thread())
+		return false;
+	const auto it = d->entries.constFind(id);
+	if (it == d->entries.cend() || !it->widget)
+		return false;
+	const auto kind = it->kind;
+	QPointer<QWidget> content = it->widget;
+	QPointer<DocumentWidget> doc = it->document;
+	if (kind == WidgetKind::Document)
+		return doc && d->area->closeDocument(doc);
+	if (!content->close())
+		return false;
+	if (kind == WidgetKind::BottomPanel)
+		unregisterBottomPanel(id);
+	else
+		unregisterSidePanel(id);
+	return true;
+}
 
 DocumentArea* MainWindow::documentArea() const {
 	return d->area;
@@ -299,17 +529,34 @@ void MainWindow::openFile(const QString& path) {
 }
 
 void MainWindow::registerSidePanel(const QString& id, const QString& glyph,
-	const QString& title, QWidget* panel, const QString& tooltip) {
+	const QString& title, QWidget* panel, const QString& tooltip, const QString& type) {
+	if (id.isEmpty() || !panel)
+		return;
+	if (auto* existing = widget(id)) {
+		if (existing != panel)
+			panel->deleteLater();
+		return;
+	}
+	d->track(id, WidgetKind::SidePanel, panel, title, type);
 	d->side->addPanel(id, title, panel);
 	d->activity->addButton(id, glyph, tooltip.isEmpty() ? title : tooltip);
 
 	auto* act = new QAction(glyph + QLatin1Char(' ') + title, this);
 	connect(act, &QAction::triggered, this, [this, id] { showSidePanel(id); });
 	d->viewMenu->insertAction(d->sidePanelsSeparator, act);
+	d->sideActions.insert(id, act);
 }
 
 void MainWindow::registerBottomPanel(const QString& id, const QString& glyph,
-	const QString& title, QWidget* panel, const QString& tooltip) {
+	const QString& title, QWidget* panel, const QString& tooltip, const QString& type) {
+	if (id.isEmpty() || !panel)
+		return;
+	if (auto* existing = widget(id)) {
+		if (existing != panel)
+			panel->deleteLater();
+		return;
+	}
+	d->track(id, WidgetKind::BottomPanel, panel, title, type);
 	d->bottom->addPanel(id, glyph, title, panel);
 
 	auto* act = new QAction(glyph + QLatin1Char(' ') + title, this);
@@ -324,6 +571,10 @@ void MainWindow::registerBottomPanel(const QString& id, const QString& glyph,
 }
 
 void MainWindow::unregisterBottomPanel(const QString& id) {
+	const auto it = d->entries.constFind(id);
+	if (it == d->entries.cend() || it->kind != WidgetKind::BottomPanel)
+		return;
+	d->entries.remove(id);
 	if (QAction* act = d->bottomActions.take(id)) {
 		d->viewMenu->removeAction(act);
 		act->deleteLater();
@@ -336,6 +587,26 @@ void MainWindow::unregisterBottomPanel(const QString& id) {
 
 	if (d->bottom->removePanel(id))
 		log(tr("Нижняя панель снята: %1").arg(id));
+}
+
+void MainWindow::unregisterSidePanel(const QString& id) {
+	const auto it = d->entries.constFind(id);
+	if (it == d->entries.cend() || it->kind != WidgetKind::SidePanel)
+		return;
+	d->entries.remove(id);
+	if (auto* act = d->sideActions.take(id)) {
+		d->viewMenu->removeAction(act);
+		act->deleteLater();
+	}
+	const bool current = d->side->currentPanel() == id;
+	d->activity->removeButton(id);
+	d->side->removePanel(id);
+	if (current) {
+		if (d->side->currentPanel().isEmpty())
+			hideSidePanel();
+		else
+			d->activity->setActive(d->side->currentPanel());
+	}
 }
 
 void MainWindow::showSidePanel(const QString& id) {

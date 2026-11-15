@@ -4,13 +4,14 @@
 #include <QHBoxLayout>
 #include <QHash>
 #include <QLabel>
+#include <QPointer>
 #include <QStackedWidget>
 #include <QVBoxLayout>
 
 struct SideHostPanel::Private {
 	QLabel* title = nullptr;
 	QStackedWidget* stack = nullptr;
-	QHash<QString, QWidget*> panels;
+	QHash<QString, QPointer<QWidget>> panels;
 	QHash<QString, QString> titles;
 	QString current;
 };
@@ -60,8 +61,28 @@ void SideHostPanel::addPanel(const QString& id, const QString& title, QWidget* p
 		setCurrentPanel(id);
 }
 
+bool SideHostPanel::removePanel(const QString& id) {
+	if (!d->panels.contains(id))
+		return false;
+	QPointer<QWidget> page = d->panels.take(id);
+	d->titles.remove(id);
+	if (page) {
+		d->stack->removeWidget(page);
+		page->setParent(nullptr);
+		page->hide();
+		page->deleteLater();
+	}
+	if (d->current == id) {
+		d->current.clear();
+		d->title->clear();
+		if (!d->panels.isEmpty())
+			setCurrentPanel(d->panels.constBegin().key());
+	}
+	return true;
+}
+
 void SideHostPanel::setCurrentPanel(const QString& id) {
-	auto* p = d->panels.value(id);
+	auto* p = d->panels.value(id).data();
 	if (!p)
 		return;
 	d->current = id;

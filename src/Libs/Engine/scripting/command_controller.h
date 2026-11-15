@@ -8,6 +8,7 @@ class CommandProcessor;
 class CommandContext;
 class ServicesRegistry;
 class WidgetRegistry;
+class MainWindow;
 class Resources;
 class ConsoleTable;
 class ConsoleJson;
@@ -28,6 +29,10 @@ public:
 	virtual ServicesRegistry* services() const = 0;
 	WidgetRegistry* widgets() const;
 	Resources* resources() const;
+
+	/// Активная оболочка; указатель не владеет окном и может быть nullptr.
+	MainWindow* mainWindow() const;
+	void setMainWindow(MainWindow* window);
 
 	std::shared_ptr<CommandContext> globalContext();
 

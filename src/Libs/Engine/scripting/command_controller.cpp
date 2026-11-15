@@ -6,13 +6,16 @@
 #include "Libs/Engine/console/console_json.h"
 #include "Libs/Engine/services/services_registry.h"
 #include "Libs/Engine/ui/widget_registry.h"
+#include "Libs/Engine/ui/main_window.h"
 
+#include <QPointer>
 #include <QUuid>
 
 class CommandController::Private {
 public:
 	std::shared_ptr<CommandContext> globalContext;
 	std::unique_ptr<WidgetRegistry> widgetRegistry;
+	QPointer<MainWindow> mainWindow;
 	Resources* resources;
 
 	std::shared_ptr<CommandContext> createLocalContext();
@@ -41,6 +44,14 @@ void CommandController::init() {
 
 WidgetRegistry* CommandController::widgets() const {
 	return d->widgetRegistry.get();
+}
+
+MainWindow* CommandController::mainWindow() const {
+	return d->mainWindow.data();
+}
+
+void CommandController::setMainWindow(MainWindow* window) {
+	d->mainWindow = window;
 }
 
 Resources* CommandController::resources() const {

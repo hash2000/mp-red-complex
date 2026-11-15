@@ -9,6 +9,7 @@ public:
 	~SideHostPanel() override;
 
 	void addPanel(const QString& id, const QString& title, QWidget* panel);
+	bool removePanel(const QString& id);
 	void setCurrentPanel(const QString& id);
 	QString currentPanel() const;
 	QWidget* panel(const QString& id) const;

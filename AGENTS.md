@@ -285,7 +285,7 @@ Launcher              точка входа и композиция: main.cpp, A
          └─ Libs/Base        утилиты, исключения, crypto, container_view
 ```
 
-- `src/Launcher` → цель `Launcher` (`qt_add_executable`): `LauncherApplication`, `ApplicationController`, `Controllers`, `Services` (фабрика сервисов), `WindowsBuilder`, команда `windows` и конкретные MDI-окна.
+- `src/Launcher` → цель `Launcher` (`qt_add_executable`): `LauncherApplication`, `ApplicationController`, `Controllers`, `Services` (фабрика сервисов), `WidgetsBuilder`, команды `documents`/`info-panels`/`side-panels` и конкретные MDI-окна (legacy).
 - `src/Libs/Engine` → статическая `RedComplexEngine`: цикл запуска, `MainWindow`, система команд и контекстов, парсер DSL, менеджер тем, `ServicesRegistry` и `WidgetRegistry`.
 - `src/Content/*` → статические `RedComplex<Module>`: ConsoleModule, DatabaseModule, UsersModule, FetchApiModule, MessagerModule, CodeEditorWidget.
 - `src/Libs/*` → инфраструктура, не знающая о прикладных модулях (Base, BaseWidgets, Resources, Graphics, DataStream, DataFormat).
@@ -304,7 +304,7 @@ Launcher              точка входа и композиция: main.cpp, A
    - создаёт `BootstrapContextBuilder(commandController)` и вызывает `reload(bootstrapConfig)` — появляются контексты `.store.<name>` с переменными из `bootstrap.yaml`;
    - создаёт `ClassManager(resources, commandController)` и вызывает `createViewport(config.application)` — оболочка строится по `applications/{name}/main.yaml`; если описание недоступно, берётся `MainWindow` со встроенными панелями (fallback);
    - показывает вьюпорт и уходит в `QApplication::exec()`.
-4. `ApplicationController::init()` (это `CommandController::init()` + `initContext()`) создаёт `CommandProcessor`, `Controllers` (`WindowsController`, `ActionPanelController`) и `Services` (фабрику), регистрирует команды `help`, `echo`, `windows`, `users`, `fetch-api`, а `WidgetsBuilder` заполняет `WidgetRegistry` нативными классами виджетов.
+4. `ApplicationController::initContext()` (это `CommandController::initContext()`, вызывается из `init()`) создаёт `CommandProcessor`, `Controllers` (`WindowsController`, `ActionPanelController` — legacy) и `Services` (фабрику), регистрирует команды `help`, `echo`, `documents`, `info-panels`, `side-panels`, `users`, `fetch-api`, а `WidgetsBuilder` заполняет `WidgetRegistry` нативными классами виджетов.
 5. `BootstrapManager::reload()` читает `bootstrap.yaml` из `path.profile`, применяет тему (`ThemeManager` + `PaletteParser`) и отдаёт конфигурацию через `config()`; декларативный UI грузит уже `ClassManager`.
 6. Виртуального `createMainFrame()` в текущем коде нет. `LauncherMainFrame` (`src/Launcher/main_frame.*`) — предыдущая оболочка на `MdiArea`, в текущем запуске не инстанцируется, но компилируется.
 
@@ -314,7 +314,7 @@ Launcher              точка входа и композиция: main.cpp, A
 - `CommandContext` (`scripting/command_context.*`) — узел дерева контекстов: глобальный имеет пустое имя и namespace `.`; `createScopedContext(name)` создаёт дочерний и регистрирует его в глобальном контексте по namespace (`.`-цепочка, например `.test1.test2`); `context(ns)` ищет по namespace, `nameSpaces()` перечисляет все. Владение — `std::shared_ptr`, ссылки на детей — слабые (поэтому владелец контекста обязан держать `shared_ptr`, иначе узел исчезает).
 - Переменные контекста: имя — произвольная строка, точки допустимы (`wal.checkInterval`). API: `setVariable`, `variable`, `hasVariable`, `variables`, `variableNames`; значения — `QVariant`.
 - `CommandContext::VariablesMode` задаёт отношение переменных к базовому контексту и может меняться в любой момент: `Lazy` — читает базовое значение, при записи делает свою копию; `Mutable` — читает и пишет общую переменную базового контекста; `ReadOnly` — запись запрещена (`setVariable` возвращает `false`); `Atomic` — при переключении получает копию видимых переменных и дальше живёт отдельно. Собственные переменные контекста изолированы в любом режиме.
-- `BootstrapContextBuilder` (`scripting/bootstrap/bootstrap_context_builder.*`) — создаёт по `bootstrap.yaml` контексты `.store.<name>` (`fetch_api`, `messages`, `accounts`) с переменными `wal.checkInterval` и `wal.maxSizeMb`; режим хранилищ — `ReadOnly`, `reload()` идемпотентен и обновляет значения.
+- `BootstrapContextBuilder` (`scripting/bootstrap/bootstrap_context_builder.*`) — создаёт по `bootstrap.yaml` контексты `.store.<name>` с переменными `path`, `encrypted`, `wal.checkInterval`, `wal.maxSizeMb` и списком `migrations`; режим хранилищ — `ReadOnly`, `reload()` идемпотентен и обновляет значения.
 - `CommandProcessor` (`scripting/command_processor.*`) — реестр `std::map<QString, std::unique_ptr<ICommand>>` (имена в нижнем регистре). Строка команды разбирается `ParserCommand`, после чего создаётся контекст команды (см. ниже), проверяются `minArgs`/`maxArgs`, вызывается `ICommand::execute(context)`, замеряется время и эмитятся сигналы `commandExecuted`/`commandError`.
 - `CommandContext` команды: дочерний к контексту вызывающей стороны, имя — имя команды, режим — `Mutable`. Параметры разбора записываются в него собственными переменными (до переключения в `Mutable`, поэтому базовые переменные не перезаписываются), mime-тип значения доступен через `variableMimeType()`. Контекст живёт только на время вызова и не регистрируется в глобальном дереве.
 - `ICommand` (`scripting/i_command.h`) — `name()`, `description()`, `help()`, `minArgs()`, `maxArgs()`, `execute(std::shared_ptr<CommandContext> context)`. Параметры команда читает из переменных своего контекста, имя команды — `context->name()`; доступ к приложению — через тот же контекст.
@@ -333,10 +333,10 @@ Launcher              точка входа и композиция: main.cpp, A
 #### Ресурсы, профиль и базы данных
 
 - `Resources` (`Libs/Resources/resources.*`) — глобальное состояние: `Variables` (`VariablesContext`, `QVariantMap`), `Directories` (`DirectoriesContext`, ключ → `QDir`) и список загруженных `DataStreamContainer`.
-- `Resources::load()` задаёт базовые пути: `path.bootstrap` (текущий каталог), `path.profile` (`QStandardPaths::AppConfigLocation` — рабочая копия конфигурации), `path.tools`, `path.databases`, `path.databases.settings.file` (`data/databases.json`), `path.databases.accounts.file`, `path.databases.fetch_api.file`, `path.users`, `path.auth.words`. `loadProfile(userHash)` пересоздаёт пути профиля `path.users/{hash}`.
+- `Resources::load()` задаёт базовые пути: `path.bootstrap` (текущий каталог), `path.profile` (`QStandardPaths::AppConfigLocation` — рабочая копия конфигурации), `path.tools`, `path.databases`, `path.users`, `path.auth.words`. `loadProfile(userHash)` пересоздаёт пути профиля `path.users/{hash}`.
 - Эталонная копия конфигурации — `src/Configurations` (`bootstrap.yaml`, `applications/`, `assets/themes/`, `dataflow/`); приложение читает копию в профиле.
-- Доступ к БД — только через `DatabasesService::connection(alias)` (`Content/DatabaseModule`): таблица псевдонимов (`accounts`, `game`, `fetch_api`, `messanger`) с флагом шифрования, ленивое открытие, `SQLiteConnection` (SQLCipher, ключ из `SecureBuffer`), `SQLiteWalManager` (авто-checkpoint по интервалу и размеру), `MigrationManager` (версии, up/down, откат). При `QApplication::aboutToQuit` — финальный checkpoint, `PRAGMA optimize`, закрытие.
-- Схемы БД описываются кодом: `Content/DatabaseModule/migrations/{accounts,fetch_api,game}_migrations.cpp`, регистрация — в конструкторе `DatabasesService`.
+- Доступ к БД — только через `DatabasesService::connection(alias)` (`Content/DatabaseModule`): настройки (`path`, `encrypted`, `wal.*`, список `migrations`) читаются из контекста `.store.<alias>`; без записи в конфигурации используется `data/<alias>.db` с WAL 60000/20 МБ без шифрования. Ленивое открытие, `SQLiteConnection` (SQLCipher, ключ из `SecureBuffer`), `SQLiteWalManager`, `MigrationManager` (qint64-версии, up/down, откат, транзакционность).
+- Схемы БД задаются SQL-файлами из `Configurations/stores/migrations/<alias>`; список и версии перечислены в `bootstrap.yaml` (`stores.items.<alias>.migrations[].{version,description,up,down}`), незаявленные файлы не загружаются.
 - Низкоуровневые обёртки — `Libs/Resources/db/sqlite`: `SQLiteConnection`, `SQLiteReader`, `MigrationManager`/`Migration`, `SQLiteWalManager`.
 
 #### Модули и сервисный реестр
@@ -345,29 +345,29 @@ Launcher              точка входа и композиция: main.cpp, A
 - Сервисы не создаются напрямую: единственная точка сборки — `ServicesFactory` в `src/Launcher/services.cpp` (наследует `ServicesRegistry` и `IServicesFactory`). Регистрация — `registerFactory<T>(lambda)`, зависимости — `LazyPtr<T>` (`std::call_once`) и `get<T>()`. Доступ из команд и окон — `commandController->services()->get<T>()`.
 - `ServicesRegistry` (`Libs/Engine/services/services_registry.h`) — реестр «тип → экземпляр»: `get<T>()` создаёт сервис по фабрике при первом обращении и возвращает `nullptr`, если тип не зарегистрирован.
 - `IServicesFactory`/`LazyPtr` (`services/i_services_factory.h`) — ленивая инициализация зависимостей без ручного порядка объявления.
-- Зарегистрированы, в частности: `DatabasesService`, `UsersService`, `UsersRegistryService`, `FetchApiService`, `FetchStoreDbService`, `HighlightingPluginManager`, `FormatterPluginManager`; провайдеры `DatabaseSettingsDataProviderJsonImpl`, `UsersRegistryDataProviderDb`.
+- Зарегистрированы, в частности: `DatabasesService`, `UsersService`, `UsersRegistryService`, `FetchApiService`, `FetchStoreDbService`, `HighlightingPluginManager`, `FormatterPluginManager`; провайдер `UsersRegistryDataProviderDb`.
 
 #### UI-оболочка (Libs/Engine/ui)
 
 - `MainWindow` (`ui/main_window.*`) — IDE-подобная композиция: слева `DocumentTabsPanel`, в центре `DocumentArea` с `DocumentWidget`/`TextDocument`, справа `SideHostPanel` + `ActivityBar`, снизу `BottomPanel`. Меню «Файл» и «Вид», статус-бар, `log()`.
-- Регистрация панелей: `registerSidePanel(id, glyph, title, widget)` и `registerBottomPanel(...)` автоматически добавляют кнопку в Activity Bar, пункт меню «Вид» и вкладку. Управление — `show/hide/toggleSidePanel`, `showBottomPanel`, `unregisterBottomPanel`.
+- Единый менеджмент зон: `createWidget(id, WidgetKind{Document, BottomPanel, SidePanel}, title, glyph, factory, tooltip, type)`, `widget`, `widgetKind`, `widgetTitle`, `widgetType`, `widgetIds([kind])`, `showWidget`, `closeWidget`. Повторный id активирует существующий виджет (фабрика не вызывается), `MainWindow` сам регистрируется в `CommandController::setMainWindow()` из `CommandContext`.
+- Регистрация панелей: `registerSidePanel(id, glyph, title, widget, tooltip, type)` и `registerBottomPanel(...)` автоматически добавляют кнопку в Activity Bar, пункт меню «Вид» и вкладку. Управление — `show/hide/toggleSidePanel`, `showBottomPanel`, `unregisterBottomPanel`/`unregisterSidePanel`.
+- `WidgetZoneCommand` (`ui/widget_zone_command.*`) — команда Engine для одной зоны: `action=create|show|close|list`. Создаёт виджет через `WidgetRegistry::build()` с `WidgetBuildHandler` (parent — окно, context — контекст команды), без `id` генерирует UUID; id из другой зоны отклоняется. Экземпляры регистрируются как команды `documents`, `info-panels`, `side-panels`.
 - `CommandConsole` (`ui/command_console.*`) — консоль команд: история ввода, выбор контекста, рендер `outputRequested` по mime-типу; в текущей оболочке это нижняя панель `console` (в старой `LauncherMainFrame` — отдельное окно с Ctrl + обратная кавычка).
 - `PropertiesPanel` — свойства документа, следует за активным документом (на базе `PropertiesListWidget`).
 - `WidgetRegistry` (`ui/widget_registry.*`) — реестр фабрик виджетов по строковому `type` (`WidgetFactory` + `WidgetTypeHandler`), задел под декларативный UI.
 - Вспомогательные: `ActivityBar` (кнопки, позиции top/bottom, auto-hide), `SideHostPanel` (хост правых панелей), `DocumentTabsPanel` (вкладки, контекстное меню «Свойства»), `DocumentArea` (коллекция документов, `closeAll`), `BottomPanel` (сворачивание), `GlyphToolButton`, `NameSelectDialog`.
 
-#### Окна MDI и команда windows (Legacy)
+#### Окна MDI (legacy) и управление зонами
 
-- `MdiChildWindow` (`Libs/Engine/mdi_child_window.*`) — наследник `QMdiSubWindow`: `windowType()`, `windowTitle()`, `windowId()`, `windowDefaultSizes()`, `handleCommand(context)`, `currentContext()`. Создаётся с `CommandContext` и id.
-- `WindowsBuilder` (`src/Launcher/windows_builder.*`) — карта `target → lambda`: `user-login`, `user-profile`, `warmup`, `code-editor`, `fetch-api`, `fetch-api-queries-tree`.
-- `WindowsController` (`src/Launcher/controllers/windows_controller.*`) — реестр окон по строковому id, поиск, активное окно, закрытие; сигналы `windowCreated`, `windowDestroyed`, `activeWindowChanged`; привязывается к `MdiArea`.
-- `Controllers` — агрегатор `WindowsController` + `ActionPanelController`; доступ — `ApplicationController::controllers()`.
-- Команда `windows` (`src/Launcher/commands/windows_cmd.*` и `commands/windows/*`): `action=create | close | list | invoke`, `target=<тип окна>`, `id=<id>` (по умолчанию UUID), `title=<заголовок>`; параметры разделяются запятой. `create` строит окно, вызывает `handleCommand(context)` (контекст команды `windows` с переменными `action`/`target`/`id`/`title`), добавляет его в `MdiArea` и регистрирует в контроллере. `invoke` пока передаёт окну тот же контекст и не разбирает `cmd` в отдельный контекст.
-- `MdiArea` (`Libs/BaseWidgets/mdi_area.*`) — `QMdiArea` с вкладками (document mode, закрытие, перемещение, история активации).
+- Управление документами и панелями вынесено в Engine: `MainWindow` хранит все созданные виджеты по id и умеет `createWidget`/`showWidget`/`closeWidget`; `CommandController::mainWindow()` отдаёт активную оболочку, поэтому командам не нужны Launcher-контроллеры.
+- Команды `documents`, `info-panels`, `side-panels` (`WidgetZoneCommand` в `Libs/Engine/ui`) заменяют прежнюю команду `windows` и не дублируют друг друга: каждая управляет одной зоной.
+- `MdiChildWindow` (`Libs/Engine/mdi_child_window.*`), `MdiArea` (`Libs/BaseWidgets/mdi_area.*`), `WindowsBuilder` (`src/Launcher/windows_builder.*`), `WindowsController` (`src/Launcher/controllers/windows_controller.*`) и окна `src/Launcher/windows/*` — legacy-оболочка на `QMdiArea`. Старая команда `windows` и её обработчики удалены; legacy-классы остаются только для `main_frame.*`, который не используется текущим запуском.
+- `Controllers` — агрегатор `WindowsController` + `ActionPanelController`; доступ — `ApplicationController::controllers()`; для новых окон/панелей используйте `MainWindow` и `WidgetRegistry`.
 
 #### Конфигурации, темы и декларативный UI
 
-- `bootstrap.yaml`: `appearance.theme`, `appearance.application.name`, `appearance.application.viewport.xtype`, `stores.items.<name>.wal.{checkInterval,maxSizeMb}`; парсится `BootstrapConfig::loadBootstrap()`, хранилища — в `Config::stores` (`Store`). Секция `stores` превращается в контексты `.store.<name>` через `BootstrapContextBuilder`.
+- `bootstrap.yaml`: `appearance.theme`, `appearance.application.name`, `appearance.application.viewport.xtype`, `stores.items.<name>.{path,encrypted,migrations,wal.{checkInterval,maxSizeMb}}`; парсится `BootstrapConfig::loadBootstrap()`, хранилища — в `Config::stores` (`Store`). Секция `stores` превращается в контексты `.store.<name>` через `BootstrapContextBuilder`.
 - Тема: `assets/themes/{theme}/palette.yaml` (иерархия `QPalette`: `palette`, `base`, `colors.{Role}.{Active|Inactive|Disabled}.value` + `modifiers`) и `stylesheets/index.yaml` (список qss, например `base.qss`). `ThemeManager` объединяет qss и определяет схему, `PaletteParser` строит `QPalette`.
 - `applications/{name}/main.yaml` — декларация UI приложения. Правила загрузки (`ClassManager`):
   - `define` — объявление класса виджета: `name` (полное имя), `extends` (базовый класс), `xtype` (псевдоним), `title`, `content`;
@@ -382,7 +382,7 @@ Launcher              точка входа и композиция: main.cpp, A
 
 1. Команда: наследник `ICommand` → регистрация в `ApplicationController::initContext()`.
 2. Сервис/провайдер: интерфейс `I*` в модуле → фабрика в `ServicesFactory` (`src/Launcher/services.cpp`).
-3. Окно: наследник `MdiChildWindow` → фабрика в `WindowsBuilder` → вызов через `windows action=create, target=<тип>`.
+3. Виджет в зоне: зарегистрировать тип в `WidgetsBuilder` (`registry->registerFactory({className, xtype}, factory)`) → `documents`/`info-panels`/`side-panels action=create, target=<xtype>[, id=<id>]`; без `id` создаётся UUID, повторный `id` активирует существующий виджет.
 4. Панель: `MainWindow::registerSidePanel` / `MainWindow::registerBottomPanel`.
 5. Модуль: каталог `src/Content/{Module}` с целью `RedComplex<Module>` по образцу существующих → `add_subdirectory` в `src/Content/CMakeLists.txt` → линковка в `src/Launcher/CMakeLists.txt`.
 6. Тема: каталог `assets/themes/{name}` с `palette.yaml` и `stylesheets/index.yaml`, имя — в `bootstrap.yaml`.
@@ -401,18 +401,17 @@ Launcher              точка входа и композиция: main.cpp, A
 - `src/Launcher/main_frame.*` (`LauncherMainFrame`) — старая оболочка на `MdiArea`, не используется текущим `main.cpp`; при доработке UI ориентируйтесь на `Libs/Engine/ui/main_window`.
 - `src/Legacy/**` не входит в сборку — источник решений для возврата (инвентари, экипировка, карты, текстуры, материалы, персонажи, старые окна и виджеты).
 - `Libs/DataFormat` и `Libs/DataStream` — legacy-слой чтения форматов Fallout 2 (`.dat`, `.frm`, `.pro`, `.int`, `.msg`, `.map`, `.pal` и др.); новый код на них не опирается, планируется вынос в отдельный модуль.
-- `DatabasesService::reloadAliases()` сейчас не добавляет псевдонимы (вызовы `appendAlias` закомментированы), поэтому `connection("accounts")` вернёт ошибку «Undefined database alias»; псевдонимы нужно включать здесь.
-- В `Application::Private::tryRun()` создаются отладочные контексты `test1`/`test2` — временный код проверки дерева контекстов.
+- `DatabasesService::reloadAliases()` закрывает открытые соединения, чтобы следующие вызовы перечитали контексты `.store.<name>`; сам список хранилищ больше не задаётся в коде.
 - `DataFlow` — только спецификация; графы обработки ещё не исполняются. `ClassManager` применяет `content` только к `MainWindow` (`bottombar`/`sidebar`); вложенный `content` произвольных виджетов пока не разбирается.
-- Команды получают параметры только из контекста: `ICommand::execute(std::shared_ptr<CommandContext>)`. Контекст команды создаётся `CommandProcessor` на каждый вызов (см. «Команды и контексты»); отдельные долгоживущие контексты для документов/виджетов (например, свой контекст на копию `FetchApiWidget`) ещё не создаются. `Instruction` и `ScriptProgram` удалены: их заменили контекст команды и `ParserCommand`.
-- `BootstrapContextBuilder::reload()` идемпотентен: при повторном вызове переиспользует существующие контексты `.store.*` и обновляет значения переменных. Тесты не покрывают сценарий удаления хранилища из конфигурации (старые контексты останутся в реестре CommandController без владельца в builder, но их можно найти через `context(".store.<name")`); потребуется явный механизм очистки при необходимости.
+- Команды получают параметры только из контекста: `ICommand::execute(std::shared_ptr<CommandContext>)`. Контекст команды создаётся `CommandProcessor` на каждый вызов (см. «Команды и контексты»); виджет, созданный командой зоны, получает этот контекст через `WidgetBuildHandler::context`. `Instruction` и `ScriptProgram` удалены: их заменили контекст команды и `ParserCommand`.
+- `BootstrapContextBuilder::reload()` идемпотентен: при повторном вызове переиспользует существующие контексты `.store.*`, обновляет значения и отпускает хранилища, удалённые из конфигурации (контексты остаются в дереве `CommandController` до своего разрушения).
 
 #### Ключевые компоненты
 
 **Запуск и команды**
 - `Application` (`Libs/Engine/application.*`) — `run()`, настройка Qt/OpenGL, `setupResources()`, `registerTypes()`, создание главного окна; фатальные ошибки — `qFatal()`.
 - `LauncherApplication` (`src/Launcher/main.cpp`) — метаданные приложения (`Hash2000` / `ru.hash2000` / `red-complex`) и сборка `ApplicationController` в `buildCommandController()`.
-- `ApplicationController` (`src/Launcher/app_controller.*`) — реализация `CommandController`: `CommandProcessor`, `Controllers`, ленивая `ServicesRegistry`; `initContext()` регистрирует `help`, `echo`, `windows`, `users`, `fetch-api`.
+- `ApplicationController` (`src/Launcher/app_controller.*`) — реализация `CommandController`: `CommandProcessor`, `Controllers`, ленивая `ServicesRegistry`; `initContext()` регистрирует `help`, `echo`, `documents`, `info-panels`, `side-panels`, `users`, `fetch-api`.
 - `CommandController` (`Libs/Engine/scripting/command_controller.*`) — глобальный контекст, `WidgetRegistry`, `Resources`, `execute*`, `print*`, сигналы `outputRequested`, `commandExecuted`, `commandFailed`.
 - `CommandProcessor`, `CommandContext`, `ICommand`, `ParserCommand` — см. раздел «Команды и контексты».
 
@@ -429,31 +428,30 @@ Launcher              точка входа и композиция: main.cpp, A
 - `Resources`, `VariablesContext`, `DirectoriesContext` (`Libs/Resources`).
 - `DatabasesService` (`Content/DatabaseModule/services/databases_service.*`).
 - `SQLiteConnection`, `SQLiteReader`, `MigrationManager`/`Migration`, `SQLiteWalManager` (`Libs/Resources/db/sqlite`).
-- `AccountsMigrations`, `FetchApiMigrations`, `GameMigrations` (`Content/DatabaseModule/migrations`).
-- `IDatabaseSettingsDataProvider` + `DatabaseSettingsDataProviderJsonImpl` (`Content/DatabaseModule/data_providers`).
+- Настройки хранилищ и SQL-миграции — в `bootstrap.yaml` (`stores.items.<name>`), файлы миграций — `Configurations/stores/migrations/<store>`; детали в `src/Configurations/stores/README.md`.
 
 **Bootstrap и темы**
 - `BootstrapManager` (`scripting/bootstrap/bootstrap_manager.*`) — тема, палитра и `config()` (загруженный `bootstrap.yaml`); `BootstrapConfig::loadBootstrap()` (`bootstrap_config.h`).
-- `BootstrapContextBuilder` (`scripting/bootstrap/bootstrap_context_builder.*`) — контексты `.store.<name>` с переменными WAL; владеет ими через `shared_ptr`.
+- `BootstrapContextBuilder` (`scripting/bootstrap/bootstrap_context_builder.*`) — контексты `.store.<name>` с переменными `path`, `encrypted`, `wal.checkInterval`, `wal.maxSizeMb` и списком `migrations`; режим хранилищ — `ReadOnly`, `reload()` идемпотентен и обновляет значения.
 - `ThemeManager`, `PaletteParser` (`Libs/Engine/themes/*`).
 
 **Декларативный UI**
 - `ClassManager` (`scripting/application/class_manager.*`) — загрузка `main.yaml`, разрешение `extends`/`requires`, слияние `content`, создание вьюпорта и панелей.
-- `WidgetsBuilder` (`src/Launcher/widgets_builder.*`) — регистрация нативных классов: `Viewport.MainForm`/`mainform`, `ConsolePanel`/`console`, `PropertiesPanel`/`properties`, `ExplorerPanel`/`explorer`, `Panel`/`panel`.
+- `WidgetsBuilder` (`src/Launcher/widgets_builder.*`) — регистрация нативных классов: `System.Viewport.MainForm`/`mainform`, `System.Panels.ConsolePanel`/`console`, `System.Panels.Properties`/`properties`, `System.Panels.Explorer`/`explorer`, `System.Panels.Panel`/`panel`, `Content.Users.*`/`user-login`/`user-register`/`user-profile`, `Content.FetchApi.*`/`fetch-api`/`fetch-api-queries-tree`, `Content.CodeEditor.CodeEditorWidget`/`code-editor`, `Launcher.WarmupWidget`/`warmup`.
 - `WidgetRegistry` (`ui/widget_registry.*`) — `registerFactory(WidgetTypeHandler{className, xtype}, factory)` и `build(type, WidgetBuildHandler)`; `WidgetBuildHandler` передаёт `name`, `title`, `glyph`, `parent`, `context`.
 
 **Оболочка**
 - `MainWindow`, `ActivityBar`, `SideHostPanel`, `DocumentTabsPanel`, `DocumentArea`, `DocumentWidget`, `TextDocument`, `PropertiesPanel`, `BottomPanel`, `CommandConsole`, `WidgetRegistry`, `GlyphToolButton`, `NameSelectDialog` (`Libs/Engine/ui/*`).
 
-**Окна MDI и контроллеры**
+**Окна MDI (legacy), зоны и контроллеры**
 - `MdiChildWindow` (`Libs/Engine/mdi_child_window.*`), `MdiArea` (`Libs/BaseWidgets/mdi_area.*`).
-- `WindowsController` (`src/Launcher/controllers/windows_controller.*`), `WindowsBuilder` (`src/Launcher/windows_builder.*`), `Controllers` (`src/Launcher/controllers.*`).
+- `WindowsController` (`src/Launcher/controllers/windows_controller.*`), `WindowsBuilder` (`src/Launcher/windows_builder.*`), `Controllers` (`src/Launcher/controllers.*`) — legacy, не используются командами зон.
 - `ActionPanelController`, `ActionButtonConfig` (`src/Launcher/controllers/action_panel_controller.*`, `action_button_config.h`).
-- Команда `windows` и обработчики `windows_create`, `windows_close`, `windows_list`, `windows_invoke` (`src/Launcher/commands/windows/*`).
+- `WidgetZoneCommand` (`Libs/Engine/ui/widget_zone_command.*`); команды `documents`, `info-panels`, `side-panels`.
 
 **Модули**
 - ConsoleModule: `HelpCommand`, `EchoCommand` (`Content/ConsoleModule/commands`).
-- DatabaseModule: `DatabasesService`, `DatabaseSettingsDataProviderJsonImpl`, миграции `accounts`/`fetch_api`/`game`.
+- DatabaseModule: `DatabasesService` (настройки и миграции из контекстов `.store.<name>`), тесты `TestDatabasesService` (`src/Content/DatabaseModule/tests`).
 - UsersModule: `UsersService`, `UsersRegistryService`, `UsersRegistryDataProviderDb`, `User`/`UserData`/`UserView`, `LoginWidget`, `RegisterWidget`, `UserWidget`, `crypto_extensions` (BIP-39-сид, соль, ключи БД).
 - FetchApiModule: `FetchApiService`, `FetchStoreDbService`, `FetchTree`/`FetchQuery`/`FetchOpt`, `FetchApiWidget`, `FetchQueriesTreeWidget`, `FetchApiCommand`.
 - MessagerModule: `MessagesDataProviderDb`, `IMessagesDataProvider`, `Message`.
@@ -473,7 +471,7 @@ Launcher              точка входа и композиция: main.cpp, A
 
 **Цели сборки и тесты**
 - Цели: `Launcher`, `RedComplexBase`, `RedComplexBaseWidgets`, `RedComplexResources`, `RedComplexGraphics`, `RedComplexEngine`, `RedComplexDataStream`, `RedComplexDataFormat`, `RedComplexConsoleModule`, `RedComplexDatabaseModule`, `RedComplexUsersModule`, `RedComplexFetchApiModule`, `RedComplexMessagerModule`, `RedComplexCodeEditorWidget`.
-- Тесты: `TestEngine` (парсер, контексты, палитра — `tests/engine`), `TestItemsService` и `TestInventoriesService` (заготовки), агрегат `run_tests`; отдельной цели `RunTests` в `tests/CMakeLists.txt` нет.
+- Тесты: `TestEngine` (парсер, контексты, палитра — `tests/engine`), `TestUiZones` (зоны `MainWindow` и команды `documents`/`info-panels`/`side-panels` — `tests/ui`), `TestDatabasesService`, `TestItemsService` и `TestInventoriesService` (заготовки), агрегат `run_tests`; отдельной цели `RunTests` в `tests/CMakeLists.txt` нет.
 
 
 ## Ссылки на существующие скилы

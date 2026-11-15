@@ -265,10 +265,14 @@ QWidget* CommandConsole::Private::setupConsoleUI(QWidget* parent) {
 	outputArea->setMinimumHeight(100);
 	inputLine->setMinimumHeight(50);
 
-	// Макет для размещения сплиттера
-	layout = new QVBoxLayout(parent);
-	layout->setContentsMargins(4, 4, 4, 4);
-	layout->setSpacing(4);
+	// Макет для размещения сплиттера: используем уже созданный у parent,
+	// иначе виджет останется без разметки.
+	layout = qobject_cast<QVBoxLayout*>(parent->layout());
+	if (!layout) {
+		layout = new QVBoxLayout(parent);
+		layout->setContentsMargins(4, 4, 4, 4);
+		layout->setSpacing(4);
+	}
 	layout->addWidget(splitter);
 
 	// Горячие клавиши истории
