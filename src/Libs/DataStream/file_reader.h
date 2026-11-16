@@ -16,6 +16,8 @@ public slots:
 
 signals:
 	void blockRead(const QStringList& line);
+	/// Файл не удалось открыть; после сигнала приходит finished().
+	void failed(const QString& errorMessage);
 	void finished();
 
 private:

@@ -13,8 +13,11 @@ void FileReader::setChunkSize(int lines) {
 
 void FileReader::readFileAsync(const QString& filePath) {
 	QFile file(filePath);
-	if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+	if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+		emit failed(tr("Не удалось открыть файл: %1").arg(filePath));
+		emit finished();
 		return;
+	}
 
 	QTextStream stream(&file);
 	QStringList buffer;

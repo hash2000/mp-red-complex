@@ -13,15 +13,18 @@ public:
 	QProcess* process = nullptr;
 	QString formatterProgram;
 	QString mimeType;
+	QStringList leadingArguments;
 	QMap<QString, QString> arguments;
 };
 
 ExternalCliFormatterPlugin::ExternalCliFormatterPlugin(
 	const QString& mimeType,
 	const QString& formatterProgram,
-	const QMap<QString, QString>& arguments)
+	const QMap<QString, QString>& arguments,
+	const QStringList& leadingArguments)
 	: d(std::make_unique<Private>(this)) {
 	d->arguments = arguments;
+	d->leadingArguments = leadingArguments;
 	d->formatterProgram = formatterProgram;
 	d->mimeType = mimeType;
 }
@@ -79,7 +82,7 @@ void ExternalCliFormatterPlugin::formatAsync(const QString& text) {
 		d->process = nullptr;
 	});
 
-	QStringList argsList;
+	QStringList argsList = d->leadingArguments;
 	for (auto it = d->arguments.begin(); it != d->arguments.end(); it++) {
 		argsList << it.key();
 		argsList << it.value();

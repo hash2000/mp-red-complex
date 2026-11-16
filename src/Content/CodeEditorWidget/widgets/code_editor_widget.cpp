@@ -1,4 +1,4 @@
-#include "Content/CodeEditorWidget/code_editor_widget.h"
+#include "Content/CodeEditorWidget/widgets/code_editor_widget.h"
 #include "Content/CodeEditorWidget/language_info.h"
 #include "Content/CodeEditorWidget/highlights/highlighter.h"
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin.h"
@@ -8,11 +8,14 @@
 #include "Libs/DataStream/file_reader.h"
 #include "Libs/Base/extensions/text_edit_extensions.h"
 
-#include <QThread>
+#include <QFont>
+#include <QFontDatabase>
 #include <QFileInfo>
 #include <QJsonParseError>
 #include <QJsonDocument>
+#include <QPointer>
 #include <QScrollBar>
+#include <QThread>
 
 class CodeEditorWidget::Private {
 public:
@@ -23,6 +26,9 @@ public:
 	HighlightingPluginManager* pluginManager = nullptr;
 	FormatterPluginManager* formatterManager = nullptr;
 	FormatterPlugin* currentFormatter = nullptr;
+	FileReader* reader = nullptr;
+	QPointer<QThread> readerThread;
+	bool readerFailed = false;
 	QString previusSuffix;
 
 	void setupUI();
@@ -43,7 +49,18 @@ CodeEditorWidget::CodeEditorWidget(
 	connect(this, &QTextEdit::textChanged, this, &CodeEditorWidget::onTextChanged);
 }
 
-CodeEditorWidget::~CodeEditorWidget() = default;
+CodeEditorWidget::~CodeEditorWidget() {
+	// Чтение идёт в отдельном потоке: не даём ему пережить редактор.
+	if (d->reader) {
+		d->reader->disconnect(this);
+		d->reader->deleteLater();
+	}
+	if (d->readerThread) {
+		d->readerThread->disconnect(this);
+		d->readerThread->quit();
+		d->readerThread->wait(2000);
+	}
+}
 
 void CodeEditorWidget::Private::setupUI() {
 	using namespace Extensions;
@@ -73,17 +90,53 @@ void CodeEditorWidget::setHoghlighterByPath(const QString& path) {
 }
 
 void CodeEditorWidget::openFile(const QString& path) {
+	QFileInfo info(path);
+	if (path.isEmpty() || !info.exists() || !info.isFile() || !info.isReadable()) {
+		emit fileOpened(path, false);
+		return;
+	}
+
 	setHoghlighterByPath(path);
+
+	// Предыдущее чтение больше не должно попадать в редактор.
+	if (d->reader) {
+		d->reader->disconnect(this);
+		d->reader->deleteLater();
+		d->reader = nullptr;
+	}
+
+	auto* reader = new FileReader();
+	d->reader = reader;
+	d->readerFailed = false;
+
 	QThread* thread = new QThread(this);
-	FileReader* reader = new FileReader();
+	d->readerThread = thread;
 	reader->moveToThread(thread);
 
 	connect(thread, &QThread::started, reader, [reader, path]() {
 		reader->readFileAsync(path);
 	});
 	connect(reader, &FileReader::finished, thread, &QThread::quit);
-	connect(reader, &FileReader::finished, thread, [this]() { d->highlighter->rehighlight(); });
+	connect(reader, &FileReader::failed, this, [this, reader](const QString& errorMessage) {
+		if (d->reader == reader) {
+			d->readerFailed = true;
+		}
+		qWarning() << "CodeEditorWidget:" << errorMessage;
+	});
+	connect(reader, &FileReader::finished, this, [this, reader, path]() {
+		// Файл уже переоткрыт другим вызовом — это устаревшее чтение.
+		if (d->reader != reader) {
+			return;
+		}
+
+		const bool success = !d->readerFailed;
+		d->reader = nullptr;
+		d->readerFailed = false;
+		d->highlighter->rehighlight();
+		emit fileOpened(path, success);
+	});
 	connect(thread, &QThread::finished, reader, &QObject::deleteLater);
+	connect(thread, &QThread::finished, thread, &QObject::deleteLater);
 	connect(reader, &FileReader::blockRead, this, &CodeEditorWidget::onBlockRead);
 
 	clear();
@@ -113,15 +166,15 @@ bool CodeEditorWidget::setContentType(const QString& type) {
 	return false;
 }
 
-void CodeEditorWidget::formatDocument() {
+bool CodeEditorWidget::formatDocument() {
 	const auto plugin = d->highlighter->plugin();
 	if (!plugin) {
-		return;
+		return false;
 	}
 
 	const auto formatter = d->formatterManager->formatter(plugin->languageInfo());
 	if (!formatter) {
-		return;
+		return false;
 	}
 
 	d->currentFormatter = formatter;
@@ -130,6 +183,27 @@ void CodeEditorWidget::formatDocument() {
 	connect(formatter, &FormatterPlugin::formattingFinished, this, &CodeEditorWidget::onFormattingFinished);
 
 	d->currentFormatter->formatAsync(toPlainText());
+	return true;
+}
+
+int CodeEditorWidget::fontSize() const {
+	const int pointSize = font().pointSize();
+	return pointSize > 0 ? pointSize : 10;
+}
+
+void CodeEditorWidget::setFontSize(int size) {
+	if (size <= 0 || size == font().pointSize()) {
+		return;
+	}
+
+	QFont current = font();
+	current.setPointSize(size);
+	setFont(current);
+	emit fontSizeChanged(size);
+}
+
+const HighlightingPlugin* CodeEditorWidget::highlightingPlugin() const {
+	return d->highlighter->plugin();
 }
 
 void CodeEditorWidget::onTextChanged() {
@@ -174,7 +248,7 @@ void CodeEditorWidget::onFormattingFinished(const QString& formattedText) {
 }
 
 void CodeEditorWidget::onBlockRead(const QStringList& lines) {
-	if (lines.isEmpty()) {
+	if (!d->reader || sender() != d->reader || lines.isEmpty()) {
 		return;
 	}
 
@@ -191,6 +265,11 @@ void CodeEditorWidget::onBlockRead(const QStringList& lines) {
 }
 
 void CodeEditorWidget::setText(const QString& text) {
+	if (text.isEmpty()) {
+		clear();
+		return;
+	}
+
 	QTextCursor cursor = textCursor();
 	cursor.beginEditBlock();
 	cursor.select(QTextCursor::Document);
@@ -207,21 +286,10 @@ void CodeEditorWidget::wheelEvent(QWheelEvent* event) {
 		return;
 	}
 
-	QFont currentFont = font();
-	int currentSize = currentFont.pointSize();
-	const int ZOOM_STEP = 1;
-	if (event->angleDelta().y() > 0) {
-		currentFont.setPointSize(currentSize + ZOOM_STEP);
-	}
-	else if (event->angleDelta().y() < 0) {
-		int newSize = currentSize - ZOOM_STEP;
-		if (newSize < 1) {
-			newSize = 1;
-		}
-
-		currentFont.setPointSize(newSize);
+	const int delta = event->angleDelta().y();
+	if (delta != 0) {
+		setFontSize(qMax(1, fontSize() + (delta > 0 ? 1 : -1)));
 	}
 
-	setFont(currentFont);
 	event->accept();
 }

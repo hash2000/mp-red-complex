@@ -10,7 +10,7 @@
 #include "Libs/Base/extensions/text_edit_extensions.h"
 #include "Libs/BaseWidgets/key_value/key_value_editor_widget.h"
 
-#include "Content/CodeEditorWidget/code_editor_widget.h"
+#include "Content/CodeEditorWidget/widgets/code_editor_widget.h"
 #include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
 

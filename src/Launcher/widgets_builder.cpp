@@ -1,5 +1,5 @@
 #include "Launcher/widgets_builder.h"
-#include "Content/CodeEditorWidget/code_editor_widget.h"
+#include "Content/CodeEditorWidget/documents/code_editor_document.h"
 #include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
@@ -219,12 +219,12 @@ void WidgetsBuilder::Private::registerAll() {
 			return widget;
 		});
 
-	registry->registerFactory({ "Content.CodeEditor.CodeEditorWidget", "code-editor" },
+	registry->registerFactory({ "Content.CodeEditor.CodeEditorDocument", "code-editor" },
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* services = servicesFor(type, handler);
 			auto* highlighter = requiredService<HighlightingPluginManager>(services, type, "HighlightingPluginManager");
 			auto* formatter = requiredService<FormatterPluginManager>(services, type, "FormatterPluginManager");
-			return highlighter && formatter ? new CodeEditorWidget(highlighter, formatter, handler.parent) : nullptr;
+			return highlighter && formatter ? new CodeEditorDocument(highlighter, formatter, handler.parent) : nullptr;
 		});
 
 	//registry->registerFactory({ "Launcher.WarmupWidget", "warmup" },

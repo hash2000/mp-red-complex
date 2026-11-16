@@ -73,6 +73,12 @@ ctest --output-on-failure
 - Порядок включения: заголовки проекта, затем заголовки Qt, затем стандартная библиотека
 - Стараться прописывать реализацию максимально в .cpp, .h должны содержать только объявления, где это возможно, кроме случаев, когда объявление и реализация приватные на уровне .cpp (пример: class MyClass::Private, всегда пишется в .cpp)
 
+### Виджеты и документы модулей
+- Самостоятельный виджет модуля хранится в `src/Content/{Module}/widgets/{widget_name.h/cpp}`; он не знает о документе и его состоянии.
+- Виджет, который открывается как документ и сохраняет состояние, оборачивается в `DocumentWidget`: обёртка-документ хранится в `src/Content/{Module}/documents/{document_name.h/cpp}` и ведёт путь, признак изменения, сохранение и реакции на изменение состояния.
+- В `MainWindow` документы создаются только как наследники `DocumentWidget`; виджеты без собственного состояния (панели, консоль) документами не являются.
+
+
 ### Соглашения об именовании
 - **Классы**: `PascalCase` (например, `ApplicationController`)
 - **Интерфейсы**: `PascalCase` с префиксом `I` (например, `IInventoryRepository`)
@@ -439,7 +445,7 @@ Launcher              точка входа и композиция: main.cpp, A
 
 **Декларативный UI**
 - `ClassManager` (`scripting/application/class_manager.*`) — загрузка `main.yaml`, разрешение `extends`/`requires`, слияние `content`, создание вьюпорта и панелей.
-- `WidgetsBuilder` (`src/Launcher/widgets_builder.*`) — регистрация нативных классов: `System.Viewport.MainForm`/`mainform`, `System.Panels.ConsolePanel`/`console`, `System.Panels.Properties`/`properties`, `System.Panels.Explorer`/`explorer`, `System.Panels.Panel`/`panel`, `Content.Users.*`/`user-login`/`user-register`/`user-profile`, `Content.FetchApi.*`/`fetch-api`/`fetch-api-queries-tree`, `Content.CodeEditor.CodeEditorWidget`/`code-editor`, `Launcher.WarmupWidget`/`warmup`.
+- `WidgetsBuilder` (`src/Launcher/widgets_builder.*`) — регистрация нативных классов: `System.Viewport.MainForm`/`mainform`, `System.Panels.ConsolePanel`/`console`, `System.Panels.Properties`/`properties`, `System.Panels.Explorer`/`explorer`, `System.Panels.Panel`/`panel`, `Content.Users.*`/`user-login`/`user-register`/`user-profile`, `Content.FetchApi.*`/`fetch-api`/`fetch-api-queries-tree`, `Content.CodeEditor.CodeEditorDocument`/`code-editor`, `Launcher.WarmupWidget`/`warmup`.
 - `WidgetRegistry` (`scripting/widgets/widget_registry.*`) — `registerFactory(WidgetTypeHandler{className, xtype}, factory)` и `build(type, WidgetBuildHandler)`; `WidgetBuildHandler` передаёт `name`, `title`, `glyph`, `parent`, `context`.
 
 **Оболочка**
@@ -457,7 +463,7 @@ Launcher              точка входа и композиция: main.cpp, A
 - UsersModule: `UsersService`, `UsersRegistryService`, `UsersRegistryDataProviderDb`, `User`/`UserData`/`UserView`, `LoginWidget`, `RegisterWidget`, `UserWidget`, `crypto_extensions` (BIP-39-сид, соль, ключи БД).
 - FetchApiModule: `FetchApiService`, `FetchStoreDbService`, `FetchTree`/`FetchQuery`/`FetchOpt`, `FetchApiWidget`, `FetchQueriesTreeWidget`, `FetchApiCommand`.
 - MessagerModule: `MessagesDataProviderDb`, `IMessagesDataProvider`, `Message`.
-- CodeEditorWidget: `CodeEditorWidget`, `Highlighter`, `HighlightingPlugin` + `HighlightingPluginManager` + плагины (bash, css, glsl, html, json, markdown, plain text), `FormatterPlugin`/`FormatterPluginAsync` + `FormatterPluginManager` + `ExternalCliFormatterPlugin`, `LanguageInfo`.
+- CodeEditorWidget: `CodeEditorDocument` (`documents/`, обёртка-документ: лента управления, путь и сохранение), `CodeEditorWidget` (`widgets/`), `Highlighter`, `HighlightingPlugin` + `HighlightingPluginManager` + плагины (bash, css, glsl, html, json, markdown, plain text), `FormatterPlugin`/`FormatterPluginAsync` + `FormatterPluginManager` + `ExternalCliFormatterPlugin`, `LanguageInfo`.
 - Окна Launcher: `LoginWindow`, `UserWindow`, `WarmupWindow`/`WarmupWidget`, `CodeEditorWindow`, `FetchApiWindow`, `FetchApiQueriesTreeWindow` (`src/Launcher/windows/*`).
 
 **Библиотеки**

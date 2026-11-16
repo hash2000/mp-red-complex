@@ -1,5 +1,5 @@
 #include "Launcher/windows/code_editor/code_editor_window.h"
-#include "Content/CodeEditorWidget/code_editor_widget.h"
+#include "Content/CodeEditorWidget/widgets/code_editor_widget.h"
 #include "Launcher/app_controller.h"
 #include "Libs/Engine/scripting/command_context.h"
 #include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"

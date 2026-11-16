@@ -313,7 +313,7 @@ void MainWindow::buildDefaultPanels() {
 // ------------------------------------------------------------------ actions
 void MainWindow::Private::newDocument() {
 	auto* doc = new TextDocument;
-	doc->setTitle(MainWindow::tr("Документ %1").arg(++untitledCounter));
+	doc->setTitle(MainWindow::tr("Документ %1").arg(untitledCounter++));
 	q->addDocument(doc);
 }
 
