@@ -16,6 +16,7 @@ struct WidgetBuildHandler : public WidgetTypeHandler {
 	QString title;
 	QString glyph;
 	QWidget* parent;
+	QVariantMap options;
 	std::shared_ptr<CommandContext> context;
 };
 

@@ -3,7 +3,7 @@
 #include "Libs/Engine/scripting/command_controller.h"
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/ui/main_window.h"
-#include "Libs/Engine/ui/widget_registry.h"
+#include "Libs/Engine/scripting/widgets/widget_registry.h"
 #include "Libs/Resources/resources.h"
 
 #include <yaml-cpp/yaml.h>
@@ -12,6 +12,8 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QMap>
+#include <QVariant>
 
 #include <map>
 #include <optional>
@@ -26,6 +28,22 @@ QString nodeString(const YAML::Node& node, const char* key) {
 	}
 
 	return QString::fromStdString(node[key].as<std::string>());
+}
+
+/// Необязательный булев ключ: отсутствие ключа — std::nullopt,
+/// ошибка преобразования — предупреждение и std::nullopt.
+std::optional<bool> nodeBool(const YAML::Node& node, const char* key) {
+	if (!node || !node[key] || !node[key].IsScalar()) {
+		return std::nullopt;
+	}
+
+	try {
+		return node[key].as<bool>();
+	}
+	catch (const YAML::Exception& e) {
+		qWarning() << "ClassManager: bad boolean value for" << key << ":" << e.what();
+		return std::nullopt;
+	}
 }
 
 QStringList nodeStringList(const YAML::Node& node, const char* key) {
@@ -102,7 +120,9 @@ private:
 	Declaration* findDeclarationForType(const Declaration& scope, const QString& type);
 	QWidget* buildViewport(Declaration& declaration);
 	void applyContent(MainWindow* window, const YAML::Node& content, const Declaration& scope);
+	void applyDocuments(MainWindow* window, const YAML::Node& block, const Declaration& scope);
 	void applyPanels(MainWindow* window, const YAML::Node& block, const Declaration& scope, bool bottom);
+	QVariantMap zoneOptions(const YAML::Node& content) const;
 	QString nativeBaseOf(const Declaration& declaration);
 	Declaration* findDeclaration(const QString& requestedName);
 	Declaration parseDeclaration(const YAML::Node& define, const QString& fallbackName) const;
@@ -261,6 +281,8 @@ QWidget* ClassManager::Private::buildViewport(Declaration& declaration) {
 	handler.title = declaration.title;
 	handler.parent = nullptr;
 	handler.context = commandController->globalContext();
+	// Зоны оболочки, выключенные описанием, сообщаются фабрике вьюпорта.
+	handler.options = zoneOptions(declaration.content);
 
 	auto* widget = commandController->widgets()->build(nativeType, handler);
 	if (!widget) {
@@ -309,20 +331,143 @@ void ClassManager::Private::applyContent(MainWindow* window, const YAML::Node& c
 		else if (blockName == QLatin1String("sidebar")) {
 			applyPanels(window, body, scope, false);
 		}
+		else if (blockName == QLatin1String("documents")) {
+			applyDocuments(window, body, scope);
+		}
 		else {
 			qWarning() << "ClassManager: unknown viewport block:" << blockName;
 		}
 	}
 }
 
+/// Открываемые при загрузке документы: showTabs и список content
+/// с тем же описанием элемента, что и у панелей.
+void ClassManager::Private::applyDocuments(MainWindow* window, const YAML::Node& block,
+	const Declaration& scope) {
+	if (!block || !block.IsMap()) {
+		qWarning() << "ClassManager: documents block of" << scope.name << "must be a map";
+		return;
+	}
+
+	// showTabs по умолчанию true: панель открытых документов видна.
+	if (const auto showTabs = nodeBool(block, "showTabs")) {
+		window->setDocumentTabsVisible(*showTabs);
+	}
+
+	const auto items = block["content"];
+	if (!items || items.IsNull()) {
+		return;
+	}
+
+	if (!items.IsSequence()) {
+		qWarning() << "ClassManager: documents content of" << scope.name << "must be a sequence";
+		return;
+	}
+
+	int index = 0;
+	for (const auto& item : items) {
+		index++;
+
+		if (!item.IsMap()) {
+			qWarning() << "ClassManager: document description must be a map";
+			continue;
+		}
+
+		const auto type = nodeString(item, "xtype");
+		if (type.isEmpty()) {
+			qWarning() << "ClassManager: document without xtype in" << scope.name;
+			continue;
+		}
+
+		auto* documentDeclaration = findDeclarationForType(scope, type);
+		const auto nativeType = documentDeclaration ? nativeBaseOf(*documentDeclaration) : type;
+
+		auto name = nodeString(item, "name");
+		if (name.isEmpty()) {
+			name = QStringLiteral("%1-%2").arg(type).arg(index);
+		}
+
+		auto title = nodeString(item, "title");
+		if (title.isEmpty() && documentDeclaration) {
+			title = documentDeclaration->title;
+		}
+		if (title.isEmpty()) {
+			title = name;
+		}
+
+		const auto glyph = nodeString(item, "glyph");
+		const auto tooltip = nodeString(item, "tooltip");
+
+		auto* registry = commandController ? commandController->widgets() : nullptr;
+		if (!registry) {
+			qWarning() << "ClassManager: widget registry is not available";
+			return;
+		}
+
+		WidgetBuildHandler handler;
+		handler.className = nativeType;
+		handler.xtype = type;
+		handler.name = name;
+		handler.title = title;
+		handler.glyph = glyph;
+		handler.parent = window;
+		handler.context = commandController ? commandController->globalContext()
+			: std::shared_ptr<CommandContext>();
+
+		auto* document = window->createWidget(name, MainWindow::WidgetKind::Document, title, glyph,
+			[registry, nativeType, handler]() { return registry->build(nativeType, handler); },
+			tooltip, type);
+		if (!document) {
+			qWarning() << "ClassManager: document is not registered:" << type << "name:" << name;
+		}
+	}
+}
+
+/// Флаги зон оболочки из content вьюпорта: "bottombar.delete" и "sidebar.delete".
+/// Ключи совпадают с именами в описании; читает их MainWindow::Options::fromBuildOptions().
+QVariantMap ClassManager::Private::zoneOptions(const YAML::Node& content) const {
+	QVariantMap options;
+
+	if (!content || !content.IsSequence()) {
+		return options;
+	}
+
+	for (const auto& block : content) {
+		if (!block.IsMap() || block.size() != 1) {
+			continue;
+		}
+
+		const auto blockName = QString::fromStdString(block.begin()->first.Scalar());
+		const auto body = block.begin()->second;
+		if (!body || !body.IsMap()) {
+			continue;
+		}
+
+		if (blockName == QLatin1String("bottombar") || blockName == QLatin1String("sidebar")) {
+			if (const auto remove = nodeBool(body, "delete")) {
+				options[blockName + QStringLiteral(".delete")] = *remove;
+			}
+		}
+	}
+
+	return options;
+}
+
 void ClassManager::Private::applyPanels(MainWindow* window, const YAML::Node& block,
 	const Declaration& scope, bool bottom) {
 	const auto items = block["content"];
-	if (!items || !items.IsSequence()) {
+	if (!items || items.IsNull()) {
+		// Допустимо: блок задаёт только delete или default.
+		return;
+	}
+
+	if (!items.IsSequence()) {
 		qWarning() << "ClassManager: panels content of" << scope.name << "must be a sequence";
 		return;
 	}
 
+	const auto zoneName = bottom ? QStringLiteral("bottombar") : QStringLiteral("sidebar");
+	const auto kind = bottom ? MainWindow::WidgetKind::BottomPanel : MainWindow::WidgetKind::SidePanel;
 	const auto defaultPanel = nodeString(block, "default");
 	QStringList registered;
 	int index = 0;
@@ -341,13 +486,20 @@ void ClassManager::Private::applyPanels(MainWindow* window, const YAML::Node& bl
 			continue;
 		}
 
-		auto* panelDeclaration = findDeclarationForType(scope, type);
-		const auto nativeType = panelDeclaration ? nativeBaseOf(*panelDeclaration) : type;
-
 		auto name = nodeString(item, "name");
 		if (name.isEmpty()) {
 			name = QStringLiteral("%1-%2").arg(type).arg(index);
 		}
+
+		if (!window->isZoneEnabled(kind)) {
+			// Зона удалена описанием (delete: true): добавление в неё — ошибка.
+			qWarning() << "ClassManager:" << zoneName << "is deleted (delete: true),"
+				<< "panel cannot be added:" << name << "xtype:" << type;
+			continue;
+		}
+
+		auto* panelDeclaration = findDeclarationForType(scope, type);
+		const auto nativeType = panelDeclaration ? nativeBaseOf(*panelDeclaration) : type;
 
 		auto title = nodeString(item, "title");
 		if (title.isEmpty() && panelDeclaration) {

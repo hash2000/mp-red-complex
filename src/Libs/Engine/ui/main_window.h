@@ -1,6 +1,8 @@
 #pragma once
 #include <QMainWindow>
+#include <QMap>
 #include <QStringList>
+#include <QVariant>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -14,10 +16,26 @@ class PropertiesPanel;
 class MainWindow : public QMainWindow {
 	Q_OBJECT
 public:
+	/// Зоны оболочки, создаваемые при построении.
+	/// Выключенная зона (yaml: bottombar/sidebar delete: true) не создаётся:
+	/// попытка добавить в неё виджет пишет qWarning() и отклоняется.
+	struct Options {
+		bool bottomPanel = true;   ///< bottombar
+		bool sidePanel = true;     ///< sidebar
+
+		/// Разбирает декларативные параметры построения виджета
+		/// (WidgetBuildHandler::options): ключи "bottombar.delete"/"sidebar.delete",
+		/// по умолчанию false.
+		static Options fromBuildOptions(const QMap<QString, QVariant>& values);
+	};
+
 	/// @param buildDefaultPanels false — оболочка без панелей,
 	/// они будут созданы декларативно (ClassManager + WidgetRegistry).
 	explicit MainWindow(std::shared_ptr<CommandContext> context, QWidget* parent = nullptr,
 		bool buildDefaultPanels = true);
+	/// @param options выключенные зоны оболочки из описания приложения.
+	MainWindow(std::shared_ptr<CommandContext> context, QWidget* parent, bool buildDefaultPanels,
+		const Options& options);
 	~MainWindow() override;
 
 	enum class WidgetKind { Document, BottomPanel, SidePanel };
@@ -48,6 +66,14 @@ public:
 
 	/// Открыть файл в новом документе (используется панелью «Проводник»).
 	void openFile(const QString& path);
+
+	/// Создана ли зона (выключенные описанием приложения зоны виджетов не принимают).
+	/// Для WidgetKind::Document всегда true.
+	bool isZoneEnabled(WidgetKind kind) const;
+
+	/// Панель открытых документов слева (yaml: content.documents.showTabs).
+	void setDocumentTabsVisible(bool visible);
+	bool isDocumentTabsVisible() const;
 
 	/// Регистрация панели справа (+ кнопка на Activity Bar + пункт меню «Вид»)
 	void registerSidePanel(const QString& id, const QString& glyph,

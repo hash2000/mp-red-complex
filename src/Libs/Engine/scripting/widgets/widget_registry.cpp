@@ -1,4 +1,4 @@
-#include "Libs/Engine/ui/widget_registry.h"
+#include "Libs/Engine/scripting/widgets/widget_registry.h"
 #include <QDebug>
 
 class WidgetRegistry::Private {

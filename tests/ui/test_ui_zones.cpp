@@ -5,7 +5,7 @@
 #include "Libs/Engine/ui/doc_area.h"
 #include "Libs/Engine/ui/doc_widget.h"
 #include "Libs/Engine/ui/main_window.h"
-#include "Libs/Engine/ui/widget_registry.h"
+#include "Libs/Engine/scripting/widgets/widget_registry.h"
 #include "Libs/Engine/commands/widget_zone_command.h"
 
 #include <QLabel>

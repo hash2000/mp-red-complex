@@ -25,3 +25,30 @@ target_link_libraries(TestUiZones PRIVATE
 )
 
 add_test(NAME TestUiZones COMMAND TestUiZones)
+
+add_executable(TestClassManager
+    test_class_manager.cpp
+)
+
+target_include_directories(TestClassManager PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/tests
+)
+
+target_link_libraries(TestClassManager PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+    Qt6::Test
+
+    RedComplexEngine
+    RedComplexBase
+    RedComplexResources
+)
+
+# Тест читает эталонные yaml-описания прямо из исходников.
+target_compile_definitions(TestClassManager PRIVATE
+    REDCOMPLEX_CONFIGURATIONS_DIR="${CMAKE_SOURCE_DIR}/src/Configurations"
+)
+
+add_test(NAME TestClassManager COMMAND TestClassManager)

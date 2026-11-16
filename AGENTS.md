@@ -352,7 +352,7 @@ Launcher              точка входа и композиция: main.cpp, A
 - `MainWindow` (`ui/main_window.*`) — IDE-подобная композиция: слева `DocumentTabsPanel`, в центре `DocumentArea` с `DocumentWidget`/`TextDocument`, справа `SideHostPanel` + `ActivityBar`, снизу `BottomPanel`. Меню «Файл» и «Вид», статус-бар, `log()`.
 - Единый менеджмент зон: `createWidget(id, WidgetKind{Document, BottomPanel, SidePanel}, title, glyph, factory, tooltip, type)`, `widget`, `widgetKind`, `widgetTitle`, `widgetType`, `widgetIds([kind])`, `showWidget`, `closeWidget`. Повторный id активирует существующий виджет (фабрика не вызывается), `MainWindow` сам регистрируется в `CommandController::setMainWindow()` из `CommandContext`.
 - Регистрация панелей: `registerSidePanel(id, glyph, title, widget, tooltip, type)` и `registerBottomPanel(...)` автоматически добавляют кнопку в Activity Bar, пункт меню «Вид» и вкладку. Управление — `show/hide/toggleSidePanel`, `showBottomPanel`, `unregisterBottomPanel`/`unregisterSidePanel`.
-- `WidgetZoneCommand` (`ui/widget_zone_command.*`) — команда Engine для одной зоны: `action=create|show|close|list`. Создаёт виджет через `WidgetRegistry::build()` с `WidgetBuildHandler` (parent — окно, context — контекст команды), без `id` генерирует UUID; id из другой зоны отклоняется. Экземпляры регистрируются как команды `documents`, `info-panels`, `side-panels`.
+- `WidgetZoneCommand` (`commands/widget_zone_command.*`) — команда Engine для одной зоны: `action=create|show|close|list`. Создаёт виджет через `WidgetRegistry::build()` с `WidgetBuildHandler` (parent — окно, context — контекст команды), без `id` генерирует UUID; id из другой зоны отклоняется. Экземпляры регистрируются как команды `documents`, `info-panels`, `side-panels`.
 - `CommandConsole` (`ui/command_console.*`) — консоль команд: история ввода, выбор контекста, рендер `outputRequested` по mime-типу; в текущей оболочке это нижняя панель `console` (в старой `LauncherMainFrame` — отдельное окно с Ctrl + обратная кавычка).
 - `PropertiesPanel` — свойства документа, следует за активным документом (на базе `PropertiesListWidget`).
 - `WidgetRegistry` (`ui/widget_registry.*`) — реестр фабрик виджетов по строковому `type` (`WidgetFactory` + `WidgetTypeHandler`), задел под декларативный UI.
@@ -361,7 +361,7 @@ Launcher              точка входа и композиция: main.cpp, A
 #### Окна MDI (legacy) и управление зонами
 
 - Управление документами и панелями вынесено в Engine: `MainWindow` хранит все созданные виджеты по id и умеет `createWidget`/`showWidget`/`closeWidget`; `CommandController::mainWindow()` отдаёт активную оболочку, поэтому командам не нужны Launcher-контроллеры.
-- Команды `documents`, `info-panels`, `side-panels` (`WidgetZoneCommand` в `Libs/Engine/ui`) заменяют прежнюю команду `windows` и не дублируют друг друга: каждая управляет одной зоной.
+- Команды `documents`, `info-panels`, `side-panels` (`WidgetZoneCommand` в `Libs/Engine/commands`) заменяют прежнюю команду `windows` и не дублируют друг друга: каждая управляет одной зоной.
 - `MdiChildWindow` (`Libs/Engine/mdi_child_window.*`), `MdiArea` (`Libs/BaseWidgets/mdi_area.*`), `WindowsBuilder` (`src/Launcher/windows_builder.*`), `WindowsController` (`src/Launcher/controllers/windows_controller.*`) и окна `src/Launcher/windows/*` — legacy-оболочка на `QMdiArea`. Старая команда `windows` и её обработчики удалены; legacy-классы остаются только для `main_frame.*`, который не используется текущим запуском.
 - `Controllers` — агрегатор `WindowsController` + `ActionPanelController`; доступ — `ApplicationController::controllers()`; для новых окон/панелей используйте `MainWindow` и `WidgetRegistry`.
 
@@ -375,6 +375,8 @@ Launcher              точка входа и композиция: main.cpp, A
   - если файл базового/запрошенного класса не найден, имя считается нативным классом из `WidgetRegistry` (`Viewport.MainForm`, `console`, `explorer` и т.п.);
   - наследование: блоки дочернего класса перетирают базовые; мапы сливаются по ключам, последовательности — по идентичности элемента (ключ одноэлементной мапы, иначе `name`, иначе `xtype`), лишние элементы базы сохраняются;
   - `content` вьюпорта: блоки `bottombar`/`sidebar` с `default` и списком `content`; элемент панели — `xtype`, `name`, `glyph`, `title`, `tooltip`; панели создаются через `WidgetRegistry::build()` и регистрируются `MainWindow::registerSidePanel`/`registerBottomPanel`;
+  - `content.documents` — документы, открываемые при загрузке: `showTabs` (`true` по умолчанию — панель открытых документов слева) и `content` со списком документов в том же формате, что у панелей; элементы создаются `MainWindow::createWidget(..., WidgetKind::Document, ...)` через `WidgetRegistry::build()`;
+  - `delete: true` у `bottombar`/`sidebar` — зона не создаётся: `ClassManager` передаёт флаги фабрике вьюпорта (`WidgetBuildHandler::options`, ключи `bottombar.delete`/`sidebar.delete`), `MainWindow::Options::fromBuildOptions()` превращает их в `MainWindow::Options`, а любая попытка добавить виджет в удалённую зону (yaml, команда зоны, код) пишет `qWarning()` и отклоняется (`MainWindow::isZoneEnabled()`);
   - `ClassManager::createViewport()` строит вьюпорт по `appearance.application.viewport.xtype`; если описание не читается или класс не зарегистрирован, `Application` откатывается на `MainWindow` со встроенными панелями.
 - `dataflow/*.yaml` и `Libs/Engine/scripting/dataflow/README.DataFlow.md` — спецификация DSL графов обработки данных (реестр процессоров, `entrypoints`, `nodes`/`inputs`/`outputs`, `policy`: executor/backpressure/priority). Реализации нет, `Configurations/dataflow/palette.yaml` пуст.
 
@@ -402,7 +404,7 @@ Launcher              точка входа и композиция: main.cpp, A
 - `src/Legacy/**` не входит в сборку — источник решений для возврата (инвентари, экипировка, карты, текстуры, материалы, персонажи, старые окна и виджеты).
 - `Libs/DataFormat` и `Libs/DataStream` — legacy-слой чтения форматов Fallout 2 (`.dat`, `.frm`, `.pro`, `.int`, `.msg`, `.map`, `.pal` и др.); новый код на них не опирается, планируется вынос в отдельный модуль.
 - `DatabasesService::reloadAliases()` закрывает открытые соединения, чтобы следующие вызовы перечитали контексты `.store.<name>`; сам список хранилищ больше не задаётся в коде.
-- `DataFlow` — только спецификация; графы обработки ещё не исполняются. `ClassManager` применяет `content` только к `MainWindow` (`bottombar`/`sidebar`); вложенный `content` произвольных виджетов пока не разбирается.
+- `DataFlow` — только спецификация; графы обработки ещё не исполняются. `ClassManager` применяет `content` только к `MainWindow` (`documents`/`bottombar`/`sidebar`); вложенный `content` произвольных виджетов пока не разбирается.
 - Команды получают параметры только из контекста: `ICommand::execute(std::shared_ptr<CommandContext>)`. Контекст команды создаётся `CommandProcessor` на каждый вызов (см. «Команды и контексты»); виджет, созданный командой зоны, получает этот контекст через `WidgetBuildHandler::context`. `Instruction` и `ScriptProgram` удалены: их заменили контекст команды и `ParserCommand`.
 - `BootstrapContextBuilder::reload()` идемпотентен: при повторном вызове переиспользует существующие контексты `.store.*`, обновляет значения и отпускает хранилища, удалённые из конфигурации (контексты остаются в дереве `CommandController` до своего разрушения).
 
@@ -438,16 +440,16 @@ Launcher              точка входа и композиция: main.cpp, A
 **Декларативный UI**
 - `ClassManager` (`scripting/application/class_manager.*`) — загрузка `main.yaml`, разрешение `extends`/`requires`, слияние `content`, создание вьюпорта и панелей.
 - `WidgetsBuilder` (`src/Launcher/widgets_builder.*`) — регистрация нативных классов: `System.Viewport.MainForm`/`mainform`, `System.Panels.ConsolePanel`/`console`, `System.Panels.Properties`/`properties`, `System.Panels.Explorer`/`explorer`, `System.Panels.Panel`/`panel`, `Content.Users.*`/`user-login`/`user-register`/`user-profile`, `Content.FetchApi.*`/`fetch-api`/`fetch-api-queries-tree`, `Content.CodeEditor.CodeEditorWidget`/`code-editor`, `Launcher.WarmupWidget`/`warmup`.
-- `WidgetRegistry` (`ui/widget_registry.*`) — `registerFactory(WidgetTypeHandler{className, xtype}, factory)` и `build(type, WidgetBuildHandler)`; `WidgetBuildHandler` передаёт `name`, `title`, `glyph`, `parent`, `context`.
+- `WidgetRegistry` (`scripting/widgets/widget_registry.*`) — `registerFactory(WidgetTypeHandler{className, xtype}, factory)` и `build(type, WidgetBuildHandler)`; `WidgetBuildHandler` передаёт `name`, `title`, `glyph`, `parent`, `context`.
 
 **Оболочка**
-- `MainWindow`, `ActivityBar`, `SideHostPanel`, `DocumentTabsPanel`, `DocumentArea`, `DocumentWidget`, `TextDocument`, `PropertiesPanel`, `BottomPanel`, `CommandConsole`, `WidgetRegistry`, `GlyphToolButton`, `NameSelectDialog` (`Libs/Engine/ui/*`).
+- `MainWindow`, `ActivityBar`, `SideHostPanel`, `DocumentTabsPanel`, `DocumentArea`, `DocumentWidget`, `TextDocument`, `PropertiesPanel`, `BottomPanel`, `CommandConsole`, `WidgetRegistry`(`Libs/scripting/widgets/widget_registry.*`), `GlyphToolButton`, `NameSelectDialog` (`Libs/Engine/ui/*`).
 
 **Окна MDI (legacy), зоны и контроллеры**
 - `MdiChildWindow` (`Libs/Engine/mdi_child_window.*`), `MdiArea` (`Libs/BaseWidgets/mdi_area.*`).
 - `WindowsController` (`src/Launcher/controllers/windows_controller.*`), `WindowsBuilder` (`src/Launcher/windows_builder.*`), `Controllers` (`src/Launcher/controllers.*`) — legacy, не используются командами зон.
 - `ActionPanelController`, `ActionButtonConfig` (`src/Launcher/controllers/action_panel_controller.*`, `action_button_config.h`).
-- `WidgetZoneCommand` (`Libs/Engine/ui/widget_zone_command.*`); команды `documents`, `info-panels`, `side-panels`.
+- `WidgetZoneCommand` (`Libs/Engine/commands/widget_zone_command.*`); команды `documents`, `info-panels`, `side-panels`.
 
 **Модули**
 - ConsoleModule: `HelpCommand`, `EchoCommand` (`Content/ConsoleModule/commands`).
@@ -471,7 +473,7 @@ Launcher              точка входа и композиция: main.cpp, A
 
 **Цели сборки и тесты**
 - Цели: `Launcher`, `RedComplexBase`, `RedComplexBaseWidgets`, `RedComplexResources`, `RedComplexGraphics`, `RedComplexEngine`, `RedComplexDataStream`, `RedComplexDataFormat`, `RedComplexConsoleModule`, `RedComplexDatabaseModule`, `RedComplexUsersModule`, `RedComplexFetchApiModule`, `RedComplexMessagerModule`, `RedComplexCodeEditorWidget`.
-- Тесты: `TestEngine` (парсер, контексты, палитра — `tests/engine`), `TestUiZones` (зоны `MainWindow` и команды `documents`/`info-panels`/`side-panels` — `tests/ui`), `TestDatabasesService`, `TestItemsService` и `TestInventoriesService` (заготовки), агрегат `run_tests`; отдельной цели `RunTests` в `tests/CMakeLists.txt` нет.
+- Тесты: `TestEngine` (парсер, контексты, палитра — `tests/engine`), `TestUiZones` (зоны `MainWindow` и команды `documents`/`info-panels`/`side-panels` — `tests/ui`), `TestClassManager` (загрузка `main.yaml`, `content.documents`/`delete`, эталонное описание `applications/singletone` — `tests/ui`), `TestDatabasesService`, `TestItemsService` и `TestInventoriesService` (заготовки), агрегат `run_tests`; отдельной цели `RunTests` в `tests/CMakeLists.txt` нет.
 
 
 ## Ссылки на существующие скилы

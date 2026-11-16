@@ -18,6 +18,7 @@
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
+#include <QList>
 #include <QMenuBar>
 #include <QPlainTextEdit>
 #include <QPointer>
@@ -61,6 +62,7 @@ struct MainWindow::Private {
 	explicit Private(MainWindow* qq) : q(qq) {}
 
 	MainWindow* q;
+	Options options;
 
 	DocumentArea* area = nullptr;
 	DocumentTabsPanel* tabs = nullptr;
@@ -100,6 +102,8 @@ struct MainWindow::Private {
 	int untitledCounter = 0;
 	int lastSideWidth = 280;
 	int lastBottomHeight = 220;
+	int lastTabsWidth = 220;
+	bool documentTabsVisible = true;
 
 	void buildUi();
 	void buildMenus();
@@ -121,7 +125,7 @@ void MainWindow::Private::buildUi() {
 	mainSplitter->setHandleWidth(1);
 	mainSplitter->setChildrenCollapsible(false);
 
-	// левая панель
+	// левая панель открытых документов
 	tabs = new DocumentTabsPanel;
 
 	centerSplitter = new QSplitter(Qt::Vertical);
@@ -131,30 +135,45 @@ void MainWindow::Private::buildUi() {
 	// центральная панель, область открытого документа
 	area = new DocumentArea;
 
-	// информационная панель снизу
-	bottom = new BottomPanel;
+	// информационная панель снизу: только если зона не удалена описанием
 	centerSplitter->addWidget(area);
-	centerSplitter->addWidget(bottom);
+	if (options.bottomPanel) {
+		bottom = new BottomPanel;
+		centerSplitter->addWidget(bottom);
+		centerSplitter->setStretchFactor(1, 0);
+	}
 	centerSplitter->setStretchFactor(0, 1);
-	centerSplitter->setStretchFactor(1, 0);
 
-	// область панелей справа
-	side = new SideHostPanel;
+	// область панелей справа: только если зона не удалена описанием
+	if (options.sidePanel) {
+		side = new SideHostPanel;
+	}
 
 	mainSplitter->addWidget(tabs);
 	mainSplitter->addWidget(centerSplitter);
-	mainSplitter->addWidget(side);
+	if (side) {
+		mainSplitter->addWidget(side);
+		mainSplitter->setSizes({ lastTabsWidth, 900, lastSideWidth });
+	}
+	else {
+		mainSplitter->setSizes({ lastTabsWidth, 900 });
+	}
 	mainSplitter->setStretchFactor(0, 0);
 	mainSplitter->setStretchFactor(1, 1);
-	mainSplitter->setStretchFactor(2, 0);
-	mainSplitter->setSizes({ 220, 900, lastSideWidth });
-	centerSplitter->setSizes({ 600, lastBottomHeight });
+	if (side) {
+		mainSplitter->setStretchFactor(2, 0);
+	}
+	centerSplitter->setSizes(bottom ? QList<int>{ 600, lastBottomHeight } : QList<int>{ 600 });
 
-	// область кнопок панелей справа
-	activity = new ActivityBar(central);
+	// область кнопок панелей справа: без панелей справа она не нужна
+	if (side) {
+		activity = new ActivityBar(central);
+	}
 
 	h->addWidget(mainSplitter, 1);
-	h->addWidget(activity);
+	if (activity) {
+		h->addWidget(activity);
+	}
 	q->setCentralWidget(central);
 
 	// Статус-бар
@@ -187,16 +206,20 @@ void MainWindow::Private::buildMenus() {
 
 	viewMenu = q->menuBar()->addMenu(MainWindow::tr("&Вид"));
 	sidePanelsSeparator = viewMenu->addSeparator();   // сюда будут вставляться панели
-	viewMenu->addAction(MainWindow::tr("Нижняя панель"), QKeySequence(Qt::CTRL | Qt::Key_J),
-		q, [this] { toggleBottom(); });
-	viewMenu->addSeparator();
-	pinAction = viewMenu->addAction(MainWindow::tr("📌 Закрепить панель кнопок"));
-	pinAction->setCheckable(true);
-	pinAction->setChecked(true);
-	QObject::connect(pinAction, &QAction::toggled, side, [this](bool pinned) {
-		activity->setAutoHide(!pinned);
-		pinAction->setChecked(pinned);
-	});
+	if (bottom) {
+		viewMenu->addAction(MainWindow::tr("Нижняя панель"), QKeySequence(Qt::CTRL | Qt::Key_J),
+			q, [this] { toggleBottom(); });
+	}
+	if (activity) {
+		viewMenu->addSeparator();
+		pinAction = viewMenu->addAction(MainWindow::tr("📌 Закрепить панель кнопок"));
+		pinAction->setCheckable(true);
+		pinAction->setChecked(true);
+		QObject::connect(pinAction, &QAction::toggled, side, [this](bool pinned) {
+			activity->setAutoHide(!pinned);
+			pinAction->setChecked(pinned);
+		});
+	}
 }
 
 void MainWindow::Private::wireSignals() {
@@ -239,40 +262,50 @@ void MainWindow::Private::wireSignals() {
 	});
 
 	// Правая сторона
-	QObject::connect(activity, &ActivityBar::buttonClicked, q, [this](const QString& id) {
-		if (id == QLatin1String("settings")) {
-			q->log(MainWindow::tr("Настройки: ещё не реализовано"));
-			return;
-		}
-		q->toggleSidePanel(id);
-	});
-	QObject::connect(side, &SideHostPanel::closeRequested, q, [this] { q->hideSidePanel(); });
+	if (activity) {
+		QObject::connect(activity, &ActivityBar::buttonClicked, q, [this](const QString& id) {
+			if (id == QLatin1String("settings")) {
+				q->log(MainWindow::tr("Настройки: ещё не реализовано"));
+				return;
+			}
+			q->toggleSidePanel(id);
+		});
+	}
+	if (side) {
+		QObject::connect(side, &SideHostPanel::closeRequested, q, [this] { q->hideSidePanel(); });
+	}
 
-	// Нижняя панель
-	QObject::connect(bottom, &BottomPanel::closeRequested, bottom, &QWidget::hide);
-	QObject::connect(bottom, &BottomPanel::collapsedChanged, q, [this](bool collapsed) {
-		const auto s = centerSplitter->sizes();
-		const auto total = s.value(0) + s.value(1);
-		const auto height = collapsed ? QWIDGETSIZE_MAX : lastBottomHeight;
-		const int panelHeight = collapsed
-			? bottom->height() // уже равна высоте заголовка
-			: lastBottomHeight; // вернуть прежнюю высоту
+	if (bottom) {
+		// Нижняя панель
+		QObject::connect(bottom, &BottomPanel::closeRequested, bottom, &QWidget::hide);
+		QObject::connect(bottom, &BottomPanel::collapsedChanged, q, [this](bool collapsed) {
+			const auto s = centerSplitter->sizes();
+			const auto total = s.value(0) + s.value(1);
+			const auto height = collapsed ? QWIDGETSIZE_MAX : lastBottomHeight;
+			const int panelHeight = collapsed
+				? bottom->height() // уже равна высоте заголовка
+				: lastBottomHeight; // вернуть прежнюю высоту
 
-		centerSplitter->setSizes({ total - panelHeight, panelHeight });
-	});
+			centerSplitter->setSizes({ total - panelHeight, panelHeight });
+		});
+	}
 
 	// Запоминаем размеры, выставленные пользователем
 	QObject::connect(mainSplitter, &QSplitter::splitterMoved, q, [this] {
-		if (side->isVisible())
+		if (side && side->isVisible())
 			lastSideWidth = side->width();
 	});
 	QObject::connect(centerSplitter, &QSplitter::splitterMoved, q, [this] {
-		if (bottom->isVisible() && !bottom->isCollapsed())
+		if (bottom && bottom->isVisible() && !bottom->isCollapsed())
 			lastBottomHeight = bottom->height();
 	});
 }
 
 void MainWindow::buildDefaultPanels() {
+	if (!d->activity) {
+		return;
+	}
+
 	d->activity->addButton(QStringLiteral("settings"), QStringLiteral("⚙"), MainWindow::tr("Настройки"),
 		ActivityBar::Position::Bottom, /*checkable*/ true);
 }
@@ -302,6 +335,10 @@ void MainWindow::Private::openFile(const QString& path) {
 }
 
 void MainWindow::Private::toggleBottom() {
+	if (!bottom) {
+		return;
+	}
+
 	if (bottom->isVisible()) {
 		bottom->hide();
 	}
@@ -348,9 +385,22 @@ void MainWindow::Private::track(const QString& id, WidgetKind kind, QWidget* wid
 	});
 }
 
+MainWindow::Options MainWindow::Options::fromBuildOptions(const QMap<QString, QVariant>& values) {
+	Options options;
+	options.bottomPanel = !values.value(QStringLiteral("bottombar.delete"), false).toBool();
+	options.sidePanel = !values.value(QStringLiteral("sidebar.delete"), false).toBool();
+	return options;
+}
+
 MainWindow::MainWindow(std::shared_ptr<CommandContext> context, QWidget* parent, bool buildDefaultPanels)
+	: MainWindow(context, parent, buildDefaultPanels, Options()) {
+}
+
+MainWindow::MainWindow(std::shared_ptr<CommandContext> context, QWidget* parent, bool buildDefaultPanels,
+	const Options& options)
 	: QMainWindow(parent), d(std::make_unique<Private>(this)) {
 	d->context = context;
+	d->options = options;
 	d->buildUi();
 	d->buildMenus();
 	d->wireSignals();
@@ -371,9 +421,12 @@ MainWindow::~MainWindow() {
 	}
 	d->area->disconnect(this);
 	d->tabs->disconnect(this);
-	d->side->disconnect(this);
-	d->activity->disconnect(this);
-	d->bottom->disconnect(this);
+	if (d->side)
+		d->side->disconnect(this);
+	if (d->activity)
+		d->activity->disconnect(this);
+	if (d->bottom)
+		d->bottom->disconnect(this);
 	if (d->properties) {
 		d->properties->disconnect(this);
 		if (!d->properties->parent())
@@ -387,6 +440,12 @@ QWidget* MainWindow::createWidget(const QString& id, WidgetKind kind, const QStr
 	if (QThread::currentThread() != thread() || id.isEmpty() ||
 		(kind != WidgetKind::Document && kind != WidgetKind::BottomPanel && kind != WidgetKind::SidePanel))
 		return nullptr;
+	if (!isZoneEnabled(kind)) {
+		qWarning() << "MainWindow:"
+			<< (kind == WidgetKind::BottomPanel ? "bottombar" : "sidebar")
+			<< "is deleted by application description, widget rejected:" << id;
+		return nullptr;
+	}
 	if (auto* existing = widget(id)) {
 		showWidget(id);
 		return existing;
@@ -474,6 +533,46 @@ QStringList MainWindow::widgetIds(WidgetKind kind) const {
 	return ids;
 }
 
+bool MainWindow::isZoneEnabled(WidgetKind kind) const {
+	switch (kind) {
+	case WidgetKind::BottomPanel:
+		return d->bottom != nullptr;
+	case WidgetKind::SidePanel:
+		return d->side != nullptr;
+	case WidgetKind::Document:
+		break;
+	}
+	return true;
+}
+
+void MainWindow::setDocumentTabsVisible(bool visible) {
+	if (d->documentTabsVisible == visible) {
+		return;
+	}
+	d->documentTabsVisible = visible;
+
+	auto sizes = d->mainSplitter->sizes();   // [tabs, center, side]
+	if (visible) {
+		d->tabs->show();
+		if (sizes.size() < 2) {
+			return;
+		}
+		sizes[0] = d->lastTabsWidth;
+		sizes[1] = qMax(200, sizes[1] - d->lastTabsWidth);
+		d->mainSplitter->setSizes(sizes);
+	}
+	else {
+		if (sizes.size() >= 2 && sizes[0] > 0) {
+			d->lastTabsWidth = sizes[0];
+		}
+		d->tabs->hide();
+	}
+}
+
+bool MainWindow::isDocumentTabsVisible() const {
+	return d->documentTabsVisible;
+}
+
 bool MainWindow::showWidget(const QString& id) {
 	if (QThread::currentThread() != thread())
 		return false;
@@ -532,6 +631,12 @@ void MainWindow::registerSidePanel(const QString& id, const QString& glyph,
 	const QString& title, QWidget* panel, const QString& tooltip, const QString& type) {
 	if (id.isEmpty() || !panel)
 		return;
+	if (!d->side) {
+		// Зона удалена описанием приложения (sidebar delete: true).
+		qWarning() << "MainWindow: sidebar is deleted by application description, panel rejected:"
+			<< id << type;
+		return;
+	}
 	if (auto* existing = widget(id)) {
 		if (existing != panel)
 			panel->deleteLater();
@@ -551,6 +656,12 @@ void MainWindow::registerBottomPanel(const QString& id, const QString& glyph,
 	const QString& title, QWidget* panel, const QString& tooltip, const QString& type) {
 	if (id.isEmpty() || !panel)
 		return;
+	if (!d->bottom) {
+		// Зона удалена описанием приложения (bottombar delete: true).
+		qWarning() << "MainWindow: bottombar is deleted by application description, panel rejected:"
+			<< id << type;
+		return;
+	}
 	if (auto* existing = widget(id)) {
 		if (existing != panel)
 			panel->deleteLater();
@@ -574,6 +685,8 @@ void MainWindow::unregisterBottomPanel(const QString& id) {
 	const auto it = d->entries.constFind(id);
 	if (it == d->entries.cend() || it->kind != WidgetKind::BottomPanel)
 		return;
+	if (!d->bottom)
+		return;
 	d->entries.remove(id);
 	if (QAction* act = d->bottomActions.take(id)) {
 		d->viewMenu->removeAction(act);
@@ -593,6 +706,8 @@ void MainWindow::unregisterSidePanel(const QString& id) {
 	const auto it = d->entries.constFind(id);
 	if (it == d->entries.cend() || it->kind != WidgetKind::SidePanel)
 		return;
+	if (!d->side || !d->activity)
+		return;
 	d->entries.remove(id);
 	if (auto* act = d->sideActions.take(id)) {
 		d->viewMenu->removeAction(act);
@@ -610,6 +725,12 @@ void MainWindow::unregisterSidePanel(const QString& id) {
 }
 
 void MainWindow::showSidePanel(const QString& id) {
+	if (!d->side) {
+		qWarning() << "MainWindow: sidebar is deleted by application description, panel is not shown:"
+			<< id;
+		return;
+	}
+
 	d->side->setCurrentPanel(id);
 	if (!d->side->isVisible()) {
 		d->side->show();
@@ -621,17 +742,26 @@ void MainWindow::showSidePanel(const QString& id) {
 		}
 	}
 
-	d->activity->setActive(id);
+	if (d->activity)
+		d->activity->setActive(id);
 }
 
 void MainWindow::hideSidePanel() {
+	if (!d->side)
+		return;
 	if (d->side->isVisible())
 		d->lastSideWidth = d->side->width();
 	d->side->hide();
-	d->activity->setActive(QString());
+	if (d->activity)
+		d->activity->setActive(QString());
 }
 
 void MainWindow::toggleSidePanel(const QString& id) {
+	if (!d->side) {
+		qWarning() << "MainWindow: sidebar is deleted by application description, panel is not toggled:"
+			<< id;
+		return;
+	}
 	if (d->side->isVisible() && d->side->currentPanel() == id)
 		hideSidePanel();
 	else
@@ -639,6 +769,11 @@ void MainWindow::toggleSidePanel(const QString& id) {
 }
 
 void MainWindow::showBottomPanel(const QString& id) {
+	if (!d->bottom) {
+		qWarning() << "MainWindow: bottombar is deleted by application description, panel is not shown:"
+			<< id;
+		return;
+	}
 	d->bottom->show();
 	d->bottom->setCurrentPanel(id);
 	d->bottom->setCollapsed(false);

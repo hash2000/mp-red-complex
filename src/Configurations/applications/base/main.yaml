@@ -1,6 +1,11 @@
 ### Описание приложения base.
 ### define — объявление класса виджета: name, extends, xtype, title, content.
-### content у вьюпорта: bottombar / sidebar, внутри — default и content панелей.
+### content у вьюпорта: documents / bottombar / sidebar.
+###   documents (для одностраничного приложения) — открытые при загрузке документы:
+###     showTabs (true по умолчанию) — панель открытых документов слева;
+###     content — список документов в формате панелей (xtype, name, glyph, title, tooltip).
+###   bottombar/sidebar — панель с default и списком content панелей;
+###     delete: true — панель не создаётся, а добавление в неё пишет предупреждение.
 ### xtype панели ищется в WidgetRegistry (нативные классы из Launcher)
 ### или в yaml-описаниях, подключённых через requires.
 

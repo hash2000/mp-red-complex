@@ -18,7 +18,7 @@
 #include "Libs/Engine/ui/doc_area.h"
 #include "Libs/Engine/ui/main_window.h"
 #include "Libs/Engine/ui/properties_panel.h"
-#include "Libs/Engine/ui/widget_registry.h"
+#include "Libs/Engine/scripting/widgets/widget_registry.h"
 
 #include <QDebug>
 #include <QDir>
@@ -101,9 +101,12 @@ void WidgetsBuilder::Private::registerAll() {
 
 	// Главное окно приложения. Панели создаются декларативно из yaml-описания,
 	// поэтому встроенные панели по умолчанию не собираются.
+	// Зоны, удалённые описанием (bottombar/sidebar delete: true), не создаются.
 	registry->registerFactory({ kMainViewportClass, kMainViewportXtype },
 		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
-			return new MainWindow(handler.context, handler.parent, /*buildDefaultPanels*/ false);
+			return new MainWindow(handler.context, handler.parent,
+				/*buildDefaultPanels*/ false,
+				MainWindow::Options::fromBuildOptions(handler.options));
 		});
 
 	// Консоль команд: для неё нужен CommandController.

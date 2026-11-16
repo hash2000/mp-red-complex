@@ -4,8 +4,7 @@
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/console/console_table.h"
 #include "Libs/Engine/console/console_json.h"
-#include "Libs/Engine/services/services_registry.h"
-#include "Libs/Engine/ui/widget_registry.h"
+#include "Libs/Engine/scripting/widgets/widget_registry.h"
 #include "Libs/Engine/ui/main_window.h"
 
 #include <QPointer>
