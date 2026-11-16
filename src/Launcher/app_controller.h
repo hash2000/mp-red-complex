@@ -13,7 +13,6 @@ public:
 
 	ServicesRegistry* services() const override;
 	CommandProcessor* commandProcessor() const override;
-	Controllers* controllers() const;
 
 private:
 	void initContext() override;

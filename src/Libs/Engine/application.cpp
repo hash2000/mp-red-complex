@@ -1,5 +1,4 @@
 #include "Libs/Engine/application.h"
-#include "Libs/Engine/main_frame.h"
 #include "Libs/Engine/scripting/command_controller.h"
 #include "Libs/Engine/scripting/bootstrap/bootstrap_manager.h"
 #include "Libs/Engine/scripting/bootstrap/bootstrap_context_builder.h"

@@ -1,5 +1,4 @@
 #include "Launcher/widgets_builder.h"
-#include "Launcher/windows/warmup/warmup_widget.h"
 #include "Content/CodeEditorWidget/code_editor_widget.h"
 #include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
@@ -225,10 +224,10 @@ void WidgetsBuilder::Private::registerAll() {
 			return highlighter && formatter ? new CodeEditorWidget(highlighter, formatter, handler.parent) : nullptr;
 		});
 
-	registry->registerFactory({ "Launcher.WarmupWidget", "warmup" },
-		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
-			return new WarmupWidget(handler.parent);
-		});
+	//registry->registerFactory({ "Launcher.WarmupWidget", "warmup" },
+	//	[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
+	//		return new WarmupWidget(handler.parent);
+	//	});
 
 	// Универсальная панель-заглушка (вывод, ошибки, поиск, git и т.п.).
 	registry->registerFactory({ "System.Panels.Panel", "panel" },

@@ -1,5 +1,4 @@
 #include "Launcher/app_controller.h"
-#include "Launcher/controllers.h"
 #include "Launcher/services.h"
 #include "Launcher/widgets_builder.h"
 #include "Libs/Engine/scripting/i_command.h"
@@ -20,7 +19,6 @@ public:
 	ApplicationController* q;
 
 	std::unique_ptr<CommandProcessor> commandProcessor;
-	std::unique_ptr<Controllers> controllers;
 	std::unique_ptr<Services> servicesBuilder;
 	std::unique_ptr<WidgetsBuilder> widgetsBuilder;
 	std::unique_ptr<ServicesRegistry> services;
@@ -36,7 +34,6 @@ ApplicationController::~ApplicationController() = default;
 void ApplicationController::initContext() {
 	d->commandProcessor = std::make_unique<CommandProcessor>(resources());
 	d->servicesBuilder = std::make_unique<Services>(resources(), globalContext());
-	d->controllers = std::make_unique<Controllers>(this);
 	d->widgetsBuilder = std::make_unique<WidgetsBuilder>(this);
 
 	auto commands = commandProcessor();
@@ -59,8 +56,4 @@ ServicesRegistry* ApplicationController::services() const {
 		d->services = d->servicesBuilder->create();
 	}
 	return d->services.get();
-}
-
-Controllers* ApplicationController::controllers() const {
-	return d->controllers.get();
 }
