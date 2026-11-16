@@ -4,7 +4,11 @@
 #include <QCoreApplication>
 
 class LauncherApplication : public Application {
+public:
+	~LauncherApplication() override;
+
 protected:
+
 	QString organizationName() const override {
 		return "Hash2000";
 	}
@@ -23,6 +27,8 @@ protected:
 private:
 	std::unique_ptr<ApplicationController> appController;
 };
+
+LauncherApplication::~LauncherApplication() = default;
 
 
 int main(int argc, char *argv[]) {

@@ -20,8 +20,8 @@ public:
 	CodeEditorWidget* q;
 
 	Highlighter* highlighter = nullptr;
-	HighlightingPluginManager* pluginManager;
-	FormatterPluginManager* formatterManager;
+	HighlightingPluginManager* pluginManager = nullptr;
+	FormatterPluginManager* formatterManager = nullptr;
 	FormatterPlugin* currentFormatter = nullptr;
 	QString previusSuffix;
 

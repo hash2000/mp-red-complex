@@ -29,7 +29,12 @@ ApplicationController::ApplicationController(Resources* resources, QObject* pare
 	, d(std::make_unique<Private>(this)) {
 }
 
-ApplicationController::~ApplicationController() = default;
+ApplicationController::~ApplicationController() {
+	d->services.reset();
+	d->servicesBuilder.reset();
+	d->widgetsBuilder.reset();
+	d->commandProcessor.reset();
+}
 
 void ApplicationController::initContext() {
 	d->commandProcessor = std::make_unique<CommandProcessor>(resources());

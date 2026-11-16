@@ -21,7 +21,7 @@ public:
 class ServicesRegistry {
 public:
 	ServicesRegistry() = default;
-	~ServicesRegistry() = default;
+	virtual ~ServicesRegistry() = default;
 
 	template<typename T>
 	T* get() {
