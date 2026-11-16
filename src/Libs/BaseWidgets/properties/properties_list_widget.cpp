@@ -25,7 +25,6 @@ public:
 	void rebuildUI(const QList<PropertyData>& properties);
 	void clearUI();
 	QWidget* createEditor(const PropertyData& prop);
-	QString getEditorStyle(bool readOnly) const;
 
 	QVBoxLayout* mainLayout = nullptr;
 	QLabel* headerLabel = nullptr;
@@ -41,18 +40,16 @@ void PropertiesListWidget::Private::initUI() {
 	mainLayout->setSpacing(0);
 
 	headerLabel = new QLabel("Properties", q);
-	headerLabel->setStyleSheet(
-		"background: #2D2D30; color: #CCCCCC; padding: 6px 8px; "
-		"font-weight: bold; border-bottom: 1px solid #3E3E42;"
-	);
+	headerLabel->setObjectName(QStringLiteral("PropertiesHeaderLabel"));
 	mainLayout->addWidget(headerLabel);
 
 	scrollArea = new QScrollArea(q);
+	scrollArea->setObjectName(QStringLiteral("PropertiesScroll"));
 	scrollArea->setWidgetResizable(true);
 	scrollArea->setFrameShape(QFrame::NoFrame);
-	scrollArea->setStyleSheet("background: transparent; border: none;");
 
 	scrollContent = new QWidget();
+	scrollContent->setObjectName(QStringLiteral("PropertiesContent"));
 	formLayout = new QFormLayout(scrollContent);
 	formLayout->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
 	formLayout->setRowWrapPolicy(QFormLayout::WrapLongRows);
@@ -61,11 +58,6 @@ void PropertiesListWidget::Private::initUI() {
 	formLayout->setVerticalSpacing(1);
 	formLayout->setHorizontalSpacing(0);
 	formLayout->setContentsMargins(0, 0, 0, 0);
-
-	scrollContent->setStyleSheet(
-		"QLabel { padding: 4px 6px; background: #252526; color: #D4D4D4; "
-		"border-bottom: 1px solid #3E3E42; }"
-	);
 
 	scrollArea->setWidget(scrollContent);
 	mainLayout->addWidget(scrollArea);
@@ -126,7 +118,6 @@ void PropertiesListWidget::Private::rebuildUI(const QList<PropertyData>& propert
 
 QWidget* PropertiesListWidget::Private::createEditor(const PropertyData& prop) {
 	QWidget* editor = nullptr;
-	const QString style = getEditorStyle(prop.readOnly);
 
 	switch (prop.type) {
 		case PropertyType::Combo: {
@@ -135,12 +126,13 @@ QWidget* PropertiesListWidget::Private::createEditor(const PropertyData& prop) {
 			int idx = prop.comboOptions.indexOf(prop.value.toString());
 			if (idx >= 0) combo->setCurrentIndex(idx);
 
+			combo->setObjectName(QStringLiteral("PropertyEditor"));
+			combo->setProperty("readOnlyEditor", prop.readOnly);
+
 			if (prop.readOnly) {
 				combo->setEnabled(false);
-				combo->setStyleSheet(style);
 			}
 			else {
-				combo->setStyleSheet(style);
 				QObject::connect(combo, &QComboBox::currentTextChanged, q,
 					[this, id = prop.id](const QString& val) {
 						emit q->propertyChanged(id, val);
@@ -154,7 +146,8 @@ QWidget* PropertiesListWidget::Private::createEditor(const PropertyData& prop) {
 			auto* lineEdit = new QLineEdit();
 			lineEdit->setText(prop.value.toString());
 			lineEdit->setReadOnly(prop.readOnly);
-			lineEdit->setStyleSheet(style);
+			lineEdit->setObjectName(QStringLiteral("PropertyEditor"));
+			lineEdit->setProperty("readOnlyEditor", prop.readOnly);
 
 			if (!prop.readOnly) {
 				QObject::connect(lineEdit, &QLineEdit::textEdited, q,
@@ -174,7 +167,8 @@ QWidget* PropertiesListWidget::Private::createEditor(const PropertyData& prop) {
 			textEdit->setTextInteractionFlags(prop.readOnly
 				? Qt::TextSelectableByMouse
 				: Qt::TextEditorInteraction);
-			textEdit->setStyleSheet(style);
+			textEdit->setObjectName(QStringLiteral("PropertyEditor"));
+			textEdit->setProperty("readOnlyEditor", prop.readOnly);
 
 			if (!prop.readOnly) {
 				QObject::connect(textEdit, &QTextEdit::textChanged, q,
@@ -195,15 +189,14 @@ QWidget* PropertiesListWidget::Private::createEditor(const PropertyData& prop) {
 			auto* pathEdit = new QLineEdit();
 			pathEdit->setText(prop.value.toString());
 			pathEdit->setReadOnly(true);
-			pathEdit->setStyleSheet(style);
+			pathEdit->setObjectName(QStringLiteral("PropertyEditor"));
+			pathEdit->setProperty("readOnlyEditor", prop.readOnly);
 
 			auto* btn = new QToolButton();
+			btn->setObjectName(QStringLiteral("PropertyBrowseButton"));
 			btn->setText("...");
 			btn->setFixedWidth(24);
 			btn->setToolTip(prop.type == PropertyType::PathFile ? "Выбрать файл" : "Выбрать папку");
-			btn->setStyleSheet("QToolButton { background: #3E3E42; color: white; border: none; } "
-				"QToolButton:pressed { background: #007ACC; } "
-				"QToolButton:disabled { background: #333333; color: #666666; }");
 
 			if (prop.readOnly) {
 				btn->setEnabled(false);
@@ -234,8 +227,8 @@ QWidget* PropertiesListWidget::Private::createEditor(const PropertyData& prop) {
 			hLayout->addWidget(btn);
 
 			auto* container = new QWidget();
+			container->setObjectName(QStringLiteral("PropertyContainer"));
 			container->setLayout(hLayout);
-			container->setStyleSheet("background: transparent;");
 			editor = container;
 			break;
 		}
@@ -244,16 +237,13 @@ QWidget* PropertiesListWidget::Private::createEditor(const PropertyData& prop) {
 			auto* chk = new QCheckBox();
 			chk->setChecked(prop.value.toBool());
 			chk->setEnabled(!prop.readOnly);
-			if (prop.readOnly) {
-				chk->setStyleSheet(style);
-			}
 
 			auto* wrapper = new QWidget();
+			wrapper->setObjectName(QStringLiteral("PropertyContainer"));
 			auto* wLayout = new QHBoxLayout(wrapper);
 			wLayout->addWidget(chk, 0, Qt::AlignCenter);
 			wLayout->setContentsMargins(0, 0, 0, 0);
 			wrapper->setLayout(wLayout);
-			wrapper->setStyleSheet("background: transparent;");
 
 			if (!prop.readOnly) {
 				QObject::connect(chk, &QCheckBox::toggled, q,
@@ -275,7 +265,8 @@ QWidget* PropertiesListWidget::Private::createEditor(const PropertyData& prop) {
 				spin->setRange(prop.minVal, prop.maxVal);
 				spin->setSingleStep(prop.step);
 				spin->setReadOnly(prop.readOnly); // setReadOnly() у QAbstractSpinBox есть
-				spin->setStyleSheet(style);
+				spin->setObjectName(QStringLiteral("PropertyEditor"));
+				spin->setProperty("readOnlyEditor", prop.readOnly);
 
 				if (!prop.readOnly) {
 					QObject::connect(spin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), q,
@@ -291,7 +282,8 @@ QWidget* PropertiesListWidget::Private::createEditor(const PropertyData& prop) {
 				spin->setRange(static_cast<int>(prop.minVal), static_cast<int>(prop.maxVal));
 				spin->setSingleStep(static_cast<int>(prop.step));
 				spin->setReadOnly(prop.readOnly);
-				spin->setStyleSheet(style);
+				spin->setObjectName(QStringLiteral("PropertyEditor"));
+				spin->setProperty("readOnlyEditor", prop.readOnly);
 
 				if (!prop.readOnly) {
 					QObject::connect(spin, QOverload<int>::of(&QSpinBox::valueChanged), q,
@@ -309,7 +301,8 @@ QWidget* PropertiesListWidget::Private::createEditor(const PropertyData& prop) {
 			button->setText("...");
 			button->setToolButtonStyle(Qt::ToolButtonTextOnly);
 			button->setEnabled(!prop.readOnly);
-			button->setStyleSheet(style);
+			button->setObjectName(QStringLiteral("PropertyEditor"));
+			button->setProperty("readOnlyEditor", prop.readOnly);
 
 			if (!prop.readOnly) {
 				QObject::connect(button, &QToolButton::clicked, q,
@@ -328,18 +321,18 @@ QWidget* PropertiesListWidget::Private::createEditor(const PropertyData& prop) {
 				initialColor = Qt::black;
 			}
 
+			colorBtn->setObjectName(QStringLiteral("PropertyColorButton"));
 			colorBtn->setText(initialColor.name());
 			colorBtn->setFixedHeight(26);
 			colorBtn->setCursor(Qt::PointingHandCursor);
 
-			// Лямбда для динамического обновления стиля под текущий цвет
+			// Рамка и отступы кнопки заданы темой; код выставляет только сам цвет,
+			// потому что это значение редактируемого свойства.
 			auto updateColorStyle = [colorBtn](const QColor& c) {
 				bool isLight = c.lightness() > 128;
 				QString textColor = isLight ? "#000000" : "#FFFFFF";
 				QString style = QString(
-					"QPushButton { background-color: %1; color: %2; border: 1px solid #3E3E42; padding: 2px 6px; text-align: left; }"
-					"QPushButton:hover { border-color: #007ACC; }"
-					"QPushButton:disabled { border-color: transparent; opacity: 0.75; }"
+					"background-color: %1; color: %2;"
 				).arg(c.name()).arg(textColor);
 				colorBtn->setStyleSheet(style);
 			};
@@ -377,20 +370,6 @@ QWidget* PropertiesListWidget::Private::createEditor(const PropertyData& prop) {
 
 	return editor;
 }
-
-QString PropertiesListWidget::Private::getEditorStyle(bool readOnly) const {
-	if (readOnly) {
-		return R"(
-            background: #252526; color: #808080; border: 1px solid transparent; 
-            padding: 2px 4px; selection-background-color: #555555;
-        )";
-	}
-	return R"(
-        background: #1E1E1E; color: #D4D4D4; border: 1px solid #3E3E42; 
-        padding: 2px 4px; selection-background-color: #094771;
-    )";
-}
-
 
 PropertiesListWidget::PropertiesListWidget(QWidget* parent)
 	: QWidget(parent)

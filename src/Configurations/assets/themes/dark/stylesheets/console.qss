@@ -1,0 +1,33 @@
+/* ------------------------------------------------------------------
+   Консоль команд: область вывода, строка ввода, кнопки.
+   Оформление текста вывода (class="...") задаётся отдельным файлом
+   stylesheets/console-document.css, потому что это CSS для QTextDocument.
+   ------------------------------------------------------------------ */
+
+QTextEdit#ConsoleOutputArea {
+  background-color: #1e1e1e;
+  color: #d4d4d4;
+  border: 1px solid #3e3e42;
+  border-radius: 3px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 10pt;
+}
+
+QTextEdit#ConsoleInputLine {
+  background-color: #1e1e1e;
+  color: #d4d4d4;
+  border: 1px solid #3e3e42;
+  border-radius: 3px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 10pt;
+}
+
+QToolButton#ConsoleButton {
+  color: #d4d4d4;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 2px 6px;
+}
+QToolButton#ConsoleButton:hover { background: #094771; border-color: #1177bb; }
+QToolButton#ConsoleButton:pressed { background: #0e639c; }

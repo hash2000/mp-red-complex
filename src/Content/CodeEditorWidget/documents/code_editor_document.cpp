@@ -84,48 +84,8 @@ void CodeEditorDocument::Private::setupUi() {
 
 QWidget* CodeEditorDocument::Private::createRibbon() {
 	ribbon = new QWidget;
-	ribbon->setObjectName(QStringLiteral("Ribbon"));
+	ribbon->setObjectName(QStringLiteral("CodeEditorRibbon"));
 	ribbon->setAttribute(Qt::WA_StyledBackground);
-	ribbon->setStyleSheet(QStringLiteral(R"(
-		QWidget#Ribbon {
-			background-color: #252526;
-			border-bottom: 1px solid #3e3e42;
-		}
-		QFrame#RibbonGroup {
-			background-color: #2d2d30;
-			border: 1px solid #3e3e42;
-			border-radius: 4px;
-		}
-		QLabel#RibbonGroupCaption { color: #8f8f8f; font-size: 8px; font-weight: 600; }
-		QToolButton#RibbonButton {
-			color: #d4d4d4;
-			background: transparent;
-			border: 1px solid transparent;
-			border-radius: 3px;
-			font-size: 15px;
-			padding: 0px;
-		}
-		QToolButton#RibbonButton:hover { background-color: #094771; border-color: #1177bb; }
-		QToolButton#RibbonButton:pressed { background-color: #0e639c; }
-		QToolButton#RibbonToggle {
-			color: #8f8f8f;
-			background: transparent;
-			border: 1px solid transparent;
-			border-radius: 3px;
-			font-size: 11px;
-			padding: 0px;
-		}
-		QToolButton#RibbonToggle:hover { color: #d4d4d4; background-color: #3e3e42; }
-		QComboBox#RibbonCombo {
-			background-color: #1e1e1e;
-			color: #d4d4d4;
-			border: 1px solid #3e3e42;
-			border-radius: 3px;
-			padding: 2px 6px;
-			min-height: 22px;
-		}
-		QComboBox#RibbonCombo::drop-down { border: none; width: 16px; }
-	)"));
 
 	auto* row = new QHBoxLayout(ribbon);
 	row->setContentsMargins(6, 4, 4, 4);
@@ -156,7 +116,7 @@ QWidget* CodeEditorDocument::Private::createRibbon() {
 
 	auto textGroup = addGroup(groupsLayout, q->tr("Текст"));
 	fontSizeCombo = new QComboBox(textGroup.widget);
-	fontSizeCombo->setObjectName(QStringLiteral("RibbonCombo"));
+	fontSizeCombo->setObjectName(QStringLiteral("CodeEditorRibbonCombo"));
 	fontSizeCombo->setFixedWidth(kFontSizeComboWidth);
 	setupFontSizes();
 	connect(fontSizeCombo, &QComboBox::currentIndexChanged, q, [this](int index) {
@@ -168,7 +128,7 @@ QWidget* CodeEditorDocument::Private::createRibbon() {
 
 	auto languageGroup = addGroup(groupsLayout, q->tr("Язык"));
 	languageCombo = new QComboBox(languageGroup.widget);
-	languageCombo->setObjectName(QStringLiteral("RibbonCombo"));
+	languageCombo->setObjectName(QStringLiteral("CodeEditorRibbonCombo"));
 	languageCombo->setMinimumWidth(kLanguageComboWidth);
 	languageCombo->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 	setupLanguages();
@@ -201,7 +161,7 @@ QWidget* CodeEditorDocument::Private::createRibbon() {
 
 	// Небольшая кнопка в правом углу ленты: свернуть или показать её.
 	ribbonToggle = new QToolButton(ribbon);
-	ribbonToggle->setObjectName(QStringLiteral("RibbonToggle"));
+	ribbonToggle->setObjectName(QStringLiteral("CodeEditorRibbonToggle"));
 	ribbonToggle->setFixedSize(20, 20);
 	ribbonToggle->setCursor(Qt::PointingHandCursor);
 	ribbonToggle->setFocusPolicy(Qt::NoFocus);
@@ -229,7 +189,7 @@ CodeEditorDocument::Private::RibbonGroup CodeEditorDocument::Private::addGroup(
 	RibbonGroup group;
 
 	group.widget = new QFrame;
-	group.widget->setObjectName(QStringLiteral("RibbonGroup"));
+	group.widget->setObjectName(QStringLiteral("CodeEditorRibbonGroup"));
 	group.widget->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
 
 	auto* layout = new QVBoxLayout(group.widget);
@@ -241,7 +201,7 @@ CodeEditorDocument::Private::RibbonGroup CodeEditorDocument::Private::addGroup(
 	group.content->setSpacing(4);
 
 	group.caption = new QLabel(title.toUpper(), group.widget);
-	group.caption->setObjectName(QStringLiteral("RibbonGroupCaption"));
+	group.caption->setObjectName(QStringLiteral("CodeEditorRibbonCaption"));
 	group.caption->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 
 	layout->addLayout(group.content, 1);
@@ -254,7 +214,7 @@ CodeEditorDocument::Private::RibbonGroup CodeEditorDocument::Private::addGroup(
 QToolButton* CodeEditorDocument::Private::addButton(RibbonGroup& group, const QString& glyph,
 	const QString& tooltip) {
 	auto* button = new QToolButton(group.widget);
-	button->setObjectName(QStringLiteral("RibbonButton"));
+	button->setObjectName(QStringLiteral("CodeEditorRibbonButton"));
 	button->setText(glyph);
 	button->setToolTip(tooltip);
 	button->setToolButtonStyle(Qt::ToolButtonTextOnly);

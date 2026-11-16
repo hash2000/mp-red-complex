@@ -4,7 +4,9 @@
 #include "Libs/Engine/scripting/command_processor.h"
 #include "Libs/Engine/scripting/command_controller.h"
 #include "Libs/Base/extensions/text_edit_extensions.h"
+#include "Libs/Resources/resources.h"
 
+#include <QFile>
 #include <QFontDatabase>
 #include <QScrollBar>
 #include <QKeyEvent>
@@ -23,137 +25,26 @@
 #include <QMessageBox>
 
 namespace {
-// Настройка стилей окна вывода
-static QString kQTextEditOutputAreaStyle = R"(
-    QTextEdit {
-        background-color: #1e1e1e;
-        color: #d4d4d4;
-        border: 1px solid #3e3e42;
-        border-radius: 3px;
-        font-family: 'Consolas', 'Courier New', monospace;
-        font-size: 10pt;
-    }
-)";
-// Настройка форматирования текста
-static QString kQTextEditOutputAreaDocumentStyleSheet = R"(		
-    .timestamp { color: #808080; font-size: 8pt; }
-    .command { color: #569cd6; font-weight: bold; }
-    .error { color: #f44336; }
-    .success { color: #66cc66; }
-    .system { color: #79b8ff; font-style: italic; }
-    .info { color: #d4d4d4; }
-		.warning { color: #FFE66D; }
+/// Оформление текста вывода (HTML-классы) хранится в теме:
+/// assets/themes/{theme}/stylesheets/console-document.css.
+QString loadOutputDocumentStyle(CommandController* controller) {
+	if (!controller || !controller->resources()) {
+		return { };
+	}
 
-		/* Стили для таблиц */
-    table.console-table {
-        border-collapse: collapse;
-        margin: 8px 0;
-        width: 100%;
-        max-width: 100%;
-        overflow-x: auto;
-        display: block;
-    }
-    
-    table.console-table th,
-    table.console-table td {
-        border: 1px solid #4a4a4a;
-        padding: 0px 8px;
-        vertical-align: top;
-        white-space: pre-wrap;
-        word-break: break-word;
-        min-width: 80px;
-    }
-    
-    table.console-table th {
-        background-color: #2d2d2d;
-        font-weight: bold;
-        color: #ffffff;
-        position: sticky;
-        top: 0;
-    }
-    
-    table.console-table tr:nth-child(even) {
-        background-color: #252526;
-    }
-    
-    table.console-table tr:nth-child(odd) {
-        background-color: #1e1e1e;
-    }
+	const auto themeDir = controller->resources()->Directories.get("path.theme");
+	if (!themeDir) {
+		return { };
+	}
 
-    /* Стили для JSON Viewer */
-    .json-viewer {
-        margin: 4px 0;
-        border-left: 3px solid #569cd6;
-				display: block;
-    }
-    
-    .json-viewer .json-node {
-        padding: 2px 0;
-    }
-    
-    .json-viewer .json-key {
-        color: #9cdcfe;
-        font-weight: bold;
-    }
-    
-    .json-viewer .json-string {
-        color: #ce9178;
-    }
-    
-    .json-viewer .json-number {
-        color: #b5cea8;
-    }
-    
-    .json-viewer .json-boolean {
-        color: #569cd6;
-        font-weight: bold;
-    }
-    
-    .json-viewer .json-null {
-        color: #808080;
-        font-style: italic;
-    }
-    
-    .json-viewer .json-bracket {
-        color: #d4d4d4;
-        font-weight: bold;
-    }
-    
-    .json-viewer .json-punctuation {
-        color: #d4d4d4;
-    }
-    
-    .json-viewer .json-more {
-        color: #6a9955;
-        font-style: italic;
-        padding-left: 20px;
-    }
-    
-    .json-viewer .json-children {
-        padding-left: 20px;
-        border-left: 1px solid #2d2d30;
-        margin: 2px 0 2px 5px;
-    }
-    
-    /* Стили для разных статусов */
-    .json-viewer-success {
-        border-left-color: #66cc66;
-    }
-    
-    .json-viewer-error {
-        border-left-color: #f44336;
-    }
-    
-    .json-viewer-warning {
-        border-left-color: #FFE66D;
-    }
-    
-    /* Подсветка при наведении для QTextEdit (поддерживается) */
-    .json-viewer .json-node:hover {
-        background-color: #2d2d30;
-        border-radius: 2px;
-    }
-)";
+	QFile file(themeDir->filePath("stylesheets/console-document.css"));
+	if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+		qWarning() << "CommandConsole: console-document.css is not found in theme:" << themeDir->path();
+		return { };
+	}
+
+	return QString::fromUtf8(file.readAll());
+}
 }
 
 class CommandConsole::Private {
@@ -227,6 +118,7 @@ void CommandConsole::Private::setupButtons() {
 
 QToolButton* CommandConsole::Private::addButton(const QString& title, const QString& tooltip) {
 	auto btn = new QToolButton(buttonsContainer);
+	btn->setObjectName(QStringLiteral("ConsoleButton"));
 	buttonsLayout->insertWidget(buttonsLayout->count() - 1, btn);
 	btn->setText(title);
 	btn->setToolTip(tooltip);
@@ -240,6 +132,7 @@ QWidget* CommandConsole::Private::setupConsoleUI(QWidget* parent) {
 
 	// Область вывода
 	outputArea = new QTextEdit(parent);
+	outputArea->setObjectName(QStringLiteral("ConsoleOutputArea"));
 	outputArea->setReadOnly(true);
 	outputArea->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 	outputArea->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
@@ -247,6 +140,7 @@ QWidget* CommandConsole::Private::setupConsoleUI(QWidget* parent) {
 
 	// Поле ввода
 	inputLine = new QTextEdit(parent);
+	inputLine->setObjectName(QStringLiteral("ConsoleInputLine"));
 	inputLine->setPlaceholderText("Enter command...");
 	inputLine->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
 	inputLine->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -328,8 +222,9 @@ bool CommandConsole::eventFilter(QObject* obj, QEvent* event) {
 }
 
 void CommandConsole::Private::setupOutputStyling() {
-	outputArea->setStyleSheet(kQTextEditOutputAreaStyle);
-	outputArea->document()->setDefaultStyleSheet(kQTextEditOutputAreaDocumentStyleSheet);
+	// Виджеты оформляет тема (console.qss), а HTML-вывод консоли —
+	// console-document.css из каталога активной темы.
+	outputArea->document()->setDefaultStyleSheet(loadOutputDocumentStyle(controller));
 }
 
 void CommandConsole::Private::submitCommend() {

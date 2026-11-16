@@ -33,11 +33,6 @@ LoginWidget::LoginWidget(UsersService* usersService, QWidget* parent)
 	d->usersService = usersService;
 
 	setWindowTitle("Вход в систему");
-	setStyleSheet(R"(
-		LoginWidget {
-			background-color: #0f172a;
-		}
-	)");
 
 	setupLayout();
 }
@@ -51,15 +46,14 @@ void LoginWidget::setupLayout() {
 
 	// Заголовок
 	d->titleLabel = new QLabel("Вход в систему");
-	d->titleLabel->setStyleSheet(
-		"color: #e2e8f0; font-weight: 700; font-size: 24px;");
+	d->titleLabel->setObjectName(QStringLiteral("AuthTitle"));
 	d->titleLabel->setAlignment(Qt::AlignCenter);
 	mainLayout->addWidget(d->titleLabel);
 
 	// Разделитель
 	auto line = new QFrame();
+	line->setObjectName(QStringLiteral("AuthSeparator"));
 	line->setFrameShape(QFrame::HLine);
-	line->setStyleSheet("background-color: #4a5568;");
 	line->setFixedHeight(2);
 	mainLayout->addWidget(line);
 
@@ -70,48 +64,24 @@ void LoginWidget::setupLayout() {
 
 	// Логин
 	d->loginEdit = new QLineEdit();
+	d->loginEdit->setObjectName(QStringLiteral("AuthInput"));
 	d->loginEdit->setPlaceholderText("Введите логин");
 	d->loginEdit->setFixedHeight(40);
-	d->loginEdit->setStyleSheet(R"(
-		QLineEdit {
-			background-color: rgba(30, 41, 59, 200);
-			border: 1px solid #4a5568;
-			border-radius: 6px;
-			color: #e2e8f0;
-			padding: 0 12px;
-			font-size: 14px;
-		}
-		QLineEdit:focus {
-			border-color: #3b82f6;
-		}
-	)");
 	formLayout->addRow("Логин:", d->loginEdit);
 
 	// Пароль
 	d->passwordEdit = new QLineEdit();
+	d->passwordEdit->setObjectName(QStringLiteral("AuthInput"));
 	d->passwordEdit->setPlaceholderText("Введите пароль");
 	d->passwordEdit->setEchoMode(QLineEdit::Password);
 	d->passwordEdit->setFixedHeight(40);
-	d->passwordEdit->setStyleSheet(R"(
-		QLineEdit {
-			background-color: rgba(30, 41, 59, 200);
-			border: 1px solid #4a5568;
-			border-radius: 6px;
-			color: #e2e8f0;
-			padding: 0 12px;
-			font-size: 14px;
-		}
-		QLineEdit:focus {
-			border-color: #3b82f6;
-		}
-	)");
 	formLayout->addRow("Пароль:", d->passwordEdit);
 
 	mainLayout->addLayout(formLayout);
 
 	// Метка для ошибок
 	d->errorLabel = new QLabel();
-	d->errorLabel->setStyleSheet("color: #ef4444; font-size: 13px;");
+	d->errorLabel->setObjectName(QStringLiteral("AuthError"));
 	d->errorLabel->setWordWrap(true);
 	d->errorLabel->hide();
 	mainLayout->addWidget(d->errorLabel);
@@ -122,44 +92,14 @@ void LoginWidget::setupLayout() {
 
 	// Кнопка входа
 	d->loginButton = new QPushButton("Войти");
+	d->loginButton->setObjectName(QStringLiteral("AuthPrimaryButton"));
 	d->loginButton->setFixedHeight(44);
-	d->loginButton->setStyleSheet(R"(
-		QPushButton {
-			background-color: #10b981;
-			color: #0f172a;
-			border: none;
-			border-radius: 6px;
-			font-weight: 600;
-			font-size: 14px;
-		}
-		QPushButton:hover {
-			background-color: #0da271;
-		}
-		QPushButton:pressed {
-			background-color: #0a8c62;
-		}
-	)");
 	buttonLayout->addWidget(d->loginButton, 1);
 
 	// Кнопка регистрации
 	d->registerButton = new QPushButton("Регистрация");
+	d->registerButton->setObjectName(QStringLiteral("AuthSecondaryButton"));
 	d->registerButton->setFixedHeight(44);
-	d->registerButton->setStyleSheet(R"(
-		QPushButton {
-			background-color: #3b82f6;
-			color: #0f172a;
-			border: none;
-			border-radius: 6px;
-			font-weight: 600;
-			font-size: 14px;
-		}
-		QPushButton:hover {
-			background-color: #2563eb;
-		}
-		QPushButton:pressed {
-			background-color: #1d4ed8;
-		}
-	)");
 	buttonLayout->addWidget(d->registerButton, 1);
 
 	mainLayout->addLayout(buttonLayout);

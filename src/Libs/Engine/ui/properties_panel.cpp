@@ -49,7 +49,7 @@ PropertiesPanel::PropertiesPanel(QWidget* parent)
 
 	auto* top = new QHBoxLayout;
 	d->header = new QLabel(this);
-	d->header->setStyleSheet(QStringLiteral("font-weight:600;"));
+	d->header->setObjectName(QStringLiteral("PropertiesPanelHeader"));
 	d->refreshBtn = new GlyphToolButton(QStringLiteral("⟳"), tr("Обновить"), this);
 	top->addWidget(d->header, 1);
 	top->addWidget(d->refreshBtn);

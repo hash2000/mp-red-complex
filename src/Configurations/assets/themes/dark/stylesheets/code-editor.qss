@@ -1,0 +1,59 @@
+/* ------------------------------------------------------------------
+   Редактор кода: CodeEditorWidget и лента управления документом.
+   ------------------------------------------------------------------ */
+
+CodeEditorWidget {
+  background-color: #1e1e1e;
+  color: #d4d4d4;
+  border: 1px solid #3e3e42;
+  border-radius: 3px;
+}
+
+/* ---------- Лента управления (CodeEditorDocument) ---------- */
+QWidget#CodeEditorRibbon {
+  background-color: #252526;
+  border-bottom: 1px solid #3e3e42;
+}
+
+QFrame#CodeEditorRibbonGroup {
+  background-color: #2d2d30;
+  border: 1px solid #3e3e42;
+  border-radius: 4px;
+}
+
+QLabel#CodeEditorRibbonCaption {
+  color: #8f8f8f;
+  font-size: 8px;
+  font-weight: 600;
+}
+
+QToolButton#CodeEditorRibbonButton {
+  color: #d4d4d4;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  font-size: 15px;
+  padding: 0px;
+}
+QToolButton#CodeEditorRibbonButton:hover { background-color: #094771; border-color: #1177bb; }
+QToolButton#CodeEditorRibbonButton:pressed { background-color: #0e639c; }
+
+QToolButton#CodeEditorRibbonToggle {
+  color: #8f8f8f;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  font-size: 11px;
+  padding: 0px;
+}
+QToolButton#CodeEditorRibbonToggle:hover { color: #d4d4d4; background-color: #3e3e42; }
+
+QComboBox#CodeEditorRibbonCombo {
+  background-color: #1e1e1e;
+  color: #d4d4d4;
+  border: 1px solid #3e3e42;
+  border-radius: 3px;
+  padding: 2px 6px;
+  min-height: 22px;
+}
+QComboBox#CodeEditorRibbonCombo::drop-down { border: none; width: 16px; }

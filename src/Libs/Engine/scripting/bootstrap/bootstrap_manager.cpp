@@ -4,6 +4,7 @@
 #include "Libs/Engine/themes/palette_parser.h"
 #include "Libs/Resources/resources.h"
 #include <QApplication>
+#include <QDir>
 #include <QPalette>
 #include <QStyleHints>
 #include <QDebug>
@@ -52,6 +53,10 @@ bool BootstrapManager::reload() {
 		ThemeManager themeMgr(themeDir);
 
 		qDebug() << "Using theme directory:" << themeDir;
+
+		// Каталог темы доступен остальным частям приложения (например,
+		// консоли для console-document.css).
+		d->resources->Directories.set("path.theme", QDir(themeDir));
 
 		// 3. Загрузка и применение Stylesheet
 		QByteArray cssData = themeMgr.loadStylesheet();

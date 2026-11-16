@@ -1,3 +1,10 @@
+/* ------------------------------------------------------------------
+   Базовые стили темы: общие для приложения элементы управления.
+   Файлы подключаются по порядку из stylesheets/index.yaml, поэтому
+   специализированные наборы (console, properties, fetch-api, users)
+   могут переопределять правила отсюда.
+   ------------------------------------------------------------------ */
+
 QTableView {
   border: none;
 }
@@ -56,6 +63,33 @@ QLineEdit, QSpinBox { background:#313131; border:1px solid #3c3c3c; border-radiu
 QLineEdit:focus, QSpinBox:focus { border:1px solid #7160e8; }
 QPushButton { background:#313131; border:1px solid #3c3c3c; border-radius:3px; padding:4px 12px; }
 QPushButton:hover { background:#3c3c3c; }
+
+/* ---------- Общие выпадающие списки ---------- */
+QComboBox {
+  background:#313131;
+  color:#d4d4d4;
+  border:1px solid #3c3c3c;
+  border-radius:3px;
+  padding:2px 6px;
+  min-height:20px;
+}
+QComboBox:hover { border-color:#7160e8; }
+QComboBox QAbstractItemView {
+  background:#252526;
+  color:#d4d4d4;
+  border:1px solid #3c3c3c;
+  selection-background-color:#7160e8;
+  selection-color:#ffffff;
+}
+
+/* ---------- Общие индикаторы выполнения ---------- */
+QProgressBar {
+  background:#313131;
+  border:1px solid #3c3c3c;
+  border-radius:3px;
+  text-align:center;
+}
+QProgressBar::chunk { background:#7160e8; border-radius:2px; }
 
 /* ---------- Общие заголовки панелей ---------- */
 #PanelHeader { background:#181818; border-bottom:1px solid #2b2b2b; }

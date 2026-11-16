@@ -71,17 +71,9 @@ void CodeEditorWidget::Private::setupUI() {
 }
 
 void CodeEditorWidget::Private::setupStyling() {
+	// Оформление задаётся темой (stylesheets/code-editor.qss),
+	// здесь остаётся только моноширинный шрифт редактора.
 	q->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
-
-	QString styleSheet = R"(
-        QTextEdit {
-            background-color: #1e1e1e;
-            color: #d4d4d4;
-            border: 1px solid #3e3e42;
-            border-radius: 3px;
-        }
-    )";
-	q->setStyleSheet(styleSheet);
 }
 
 void CodeEditorWidget::setHoghlighterByPath(const QString& path) {
