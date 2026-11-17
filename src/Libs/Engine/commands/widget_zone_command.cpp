@@ -117,11 +117,21 @@ bool WidgetZoneCommand::executeCreate(const std::shared_ptr<CommandContext>& con
 	handler.title = title;
 	handler.glyph = glyph;
 	handler.parent = window;
+	// Параметры запуска (action/target/...) виджет получает из контекста команды.
 	handler.context = context;
+
+	// Новый документ всегда создаётся в контексте `.documents.{id}`:
+	// если команду выполнил документ (например, file explorer), родителем
+	// становится его контекст, иначе — глобальный контекст приложения,
+	// независимо от выбранного в консоли пространства имён.
+	auto creator = context->owningDocumentContext();
+	if (!creator) {
+		creator = context->globalContext();
+	}
 
 	auto* widget = window->createWidget(id, _kind, title, glyph,
 		[registry, target, handler]() { return registry->build(target, handler); },
-		tooltip, target);
+		tooltip, target, creator);
 	if (!widget) {
 		controller->printError(QString("%1: не удалось создать %2").arg(_name, target));
 		return false;

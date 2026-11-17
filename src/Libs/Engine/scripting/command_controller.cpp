@@ -13,6 +13,9 @@
 class CommandController::Private {
 public:
 	std::shared_ptr<CommandContext> globalContext;
+	/// Корневой контекст документов `.documents`; владеется контроллером,
+	/// иначе он уничтожался бы вместе с локальной ссылкой.
+	std::shared_ptr<CommandContext> documentsContext;
 	std::unique_ptr<WidgetRegistry> widgetRegistry;
 	QPointer<MainWindow> mainWindow;
 	Resources* resources;
@@ -34,6 +37,10 @@ CommandController::~CommandController() {
 }
 
 void CommandController::init() {
+	// Корневой контекст документов: в нём живут документы-синглтоны,
+	// дочерние документы создаются в `.documents.{documentId}`.
+	d->documentsContext = d->globalContext->documentsContext();
+
 	initContext();
 
 	const auto controller = d->globalContext->commandController();
@@ -59,6 +66,18 @@ Resources* CommandController::resources() const {
 
 std::shared_ptr<CommandContext> CommandController::globalContext() {
 	return d->globalContext;
+}
+
+std::shared_ptr<CommandContext> CommandController::documentsContext() {
+	if (!d->globalContext) {
+		return nullptr;
+	}
+
+	if (!d->documentsContext) {
+		d->documentsContext = d->globalContext->documentsContext();
+	}
+
+	return d->documentsContext;
 }
 
 bool CommandController::execute(const QString& commandText, QObject* requester) {

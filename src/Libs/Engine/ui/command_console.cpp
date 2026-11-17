@@ -454,7 +454,7 @@ void CommandConsole::onSelectContext() {
 		// Обновляем UI
 		d->selectNamespaceButton->setToolTip(selectedVar);
 		d->currentNamespace = selectedVar;
-		d->controller->printSystem(QString("use namespace [%1]")
+		d->controller->printSystem(QString("use context [%1]")
 			.arg(selectedVar));
 	}
 }

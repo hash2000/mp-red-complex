@@ -416,7 +416,8 @@ void ClassManager::Private::applyDocuments(MainWindow* window, const YAML::Node&
 
 		auto* document = window->createWidget(name, MainWindow::WidgetKind::Document, title, glyph,
 			[registry, nativeType, handler]() { return registry->build(nativeType, handler); },
-			tooltip, type);
+			tooltip, type,
+			commandController ? commandController->globalContext() : nullptr);
 		if (!document) {
 			qWarning() << "ClassManager: document is not registered:" << type << "name:" << name;
 		}
@@ -519,17 +520,19 @@ void ClassManager::Private::applyPanels(MainWindow* window, const YAML::Node& bl
 		handler.context = commandController ? commandController->globalContext()
 			: std::shared_ptr<CommandContext>();
 
-		auto* panel = commandController ? commandController->widgets()->build(nativeType, handler) : nullptr;
+		// Панели создаются как документы: у каждой свой контекст
+		// `.documents.{name}`, поэтому панель может порождать документы
+		// и подписываться на изменения соседей.
+		auto* panel = commandController
+			? window->createWidget(name, kind, title, handler.glyph,
+				[registry = commandController->widgets(), nativeType, handler]() {
+					return registry->build(nativeType, handler);
+				},
+				nodeString(item, "tooltip"), type, commandController->globalContext())
+			: nullptr;
 		if (!panel) {
 			qWarning() << "ClassManager: panel is not registered:" << type << "name:" << name;
 			continue;
-		}
-
-		if (bottom) {
-			window->registerBottomPanel(name, handler.glyph, title, panel, nodeString(item, "tooltip"), type);
-		}
-		else {
-			window->registerSidePanel(name, handler.glyph, title, panel, nodeString(item, "tooltip"), type);
 		}
 
 		registered << name;

@@ -76,7 +76,7 @@ ctest --output-on-failure
 ### Виджеты и документы модулей
 - Самостоятельный виджет модуля хранится в `src/Content/{Module}/widgets/{widget_name.h/cpp}`; он не знает о документе и его состоянии.
 - Виджет, который открывается как документ и сохраняет состояние, оборачивается в `DocumentWidget`: обёртка-документ хранится в `src/Content/{Module}/documents/{document_name.h/cpp}` и ведёт путь, признак изменения, сохранение и реакции на изменение состояния.
-- В `MainWindow` документы создаются только как наследники `DocumentWidget`; виджеты без собственного состояния (панели, консоль) документами не являются.
+- Любой виджет, созданный `MainWindow::createWidget` в любой зоне, считается документом: если фабрика вернула не `DocumentWidget`, его оборачивает `WidgetDocument`. Виджет без собственного класса-документа всё равно получает контекст `.documents.{id}` и участвует в общем дереве документов.
 
 
 ### Соглашения об именовании
@@ -326,8 +326,19 @@ Launcher              точка входа и композиция: main.cpp, A
 - `ICommand` (`scripting/i_command.h`) — `name()`, `description()`, `help()`, `minArgs()`, `maxArgs()`, `execute(std::shared_ptr<CommandContext> context)`. Параметры команда читает из переменных своего контекста, имя команды — `context->name()`; доступ к приложению — через тот же контекст.
 - Синтаксис строки: `command param=value, param2="текст с пробелами"`; параметры разделяются запятой, `\` экранирует символ внутри строки в кавычках. Значения читаются парсерами DSL (`ParserValue`): строка в кавычках, число, `true`/`false`, блоки `<<json>>…<</json>>`, `<<xml>>…<</xml>>`, `<<ini>>…<</ini>>`, `<<text>>…<</text>>`; обычный текст (`action=create`, `target=fetch-api`) — строка с mime-типом `text/plane`. Эквивалент из кода — `executeCommand(name, QMap<QString, QString>)` (значения получают mime-тип `text/plane`).
 
-#### Парсер DSL
+#### Документы и их контексты
 
+Документы и панели, зависящие друг от друга, связываются только через `CommandContext`: у каждого документа свой контекст, а изменения видны соседям по сигналам.
+
+- Любой виджет, созданный `MainWindow::createWidget` (в любой зоне — `Document`, `SidePanel`, `BottomPanel`), является документом: если фабрика вернула не `DocumentWidget`, он оборачивается в `WidgetDocument`. Документ хранит свой контекст (`DocumentWidget::context`/`setContext`), доступен через `MainWindow::document(id)` и `MainWindow::documentContext(id)`.
+- При `CommandController::init()` создаётся корневой контекст `.documents`. Новый документ получает контекст `{creator}.documents.{documentId}`: у документа, созданного из консоли или при загрузке описания приложения, это `.documents.{id}`; у документа, созданного другим документом (например, file explorer открывает редактор), — `.documents.{creator}.documents.{id}`.
+- Источник документа — `creatorContext` в `MainWindow::createWidget`. `WidgetZoneCommand` выбирает его так: ближайший документ-контекст команды (`CommandContext::owningDocumentContext()`), иначе глобальный контекст, поэтому выбор контекста в консоли не влияет на место нового документа. `ClassManager` передаёт глобальный контекст.
+- Документы бывают двух видов: **документ-синглтон** — один на приложение (панель свойств), живёт прямо в `.documents`, его id совпадает с `xtype`, а документы, которым он нужен, привязываются сами и ждут `documentAttached()`, если синглтон ещё не создан; **обычный документ** — создаётся в любом количестве в любой зоне.
+- Сигналы `CommandContext`: `variableChanged(contextName, variableName, oldValue, newValue)` (только при реальном изменении значения), `documentAttached(documentId)` (в контексте `.documents` появился документ), `documentActivated(documentId)` / `documentDeactivated()` (документ стал или перестал быть активным в любой зоне), `documentInvoked(documentId)` (другой документ вызвал существующий документ — повторный `createWidget` с тем же id).
+- Активный документ отслеживает `MainWindow` (`activeDocumentId()`): переключение вкладки в `DocumentArea`, показ боковой или нижней панели.
+- Владение: глобальный контекст и `.documents` принадлежат `CommandController`, реестр контекстов хранит слабые ссылки, а документ держит сильную ссылку на свой контекст; повторная регистрация после уничтожения прежнего контекста не считается конфликтом.
+
+#### Парсер DSL
 - `SourceCursor` (`scripting/parser/source_cursor.*`) — курсор по исходнику: позиция, `SourceLocation`, пропуск пробелов и комментариев (`//`, `/* */`).
 - `IParser` (`parser/i_parser.h`) — `parse(SourceCursor&, std::optional<ParseError>&)` возвращает `IAstPtr` либо `nullptr` (не подошло или ошибка), `tokens()` отдаёт статические токены.
 - `IAst`/`AstBase` (`parser/i_ast.h`, `parser/base/ast_base.*`) — узел AST: параметры, типизированные дети (`setChild`/`children`) и локация.

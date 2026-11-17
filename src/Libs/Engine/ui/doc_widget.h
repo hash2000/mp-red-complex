@@ -2,8 +2,12 @@
 #include <QWidget>
 #include <memory>
 
-/// Базовый класс для всех виджетов центральной области.
+class CommandContext;
+
+/// Базовый класс для всех виджетов-документов.
 /// Каждому DocumentWidget автоматически соответствует вкладка слева.
+/// Документ связан с остальными документами через свой CommandContext
+/// (`.documents.{id}`), поэтому изменение свойств и вызовы видны соседям.
 class DocumentWidget : public QWidget {
 	Q_OBJECT
 public:
@@ -18,6 +22,11 @@ public:
 
 	bool isModified() const;
 	void setModified(bool modified);
+
+	/// Контекст документа. Может быть nullptr у документов, созданных
+	/// напрямую (например, в тестах или legacy-окнах).
+	std::shared_ptr<CommandContext> context() const;
+	void setContext(const std::shared_ptr<CommandContext>& context);
 
 	/// Редактор свойств (показывается в панели «Свойства»).
 	/// Базовая реализация возвращает QWidget с QFormLayout — наследники

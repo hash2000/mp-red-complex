@@ -6,6 +6,11 @@
 #include <QList>
 #include <QMap>
 
+namespace {
+/// Имя контекста, в котором живут документы, созданные другим контекстом.
+constexpr const char* kDocumentsScope = "documents";
+}
+
 class CommandContext::Private {
 public:
 	Private(CommandContext* parent) : q(parent) { }
@@ -17,11 +22,16 @@ public:
 	QString name;
 	QString nameSpace;
 
+	/// Кэш контекста `documents`; слабая ссылка, чтобы не создавать цикл
+	/// «родитель → ребёнок → родитель».
+	std::weak_ptr<CommandContext> documentsContext;
+
 	QMap<QString, QVariant> variables;
 	QMap<QString, QString> variableMimeTypes;
 	CommandContext::VariablesMode variablesMode = CommandContext::VariablesMode::Lazy;
 
 	void snapshotParentVariables();
+	std::shared_ptr<CommandContext> childByName(const QString& childName) const;
 };
 
 
@@ -181,7 +191,14 @@ bool CommandContext::setVariable(const QString& name, const QVariant& value) {
 		return d->parentContext->setVariable(name, value);
 	}
 
+	const bool hadValue = d->variables.contains(name);
+	const QVariant oldValue = hadValue ? d->variables.value(name) : QVariant();
 	d->variables.insert(name, value);
+
+	if (!hadValue || oldValue != value) {
+		emit variableChanged(d->nameSpace, name, oldValue, value);
+	}
+
 	return true;
 }
 
@@ -255,10 +272,112 @@ QString CommandContext::variableMimeType(const QString& name, const QString& def
 }
 
 void CommandContext::registerContext(const QString& ns, std::weak_ptr<CommandContext> context) {
-	if (d->contexts.contains(ns)) {
+	// Повторная регистрация после того, как прежний контекст был уничтожен
+	// (реестр хранит слабые ссылки), — это норма, а не конфликт.
+	if (d->contexts.value(ns).lock()) {
 		qWarning() << "CommandContext::registerNamespace:" << ns << "allready defined. Revrite.";
 	}
 
 	d->contexts[ns] = context;
+}
+
+std::shared_ptr<CommandContext> CommandContext::Private::childByName(const QString& childName) const {
+	for (const auto& child : q->childContexts()) {
+		if (child->name() == childName) {
+			return child;
+		}
+	}
+
+	return nullptr;
+}
+
+std::shared_ptr<CommandContext> CommandContext::documentsContext() {
+	if (auto cached = d->documentsContext.lock()) {
+		return cached;
+	}
+
+	if (auto existing = d->childByName(QString::fromLatin1(kDocumentsScope))) {
+		d->documentsContext = existing;
+		return existing;
+	}
+
+	auto created = createScopedContext(QString::fromLatin1(kDocumentsScope));
+	d->documentsContext = created;
+	return created;
+}
+
+std::shared_ptr<CommandContext> CommandContext::documentContext(const QString& documentId) const {
+	if (documentId.isEmpty()) {
+		return nullptr;
+	}
+
+	// У глобального контекста nameSpace равен ".", поэтому базовый префикс
+	// строится так же, как в конструкторе дочернего контекста.
+	const auto base = isGlobalContext() ? QString() : d->nameSpace;
+	const auto ns = QString("%1.%2.%3")
+		.arg(base, QString::fromLatin1(kDocumentsScope), documentId);
+
+	auto context = globalContext()->context(ns);
+	if (!context || !context->isDocumentContext()) {
+		return nullptr;
+	}
+
+	return context;
+}
+
+std::shared_ptr<CommandContext> CommandContext::createDocumentContext(const QString& documentId) {
+	if (documentId.isEmpty()) {
+		return nullptr;
+	}
+
+	auto documents = documentsContext();
+	if (auto existing = documents->d->childByName(documentId)) {
+		return existing;
+	}
+
+	auto created = documents->createScopedContext(documentId);
+	emit documents->documentAttached(documentId);
+	return created;
+}
+
+bool CommandContext::isDocumentContext() const {
+	if (!d->parentContext) {
+		return false;
+	}
+
+	return d->parentContext->name() == QString::fromLatin1(kDocumentsScope);
+}
+
+QString CommandContext::documentId() const {
+	return isDocumentContext() ? d->name : QString();
+}
+
+std::shared_ptr<CommandContext> CommandContext::owningDocumentContext() const {
+	auto current = d->parentContext;
+	while (current) {
+		if (current->isDocumentContext()) {
+			return current;
+		}
+
+		current = current->parentContext();
+	}
+
+	return nullptr;
+}
+
+void CommandContext::notifyDocumentAttached(const QString& documentId) {
+	emit documentAttached(documentId);
+}
+
+void CommandContext::notifyDocumentActivated(const QString& documentId) {
+	emit documentActivated(documentId);
+}
+
+void CommandContext::notifyDocumentDeactivated() {
+	emit documentDeactivated();
+}
+
+void CommandContext::notifyDocumentInvoked(const QString& documentId) {
+	emit documentInvoked(documentId);
 }
 

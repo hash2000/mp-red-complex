@@ -45,10 +45,21 @@ public:
 	/// При существующем id фабрика не вызывается, виджет активируется.
 	/// При успехе окно принимает владение виджетом.
 	/// type — xtype/класс, которым создан виджет (для списков и справки).
+	/// creatorContext — контекст, создающий документ: новый документ получает
+	/// контекст `{creator}.documents.{id}`; nullptr — контекст вьюпорта.
+	/// Любой виджет любой зоны является документом (оборачивается в
+	/// DocumentWidget), поэтому связан с остальными через CommandContext.
 	QWidget* createWidget(const QString& id, WidgetKind kind, const QString& title,
 		const QString& glyph, const WidgetFactory& factory, const QString& tooltip = QString(),
-		const QString& type = QString());
+		const QString& type = QString(),
+		const std::shared_ptr<CommandContext>& creatorContext = std::shared_ptr<CommandContext>());
 	QWidget* widget(const QString& id) const;
+	/// Документ виджета (обёртка DocumentWidget) либо nullptr.
+	DocumentWidget* document(const QString& id) const;
+	/// Контекст документа по id виджета.
+	std::shared_ptr<CommandContext> documentContext(const QString& id) const;
+	/// Идентификатор активного документа (в любой зоне) либо пустая строка.
+	QString activeDocumentId() const;
 	std::optional<WidgetKind> widgetKind(const QString& id) const;
 	QString widgetTitle(const QString& id) const;
 	QString widgetType(const QString& id) const;

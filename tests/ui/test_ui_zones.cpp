@@ -72,6 +72,12 @@ private slots:
 	void showAndListActions();
 	void commandRunsThroughProcessor();
 	void commandValidatesParameters();
+	void widgetGetsDocumentContext();
+	void documentCreatedFromDocumentNests();
+	void variableChangeIsNotified();
+	void documentAttachmentIsNotified();
+	void documentActivationIsNotified();
+	void existingDocumentInvocationIsNotified();
 };
 
 void TestUiZones::createWidgetInEveryZone() {
@@ -239,6 +245,164 @@ void TestUiZones::commandValidatesParameters() {
 	QVERIFY(!documents.execute(commandContext(controller, { { "action", "destroy" } })));
 
 	QVERIFY(window.widgetIds().isEmpty());
+}
+
+void TestUiZones::widgetGetsDocumentContext() {
+	TestCommandController controller;
+	WidgetFixture fixture(controller);
+	MainWindow window(controller.globalContext(), nullptr, false);
+
+	auto* document = window.createWidget(QStringLiteral("doc"),
+		MainWindow::WidgetKind::Document, QStringLiteral("Документ"), QString(),
+		[&fixture] { return fixture.built++, new QLabel(QStringLiteral("doc")); },
+		QString(), QStringLiteral("test-widget"));
+	QVERIFY(document);
+
+	// Любой виджет любой зоны — документ со своим контекстом.
+	auto* panel = window.createWidget(QStringLiteral("side"),
+		MainWindow::WidgetKind::SidePanel, QStringLiteral("Панель"), QString(),
+		[&fixture] { return fixture.built++, new QLabel(QStringLiteral("side")); },
+		QString(), QStringLiteral("test-widget"));
+	QVERIFY(panel);
+
+	auto documentContext = window.documentContext(QStringLiteral("doc"));
+	auto panelContext = window.documentContext(QStringLiteral("side"));
+	QVERIFY(documentContext);
+	QVERIFY(panelContext);
+	QVERIFY(documentContext->isDocumentContext());
+	QCOMPARE(documentContext->documentId(), QStringLiteral("doc"));
+	QCOMPARE(panelContext->documentId(), QStringLiteral("side"));
+	QCOMPARE(documentContext->nameSpace(), QStringLiteral(".documents.doc"));
+	// Документы ищутся среди документов своего создателя.
+	QVERIFY(controller.globalContext()->documentContext(QStringLiteral("doc")));
+	QCOMPARE(controller.documentsContext()->name(), QStringLiteral("documents"));
+	QCOMPARE(window.document(QStringLiteral("doc"))->context(), documentContext);
+}
+
+void TestUiZones::documentCreatedFromDocumentNests() {
+	TestCommandController controller;
+	WidgetFixture fixture(controller);
+	MainWindow window(controller.globalContext(), nullptr, false);
+
+	auto* explorer = window.createWidget(QStringLiteral("explorer"),
+		MainWindow::WidgetKind::SidePanel, QStringLiteral("Проводник"), QString(),
+		[&fixture] { return fixture.built++, new QLabel(QStringLiteral("explorer")); },
+		QString(), QStringLiteral("test-widget"));
+	QVERIFY(explorer);
+
+	auto explorerContext = window.documentContext(QStringLiteral("explorer"));
+	QVERIFY(explorerContext);
+
+	// Документ, созданный документом, попадает в его контекст документов.
+	WidgetZoneCommand documents(QStringLiteral("documents"), MainWindow::WidgetKind::Document);
+	auto caller = explorerContext->createScopedContext(QStringLiteral("command"));
+	caller->setVariable(QStringLiteral("action"), QStringLiteral("create"));
+	caller->setVariable(QStringLiteral("target"), QStringLiteral("test-widget"));
+	caller->setVariable(QStringLiteral("id"), QStringLiteral("editor"));
+	QVERIFY(documents.execute(caller));
+
+	auto editorContext = window.documentContext(QStringLiteral("editor"));
+	QVERIFY(editorContext);
+	QCOMPARE(editorContext->nameSpace(),
+		QStringLiteral(".documents.explorer.documents.editor"));
+	QCOMPARE(editorContext->owningDocumentContext(), explorerContext);
+}
+
+void TestUiZones::variableChangeIsNotified() {
+	TestCommandController controller;
+	auto context = controller.globalContext()->createScopedContext(QStringLiteral("view"));
+	QSignalSpy spy(context.get(), &CommandContext::variableChanged);
+
+	QVERIFY(context->setVariable(QStringLiteral("zoom"), 1));
+	QCOMPARE(spy.count(), 1);
+
+	const auto args = spy.takeFirst();
+	QCOMPARE(args.at(0).toString(), QStringLiteral(".view"));
+	QCOMPARE(args.at(1).toString(), QStringLiteral("zoom"));
+	QVERIFY(!args.at(2).isValid());        // старого значения не было
+	QCOMPARE(args.at(3).toInt(), 1);
+
+	// Повторная запись того же значения не считается изменением.
+	QVERIFY(context->setVariable(QStringLiteral("zoom"), 1));
+	QCOMPARE(spy.count(), 0);
+
+	QVERIFY(context->setVariable(QStringLiteral("zoom"), 2));
+	QCOMPARE(spy.count(), 1);
+	const auto changed = spy.takeFirst();
+	QCOMPARE(changed.at(2).toInt(), 1);
+	QCOMPARE(changed.at(3).toInt(), 2);
+}
+
+void TestUiZones::documentAttachmentIsNotified() {
+	TestCommandController controller;
+	WidgetFixture fixture(controller);
+	MainWindow window(controller.globalContext(), nullptr, false);
+
+	auto documentsContext = controller.documentsContext();
+	QVERIFY(documentsContext);
+	QSignalSpy spy(documentsContext.get(), &CommandContext::documentAttached);
+
+	QVERIFY(window.createWidget(QStringLiteral("doc"),
+		MainWindow::WidgetKind::Document, QStringLiteral("Документ"), QString(),
+		[&fixture] { return fixture.built++, new QLabel; }, QString(), QStringLiteral("test-widget")));
+
+	QCOMPARE(spy.count(), 1);
+	QCOMPARE(spy.at(0).at(0).toString(), QStringLiteral("doc"));
+}
+
+void TestUiZones::documentActivationIsNotified() {
+	TestCommandController controller;
+	WidgetFixture fixture(controller);
+	MainWindow window(controller.globalContext(), nullptr, false);
+
+	QVERIFY(window.createWidget(QStringLiteral("one"),
+		MainWindow::WidgetKind::Document, QStringLiteral("Первый"), QString(),
+		[&fixture] { return fixture.built++, new QLabel; }));
+	QVERIFY(window.createWidget(QStringLiteral("two"),
+		MainWindow::WidgetKind::Document, QStringLiteral("Второй"), QString(),
+		[&fixture] { return fixture.built++, new QLabel; }));
+
+	auto first = window.documentContext(QStringLiteral("one"));
+	auto second = window.documentContext(QStringLiteral("two"));
+	QVERIFY(first);
+	QVERIFY(second);
+
+	QSignalSpy firstActivated(first.get(), &CommandContext::documentActivated);
+	QSignalSpy firstDeactivated(first.get(), &CommandContext::documentDeactivated);
+	QSignalSpy secondActivated(second.get(), &CommandContext::documentActivated);
+
+	window.showWidget(QStringLiteral("one"));
+	QCOMPARE(window.activeDocumentId(), QStringLiteral("one"));
+	QCOMPARE(firstActivated.count(), 1);
+
+	window.showWidget(QStringLiteral("two"));
+	QCOMPARE(window.activeDocumentId(), QStringLiteral("two"));
+	QCOMPARE(firstDeactivated.count(), 1);
+	QCOMPARE(secondActivated.count(), 1);
+}
+
+void TestUiZones::existingDocumentInvocationIsNotified() {
+	TestCommandController controller;
+	WidgetFixture fixture(controller);
+	MainWindow window(controller.globalContext(), nullptr, false);
+
+	QVERIFY(window.createWidget(QStringLiteral("logger"),
+		MainWindow::WidgetKind::BottomPanel, QStringLiteral("Журнал"), QString(),
+		[&fixture] { return fixture.built++, new QLabel; }));
+
+	auto loggerContext = window.documentContext(QStringLiteral("logger"));
+	QVERIFY(loggerContext);
+	QSignalSpy invoked(loggerContext.get(), &CommandContext::documentInvoked);
+
+	// Повторное создание существующего документа — это вызов его другим документом.
+	QVERIFY(window.createWidget(QStringLiteral("logger"),
+		MainWindow::WidgetKind::BottomPanel, QStringLiteral("Журнал"), QString(),
+		[&fixture] { return fixture.built++, new QLabel; },
+		QString(), QString(), controller.documentsContext()));
+
+	QCOMPARE(fixture.built, 1);   // фабрика повторно не вызывается
+	QCOMPARE(invoked.count(), 1);
+	QCOMPARE(invoked.at(0).at(0).toString(), QStringLiteral("logger"));
 }
 
 QTEST_MAIN(TestUiZones)

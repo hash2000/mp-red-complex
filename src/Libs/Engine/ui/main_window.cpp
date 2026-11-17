@@ -94,6 +94,14 @@ struct MainWindow::Private {
 	quint64 nextSerial = 0;
 	QPointer<CommandController> controller;
 
+	/// Активный документ любой зоны; нужен для documentActivated/Deactivated.
+	QString activeDocument;
+	QPointer<DocumentWidget> activeDocumentWidget;
+
+	void activateDocument(const QString& id);
+	void deactivateDocument();
+	QString idOfDocument(DocumentWidget* doc) const;
+
 	std::shared_ptr<CommandContext> context;
 	void track(const QString& id, WidgetKind kind, QWidget* widget, const QString& title,
 		const QString& type, DocumentWidget* document = nullptr);
@@ -259,6 +267,7 @@ void MainWindow::Private::wireSignals() {
 		if (properties)
 			properties->setDocument(doc);   // «Свойства» следуют за активным документом
 		updateWindowTitle(doc);
+		activateDocument(idOfDocument(doc));
 	});
 
 	// Правая сторона
@@ -356,8 +365,12 @@ void MainWindow::Private::updateWindowTitle(DocumentWidget* doc) {
 
 void MainWindow::Private::forgetDocument(DocumentWidget* doc) {
 	for (auto it = entries.begin(); it != entries.end();) {
-		if (it->documentIdentity == doc)
+		if (it->documentIdentity == doc) {
+			if (activeDocument == it.key()) {
+				deactivateDocument();
+			}
 			it = entries.erase(it);
+		}
 		else
 			it++;
 	}
@@ -436,7 +449,7 @@ MainWindow::~MainWindow() {
 
 QWidget* MainWindow::createWidget(const QString& id, WidgetKind kind, const QString& title,
 	const QString& glyph, const WidgetFactory& factory, const QString& tooltip,
-	const QString& type) {
+	const QString& type, const std::shared_ptr<CommandContext>& creatorContext) {
 	if (QThread::currentThread() != thread() || id.isEmpty() ||
 		(kind != WidgetKind::Document && kind != WidgetKind::BottomPanel && kind != WidgetKind::SidePanel))
 		return nullptr;
@@ -447,6 +460,14 @@ QWidget* MainWindow::createWidget(const QString& id, WidgetKind kind, const QStr
 		return nullptr;
 	}
 	if (auto* existing = widget(id)) {
+		// Документ уже создан: другой документ его вызывает.
+		const auto it = d->entries.constFind(id);
+		if (it != d->entries.cend() && creatorContext) {
+			creatorContext->notifyDocumentInvoked(id);
+			if (it->document && it->document->context()) {
+				it->document->context()->notifyDocumentInvoked(id);
+			}
+		}
 		showWidget(id);
 		return existing;
 	}
@@ -468,30 +489,113 @@ QWidget* MainWindow::createWidget(const QString& id, WidgetKind kind, const QStr
 		if (entry.widget == content || entry.document == content)
 			return nullptr;
 	}
+
+	// Любой виджет любой зоны — документ: получает контекст и участвует
+	// в общем дереве документов.
+	auto* document = qobject_cast<DocumentWidget*>(content);
+	if (!document) {
+		document = new WidgetDocument(content);
+	}
+
+	const auto creator = creatorContext ? creatorContext : d->context;
+	if (creator && document->context() == nullptr) {
+		document->setContext(creator->createDocumentContext(id));
+	}
+
+	if (!title.isEmpty()) {
+		document->setTitle(title);
+	}
+	if (!glyph.isEmpty()) {
+		document->setGlyph(glyph);
+	}
+	document->setToolTip(tooltip);
+
 	if (kind == WidgetKind::Document) {
-		auto* doc = qobject_cast<DocumentWidget*>(content);
-		if (!doc)
-			doc = new WidgetDocument(content);
-		doc->setTitle(title);
-		if (!glyph.isEmpty())
-			doc->setGlyph(glyph);
-		doc->setToolTip(tooltip);
-		d->track(id, kind, content, title, type, doc);
-		addDocument(doc);
+		d->track(id, kind, document, title, type, document);
+		addDocument(document);
 	}
 	else if (kind == WidgetKind::BottomPanel) {
-		registerBottomPanel(id, glyph, title, content, tooltip, type);
+		registerBottomPanel(id, glyph, title, document, tooltip, type);
 		showBottomPanel(id);
 	}
 	else if (kind == WidgetKind::SidePanel) {
-		registerSidePanel(id, glyph, title, content, tooltip, type);
+		registerSidePanel(id, glyph, title, document, tooltip, type);
 		showSidePanel(id);
 	}
-	return content;
+
+	// Наружу отдаём документ: у всех зон это DocumentWidget, связанный контекстом.
+	return document;
 }
 
 QWidget* MainWindow::widget(const QString& id) const {
 	return d->entries.value(id).widget.data();
+}
+
+DocumentWidget* MainWindow::document(const QString& id) const {
+	const auto it = d->entries.constFind(id);
+	if (it == d->entries.cend()) {
+		return nullptr;
+	}
+
+	return it->document;
+}
+
+std::shared_ptr<CommandContext> MainWindow::documentContext(const QString& id) const {
+	auto* doc = document(id);
+	return doc ? doc->context() : nullptr;
+}
+
+QString MainWindow::activeDocumentId() const {
+	return d->activeDocument;
+}
+
+QString MainWindow::Private::idOfDocument(DocumentWidget* doc) const {
+	if (!doc) {
+		return { };
+	}
+
+	for (auto it = entries.cbegin(); it != entries.cend(); it++) {
+		if (it->document.data() == doc) {
+			return it.key();
+		}
+	}
+
+	return { };
+}
+
+void MainWindow::Private::activateDocument(const QString& id) {
+	if (id.isEmpty() || id == activeDocument) {
+		return;
+	}
+
+	const auto it = entries.constFind(id);
+	if (it == entries.cend() || !it->document) {
+		return;
+	}
+
+	deactivateDocument();
+
+	activeDocument = id;
+	activeDocumentWidget = it->document;
+	if (auto context = it->document->context()) {
+		context->notifyDocumentActivated(id);
+	}
+}
+
+void MainWindow::Private::deactivateDocument() {
+	if (activeDocument.isEmpty()) {
+		return;
+	}
+
+	QPointer<DocumentWidget> previous = activeDocumentWidget;
+	activeDocument.clear();
+	activeDocumentWidget = nullptr;
+
+	if (previous) {
+		if (auto context = previous->context()) {
+			context->notifyDocumentDeactivated();
+		}
+	}
 }
 
 std::optional<MainWindow::WidgetKind> MainWindow::widgetKind(const QString& id) const {
@@ -642,7 +746,8 @@ void MainWindow::registerSidePanel(const QString& id, const QString& glyph,
 			panel->deleteLater();
 		return;
 	}
-	d->track(id, WidgetKind::SidePanel, panel, title, type);
+	d->track(id, WidgetKind::SidePanel, panel, title, type,
+		qobject_cast<DocumentWidget*>(panel));
 	d->side->addPanel(id, title, panel);
 	d->activity->addButton(id, glyph, tooltip.isEmpty() ? title : tooltip);
 
@@ -667,7 +772,8 @@ void MainWindow::registerBottomPanel(const QString& id, const QString& glyph,
 			panel->deleteLater();
 		return;
 	}
-	d->track(id, WidgetKind::BottomPanel, panel, title, type);
+	d->track(id, WidgetKind::BottomPanel, panel, title, type,
+		qobject_cast<DocumentWidget*>(panel));
 	d->bottom->addPanel(id, glyph, title, panel);
 
 	auto* act = new QAction(glyph + QLatin1Char(' ') + title, this);
@@ -687,6 +793,8 @@ void MainWindow::unregisterBottomPanel(const QString& id) {
 		return;
 	if (!d->bottom)
 		return;
+	if (d->activeDocument == id)
+		d->deactivateDocument();
 	d->entries.remove(id);
 	if (QAction* act = d->bottomActions.take(id)) {
 		d->viewMenu->removeAction(act);
@@ -708,6 +816,8 @@ void MainWindow::unregisterSidePanel(const QString& id) {
 		return;
 	if (!d->side || !d->activity)
 		return;
+	if (d->activeDocument == id)
+		d->deactivateDocument();
 	d->entries.remove(id);
 	if (auto* act = d->sideActions.take(id)) {
 		d->viewMenu->removeAction(act);
@@ -732,6 +842,7 @@ void MainWindow::showSidePanel(const QString& id) {
 	}
 
 	d->side->setCurrentPanel(id);
+	d->activateDocument(id);
 	if (!d->side->isVisible()) {
 		d->side->show();
 		auto sizes = d->mainSplitter->sizes();   // [tabs, center, side]
@@ -777,6 +888,7 @@ void MainWindow::showBottomPanel(const QString& id) {
 	d->bottom->show();
 	d->bottom->setCurrentPanel(id);
 	d->bottom->setCollapsed(false);
+	d->activateDocument(id);
 }
 
 void MainWindow::log(const QString& message) {

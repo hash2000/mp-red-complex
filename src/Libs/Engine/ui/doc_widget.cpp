@@ -1,4 +1,5 @@
 #include "Libs/Engine/ui/doc_widget.h"
+#include "Libs/Engine/scripting/command_context.h"
 
 #include <QCheckBox>
 #include <QCloseEvent>
@@ -10,6 +11,7 @@ struct DocumentWidget::Private {
 	QString title;
 	QString glyph = QStringLiteral("📄");
 	bool modified = false;
+	std::shared_ptr<CommandContext> context;
 };
 
 DocumentWidget::DocumentWidget(QWidget* parent)
@@ -50,6 +52,14 @@ void DocumentWidget::setModified(bool modified) {
 		return;
 	d->modified = modified;
 	emit modifiedChanged(modified);
+}
+
+std::shared_ptr<CommandContext> DocumentWidget::context() const {
+	return d->context;
+}
+
+void DocumentWidget::setContext(const std::shared_ptr<CommandContext>& context) {
+	d->context = context;
 }
 
 QWidget* DocumentWidget::createPropertiesEditor(QWidget* parent) {

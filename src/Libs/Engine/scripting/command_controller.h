@@ -36,6 +36,9 @@ public:
 
 	std::shared_ptr<CommandContext> globalContext();
 
+	/// Контекст документов приложения (`.documents`). Создаётся при init().
+	std::shared_ptr<CommandContext> documentsContext();
+
 	bool execute(const QString& commandText, QObject* requester = nullptr);
 	bool executeCommand(const QString& commandName, const QMap<QString, QString>& args, QObject* requester = nullptr);
 
