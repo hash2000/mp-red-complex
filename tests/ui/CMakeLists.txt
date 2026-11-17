@@ -80,3 +80,27 @@ target_compile_definitions(TestHighlighters PRIVATE
 )
 
 add_test(NAME TestHighlighters COMMAND TestHighlighters)
+
+# Тест логики поиска в документе редактора кода.
+add_executable(TestCodeEditorSearch
+    test_code_editor_search.cpp
+)
+
+target_include_directories(TestCodeEditorSearch PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/tests
+)
+
+target_link_libraries(TestCodeEditorSearch PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+    Qt6::Test
+
+    RedComplexCodeEditorWidget
+    RedComplexEngine
+    RedComplexBase
+    RedComplexResources
+)
+
+add_test(NAME TestCodeEditorSearch COMMAND TestCodeEditorSearch)

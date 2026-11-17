@@ -37,6 +37,39 @@ QToolButton#CodeEditorRibbonButton {
 }
 QToolButton#CodeEditorRibbonButton:hover { background-color: #094771; border-color: #1177bb; }
 QToolButton#CodeEditorRibbonButton:pressed { background-color: #0e639c; }
+QToolButton#CodeEditorRibbonButton:checked { background-color: #0e639c; border-color: #1177bb; }
+
+/* ---------- Панель поиска ---------- */
+QWidget#CodeEditorSearchPanel {
+  background-color: #252526;
+  border-bottom: 1px solid #3e3e42;
+}
+
+QLineEdit#CodeEditorSearchInput {
+  background-color: #1e1e1e;
+  color: #d4d4d4;
+  border: 1px solid #3e3e42;
+  border-radius: 3px;
+  padding: 2px 6px;
+  min-height: 20px;
+}
+QLineEdit#CodeEditorSearchInput:focus { border-color: #1177bb; }
+
+QLabel#CodeEditorSearchCount {
+  color: #8f8f8f;
+}
+
+QToolButton#CodeEditorSearchButton {
+  color: #d4d4d4;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 0px;
+  min-width: 22px;
+  min-height: 22px;
+}
+QToolButton#CodeEditorSearchButton:hover { background-color: #3e3e42; }
+QToolButton#CodeEditorSearchButton:pressed { background-color: #094771; }
 
 QToolButton#CodeEditorRibbonToggle {
   color: #8f8f8f;

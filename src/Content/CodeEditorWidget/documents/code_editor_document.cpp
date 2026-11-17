@@ -1,5 +1,6 @@
 #include "Content/CodeEditorWidget/documents/code_editor_document.h"
 #include "Content/CodeEditorWidget/widgets/code_editor_widget.h"
+#include "Content/CodeEditorWidget/widgets/code_editor_search_panel.h"
 #include "Content/CodeEditorWidget/language_info.h"
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin.h"
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
@@ -53,6 +54,13 @@ public:
 	QComboBox* fontSizeCombo = nullptr;
 	QComboBox* languageCombo = nullptr;
 
+	CodeEditorSearchPanel* searchPanel = nullptr;
+	QToolButton* searchButton = nullptr;
+	QToolButton* regexButton = nullptr;
+	QToolButton* simplifiedButton = nullptr;
+	QToolButton* caseButton = nullptr;
+	QToolButton* wholeWordButton = nullptr;
+
 	QString path;
 
 	void setupUi();
@@ -64,6 +72,9 @@ public:
 	void syncLanguageCombo();
 	void setRibbonVisible(bool visible);
 	void updateRibbonState();
+	QWidget* createSearchPanel();
+	void setSearchVisible(bool visible);
+	void setSearchOption(CodeEditorSearchPanel::Option option, bool enabled);
 	QString currentMimeType() const;
 	QString currentLanguageName() const;
 };
@@ -77,9 +88,48 @@ void CodeEditorDocument::Private::setupUi() {
 	layout->setContentsMargins(0, 0, 0, 0);
 	layout->setSpacing(0);
 	layout->addWidget(createRibbon(), 0);
+	// Панель поиска живёт между лентой и редактором, чтобы не закрывать текст.
+	layout->addWidget(createSearchPanel(), 0);
 	layout->addWidget(editor, 1);
 
 	q->setFocusProxy(editor);
+}
+
+QWidget* CodeEditorDocument::Private::createSearchPanel() {
+	searchPanel = new CodeEditorSearchPanel(editor, q);
+	searchPanel->hide();
+
+	connect(searchPanel, &CodeEditorSearchPanel::closed, q, [this] {
+		if (searchButton) {
+			searchButton->setChecked(false);
+		}
+		else {
+			setSearchVisible(false);
+		}
+	});
+
+	return searchPanel;
+}
+
+void CodeEditorDocument::Private::setSearchVisible(bool visible) {
+	if (!searchPanel) {
+		return;
+	}
+
+	if (visible) {
+		searchPanel->focusSearch();
+		return;
+	}
+
+	searchPanel->clearSearch();
+	searchPanel->hide();
+	editor->setFocus();
+}
+
+void CodeEditorDocument::Private::setSearchOption(CodeEditorSearchPanel::Option option, bool enabled) {
+	if (searchPanel) {
+		searchPanel->setOption(option, enabled);
+	}
 }
 
 QWidget* CodeEditorDocument::Private::createRibbon() {
@@ -154,6 +204,48 @@ QWidget* CodeEditorDocument::Private::createRibbon() {
 					q->tr("Для текущего языка форматирование недоступно."));
 			}
 		});
+
+	auto searchGroup = addGroup(groupsLayout, q->tr("Поиск"));
+	searchButton = addButton(searchGroup, QStringLiteral("🔍"), q->tr("Поиск (показать/скрыть)"));
+	searchButton->setCheckable(true);
+	connect(searchButton, &QToolButton::toggled, q, [this](bool checked) {
+		setSearchVisible(checked);
+	});
+
+	auto optionsGroup = addGroup(groupsLayout, q->tr("Опции поиска"));
+
+	regexButton = addButton(optionsGroup, QStringLiteral(".*"),
+		q->tr("Регулярное выражение"));
+	regexButton->setCheckable(true);
+	connect(regexButton, &QToolButton::toggled, q, [this](bool checked) {
+		setSearchOption(CodeEditorSearchPanel::Option::RegularExpression, checked);
+		// Регулярное выражение и упрощённый режим взаимоисключающие.
+		if (checked && simplifiedButton && simplifiedButton->isChecked()) {
+			simplifiedButton->setChecked(false);
+		}
+	});
+
+	simplifiedButton = addButton(optionsGroup, QStringLiteral("\\n"),
+		q->tr("Упрощённое выражение: \\n, \\t, \\r"));
+	simplifiedButton->setCheckable(true);
+	connect(simplifiedButton, &QToolButton::toggled, q, [this](bool checked) {
+		setSearchOption(CodeEditorSearchPanel::Option::SimplifiedExpression, checked);
+		if (checked && regexButton && regexButton->isChecked()) {
+			regexButton->setChecked(false);
+		}
+	});
+
+	caseButton = addButton(optionsGroup, QStringLiteral("Aa"), q->tr("Учитывать регистр"));
+	caseButton->setCheckable(true);
+	connect(caseButton, &QToolButton::toggled, q, [this](bool checked) {
+		setSearchOption(CodeEditorSearchPanel::Option::CaseSensitive, checked);
+	});
+
+	wholeWordButton = addButton(optionsGroup, QStringLiteral("ab"), q->tr("Слово целиком"));
+	wholeWordButton->setCheckable(true);
+	connect(wholeWordButton, &QToolButton::toggled, q, [this](bool checked) {
+		setSearchOption(CodeEditorSearchPanel::Option::WholeWord, checked);
+	});
 
 	ribbonGroups->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
 	row->addWidget(ribbonGroups, 0, Qt::AlignLeft | Qt::AlignTop);
