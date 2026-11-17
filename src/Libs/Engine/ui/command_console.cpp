@@ -23,6 +23,8 @@
 #include <QStringListModel>
 #include <QSplitter>
 #include <QMessageBox>
+#include <QGuiApplication>
+#include <QScreen>
 
 namespace {
 /// Оформление текста вывода (HTML-классы) хранится в теме:
@@ -439,14 +441,25 @@ void CommandConsole::onOutputClear() {
 }
 
 void CommandConsole::onSelectContext() {
-	const auto names = d->controller->globalContext()->nameSpaces();
+	const auto names = d->controller->globalContext()->nameSpaces(true);
 	NameSelectDialog dialog(names, this);
-	// Позиционируем диалог прямо под кнопкой
-	QPoint buttonBottomLeft = d->selectNamespaceButton->mapToGlobal(QPoint(0, d->selectNamespaceButton->height()));
-	dialog.move(buttonBottomLeft);
 
-	// Опционально: задаем ширину диалога равной ширине кнопки (если список длинный, лучше оставить фиксированную или побольше)
-	// dialog.setFixedWidth(m_selectButton->width()); 
+	// Основное окно: диалог должен появиться на его поверхности, поэтому
+	// считаем границы окна, а не только панели консоли.
+	const QWidget* host = window();
+	QRect hostRect = host ? host->frameGeometry() : QRect();
+
+	const auto* screen = host ? host->screen() : QGuiApplication::primaryScreen();
+	const QRect screenRect = screen
+		? screen->availableGeometry()
+		: QRect(QPoint(0, 0), dialog.size());
+
+	const QRect buttonRect(d->selectNamespaceButton->mapToGlobal(QPoint(0, 0)),
+		d->selectNamespaceButton->size());
+
+	// Сначала ставим по клиентскому размеру, затем уточняем по рамке окна:
+	// иначе заголовок диалога накрывает кнопку.
+	dialog.move(buttonRect.x() - dialog.width(), buttonRect.y() - dialog.height() / 2);
 
 	if (dialog.exec() == QDialog::Accepted) {
 		QString selectedVar = dialog.selectedName();

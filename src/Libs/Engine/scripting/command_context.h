@@ -28,7 +28,10 @@ public:
 
 	QString name() const;
 	QString nameSpace() const;
-	QStringList nameSpaces() const;
+	/// Namespace зарегистрированных контекстов. `alive = true` (по умолчанию) —
+	/// только живые; `false` включает записи, чьи владельцы уже уничтожены
+	/// (диагностика и тесты очистки).
+	QStringList nameSpaces(bool alive = true) const;
 
 	bool isGlobalContext() const;
 	std::shared_ptr<CommandContext> parentContext() const;
@@ -36,6 +39,7 @@ public:
 	std::shared_ptr<CommandContext> createScopedContext(const QString& name);
 	std::shared_ptr<CommandContext> context(const QString& ns) const;
 	/// Живые зарегистрированные прямые потомки; без передачи постоянного владения.
+	/// Мёртвые записи (владелец уничтожил контекст) не возвращаются.
 	QList<std::shared_ptr<CommandContext>> childContexts() const;
 
 	// Переменные контекста. Имя может содержать точки: "wal.checkInterval".
@@ -78,6 +82,11 @@ public:
 	/// Для контекста команды из документа это документ, вызвавший команду.
 	std::shared_ptr<CommandContext> owningDocumentContext() const;
 
+	/// Удаляет из дерева контекстов записи, которые уже никто не держит
+	/// (владелец уничтожил контекст). Обход начинается от глобального
+	/// контекста по всем вложенным. Возвращает количество удалённых записей.
+	int pruneDeadContexts();
+
 public slots:
 	/// Уведомления о жизненном цикле документов.
 	void notifyDocumentAttached(const QString& documentId);
@@ -104,6 +113,8 @@ signals:
 
 private:
 	void registerContext(const QString& ns, std::weak_ptr<CommandContext> context);
+	/// Чистит реестр этого контекста и рекурсивно — реестры живых детей.
+	int pruneDeadSubtree();
 
 private:
 	class Private;

@@ -3,6 +3,7 @@
 #include "Libs/Engine/scripting/bootstrap/bootstrap_context_builder.h"
 #include "Libs/Engine/scripting/command_controller.h"
 #include "Libs/Engine/scripting/command_context.h"
+#include "Libs/Resources/resources.h"
 
 #include <QDir>
 #include <QFile>
@@ -15,6 +16,8 @@ namespace {
 class TestCommandController : public CommandController {
 public:
 	TestCommandController() : CommandController(nullptr, nullptr) {
+	}
+	explicit TestCommandController(Resources* resources) : CommandController(resources, nullptr) {
 	}
 	~TestCommandController() override = default;
 	virtual CommandProcessor* commandProcessor() const override {
@@ -62,6 +65,141 @@ void TestEngine::testContext_BuildChildContext() {
 	QCOMPARE(ch12_ptr->nameSpace(), ".test2");
 	QCOMPARE(ch111_ptr->name(), "test11");
 	QCOMPARE(ch111_ptr->nameSpace(), ".test1.test11");
+}
+
+void TestEngine::testContext_PruneDeadContexts() {
+	// Given: живые и уже уничтоженные вложенные контексты
+	auto ctl = std::make_unique<TestCommandController>();
+	auto glob = ctl->globalContext();
+
+	auto alive = glob->createScopedContext("alive");
+	auto aliveChild = alive->createScopedContext("child");
+
+	{
+		auto dead = glob->createScopedContext("dead");
+		auto deadChild = dead->createScopedContext("child");
+		auto deadGrandChild = deadChild->createScopedContext("grand");
+		Q_UNUSED(deadGrandChild);
+	}
+
+	// Мёртвые записи видны только при явном запросе (alive = false).
+	QVERIFY(glob->nameSpaces(false).contains(".dead"));
+	QVERIFY(glob->nameSpaces(false).contains(".dead.child"));
+	QVERIFY(glob->nameSpaces(false).contains(".dead.child.grand"));
+	QVERIFY(glob->nameSpaces().contains(".alive"));
+	// Для системы мёртвых контекстов не существует.
+	QVERIFY(!glob->nameSpaces().contains(".dead"));
+
+	// When
+	const int removed = ctl->pruneDeadContexts();
+
+	// Then: мёртвые ветки удалены, живые остались
+	QCOMPARE(removed, 3);
+	QVERIFY(!glob->nameSpaces(false).contains(".dead"));
+	QVERIFY(!glob->nameSpaces(false).contains(".dead.child"));
+	QVERIFY(!glob->nameSpaces(false).contains(".dead.child.grand"));
+	QVERIFY(glob->nameSpaces().contains(".alive"));
+	QVERIFY(glob->nameSpaces().contains(".alive.child"));
+	QCOMPARE(glob->context(".alive").get(), alive.get());
+	QCOMPARE(glob->context(".alive.child").get(), aliveChild.get());
+
+	// Повторный вызов ничего не находит.
+	QCOMPARE(ctl->pruneDeadContexts(), 0);
+}
+
+void TestEngine::testContext_NameSpacesAliveOnly() {
+	// Given: живые и уничтоженные контексты на двух уровнях вложенности
+	auto ctl = std::make_unique<TestCommandController>();
+	auto glob = ctl->globalContext();
+
+	auto alive = glob->createScopedContext("alive");
+	auto aliveChild = alive->createScopedContext("child");
+
+	{
+		auto dead = glob->createScopedContext("dead");
+		auto deadChild = dead->createScopedContext("child");
+		Q_UNUSED(deadChild);
+	}
+
+	// When: по умолчанию и с alive = true
+	const auto aliveOnly = glob->nameSpaces();
+
+	// Then: мёртвых нет
+	QVERIFY(aliveOnly.contains(".alive"));
+	QVERIFY(aliveOnly.contains(".alive.child"));
+	QVERIFY(!aliveOnly.contains(".dead"));
+	QVERIFY(!aliveOnly.contains(".dead.child"));
+	QCOMPARE(glob->nameSpaces(true), aliveOnly);
+
+	// When: alive = false — реестр отдаёт и мёртвые записи
+	const auto all = glob->nameSpaces(false);
+
+	// Then
+	QVERIFY(all.contains(".alive"));
+	QVERIFY(all.contains(".alive.child"));
+	QVERIFY(all.contains(".dead"));
+	QVERIFY(all.contains(".dead.child"));
+	QVERIFY(all.size() > aliveOnly.size());
+
+	// Вложенный контекст отдаёт тот же список, что и глобальный.
+	QCOMPARE(alive->nameSpaces(), aliveOnly);
+	QCOMPARE(alive->nameSpaces(false), all);
+
+	// После очистки оба списка совпадают: мёртвых записей не осталось.
+	ctl->pruneDeadContexts();
+	QCOMPARE(glob->nameSpaces(false), aliveOnly);
+}
+
+void TestEngine::testContext_ChildContextsReturnOnlyAlive() {
+	// Given: у родителя два ребёнка, один из них уничтожается
+	auto ctl = std::make_unique<TestCommandController>();
+	auto glob = ctl->globalContext();
+
+	auto parent = glob->createScopedContext("parent");
+	auto live = parent->createScopedContext("live");
+
+	{
+		auto dead = parent->createScopedContext("dead");
+		auto deadChild = dead->createScopedContext("grand");
+		Q_UNUSED(deadChild);
+	}
+
+	// When
+	const auto children = parent->childContexts();
+
+	// Then: только живой ребёнок, мёртвый не возвращается
+	QCOMPARE(children.size(), 1);
+	QCOMPARE(children.front().get(), live.get());
+
+	// У глобального контекста ребёнок — только parent.
+	const auto globalChildren = glob->childContexts();
+	QCOMPARE(globalChildren.size(), 1);
+	QCOMPARE(globalChildren.front().get(), parent.get());
+
+	// Прямые дети вызываются по имени только среди живых.
+	QVERIFY(parent->context(".parent.dead") == nullptr);
+	QCOMPARE(parent->context(".parent.live").get(), live.get());
+}
+
+void TestEngine::testContext_CleanupRunsInBackground() {
+	// Given: контроллер с коротким периодом очистки
+	Resources resources;
+	resources.Variables.set("command.context.cleanupIntervalMs", 50);
+
+	auto ctl = std::make_unique<TestCommandController>(&resources);
+	ctl->startContextCleanup();
+
+	{
+		auto dead = ctl->globalContext()->createScopedContext("dead");
+		auto deadChild = dead->createScopedContext("child");
+		Q_UNUSED(deadChild);
+	}
+	QVERIFY(ctl->globalContext()->nameSpaces(false).contains(".dead.child"));
+
+	// When/Then: фоновый поток сам вычищает мёртвую ветку из реестра
+	QTRY_VERIFY_WITH_TIMEOUT(!ctl->globalContext()->nameSpaces(false).contains(".dead"), 5000);
+
+	ctl->stopContextCleanup();
 }
 
 void TestEngine::testContext_VariablesLazyMode() {

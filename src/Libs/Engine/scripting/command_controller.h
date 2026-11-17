@@ -39,6 +39,16 @@ public:
 	/// Контекст документов приложения (`.documents`). Создаётся при init().
 	std::shared_ptr<CommandContext> documentsContext();
 
+	/// Удаляет из дерева контексты, которые уже никто не держит.
+	/// Возвращает количество удалённых записей. Выполняется в потоке
+	/// контроллера; периодический вызов делает фоновый поток очистки.
+	int pruneDeadContexts();
+
+	/// Запускает и останавливает фоновый поток, который периодически
+	/// вызывает pruneDeadContexts(). init() запускает его автоматически.
+	void startContextCleanup();
+	void stopContextCleanup();
+
 	bool execute(const QString& commandText, QObject* requester = nullptr);
 	bool executeCommand(const QString& commandName, const QMap<QString, QString>& args, QObject* requester = nullptr);
 

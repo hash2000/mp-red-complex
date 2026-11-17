@@ -35,6 +35,10 @@ private slots:
 	void testContext_ScopeIsolation();
 	void testContext_BootstrapContextBuilder();
 	void testContext_ChildContexts();
+	void testContext_PruneDeadContexts();
+	void testContext_NameSpacesAliveOnly();
+	void testContext_ChildContextsReturnOnlyAlive();
+	void testContext_CleanupRunsInBackground();
 	void testContext_BootstrapMigrations();
 	void testContext_BootstrapMigrationErrors();
 

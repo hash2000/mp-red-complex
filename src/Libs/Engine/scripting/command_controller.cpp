@@ -6,9 +6,18 @@
 #include "Libs/Engine/console/console_json.h"
 #include "Libs/Engine/scripting/widgets/widget_registry.h"
 #include "Libs/Engine/ui/main_window.h"
+#include "Libs/Resources/resources.h"
 
+#include <QDebug>
 #include <QPointer>
+#include <QThread>
+#include <QTimer>
 #include <QUuid>
+
+namespace {
+/// Период фоновой очистки мёртвых контекстов по умолчанию.
+constexpr int kDefaultCleanupIntervalMs = 30000;
+}
 
 class CommandController::Private {
 public:
@@ -20,7 +29,11 @@ public:
 	QPointer<MainWindow> mainWindow;
 	Resources* resources;
 
+	/// Фоновый поток периодической очистки мёртвых контекстов.
+	QThread* cleanupThread = nullptr;
+
 	std::shared_ptr<CommandContext> createLocalContext();
+	int cleanupIntervalMs() const;
 };
 
 CommandController::CommandController(Resources* resources, QObject* parent)
@@ -33,7 +46,65 @@ CommandController::CommandController(Resources* resources, QObject* parent)
 }
 
 CommandController::~CommandController() {
+	stopContextCleanup();
 	d->globalContext.reset();
+}
+
+int CommandController::Private::cleanupIntervalMs() const {
+	int interval = kDefaultCleanupIntervalMs;
+	if (resources) {
+		interval = resources->Variables.get(
+			"command.context.cleanupIntervalMs", interval).toInt();
+	}
+
+	return interval > 0 ? interval : kDefaultCleanupIntervalMs;
+}
+
+void CommandController::startContextCleanup() {
+	if (d->cleanupThread) {
+		return;
+	}
+
+	d->cleanupThread = new QThread(this);
+	d->cleanupThread->setObjectName(QStringLiteral("CommandContextCleanup"));
+
+	// Таймер живёт в фоновом потоке, а очистка выполняется в потоке
+	// контроллера: реестр контекстов принадлежит GUI-потоку.
+	auto* timer = new QTimer();
+	timer->setInterval(d->cleanupIntervalMs());
+	timer->moveToThread(d->cleanupThread);
+	qDebug() << "CommandController: context cleanup interval" << timer->interval() << "ms";
+
+	QObject::connect(d->cleanupThread, &QThread::started, timer, [timer]() {
+		timer->start();
+	});
+	QObject::connect(timer, &QTimer::timeout, this, [this]() {
+		pruneDeadContexts();
+	}, Qt::QueuedConnection);
+	QObject::connect(d->cleanupThread, &QThread::finished, timer, &QObject::deleteLater);
+
+	d->cleanupThread->start();
+}
+
+void CommandController::stopContextCleanup() {
+	if (!d->cleanupThread) {
+		return;
+	}
+
+	d->cleanupThread->quit();
+	if (!d->cleanupThread->wait(2000)) {
+		qWarning() << "CommandController: context cleanup thread did not stop in time";
+	}
+
+	d->cleanupThread = nullptr;
+}
+
+int CommandController::pruneDeadContexts() {
+	if (!d->globalContext) {
+		return 0;
+	}
+
+	return d->globalContext->pruneDeadContexts();
 }
 
 void CommandController::init() {
@@ -42,6 +113,10 @@ void CommandController::init() {
 	d->documentsContext = d->globalContext->documentsContext();
 
 	initContext();
+
+	// Фоновый поток периодически убирает контексты, владельцы которых
+	// уже уничтожены.
+	startContextCleanup();
 
 	const auto controller = d->globalContext->commandController();
 	controller->printSuccess(QString("CommandController initialized with %1 available commands")

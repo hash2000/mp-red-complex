@@ -119,7 +119,7 @@ std::shared_ptr<CommandContext> CommandContext::context(const QString& ns) const
 
 	if (isGlobalContext()) {
 		const auto it = d->contexts.constFind(ns);
-		if (it == d->contexts.constEnd()) {
+		if (it == d->contexts.constEnd() || it->expired()) {
 			return nullptr;
 		}
 
@@ -149,15 +149,22 @@ QList<std::shared_ptr<CommandContext>> CommandContext::childContexts() const {
 	return result;
 }
 
-QStringList CommandContext::nameSpaces() const {
+QStringList CommandContext::nameSpaces(bool alive) const {
 	if (isGlobalContext()) {
 		QStringList result;
-		result << ".";
-		result << d->contexts.keys();
+		for (auto it = d->contexts.cbegin(); it != d->contexts.cend(); it++) {
+			// По умолчанию мёртвые записи системе не видны: их убирает очистка.
+			if (alive && it->expired()) {
+				continue;
+			}
+
+			result << it.key();
+		}
+
 		return result;
 	}
 
-	return globalContext()->nameSpaces();
+	return globalContext()->nameSpaces(alive);
 }
 
 void CommandContext::setVariablesMode(VariablesMode mode) {
@@ -379,5 +386,42 @@ void CommandContext::notifyDocumentDeactivated() {
 
 void CommandContext::notifyDocumentInvoked(const QString& documentId) {
 	emit documentInvoked(documentId);
+}
+
+int CommandContext::pruneDeadContexts() {
+	auto global = globalContext();
+	if (!global) {
+		return 0;
+	}
+
+	const int removed = global->pruneDeadSubtree();
+	if (removed > 0) {
+		qDebug() << "CommandContext: removed" << removed << "dead contexts";
+	}
+
+	return removed;
+}
+
+int CommandContext::pruneDeadSubtree() {
+	int removed = 0;
+
+	// Реестр хранит слабые ссылки: если владелец контекст уничтожил,
+	// запись остаётся «мёртвой» и её пора убрать.
+	for (auto it = d->contexts.begin(); it != d->contexts.end(); ) {
+		if (it->expired()) {
+			it = d->contexts.erase(it);
+			removed++;
+		}
+		else {
+			it++;
+		}
+	}
+
+	// У живых детей могут быть собственные реестры.
+	for (const auto& child : childContexts()) {
+		removed += child->pruneDeadSubtree();
+	}
+
+	return removed;
 }
 
