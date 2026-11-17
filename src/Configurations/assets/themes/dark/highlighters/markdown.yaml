@@ -1,0 +1,195 @@
+# Подсветка Markdown с вложенными блоками кода.
+language:
+  name: Markdown
+  mimeType: text/markdown
+  extensions: [.md]
+  icon: ":/icons/md.png"
+
+rules:
+  # Заголовки ATX
+  - pattern: '^# [^\n]+$'
+    priority: 10
+    foreground: "#569CD6"
+    bold: true
+    pointSize: 24
+
+  - pattern: '^## [^\n]+$'
+    priority: 10
+    foreground: "#569CD6"
+    bold: true
+    pointSize: 20
+
+  - pattern: '^### [^\n]+$'
+    priority: 10
+    foreground: "#569CD6"
+    bold: true
+    pointSize: 16
+
+  - pattern: '^#### [^\n]+$'
+    priority: 10
+    foreground: "#569CD6"
+    bold: true
+    pointSize: 14
+
+  - pattern: '^##### [^\n]+$'
+    priority: 10
+    foreground: "#569CD6"
+    bold: true
+
+  - pattern: '^###### [^\n]+$'
+    priority: 10
+    foreground: "#569CD6"
+    bold: true
+
+  # Заголовки Setext
+  - pattern: '^=+$'
+    priority: 11
+    foreground: "#569CD6"
+    bold: true
+    underline: true
+
+  - pattern: '^-+$'
+    priority: 11
+    foreground: "#569CD6"
+    bold: true
+    underline: true
+
+  # Жирный текст
+  - pattern: '\*\*[^\*]+\*\*'
+    priority: 20
+    bold: true
+
+  - pattern: '__[^_]+__'
+    priority: 20
+    bold: true
+
+  # Курсив
+  - pattern: '(?<!\*)\*(?!\*)[^\*]+\*(?!\*)'
+    priority: 21
+    italic: true
+
+  - pattern: '(?<!_)_(?!_)[^_]+_(?!_)'
+    priority: 21
+    italic: true
+
+  # Жирный курсив
+  - pattern: '\*\*\*[^\*]+\*\*\*'
+    priority: 19
+    bold: true
+    italic: true
+
+  - pattern: '___[^_]+___'
+    priority: 19
+    bold: true
+    italic: true
+
+  - pattern: '\*\*_[^_]+_\*\*'
+    priority: 19
+    bold: true
+    italic: true
+
+  # Зачёркнутый текст
+  - pattern: '~~[^~]+~~'
+    priority: 22
+    strikeout: true
+    foreground: "#808080"
+
+  # Ссылки [text](url)
+  - pattern: '\[([^\]]+)\]\(([^\)]+)\)'
+    priority: 25
+    foreground: "#4EA1FE"
+    underline: true
+
+  # Простые URL
+  - pattern: 'https?://[^\s\)]+|ftp://[^\s\)]+|www\.[^\s\)]+'
+    priority: 26
+    foreground: "#4EA1FE"
+    underline: true
+
+  # Ссылки-сноски [text][id]
+  - pattern: '\[([^\]]+)\]\[([^\]]*)\]'
+    priority: 25
+    foreground: "#4EA1FE"
+    underline: true
+
+  # Изображения
+  - pattern: '!\[([^\]]*)\]\(([^\)]+)\)'
+    priority: 27
+    foreground: "#CE9178"
+    italic: true
+
+  # Цитаты
+  - pattern: '^> .*$'
+    priority: 30
+    foreground: "#6A9955"
+    italic: true
+    background: "#2D2D2D"
+
+  # Маркированные списки
+  - pattern: '^[\s]*[-*+] .*$'
+    priority: 35
+    foreground: "#FFE66D"
+    bold: true
+
+  # Нумерованные списки
+  - pattern: '^[\s]*\d+\. .*$'
+    priority: 35
+    foreground: "#FFE66D"
+    bold: true
+
+  # Горизонтальные линии
+  - pattern: '^[-*_]{3,}$'
+    priority: 40
+    foreground: "#808080"
+
+  # Маркеры списков
+  - pattern: '^[\s]*[-*+] '
+    priority: 36
+    foreground: "#808080"
+
+  - pattern: '^[\s]*\d+\. '
+    priority: 36
+    foreground: "#808080"
+
+  # Маркер цитаты
+  - pattern: '^> '
+    priority: 31
+    foreground: "#808080"
+
+  # Escape-последовательности
+  - pattern: '\\[\*_\[\]()#\+\-\.!|~`<>]'
+    priority: 5
+    foreground: "#D7BA7D"
+    bold: true
+
+  # HTML-теги
+  - pattern: '</?\w+[^>]*>'
+    priority: 45
+    foreground: "#808080"
+    fontFamily: "Courier New"
+
+  # Разделители таблиц
+  - pattern: '^\|[\s\-:]+\|'
+    priority: 40
+    foreground: "#569CD6"
+
+  # Строки таблиц
+  - pattern: '^\|[^\n]+\|$'
+    priority: 41
+    foreground: "#569CD6"
+
+# Блоки кода: язык берётся из захваченной группы или задан явно.
+embeddedBlocks:
+  - start: '^```(\w+)[\r\n]*$'
+    end: '^```$'
+    language: '$1'
+    priority: 14
+    foreground: "#CE9178"
+    background: "#1E1E1E"
+
+  - start: '^```$'
+    end: '^```$'
+    language: ''
+    priority: 14
+    foreground: "#CE9178"
+    background: "#1E1E1E"

@@ -159,7 +159,7 @@ public:
 		});
 
 		registerFactory<HighlightingPluginManager>([this] {
-			return std::make_unique<HighlightingPluginManager>();
+			return std::make_unique<HighlightingPluginManager>(resources);
 		});
 
 		registerFactory<FormatterPluginManager>([this] {

@@ -1,16 +1,27 @@
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
 #include "Content/CodeEditorWidget/language_info.h"
-#include "Content/CodeEditorWidget/highlights/plugins/glsl_plugin.h"
-#include "Content/CodeEditorWidget/highlights/plugins/plane_text_plugin.h"
-#include "Content/CodeEditorWidget/highlights/plugins/markdown_plugin.h"
-#include "Content/CodeEditorWidget/highlights/plugins/bash_plugin.h"
-#include "Content/CodeEditorWidget/highlights/plugins/html_plugin.h"
-#include "Content/CodeEditorWidget/highlights/plugins/css_plugin.h"
-#include "Content/CodeEditorWidget/highlights/plugins/json_plugin.h"
+#include "Content/CodeEditorWidget/highlights/theme_highlighter_plugin.h"
+#include "Libs/Resources/resources.h"
 
+#include <QDebug>
 #include <QFileInfo>
 #include <map>
 
+namespace {
+/// Каталог плагинов подсветки внутри активной темы.
+QString highlightersDirectory(Resources* resources) {
+	if (!resources) {
+		return { };
+	}
+
+	const auto themeDir = resources->Directories.get("path.theme");
+	if (!themeDir) {
+		return { };
+	}
+
+	return themeDir->filePath("highlighters");
+}
+}
 
 class HighlightingPluginManager::Private {
 public:
@@ -22,15 +33,21 @@ public:
 	std::map<QString, HighlightingPlugin*> contentTypeToPlugin;
 };
 
-HighlightingPluginManager::HighlightingPluginManager()
+HighlightingPluginManager::HighlightingPluginManager(Resources* resources)
 	: d(std::make_unique<Private>(this)) {
-	registerPlugin(std::make_unique<GLSLHighlighterPlugin>());
-	registerPlugin(std::make_unique<PlaneTextHighlighterPlugin>());
-	registerPlugin(std::make_unique<MarkdownHighlighterPlugin>());
-	registerPlugin(std::make_unique<BashHighlighterPlugin>());
-	registerPlugin(std::make_unique<HtmlHighlighterPlugin>());
-	registerPlugin(std::make_unique<CssHighlighterPlugin>());
-	registerPlugin(std::make_unique<JsonHighlighterPlugin>());
+	const auto directory = highlightersDirectory(resources);
+	if (directory.isEmpty()) {
+		qWarning() << "HighlightingPluginManager: theme directory is not configured";
+		return;
+	}
+
+	auto plugins = ThemeHighlighterPlugin::loadDirectory(directory);
+	for (auto& plugin : plugins) {
+		registerPlugin(std::move(plugin));
+	}
+
+	qDebug() << "HighlightingPluginManager: loaded" << d->plugins.size()
+		<< "highlighters from" << directory;
 }
 
 HighlightingPluginManager::~HighlightingPluginManager() = default;
@@ -51,12 +68,12 @@ void HighlightingPluginManager::registerPlugin(std::unique_ptr<HighlightingPlugi
 
 HighlightingPlugin* HighlightingPluginManager::pluginForLanguage(const QString& name) const {
 	const auto ext = name.startsWith(".") ? name : "." + name;
-	auto it = d->extToPlugin.find(ext);
+	auto it = d->extToPlugin.find(ext.toLower());
 	return (it != d->extToPlugin.end()) ? it->second : nullptr;
 }
 
 HighlightingPlugin* HighlightingPluginManager::pluginForContentType(const QString& name) const {
-	auto it = d->contentTypeToPlugin.find(name);
+	auto it = d->contentTypeToPlugin.find(name.toLower());
 	return (it != d->contentTypeToPlugin.end()) ? it->second : nullptr;
 }
 

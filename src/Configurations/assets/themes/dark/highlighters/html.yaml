@@ -1,0 +1,101 @@
+# Подсветка HTML с вложенными блоками JSON и CSS.
+language:
+  name: HTML
+  mimeType: text/html
+  extensions: [.html, .htm, .xhtml, .shtml]
+
+rules:
+  # Комментарии
+  - pattern: '<!--[\s\S]*?-->'
+    priority: 5
+    foreground: "#6A9955"
+    italic: true
+
+  # Открывающие и закрывающие теги
+  - pattern: '</?[\w\-]+[^>]*/?>'
+    priority: 10
+    foreground: "#569CD6"
+    bold: true
+
+  # Самозакрывающиеся теги
+  - pattern: '<[\w\-]+[^>]*/>\s*'
+    priority: 10
+    foreground: "#569CD6"
+    bold: true
+
+  # Имя тега внутри скобок
+  - pattern: '(?<=</?)[\w\-]+(?=[\s>])'
+    priority: 11
+    foreground: "#569CD6"
+    bold: true
+
+  # Имена атрибутов
+  - pattern: '(?<=\s)[\w\-]+(?=\s*=)'
+    priority: 15
+    foreground: "#9CDCFE"
+
+  # Значения атрибутов в двойных кавычках
+  - pattern: '=\s*"[^"]*"'
+    priority: 16
+    foreground: "#CE9178"
+
+  # Значения атрибутов в одинарных кавычках
+  - pattern: "=\\s*'[^']*'"
+    priority: 16
+    foreground: "#CE9178"
+
+  # Значения атрибутов без кавычек
+  - pattern: '=\s*[\w\-]+'
+    priority: 16
+    foreground: "#CE9178"
+
+  # DOCTYPE
+  - pattern: '<!DOCTYPE[\s\S]*?>'
+    priority: 8
+    foreground: "#808080"
+    italic: true
+
+  # HTML-сущности
+  - pattern: '&[a-zA-Z]+;|&#\d+;|&#x[0-9a-fA-F]+;'
+    priority: 20
+    foreground: "#D7BA7D"
+    bold: true
+
+  # CDATA
+  - pattern: '<!\[CDATA\[[\s\S]*?\]\]>'
+    priority: 7
+    foreground: "#808080"
+    background: "#2D2D2D"
+
+  # Условные комментарии IE
+  - pattern: '<!\[if[\s\S]*?<!\[endif\]\]>'
+    priority: 6
+    foreground: "#808080"
+    italic: true
+
+  # Серверные вставки
+  - pattern: '<\?[\s\S]*?\?>'
+    priority: 30
+    foreground: "#FF6B6B"
+    background: "#2D2D2D"
+
+  # Комментарии IE внутри тегов
+  - pattern: '<!--\[if[^\]]*\]>[\s\S]*?<!\[endif\]-->'
+    priority: 6
+    foreground: "#6A9955"
+    italic: true
+
+# Вложенные блоки: содержимое подсвечивается плагином указанного языка.
+embeddedBlocks:
+  - start: '<script[^>]*\btype\s*=\s*[''"]application/json[''"][^>]*>'
+    end: '</script>'
+    language: json
+    priority: 25
+    background: "#1E1E1E"
+    options: [caseInsensitive]
+
+  - start: '<style[^>]*>'
+    end: '</style>'
+    language: css
+    priority: 25
+    background: "#1E1E1E"

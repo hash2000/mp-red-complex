@@ -406,7 +406,7 @@ Launcher              точка входа и композиция: main.cpp, A
 4. Панель: `MainWindow::registerSidePanel` / `MainWindow::registerBottomPanel`.
 5. Модуль: каталог `src/Content/{Module}` с целью `RedComplex<Module>` по образцу существующих → `add_subdirectory` в `src/Content/CMakeLists.txt` → линковка в `src/Launcher/CMakeLists.txt`.
 6. Тема: каталог `assets/themes/{name}` с `palette.yaml` и `stylesheets/index.yaml`, имя — в `bootstrap.yaml`.
-7. Подсветка/форматтер: наследник `HighlightingPlugin` или `FormatterPlugin`/`FormatterPluginAsync` → регистрация в `HighlightingPluginManager`/`FormatterPluginManager`.
+7. Подсветка/форматтер: язык подсветки добавляется файлом `assets/themes/{theme}/highlighters/{name}.yaml` без изменения кода; собственный C++-плагин — наследник `HighlightingPlugin` через `HighlightingPluginManager::registerPlugin`. Форматтер — наследник `FormatterPlugin`/`FormatterPluginAsync` в `FormatterPluginManager`.
 8. Класс виджета для yaml: `WidgetsBuilder` (`src/Launcher/widgets_builder.cpp`) → `registry->registerFactory({className, xtype}, factory)`; фабрика получает `WidgetBuildHandler` (`name`, `title`, `glyph`, `parent`, `context`) и возвращает `QWidget*`.
 
 #### Соглашения по слоям
@@ -475,7 +475,8 @@ Launcher              точка входа и композиция: main.cpp, A
 - UsersModule: `UsersService`, `UsersRegistryService`, `UsersRegistryDataProviderDb`, `User`/`UserData`/`UserView`, `LoginWidget`, `RegisterWidget`, `UserWidget`, `crypto_extensions` (BIP-39-сид, соль, ключи БД).
 - FetchApiModule: `FetchApiService`, `FetchStoreDbService`, `FetchTree`/`FetchQuery`/`FetchOpt`, `FetchApiWidget`, `FetchQueriesTreeWidget`, `FetchApiCommand`.
 - MessagerModule: `MessagesDataProviderDb`, `IMessagesDataProvider`, `Message`.
-- CodeEditorWidget: `CodeEditorDocument` (`documents/`, обёртка-документ: лента управления, путь и сохранение), `CodeEditorWidget` (`widgets/`), `Highlighter`, `HighlightingPlugin` + `HighlightingPluginManager` + плагины (bash, css, glsl, html, json, markdown, plain text), `FormatterPlugin`/`FormatterPluginAsync` + `FormatterPluginManager` + `ExternalCliFormatterPlugin`, `LanguageInfo`.
+- CodeEditorWidget: `CodeEditorDocument` (`documents/`, обёртка-документ: лента управления, путь и сохранение), `CodeEditorWidget` (`widgets/`), `Highlighter`, `HighlightingPlugin` + `HighlightingPluginManager` + `ThemeHighlighterPlugin` (правила читаются из темы), `FormatterPlugin`/`FormatterPluginAsync` + `FormatterPluginManager` + `ExternalCliFormatterPlugin`, `LanguageInfo`.
+- Подсветка задаётся данными темы: `assets/themes/{theme}/highlighters/{language}.yaml` (`language`: имя, `mimeType`, `extensions`, `icon`; `rules` и `embeddedBlocks` со стилями `foreground`/`background`/`bold`/`italic`/`underline`/`strikeout`/`pointSize`/`fontFamily`, `priority`, `options`). `HighlightingPluginManager(Resources*)` читает каталог `{path.theme}/highlighters`; в коде правил и цветов нет, новый язык добавляется файлом темы.
 - Окна Launcher: `LoginWindow`, `UserWindow`, `WarmupWindow`/`WarmupWidget`, `CodeEditorWindow`, `FetchApiWindow`, `FetchApiQueriesTreeWindow` (`src/Launcher/windows/*`).
 
 **Библиотеки**
@@ -491,7 +492,7 @@ Launcher              точка входа и композиция: main.cpp, A
 
 **Цели сборки и тесты**
 - Цели: `Launcher`, `RedComplexBase`, `RedComplexBaseWidgets`, `RedComplexResources`, `RedComplexGraphics`, `RedComplexEngine`, `RedComplexDataStream`, `RedComplexDataFormat`, `RedComplexConsoleModule`, `RedComplexDatabaseModule`, `RedComplexUsersModule`, `RedComplexFetchApiModule`, `RedComplexMessagerModule`, `RedComplexCodeEditorWidget`.
-- Тесты: `TestEngine` (парсер, контексты, палитра — `tests/engine`), `TestUiZones` (зоны `MainWindow` и команды `documents`/`info-panels`/`side-panels` — `tests/ui`), `TestClassManager` (загрузка `main.yaml`, `content.documents`/`delete`, эталонное описание `applications/singletone` — `tests/ui`), `TestDatabasesService`, `TestItemsService` и `TestInventoriesService` (заготовки), агрегат `run_tests`; отдельной цели `RunTests` в `tests/CMakeLists.txt` нет.
+- Тесты: `TestEngine` (парсер, контексты, палитра — `tests/engine`), `TestUiZones` (зоны `MainWindow`, команды `documents`/`info-panels`/`side-panels` и контексты документов — `tests/ui`), `TestClassManager` (загрузка `main.yaml`, `content.documents`/`delete`, эталонное описание `applications/singletone` — `tests/ui`), `TestHighlighters` (загрузка правил подсветки из темы — `tests/ui`), `TestDatabasesService`, `TestItemsService` и `TestInventoriesService` (заготовки), агрегат `run_tests`; отдельной цели `RunTests` в `tests/CMakeLists.txt` нет.
 
 
 ## Ссылки на существующие скилы

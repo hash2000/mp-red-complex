@@ -52,3 +52,31 @@ target_compile_definitions(TestClassManager PRIVATE
 )
 
 add_test(NAME TestClassManager COMMAND TestClassManager)
+
+# Тест читает правила подсветки прямо из темы в исходниках.
+add_executable(TestHighlighters
+    test_highlighters.cpp
+)
+
+target_include_directories(TestHighlighters PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/tests
+)
+
+target_link_libraries(TestHighlighters PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+    Qt6::Test
+
+    RedComplexCodeEditorWidget
+    RedComplexEngine
+    RedComplexBase
+    RedComplexResources
+)
+
+target_compile_definitions(TestHighlighters PRIVATE
+    REDCOMPLEX_CONFIGURATIONS_DIR="${CMAKE_SOURCE_DIR}/src/Configurations"
+)
+
+add_test(NAME TestHighlighters COMMAND TestHighlighters)

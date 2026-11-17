@@ -1,0 +1,102 @@
+# Подсветка Bash. Правила читаются ThemeHighlighterPlugin.
+language:
+  name: Bash
+  mimeType: text/x-sh
+  extensions: [.sh, .bash, .bashrc, .bash_profile, .profile]
+  icon: ":/icons/bash.png"
+
+rules:
+  # Комментарии
+  - pattern: '#[^\n]*'
+    priority: 5
+    foreground: "#6A9955"
+    italic: true
+
+  # Строки в двойных кавычках
+  - pattern: '"[^"]*"'
+    priority: 6
+    foreground: "#CE9178"
+
+  # Строки в одинарных кавычках
+  - pattern: "'[^']*'"
+    priority: 6
+    foreground: "#CE9178"
+
+  # Ключевые слова
+  - pattern: '\b(if|then|else|elif|fi|case|esac|for|while|until|do|done|in|select|function|time|coproc)\b'
+    priority: 10
+    foreground: "#569CD6"
+    bold: true
+
+  # Встроенные команды
+  - pattern: '\b(alias|bg|bind|break|builtin|caller|cd|command|compgen|complete|compopt|continue|declare|dirs|disown|echo|enable|eval|exec|exit|export|false|fc|fg|getopts|hash|help|history|jobs|kill|let|local|logout|mapfile|popd|printf|pushd|pwd|read|readarray|readonly|return|set|shift|shopt|source|suspend|test|times|trap|true|type|typeset|ulimit|umask|unalias|unset|wait)\b'
+    priority: 11
+    foreground: "#4EC9B0"
+    bold: true
+
+  # Переменные $var и ${var}
+  - pattern: '\$\{?\w+\}?'
+    priority: 12
+    foreground: "#9CDCFE"
+
+  # Специальные переменные $0-$9, $#, $?, $$, $!, $@, $*
+  - pattern: '\$[0-9#?!@*\-$]'
+    priority: 12
+    foreground: "#9CDCFE"
+
+  # Числа
+  - pattern: '\b[0-9]+\.?[0-9]*(?:[eE][+-]?[0-9]+)?\b|\b0[xX][0-9a-fA-F]+\b'
+    priority: 7
+    foreground: "#B5CEA8"
+
+  # Операторы и перенаправления
+  - pattern: '[<>|&!]+|&&|\|\||>>|<<|>|>>|<|<<<|&>|>&|2>|2>>|2>&1|1>&2'
+    priority: 30
+    foreground: "#D4D4D4"
+
+  # Тестовые операторы
+  - pattern: '\b(-eq|-ne|-lt|-le|-gt|-ge|-z|-n|-f|-d|-e|-x|-r|-w|-s|-h|-L|-O|-G|-nt|-ot|-ef)\b'
+    priority: 13
+    foreground: "#569CD6"
+
+  # Here-documents
+  - pattern: '<<[-]?\s*['']?(\w+)['']?'
+    priority: 15
+    foreground: "#CE9178"
+
+  # Арифметические выражения
+  - pattern: '\$?\(\(.*\)\)'
+    priority: 14
+    foreground: "#FFE66D"
+
+  # Подстановки команд $(command)
+  - pattern: '\$\([^)]+\)'
+    priority: 14
+    foreground: "#D7BA7D"
+
+  # Подстановки команд `command`
+  - pattern: '`[^`]+`'
+    priority: 14
+    foreground: "#D7BA7D"
+
+  # Объявление функций
+  - pattern: '^\s*(function\s+)?(\w+)\s*\(\s*\)\s*\{?'
+    priority: 8
+    foreground: "#DCDCAA"
+    bold: true
+
+  # Shebang
+  - pattern: '^#!/.*$'
+    priority: 3
+    foreground: "#9B9B9B"
+    bold: true
+
+  # Escape-последовательности в строках
+  - pattern: '\\[\\nrtabfv\"''$]'
+    priority: 4
+    foreground: "#D7BA7D"
+
+  # Массивы
+  - pattern: '\w+\s*=\s*\([^)]*\)'
+    priority: 16
+    foreground: "#9CDCFE"
