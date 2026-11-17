@@ -58,7 +58,6 @@ public:
 
 private:
 	void registerContext(const QString& ns, std::weak_ptr<CommandContext> context);
-	void snapshotParentVariables();
 
 private:
 	class Private;

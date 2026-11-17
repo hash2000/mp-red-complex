@@ -20,7 +20,32 @@ public:
 	QMap<QString, QVariant> variables;
 	QMap<QString, QString> variableMimeTypes;
 	CommandContext::VariablesMode variablesMode = CommandContext::VariablesMode::Lazy;
+
+	void snapshotParentVariables();
 };
+
+
+void CommandContext::Private::snapshotParentVariables() {
+	if (!parentContext) {
+		return;
+	}
+
+	const auto inherited = parentContext->variables();
+	for (auto it = inherited.cbegin(); it != inherited.cend(); ++it) {
+		if (!variables.contains(it.key())) {
+			variables.insert(it.key(), it.value());
+		}
+
+		if (variableMimeTypes.contains(it.key())) {
+			continue;
+		}
+
+		const auto mimeType = parentContext->variableMimeType(it.key());
+		if (!mimeType.isEmpty()) {
+			variableMimeTypes.insert(it.key(), mimeType);
+		}
+	}
+}
 
 CommandContext::CommandContext(CommandController* commandController, std::shared_ptr<CommandContext> parentContext, const QString& name, QObject* parent)
 : d(std::make_unique<Private>(this))
@@ -56,14 +81,6 @@ QString CommandContext::name() const {
 
 QString CommandContext::nameSpace() const {
 	return d->nameSpace;
-}
-
-void CommandContext::registerContext(const QString& ns, std::weak_ptr<CommandContext> context) {
-	if (d->contexts.contains(ns)) {
-		qWarning() << "CommandContext::registerNamespace:" << ns << "allready defined. Revrite.";
-	}
-
-	d->contexts[ns] = context;
 }
 
 std::shared_ptr<CommandContext> CommandContext::createScopedContext(const QString& name) {
@@ -141,7 +158,7 @@ void CommandContext::setVariablesMode(VariablesMode mode) {
 	d->variablesMode = mode;
 
 	if (mode == VariablesMode::Atomic) {
-		snapshotParentVariables();
+		d->snapshotParentVariables();
 	}
 }
 
@@ -237,24 +254,11 @@ QString CommandContext::variableMimeType(const QString& name, const QString& def
 	return d->parentContext->variableMimeType(name, defaultValue);
 }
 
-void CommandContext::snapshotParentVariables() {
-	if (!d->parentContext) {
-		return;
+void CommandContext::registerContext(const QString& ns, std::weak_ptr<CommandContext> context) {
+	if (d->contexts.contains(ns)) {
+		qWarning() << "CommandContext::registerNamespace:" << ns << "allready defined. Revrite.";
 	}
 
-	const auto inherited = d->parentContext->variables();
-	for (auto it = inherited.cbegin(); it != inherited.cend(); ++it) {
-		if (!d->variables.contains(it.key())) {
-			d->variables.insert(it.key(), it.value());
-		}
-
-		if (d->variableMimeTypes.contains(it.key())) {
-			continue;
-		}
-
-		const auto mimeType = d->parentContext->variableMimeType(it.key());
-		if (!mimeType.isEmpty()) {
-			d->variableMimeTypes.insert(it.key(), mimeType);
-		}
-	}
+	d->contexts[ns] = context;
 }
+
