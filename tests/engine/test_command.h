@@ -37,6 +37,10 @@ private slots:
 	void testContext_ChildContexts();
 	void testContext_PruneDeadContexts();
 	void testContext_NameSpacesAliveOnly();
+	void testContext_EventIsFired();
+	void testContext_VariablesBatchSuppressesChangeSignals();
+	void testContext_VariablesBatchWithoutChanges();
+	void testContext_ChangedVariablesEmptyOutsideBatch();
 	void testContext_ChildContextsReturnOnlyAlive();
 	void testContext_CleanupRunsInBackground();
 	void testContext_BootstrapMigrations();

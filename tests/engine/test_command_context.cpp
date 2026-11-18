@@ -202,6 +202,88 @@ void TestEngine::testContext_CleanupRunsInBackground() {
 	ctl->stopContextCleanup();
 }
 
+void TestEngine::testContext_EventIsFired() {
+	// Given
+	auto ctl = std::make_unique<TestCommandController>();
+	auto context = ctl->globalContext()->createScopedContext("events");
+	QSignalSpy fired(context.get(), &CommandContext::eventFired);
+
+	// When
+	context->fireEvent("documents.changed");
+
+	// Then: событие пришло подписчикам с именем в параметре
+	QCOMPARE(fired.count(), 1);
+	QCOMPARE(fired.at(0).at(0).toString(), QStringLiteral("documents.changed"));
+}
+
+void TestEngine::testContext_VariablesBatchSuppressesChangeSignals() {
+	// Given
+	auto ctl = std::make_unique<TestCommandController>();
+	auto context = ctl->globalContext()->createScopedContext("batch");
+	QSignalSpy changed(context.get(), &CommandContext::variableChanged);
+	QSignalSpy fired(context.get(), &CommandContext::eventFired);
+
+	// When: пакет объявлен, переменные меняются
+	context->beginVariablesBatch();
+	QVERIFY(context->isVariablesBatchActive());
+	context->setVariable("alpha", 1);
+	context->setVariable("beta", 2);
+	context->setVariable("alpha", 3);   // повторно — в списке один раз
+
+	// Then: сигналов на отдельные переменные нет, список накоплен
+	QCOMPARE(changed.count(), 0);
+	QCOMPARE(context->changedVariables(), QStringList({ "alpha", "beta" }));
+
+	// When: пакет завершён
+	context->endVariablesBatch();
+
+	// Then: пришло одно событие завершения, список очищен
+	QVERIFY(!context->isVariablesBatchActive());
+	QCOMPARE(fired.count(), 1);
+	QCOMPARE(fired.at(0).at(0).toString(), CommandContext::variablesBatchCompleteEvent());
+	QCOMPARE(fired.at(0).at(0).toString(), QStringLiteral("variables.batch.complete"));
+	QVERIFY(context->changedVariables().isEmpty());
+
+	// Изменения вне пакета снова рассылаются как обычно
+	context->setVariable("gamma", 4);
+	QCOMPARE(changed.count(), 1);
+	QCOMPARE(changed.at(0).at(1).toString(), QStringLiteral("gamma"));
+}
+
+void TestEngine::testContext_VariablesBatchWithoutChanges() {
+	// Given
+	auto ctl = std::make_unique<TestCommandController>();
+	auto context = ctl->globalContext()->createScopedContext("empty-batch");
+	QSignalSpy fired(context.get(), &CommandContext::eventFired);
+
+	// When: пакет без изменений
+	context->beginVariablesBatch();
+	QVERIFY(context->changedVariables().isEmpty());
+	context->endVariablesBatch();
+
+	// Then: событие всё равно отправляется
+	QCOMPARE(fired.count(), 1);
+	QCOMPARE(fired.at(0).at(0).toString(), CommandContext::variablesBatchCompleteEvent());
+}
+
+void TestEngine::testContext_ChangedVariablesEmptyOutsideBatch() {
+	// Given
+	auto ctl = std::make_unique<TestCommandController>();
+	auto context = ctl->globalContext()->createScopedContext("outside");
+
+	// Then: без объявленного пакета список пуст
+	QVERIFY(!context->isVariablesBatchActive());
+	QVERIFY(context->changedVariables().isEmpty());
+
+	context->setVariable("alpha", 1);
+	QVERIFY(context->changedVariables().isEmpty());
+
+	// Завершение без начала ничего не делает
+	QSignalSpy fired(context.get(), &CommandContext::eventFired);
+	context->endVariablesBatch();
+	QCOMPARE(fired.count(), 0);
+}
+
 void TestEngine::testContext_VariablesLazyMode() {
 	// Given
 	auto ctl = std::make_unique<TestCommandController>();

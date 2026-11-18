@@ -60,6 +60,23 @@ public:
 	void setVariableMimeType(const QString& name, const QString& mimeType);
 	QString variableMimeType(const QString& name, const QString& defaultValue = QString()) const;
 
+	// -------------------------------------------------------------------- события
+	/// Отправить событие контекста: на него подписаны документы.
+	void fireEvent(const QString& eventName);
+	/// Имя события, которое отправляется по завершении пакета переменных.
+	static const QString& variablesBatchCompleteEvent();
+
+	// ------------------------------------------------- пакетное изменение переменных
+	/// Начать пакетное изменение переменных: сигналы на отдельные переменные
+	/// не рассылаются, а их имена копятся в changedVariables().
+	void beginVariablesBatch();
+	/// Завершить пакет: вместо отдельных сигналов отправляется событие
+	/// `variables.batch.complete`.
+	void endVariablesBatch();
+	bool isVariablesBatchActive() const;
+	/// Изменённые за пакет переменные. Вне пакета список пуст.
+	QStringList changedVariables() const;
+
 	// ---------------------------------------------------------------- документы
 	/// Контекст документов, созданных этим контекстом (`{nameSpace}.documents`).
 	/// Создаётся лениво и переиспользуется.
@@ -98,6 +115,9 @@ signals:
 	/// Изменилось значение переменной контекста.
 	void variableChanged(const QString& contextName, const QString& variableName,
 		const QVariant& oldValue, const QVariant& newValue);
+
+	/// Сработало событие контекста (см. fireEvent); документы следят за ним.
+	void eventFired(const QString& eventName);
 
 	/// В контексте документов появился документ (документ создал документ).
 	void documentAttached(const QString& documentId);

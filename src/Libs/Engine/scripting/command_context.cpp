@@ -9,6 +9,8 @@
 namespace {
 /// Имя контекста, в котором живут документы, созданные другим контекстом.
 constexpr const char* kDocumentsScope = "documents";
+/// Событие, которым завершается пакетное изменение переменных.
+constexpr const char* kVariablesBatchComplete = "variables.batch.complete";
 }
 
 class CommandContext::Private {
@@ -30,9 +32,24 @@ public:
 	QMap<QString, QString> variableMimeTypes;
 	CommandContext::VariablesMode variablesMode = CommandContext::VariablesMode::Lazy;
 
+	/// Пакетная обработка переменных: пока она объявлена, изменение
+	/// отдельных переменных не рассылается, а копится в списке.
+	bool variablesBatchActive = false;
+	QStringList batchChangedVariables;
+
+	void rememberChangedVariable(const QString& name);
+
 	void snapshotParentVariables();
 	std::shared_ptr<CommandContext> childByName(const QString& childName) const;
 };
+
+void CommandContext::Private::rememberChangedVariable(const QString& name) {
+	if (batchChangedVariables.contains(name)) {
+		return;
+	}
+
+	batchChangedVariables.append(name);
+}
 
 
 void CommandContext::Private::snapshotParentVariables() {
@@ -203,10 +220,64 @@ bool CommandContext::setVariable(const QString& name, const QVariant& value) {
 	d->variables.insert(name, value);
 
 	if (!hadValue || oldValue != value) {
-		emit variableChanged(d->nameSpace, name, oldValue, value);
+		// В пакетном режиме сигналы отдельных переменных не рассылаются:
+		// документы получат одно событие по завершении пакета.
+		if (d->variablesBatchActive) {
+			d->rememberChangedVariable(name);
+		}
+		else {
+			emit variableChanged(d->nameSpace, name, oldValue, value);
+		}
 	}
 
 	return true;
+}
+
+void CommandContext::fireEvent(const QString& eventName) {
+	// Отправка события сама по себе событием не является.
+	if (eventName == variablesBatchCompleteEvent()) {
+		qWarning() << "CommandContext::fireEvent: reserved event name" << eventName;
+		return;
+	}
+
+	emit eventFired(eventName);
+}
+
+const QString& CommandContext::variablesBatchCompleteEvent() {
+	static const QString event = QString::fromLatin1(kVariablesBatchComplete);
+	return event;
+}
+
+void CommandContext::beginVariablesBatch() {
+	d->variablesBatchActive = true;
+	d->batchChangedVariables.clear();
+}
+
+void CommandContext::endVariablesBatch() {
+	if (!d->variablesBatchActive) {
+		return;
+	}
+
+	d->variablesBatchActive = false;
+
+	// Событие отправляется, пока список изменённых переменных ещё доступен:
+	// подписчики читают его в обработчике.
+	emit eventFired(variablesBatchCompleteEvent());
+
+	d->batchChangedVariables.clear();
+}
+
+bool CommandContext::isVariablesBatchActive() const {
+	return d->variablesBatchActive;
+}
+
+QStringList CommandContext::changedVariables() const {
+	// Список существует только внутри пакета: вне его изменений не копится.
+	if (!d->variablesBatchActive) {
+		return { };
+	}
+
+	return d->batchChangedVariables;
 }
 
 bool CommandContext::hasVariable(const QString& name) const {

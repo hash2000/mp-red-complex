@@ -10,7 +10,7 @@ TextWidget* applyTabDistance(TextWidget* obj, int distance) {
 	const QFontMetrics fm(obj->font());
 
 	const int charWidth = fm.horizontalAdvance(QLatin1Char(' '));
-	const int tabWidth = distance * charWidth;
+	const int tabWidth = distance * charWidth * 2;
 
 	obj->setTabStopDistance(tabWidth);
 	return obj;
