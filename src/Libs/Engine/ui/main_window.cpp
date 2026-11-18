@@ -6,10 +6,12 @@
 #include "Libs/Engine/ui/doc_tab_panel.h"
 #include "Libs/Engine/ui/side_host_panel.h"
 #include "Libs/Engine/ui/properties_panel.h"
+#include "Libs/Engine/ui/new_document_dialog.h"
 #include "Libs/Engine/ui/text_document.h"
 #include "Libs/Engine/ui/command_console.h"
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/scripting/command_controller.h"
+#include "Libs/Engine/scripting/widgets/widget_registry.h"
 
 #include <QAction>
 #include <QCloseEvent>
@@ -321,9 +323,48 @@ void MainWindow::buildDefaultPanels() {
 
 // ------------------------------------------------------------------ actions
 void MainWindow::Private::newDocument() {
-	auto* doc = new TextDocument;
-	doc->setTitle(MainWindow::tr("Документ %1").arg(untitledCounter++));
-	q->addDocument(doc);
+	auto* registry = controller ? controller->widgets() : nullptr;
+	if (!registry || registry->types().isEmpty()) {
+		// Реестр недоступен (окно создано без контроллера): сохраняем
+		// прежнее поведение — пустой текстовый документ.
+		auto* doc = new TextDocument;
+		doc->setTitle(MainWindow::tr("Документ %1").arg(untitledCounter++));
+		q->addDocument(doc);
+		return;
+	}
+
+	NewDocumentDialog dialog(registry, context, q);
+	if (dialog.exec() != QDialog::Accepted) {
+		return;
+	}
+
+	const auto info = registry->typeInfo(dialog.documentType());
+	if (!info) {
+		q->log(MainWindow::tr("Тип документа не зарегистрирован: %1").arg(dialog.documentType()));
+		return;
+	}
+
+	WidgetBuildHandler handler;
+	handler.className = info->className;
+	handler.xtype = info->xtype;
+	handler.name = dialog.documentName();
+	handler.title = dialog.documentTitle();
+	handler.glyph = dialog.documentGlyph();
+	handler.singletone = info->singletone;
+	handler.parent = q;
+	handler.context = context;
+
+	// Для singletone имя документа совпадает с xtype: повторный выбор
+	// того же типа активирует уже открытый документ.
+	const auto id = registry->documentId(info->xtype, dialog.documentName());
+	const auto title = dialog.documentTitle();
+	const auto glyph = dialog.documentGlyph();
+	auto* document = q->createWidget(id, WidgetKind::Document, title, glyph,
+		[registry, type = info->xtype, handler]() { return registry->build(type, handler); },
+		QString(), info->xtype, context);
+	if (!document) {
+		q->log(MainWindow::tr("Не удалось создать документ: %1").arg(info->xtype));
+	}
 }
 
 void MainWindow::Private::openFile(const QString& path) {
@@ -459,28 +500,36 @@ QWidget* MainWindow::createWidget(const QString& id, WidgetKind kind, const QStr
 			<< "is deleted by application description, widget rejected:" << id;
 		return nullptr;
 	}
-	if (auto* existing = widget(id)) {
+
+	// Имя singletone-документа всегда равно его xtype: повторное создание
+	// с другим id активирует уже открытый документ.
+	QString documentId = id;
+	if (d->controller && d->controller->widgets()) {
+		documentId = d->controller->widgets()->documentId(type, id);
+	}
+
+	if (auto* existing = widget(documentId)) {
 		// Документ уже создан: другой документ его вызывает.
-		const auto it = d->entries.constFind(id);
+		const auto it = d->entries.constFind(documentId);
 		if (it != d->entries.cend() && creatorContext) {
-			creatorContext->notifyDocumentInvoked(id);
+			creatorContext->notifyDocumentInvoked(documentId);
 			if (it->document && it->document->context()) {
-				it->document->context()->notifyDocumentInvoked(id);
+				it->document->context()->notifyDocumentInvoked(documentId);
 			}
 		}
-		showWidget(id);
+		showWidget(documentId);
 		return existing;
 	}
-	if (!factory || d->creating.contains(id))
+	if (!factory || d->creating.contains(documentId))
 		return nullptr;
-	d->creating.insert(id);
-	auto guard = qScopeGuard([this, id] { d->creating.remove(id); });
+	d->creating.insert(documentId);
+	auto guard = qScopeGuard([this, documentId] { d->creating.remove(documentId); });
 	QWidget* content = nullptr;
 	try {
 		content = factory();
 	}
 	catch (const std::exception& e) {
-		qWarning() << "MainWindow: widget factory failed for" << id << e.what();
+		qWarning() << "MainWindow: widget factory failed for" << documentId << e.what();
 		return nullptr;
 	}
 	if (!content)
@@ -499,7 +548,7 @@ QWidget* MainWindow::createWidget(const QString& id, WidgetKind kind, const QStr
 
 	const auto creator = creatorContext ? creatorContext : d->context;
 	if (creator && document->context() == nullptr) {
-		document->setContext(creator->createDocumentContext(id));
+		document->setContext(creator->createDocumentContext(documentId));
 	}
 
 	if (!title.isEmpty()) {
@@ -511,16 +560,16 @@ QWidget* MainWindow::createWidget(const QString& id, WidgetKind kind, const QStr
 	document->setToolTip(tooltip);
 
 	if (kind == WidgetKind::Document) {
-		d->track(id, kind, document, title, type, document);
+		d->track(documentId, kind, document, title, type, document);
 		addDocument(document);
 	}
 	else if (kind == WidgetKind::BottomPanel) {
-		registerBottomPanel(id, glyph, title, document, tooltip, type);
-		showBottomPanel(id);
+		registerBottomPanel(documentId, glyph, title, document, tooltip, type);
+		showBottomPanel(documentId);
 	}
 	else if (kind == WidgetKind::SidePanel) {
-		registerSidePanel(id, glyph, title, document, tooltip, type);
-		showSidePanel(id);
+		registerSidePanel(documentId, glyph, title, document, tooltip, type);
+		showSidePanel(documentId);
 	}
 
 	// Наружу отдаём документ: у всех зон это DocumentWidget, связанный контекстом.

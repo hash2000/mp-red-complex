@@ -333,7 +333,7 @@ Launcher              точка входа и композиция: main.cpp, A
 - Любой виджет, созданный `MainWindow::createWidget` (в любой зоне — `Document`, `SidePanel`, `BottomPanel`), является документом: если фабрика вернула не `DocumentWidget`, он оборачивается в `WidgetDocument`. Документ хранит свой контекст (`DocumentWidget::context`/`setContext`), доступен через `MainWindow::document(id)` и `MainWindow::documentContext(id)`.
 - При `CommandController::init()` создаётся корневой контекст `.documents`. Новый документ получает контекст `{creator}.documents.{documentId}`: у документа, созданного из консоли или при загрузке описания приложения, это `.documents.{id}`; у документа, созданного другим документом (например, file explorer открывает редактор), — `.documents.{creator}.documents.{id}`.
 - Источник документа — `creatorContext` в `MainWindow::createWidget`. `WidgetZoneCommand` выбирает его так: ближайший документ-контекст команды (`CommandContext::owningDocumentContext()`), иначе глобальный контекст, поэтому выбор контекста в консоли не влияет на место нового документа. `ClassManager` передаёт глобальный контекст.
-- Документы бывают двух видов: **документ-синглтон** — один на приложение (панель свойств), живёт прямо в `.documents`, его id совпадает с `xtype`, а документы, которым он нужен, привязываются сами и ждут `documentAttached()`, если синглтон ещё не создан; **обычный документ** — создаётся в любом количестве в любой зоне.
+- Документы бывают двух видов: **документ-синглтон** — один на приложение (панель свойств), живёт прямо в `.documents`, его id совпадает с `xtype`, а документы, которым он нужен, привязываются сами и ждут `documentAttached()`, если синглтон ещё не создан; **обычный документ** — создаётся в любом количестве в любой зоне. Признак `singletone` задаётся при регистрации типа в `WidgetRegistry`: для синглтона `WidgetRegistry::documentId()` всегда возвращает `xtype`, поэтому повторное создание (в том числе командой с другим `id`) активирует уже открытый документ.
 - Сигналы `CommandContext`: `variableChanged(contextName, variableName, oldValue, newValue)` (только при реальном изменении значения), `eventFired(eventName)` (сработало событие контекста), `documentAttached(documentId)` (в контексте `.documents` появился документ), `documentActivated(documentId)` / `documentDeactivated()` (документ стал или перестал быть активным в любой зоне), `documentInvoked(documentId)` (другой документ вызвал существующий документ — повторный `createWidget` с тем же id).
 - События и пакетное изменение переменных: `fireEvent(name)` отправляет `eventFired(name)` — на него подписываются документы (имя `variables.batch.complete` зарезервировано за пакетом). `beginVariablesBatch()` подавляет сигналы на отдельные переменные и копит их имена, `endVariablesBatch()` отправляет событие `variables.batch.complete` и очищает накопленное; `changedVariables()` отдаёт список изменённых переменных только внутри пакета (вне пакета — пусто), а `isVariablesBatchActive()` показывает состояние. Имя события доступно как `CommandContext::variablesBatchCompleteEvent()`.
 - Активный документ отслеживает `MainWindow` (`activeDocumentId()`): переключение вкладки в `DocumentArea`, показ боковой или нижней панели.
@@ -375,7 +375,7 @@ Launcher              точка входа и композиция: main.cpp, A
 - `CommandConsole` (`ui/command_console.*`) — консоль команд: история ввода, выбор контекста, рендер `outputRequested` по mime-типу; в текущей оболочке это нижняя панель `console` (в старой `LauncherMainFrame` — отдельное окно с Ctrl + обратная кавычка).
 - `PropertiesPanel` — свойства документа, следует за активным документом (на базе `PropertiesListWidget`).
 - `WidgetRegistry` (`ui/widget_registry.*`) — реестр фабрик виджетов по строковому `type` (`WidgetFactory` + `WidgetTypeHandler`), задел под декларативный UI.
-- Вспомогательные: `ActivityBar` (кнопки, позиции top/bottom, auto-hide), `SideHostPanel` (хост правых панелей), `DocumentTabsPanel` (вкладки, контекстное меню «Свойства»), `DocumentArea` (коллекция документов, `closeAll`), `BottomPanel` (сворачивание), `GlyphToolButton`, `NameSelectDialog`.
+- Вспомогательные: `ActivityBar` (кнопки, позиции top/bottom, auto-hide), `SideHostPanel` (хост правых панелей), `DocumentTabsPanel` (вкладки, контекстное меню «Свойства»), `DocumentArea` (коллекция документов, `closeAll`), `BottomPanel` (сворачивание), `GlyphToolButton`, `NameSelectDialog`, `NewDocumentDialog` (выбор типа документа при создании: поиск по `xtype`/классу, параметры `name`/`glyph`/`title`, переменные контекста).
 
 #### Окна MDI (legacy) и управление зонами
 
@@ -404,12 +404,12 @@ Launcher              точка входа и композиция: main.cpp, A
 
 1. Команда: наследник `ICommand` → регистрация в `ApplicationController::initContext()`.
 2. Сервис/провайдер: интерфейс `I*` в модуле → фабрика в `ServicesFactory` (`src/Launcher/services.cpp`).
-3. Виджет в зоне: зарегистрировать тип в `WidgetsBuilder` (`registry->registerFactory({className, xtype}, factory)`) → `documents`/`info-panels`/`side-panels action=create, target=<xtype>[, id=<id>]`; без `id` создаётся UUID, повторный `id` активирует существующий виджет.
+3. Виджет в зоне: зарегистрировать тип в `WidgetsBuilder` (`registry->registerFactory({className, xtype, singletone[, glyph, title]}, factory)`) → `documents`/`info-panels`/`side-panels action=create, target=<xtype>[, id=<id>]`; без `id` создаётся UUID, повторный `id` активирует существующий виджет; для `singletone` id всегда равен `xtype`.
 4. Панель: `MainWindow::registerSidePanel` / `MainWindow::registerBottomPanel`.
 5. Модуль: каталог `src/Content/{Module}` с целью `RedComplex<Module>` по образцу существующих → `add_subdirectory` в `src/Content/CMakeLists.txt` → линковка в `src/Launcher/CMakeLists.txt`.
 6. Тема: каталог `assets/themes/{name}` с `palette.yaml` и `stylesheets/index.yaml`, имя — в `bootstrap.yaml`.
 7. Подсветка/форматтер: язык подсветки добавляется файлом `assets/themes/{theme}/highlighters/{name}.yaml` без изменения кода; собственный C++-плагин — наследник `HighlightingPlugin` через `HighlightingPluginManager::registerPlugin`. Форматтер — наследник `FormatterPlugin`/`FormatterPluginAsync` в `FormatterPluginManager`.
-8. Класс виджета для yaml: `WidgetsBuilder` (`src/Launcher/widgets_builder.cpp`) → `registry->registerFactory({className, xtype}, factory)`; фабрика получает `WidgetBuildHandler` (`name`, `title`, `glyph`, `parent`, `context`) и возвращает `QWidget*`.
+8. Класс виджета для yaml: `WidgetsBuilder` (`src/Launcher/widgets_builder.cpp`) → `registry->registerFactory({className, xtype, singletone[, glyph, title]}, factory)`; фабрика получает `WidgetBuildHandler` (`name`, `title`, `glyph`, `parent`, `context`) и возвращает `QWidget*`.
 
 #### Соглашения по слоям
 
@@ -460,10 +460,10 @@ Launcher              точка входа и композиция: main.cpp, A
 **Декларативный UI**
 - `ClassManager` (`scripting/application/class_manager.*`) — загрузка `main.yaml`, разрешение `extends`/`requires`, слияние `content`, создание вьюпорта и панелей.
 - `WidgetsBuilder` (`src/Launcher/widgets_builder.*`) — регистрация нативных классов: `System.Viewport.MainForm`/`mainform`, `System.Panels.ConsolePanel`/`console`, `System.Panels.Properties`/`properties`, `System.Panels.Explorer`/`explorer`, `System.Panels.Panel`/`panel`, `Content.Users.*`/`user-login`/`user-register`/`user-profile`, `Content.FetchApi.*`/`fetch-api`/`fetch-api-queries-tree`, `Content.CodeEditor.CodeEditorDocument`/`code-editor`, `Launcher.WarmupWidget`/`warmup`.
-- `WidgetRegistry` (`scripting/widgets/widget_registry.*`) — `registerFactory(WidgetTypeHandler{className, xtype}, factory)` и `build(type, WidgetBuildHandler)`; `WidgetBuildHandler` передаёт `name`, `title`, `glyph`, `parent`, `context`.
+- `WidgetRegistry` (`scripting/widgets/widget_registry.*`) — `registerFactory(WidgetTypeHandler{className, xtype, singletone[, glyph, title]}, factory)`, `types()`/`typeInfo()` для списка типов и значений по умолчанию, `documentId(type, id)` для имени документа (у `singletone` — `xtype`) и `build(type, WidgetBuildHandler)`; `WidgetBuildHandler` передаёт `name`, `title`, `glyph`, `parent`, `context`.
 
 **Оболочка**
-- `MainWindow`, `ActivityBar`, `SideHostPanel`, `DocumentTabsPanel`, `DocumentArea`, `DocumentWidget`, `TextDocument`, `PropertiesPanel`, `BottomPanel`, `CommandConsole`, `WidgetRegistry`(`Libs/scripting/widgets/widget_registry.*`), `GlyphToolButton`, `NameSelectDialog` (`Libs/Engine/ui/*`).
+- `MainWindow`, `ActivityBar`, `SideHostPanel`, `DocumentTabsPanel`, `DocumentArea`, `DocumentWidget`, `TextDocument`, `PropertiesPanel`, `BottomPanel`, `CommandConsole`, `WidgetRegistry`(`Libs/scripting/widgets/widget_registry.*`), `GlyphToolButton`, `NameSelectDialog`, `NewDocumentDialog` (`Libs/Engine/ui/*`).
 
 **Окна MDI (legacy), зоны и контроллеры**
 - `MdiChildWindow` (`Libs/Engine/mdi_child_window.*`), `MdiArea` (`Libs/BaseWidgets/mdi_area.*`).

@@ -102,7 +102,8 @@ void WidgetsBuilder::Private::registerAll() {
 	// Главное окно приложения. Панели создаются декларативно из yaml-описания,
 	// поэтому встроенные панели по умолчанию не собираются.
 	// Зоны, удалённые описанием (bottombar/sidebar delete: true), не создаются.
-	registry->registerFactory({ kMainViewportClass, kMainViewportXtype },
+	registry->registerFactory({ kMainViewportClass, kMainViewportXtype, /*singletone*/ true,
+		QStringLiteral("🖥"), QStringLiteral("Оболочка") },
 		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 			return new MainWindow(handler.context, handler.parent,
 				/*buildDefaultPanels*/ false,
@@ -110,7 +111,8 @@ void WidgetsBuilder::Private::registerAll() {
 		});
 
 	// Консоль команд: для неё нужен CommandController.
-	registry->registerFactory({ "System.Panels.ConsolePanel", "console" },
+	registry->registerFactory({ "System.Panels.ConsolePanel", "console", /*singletone*/ false,
+		QStringLiteral("🖥"), QStringLiteral("Консоль") },
 		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 			if (!handler.context) {
 				return nullptr;
@@ -125,7 +127,9 @@ void WidgetsBuilder::Private::registerAll() {
 		});
 
 	// Каждый вызов создаёт отдельную панель, следящую за активным документом окна.
-	registry->registerFactory({ "System.Panels.Properties", "properties" },
+	// Документ-синглтон: в приложении только одна панель свойств.
+	registry->registerFactory({ "System.Panels.Properties", "properties", /*singletone*/ true,
+		QStringLiteral("🛠"), QStringLiteral("Свойства") },
 		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* properties = new PropertiesPanel(handler.parent);
 			if (auto* window = findMainWindow(handler.parent)) {
@@ -144,7 +148,9 @@ void WidgetsBuilder::Private::registerAll() {
 		});
 
 	// Проводник по файловой системе; двойной клик открывает документ в окне.
-	registry->registerFactory({ "System.Panels.Explorer", "explorer" },
+	// Документ-синглтон: второй проводник не создаётся, а активируется первый.
+	registry->registerFactory({ "System.Panels.Explorer", "explorer", /*singletone*/ true,
+		QStringLiteral("📁"), QStringLiteral("Проводник") },
 		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* tree = new QTreeView(handler.parent);
 			auto* model = new QFileSystemModel(tree);
@@ -171,13 +177,15 @@ void WidgetsBuilder::Private::registerAll() {
 			return tree;
 		});
 
-	registry->registerFactory({ "Content.Users.LoginWidget", "user-login" },
+	registry->registerFactory({ "Content.Users.LoginWidget", "user-login", /*singletone*/ true,
+		QStringLiteral("🔑"), QStringLiteral("Вход") },
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* service = requiredService<UsersService>(servicesFor(type, handler), type, "UsersService");
 			return service ? new LoginWidget(service, handler.parent) : nullptr;
 		});
 
-	registry->registerFactory({ "Content.Users.RegisterWidget", "user-register" },
+	registry->registerFactory({ "Content.Users.RegisterWidget", "user-register", /*singletone*/ true,
+		QStringLiteral("📝"), QStringLiteral("Регистрация") },
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* service = requiredService<UsersRegistryService>(servicesFor(type, handler), type, "UsersRegistryService");
 			if (!service) {
@@ -190,13 +198,15 @@ void WidgetsBuilder::Private::registerAll() {
 			return widget;
 		});
 
-	registry->registerFactory({ "Content.Users.UserWidget", "user-profile" },
+	registry->registerFactory({ "Content.Users.UserWidget", "user-profile", /*singletone*/ true,
+		QStringLiteral("👤"), QStringLiteral("Профиль") },
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* service = requiredService<UsersService>(servicesFor(type, handler), type, "UsersService");
 			return service ? new UserWidget(service, handler.parent) : nullptr;
 		});
 
-	registry->registerFactory({ "Content.FetchApi.FetchApiWidget", "fetch-api" },
+	registry->registerFactory({ "Content.FetchApi.FetchApiWidget", "fetch-api", /*singletone*/ true,
+		QStringLiteral("🌐"), QStringLiteral("Fetch API") },
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* services = servicesFor(type, handler);
 			if (!services || !requiredService<FetchApiService>(services, type, "FetchApiService") ||
@@ -207,7 +217,8 @@ void WidgetsBuilder::Private::registerAll() {
 			return new FetchApiWidget(handler.context, handler.parent);
 		});
 
-	registry->registerFactory({ "Content.FetchApi.FetchQueriesTreeWidget", "fetch-api-queries-tree" },
+	registry->registerFactory({ "Content.FetchApi.FetchQueriesTreeWidget", "fetch-api-queries-tree",
+		/*singletone*/ true, QStringLiteral("🌳"), QStringLiteral("Запросы Fetch API") },
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* service = requiredService<FetchStoreDbService>(servicesFor(type, handler), type, "FetchStoreDbService");
 			if (!service) {
@@ -219,7 +230,9 @@ void WidgetsBuilder::Private::registerAll() {
 			return widget;
 		});
 
-	registry->registerFactory({ "Content.CodeEditor.CodeEditorDocument", "code-editor" },
+	// Редактор кода — обычный документ: экземпляров может быть несколько.
+	registry->registerFactory({ "Content.CodeEditor.CodeEditorDocument", "code-editor",
+		/*singletone*/ false, QStringLiteral("📝"), QStringLiteral("Редактор кода") },
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* services = servicesFor(type, handler);
 			auto* highlighter = requiredService<HighlightingPluginManager>(services, type, "HighlightingPluginManager");
@@ -233,7 +246,8 @@ void WidgetsBuilder::Private::registerAll() {
 	//	});
 
 	// Универсальная панель-заглушка (вывод, ошибки, поиск, git и т.п.).
-	registry->registerFactory({ "System.Panels.Panel", "panel" },
+	registry->registerFactory({ "System.Panels.Panel", "panel", /*singletone*/ false,
+		QStringLiteral("🗔"), QStringLiteral("Панель") },
 		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 			return makePlaceholderPanel(handler);
 		});

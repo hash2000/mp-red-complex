@@ -5,10 +5,15 @@
 #include "Libs/Engine/ui/doc_area.h"
 #include "Libs/Engine/ui/doc_widget.h"
 #include "Libs/Engine/ui/main_window.h"
+#include "Libs/Engine/ui/new_document_dialog.h"
 #include "Libs/Engine/scripting/widgets/widget_registry.h"
 #include "Libs/Engine/commands/widget_zone_command.h"
 
 #include <QLabel>
+#include <QLineEdit>
+#include <QListWidget>
+#include <QTableWidget>
+#include <QToolButton>
 #include <QtTest/QtTest>
 
 #include <memory>
@@ -37,7 +42,8 @@ struct WidgetFixture {
 	int built = 0;
 
 	explicit WidgetFixture(CommandController& controller) {
-		controller.widgets()->registerFactory({ "Test.Widget", "test-widget" },
+		controller.widgets()->registerFactory({ "Test.Widget", "test-widget", /*singletone*/ false,
+			QStringLiteral("🧪"), QStringLiteral("Тестовый виджет") },
 			[this](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 				built++;
 				auto* label = new QLabel(QStringLiteral("test"), handler.parent);
@@ -78,6 +84,11 @@ private slots:
 	void documentAttachmentIsNotified();
 	void documentActivationIsNotified();
 	void existingDocumentInvocationIsNotified();
+	void registryDescribesTypes();
+	void singletoneDocumentKeepsXtypeName();
+	void singletoneCreateWidgetNormalizesId();
+	void commandUsesRegistryDefaults();
+	void newDocumentDialogFiltersTypes();
 };
 
 void TestUiZones::createWidgetInEveryZone() {
@@ -403,6 +414,193 @@ void TestUiZones::existingDocumentInvocationIsNotified() {
 	QCOMPARE(fixture.built, 1);   // фабрика повторно не вызывается
 	QCOMPARE(invoked.count(), 1);
 	QCOMPARE(invoked.at(0).at(0).toString(), QStringLiteral("logger"));
+}
+
+void TestUiZones::registryDescribesTypes() {
+	TestCommandController controller;
+	WidgetFixture fixture(controller);
+	controller.widgets()->registerFactory({ "Test.Singleton", "test-singleton", /*singletone*/ true,
+		QStringLiteral("★"), QStringLiteral("Одиночный") },
+		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
+			return new QLabel(handler.title, handler.parent);
+		});
+
+	const auto types = controller.widgets()->types();
+	QCOMPARE(types.size(), 2);
+	QCOMPARE(types.at(0).xtype, QStringLiteral("test-singleton"));
+	QCOMPARE(types.at(0).className, QStringLiteral("Test.Singleton"));
+	QVERIFY(types.at(0).singletone);
+	QCOMPARE(types.at(0).glyph, QStringLiteral("★"));
+	QCOMPARE(types.at(0).title, QStringLiteral("Одиночный"));
+
+	QCOMPARE(types.at(1).xtype, QStringLiteral("test-widget"));
+	QVERIFY(!types.at(1).singletone);
+	QCOMPARE(types.at(1).glyph, QStringLiteral("🧪"));
+	QCOMPARE(types.at(1).title, QStringLiteral("Тестовый виджет"));
+
+	// Поиск описания по xtype и по полному имени класса.
+	const auto byClass = controller.widgets()->typeInfo(QStringLiteral("Test.Singleton"));
+	QVERIFY(byClass);
+	QCOMPARE(byClass->xtype, QStringLiteral("test-singleton"));
+	QVERIFY(!controller.widgets()->typeInfo(QStringLiteral("unknown")));
+
+	// Для singletone id всегда равен xtype, иначе сохраняется предложенный.
+	QCOMPARE(controller.widgets()->documentId(QStringLiteral("test-singleton"),
+		QStringLiteral("custom")), QStringLiteral("test-singleton"));
+	QCOMPARE(controller.widgets()->documentId(QStringLiteral("test-widget"),
+		QStringLiteral("custom")), QStringLiteral("custom"));
+}
+
+void TestUiZones::singletoneDocumentKeepsXtypeName() {
+	TestCommandController controller;
+	int built = 0;
+	controller.widgets()->registerFactory({ "Test.Singleton", "test-singleton", /*singletone*/ true,
+		QStringLiteral("★"), QStringLiteral("Одиночный") },
+		[&built](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
+			built++;
+			return new QLabel(handler.title, handler.parent);
+		});
+	MainWindow window(controller.globalContext(), nullptr, false);
+	WidgetZoneCommand documents(QStringLiteral("documents"), MainWindow::WidgetKind::Document);
+
+	// У команды передан id=test, но документ-синглтон получает имя xtype.
+	QVERIFY(documents.execute(commandContext(controller, {
+		{ "action", "create" }, { "target", "test-singleton" }, { "id", "test" }
+	})));
+	QVERIFY(window.widget(QStringLiteral("test-singleton")));
+	QVERIFY(!window.widget(QStringLiteral("test")));
+	QCOMPARE(built, 1);
+	QCOMPARE(window.widgetTitle(QStringLiteral("test-singleton")), QStringLiteral("Одиночный"));
+	QCOMPARE(window.document(QStringLiteral("test-singleton"))->glyph(), QStringLiteral("★"));
+
+	// Повторное создание с другим id активирует уже открытый документ.
+	QVERIFY(documents.execute(commandContext(controller, {
+		{ "action", "create" }, { "target", "test-singleton" }, { "id", "other" }
+	})));
+	QCOMPARE(built, 1);
+	QCOMPARE(window.widgetIds(MainWindow::WidgetKind::Document).size(), 1);
+	QCOMPARE(window.activeDocumentId(), QStringLiteral("test-singleton"));
+}
+
+void TestUiZones::singletoneCreateWidgetNormalizesId() {
+	TestCommandController controller;
+	int built = 0;
+	controller.widgets()->registerFactory({ "Test.Singleton", "test-singleton", /*singletone*/ true,
+		QStringLiteral("★"), QStringLiteral("Одиночный") },
+		[&built](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
+			built++;
+			return new QLabel(handler.title, handler.parent);
+		});
+	MainWindow window(controller.globalContext(), nullptr, false);
+
+	// Имя singletone-документа приводится к xtype уже в createWidget,
+	// поэтому фабрика вызывается один раз, а id=test не появляется.
+	QVERIFY(window.createWidget(QStringLiteral("test"),
+		MainWindow::WidgetKind::Document, QStringLiteral("Документ"), QString(),
+		[&built] { return built++, new QLabel; }, QString(), QStringLiteral("test-singleton")));
+	QVERIFY(window.widget(QStringLiteral("test-singleton")));
+	QVERIFY(!window.widget(QStringLiteral("test")));
+	QCOMPARE(built, 1);
+
+	// Повторное создание с другим id активирует уже открытый документ.
+	QVERIFY(window.createWidget(QStringLiteral("other"),
+		MainWindow::WidgetKind::Document, QStringLiteral("Другой"), QString(),
+		[&built] { return built++, new QLabel; }, QString(), QStringLiteral("test-singleton")));
+	QCOMPARE(built, 1);
+	QCOMPARE(window.widgetIds(MainWindow::WidgetKind::Document).size(), 1);
+	QCOMPARE(window.activeDocumentId(), QStringLiteral("test-singleton"));
+}
+
+void TestUiZones::commandUsesRegistryDefaults() {
+	TestCommandController controller;
+	WidgetFixture fixture(controller);
+	MainWindow window(controller.globalContext(), nullptr, false);
+	WidgetZoneCommand documents(QStringLiteral("documents"), MainWindow::WidgetKind::Document);
+
+	// Без title/glyph в команде берутся значения по умолчанию из регистрации.
+	QVERIFY(documents.execute(commandContext(controller, {
+		{ "action", "create" }, { "target", "test-widget" }, { "id", "defaults" }
+	})));
+
+	auto* document = window.document(QStringLiteral("defaults"));
+	QVERIFY(document);
+	QCOMPARE(document->title(), QStringLiteral("Тестовый виджет"));
+	QCOMPARE(document->glyph(), QStringLiteral("🧪"));
+	QCOMPARE(window.widgetType(QStringLiteral("defaults")), QStringLiteral("test-widget"));
+}
+
+void TestUiZones::newDocumentDialogFiltersTypes() {
+	TestCommandController controller;
+	WidgetFixture fixture(controller);
+	controller.widgets()->registerFactory({ "Test.Singleton", "test-singleton", /*singletone*/ true,
+		QStringLiteral("★"), QStringLiteral("Одиночный") },
+		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
+			return new QLabel(handler.title, handler.parent);
+		});
+	controller.globalContext()->setVariable(QStringLiteral("test.var"), 42);
+
+	NewDocumentDialog dialog(controller.widgets(), controller.globalContext());
+
+	auto* list = dialog.findChild<QListWidget*>(QStringLiteral("NewDocumentDialogTypes"));
+	auto* search = dialog.findChild<QLineEdit*>(QStringLiteral("NewDocumentDialogSearch"));
+	auto* name = dialog.findChild<QLineEdit*>(QStringLiteral("NewDocumentDialogName"));
+	auto* glyph = dialog.findChild<QLineEdit*>(QStringLiteral("NewDocumentDialogGlyph"));
+	auto* title = dialog.findChild<QLineEdit*>(QStringLiteral("NewDocumentDialogTitle"));
+	auto* random = dialog.findChild<QToolButton*>(QStringLiteral("NewDocumentDialogRandomName"));
+	auto* variables = dialog.findChild<QTableWidget*>(QStringLiteral("NewDocumentDialogVariables"));
+	QVERIFY(list);
+	QVERIFY(search);
+	QVERIFY(name);
+	QVERIFY(glyph);
+	QVERIFY(title);
+	QVERIFY(random);
+	QVERIFY(variables);
+
+	QCOMPARE(list->count(), 2);
+	QCOMPARE(list->item(0)->text(), QStringLiteral("(test-singleton) Test.Singleton"));
+	QCOMPARE(list->item(1)->text(), QStringLiteral("(test-widget) Test.Widget"));
+
+	// Тип-синглтон: имя совпадает с xtype и не редактируется.
+	list->setCurrentRow(0);
+	QVERIFY(dialog.isSingletone());
+	QCOMPARE(dialog.documentType(), QStringLiteral("test-singleton"));
+	QCOMPARE(dialog.documentName(), QStringLiteral("test-singleton"));
+	QVERIFY(!name->isEnabled());
+	QCOMPARE(name->text(), QStringLiteral("test-singleton"));
+	QCOMPARE(glyph->text(), QStringLiteral("★"));
+	QCOMPARE(title->text(), QStringLiteral("Одиночный"));
+
+	// Обычный документ: имя можно изменить и сгенерировать заново.
+	list->setCurrentRow(1);
+	QVERIFY(!dialog.isSingletone());
+	QVERIFY(name->isEnabled());
+	QVERIFY(!name->text().isEmpty());
+	const auto generated = name->text();
+	random->click();
+	QVERIFY(name->text() != generated);
+	QCOMPARE(glyph->text(), QStringLiteral("🧪"));
+	QCOMPARE(title->text(), QStringLiteral("Тестовый виджет"));
+
+	// Переменные текущего контекста попадают в таблицу.
+	bool foundVariable = false;
+	for (int row = 0; row < variables->rowCount(); row++) {
+		if (variables->item(row, 0)
+			&& variables->item(row, 0)->text() == QStringLiteral("test.var")) {
+			foundVariable = true;
+			QCOMPARE(variables->item(row, 1)->text(), QStringLiteral("42"));
+		}
+	}
+	QVERIFY(foundVariable);
+
+	// Поиск по вхождению в xtype/класс: остаётся только совпавший тип.
+	search->setText(QStringLiteral("singleton"));
+	QVERIFY(!list->item(0)->isHidden());
+	QVERIFY(list->item(1)->isHidden());
+	QCOMPARE(dialog.documentType(), QStringLiteral("test-singleton"));
+
+	search->clear();
+	QVERIFY(!list->item(0)->isHidden());
+	QVERIFY(!list->item(1)->isHidden());
 }
 
 QTEST_MAIN(TestUiZones)

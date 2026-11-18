@@ -40,7 +40,8 @@ QString WidgetZoneCommand::help() const {
 		"%1 action=close, id=<id>\n"
 		"%1 action=list\n"
 		"Без id генерируется UUID. Повторный id в этой же области активирует виджет,"
-		" в другой области — ошибка.")
+		" в другой области — ошибка. Для типа-синглтона id всегда равен его xtype,"
+		" поэтому повторное создание активирует уже открытый документ.")
 		.arg(_name);
 }
 
@@ -88,10 +89,22 @@ bool WidgetZoneCommand::executeCreate(const std::shared_ptr<CommandContext>& con
 		return false;
 	}
 
+	auto* registry = controller->widgets();
+	if (!registry) {
+		controller->printError(QStringLiteral("Реестр виджетов недоступен"));
+		return false;
+	}
+
+	// Описание типа: значения по умолчанию и признак singletone.
+	const auto typeInfo = registry->typeInfo(target);
+
 	auto id = context->variable("id").toString();
 	if (id.isEmpty()) {
 		id = QUuid::createUuid().toString(QUuid::WithoutBraces);
 	}
+	// Для singletone имя всегда равно xtype: повторный вызов активирует
+	// уже открытый документ, даже если в команде передан другой id.
+	id = registry->documentId(target, id);
 
 	const auto existingKind = window->widgetKind(id);
 	if (existingKind && *existingKind != _kind) {
@@ -100,22 +113,28 @@ bool WidgetZoneCommand::executeCreate(const std::shared_ptr<CommandContext>& con
 	}
 
 	const auto name = context->variable("name", id).toString();
-	const auto title = context->variable("title", target).toString();
-	const auto glyph = context->variable("glyph").toString();
+	auto title = context->variable("title").toString();
+	auto glyph = context->variable("glyph").toString();
+	if (typeInfo) {
+		if (title.isEmpty()) {
+			title = typeInfo->title;
+		}
+		if (glyph.isEmpty()) {
+			glyph = typeInfo->glyph;
+		}
+	}
+	if (title.isEmpty()) {
+		title = target;
+	}
 	const auto tooltip = context->variable("tooltip").toString();
 
-	auto* registry = controller->widgets();
-	if (!registry) {
-		controller->printError(QStringLiteral("Реестр виджетов недоступен"));
-		return false;
-	}
-
 	WidgetBuildHandler handler;
-	handler.className = target;
-	handler.xtype = target;
+	handler.className = typeInfo ? typeInfo->className : target;
+	handler.xtype = typeInfo ? typeInfo->xtype : target;
 	handler.name = name;
 	handler.title = title;
 	handler.glyph = glyph;
+	handler.singletone = typeInfo ? typeInfo->singletone : false;
 	handler.parent = window;
 	// Параметры запуска (action/target/...) виджет получает из контекста команды.
 	handler.context = context;
@@ -131,7 +150,7 @@ bool WidgetZoneCommand::executeCreate(const std::shared_ptr<CommandContext>& con
 
 	auto* widget = window->createWidget(id, _kind, title, glyph,
 		[registry, target, handler]() { return registry->build(target, handler); },
-		tooltip, target, creator);
+		tooltip, handler.xtype, creator);
 	if (!widget) {
 		controller->printError(QString("%1: не удалось создать %2").arg(_name, target));
 		return false;

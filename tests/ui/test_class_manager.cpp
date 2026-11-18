@@ -158,12 +158,14 @@ void TestClassManager::singlePageOpensDocumentWithoutZones() {
 	resources.Directories.set(QStringLiteral("path.profile"), root);
 
 	TestCommandController controller;
-	controller.widgets()->registerFactory({ "System.Viewport.MainForm", "mainform" },
+	controller.widgets()->registerFactory({ "System.Viewport.MainForm", "mainform",
+		/*singletone*/ true, QStringLiteral("🖥"), QStringLiteral("Оболочка") },
 		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 			return new MainWindow(handler.context, handler.parent, /*buildDefaultPanels*/ false,
 				MainWindow::Options::fromBuildOptions(handler.options));
 		});
-	controller.widgets()->registerFactory({ "Test.Document", "test-document" },
+	controller.widgets()->registerFactory({ "Test.Document", "test-document",
+		/*singletone*/ false },
 		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* document = new DocumentWidget(handler.parent);
 			document->setTitle(handler.title);
@@ -238,12 +240,13 @@ void TestClassManager::panelsAreBuiltWhenNotDeleted() {
 	resources.Directories.set(QStringLiteral("path.profile"), root);
 
 	TestCommandController controller;
-	controller.widgets()->registerFactory({ "System.Viewport.MainForm", "mainform" },
+	controller.widgets()->registerFactory({ "System.Viewport.MainForm", "mainform",
+		/*singletone*/ true, QStringLiteral("🖥"), QStringLiteral("Оболочка") },
 		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 			return new MainWindow(handler.context, handler.parent, /*buildDefaultPanels*/ false,
 				MainWindow::Options::fromBuildOptions(handler.options));
 		});
-	controller.widgets()->registerFactory({ "Test.Panel", "test-panel" },
+	controller.widgets()->registerFactory({ "Test.Panel", "test-panel", /*singletone*/ false },
 		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 			return new QLabel(handler.title, handler.parent);
 		});
@@ -288,12 +291,14 @@ void TestClassManager::shippedSinglePageDescriptionLoads() {
 	resources.Directories.set(QStringLiteral("path.profile"), root);
 
 	TestCommandController controller;
-	controller.widgets()->registerFactory({ "System.Viewport.MainForm", "mainform" },
+	controller.widgets()->registerFactory({ "System.Viewport.MainForm", "mainform",
+		/*singletone*/ true, QStringLiteral("🖥"), QStringLiteral("Оболочка") },
 		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 			return new MainWindow(handler.context, handler.parent, /*buildDefaultPanels*/ false,
 				MainWindow::Options::fromBuildOptions(handler.options));
 		});
-	controller.widgets()->registerFactory({ "System.Panels.ConsolePanel", "console" },
+	controller.widgets()->registerFactory({ "System.Panels.ConsolePanel", "console",
+		/*singletone*/ false },
 		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 			return new QLabel(handler.title, handler.parent);
 		});
