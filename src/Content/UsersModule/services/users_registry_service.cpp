@@ -25,9 +25,8 @@ public:
 
 UsersRegistryService::UsersRegistryService(
 	Resources* resources,
-	IUsersRegistryDataProvider* usersRegistryDataProvider,
-	QObject* parent)
-	: QObject(parent)
+	IUsersRegistryDataProvider* usersRegistryDataProvider)
+	: QObject(nullptr)
 	, d(std::make_unique<Private>(this)) {
 	d->usersRegistryDataProvider = usersRegistryDataProvider;
 	d->resources = resources;

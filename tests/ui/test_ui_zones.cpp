@@ -7,6 +7,7 @@
 #include "Libs/Engine/ui/doc_widget.h"
 #include "Libs/Engine/ui/main_window.h"
 #include "Libs/Engine/ui/main_window/new_document_dialog.h"
+#include "Libs/Engine/ui/doc_widget_stub.h"
 #include "Libs/Engine/scripting/widgets/i_document_metadata.h"
 #include "Libs/Engine/scripting/widgets/widget_registry.h"
 #include "Libs/Engine/commands/widget_zone_command.h"
@@ -134,6 +135,7 @@ private slots:
 	void newDocumentDialogFiltersTypes();
 	void newDocumentDialogUsesDocumentMetadata();
 	void propertiesListWidgetAddsAndRemoves();
+	void registryBuildWrapsWidgetIntoDocument();
 };
 
 void TestUiZones::createWidgetInEveryZone() {
@@ -794,6 +796,28 @@ void TestUiZones::propertiesListWidgetAddsAndRemoves() {
 	widget.clearProperties();
 	QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
 	QVERIFY(!findPropertyEditor<QCheckBox>(&widget, QStringLiteral("second")));
+}
+
+void TestUiZones::registryBuildWrapsWidgetIntoDocument() {
+	TestCommandController controller;
+	WidgetFixture fixture(controller);
+
+	WidgetBuildHandler handler;
+	auto* document = controller.widgets()->build(QStringLiteral("test-widget"), handler);
+	QVERIFY(document);
+	QCOMPARE(fixture.built, 1);
+	// Фабрика вернула QLabel — build обернул его в документ.
+	QVERIFY(qobject_cast<DocumentWidgetStub*>(document));
+
+	// buildWidget возвращает содержимое без обёртки (для вьюпорта).
+	auto* raw = controller.widgets()->buildWidget(QStringLiteral("test-widget"), handler);
+	QVERIFY(raw);
+	QCOMPARE(fixture.built, 2);
+	QVERIFY(!qobject_cast<DocumentWidget*>(raw));
+	QVERIFY(!qobject_cast<DocumentWidgetStub*>(raw));
+
+	delete raw;
+	delete document;
 }
 
 void TestUiZones::newDocumentDialogFiltersTypes() {

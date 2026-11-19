@@ -1,5 +1,6 @@
 #include "Libs/Engine/scripting/widgets/widget_registry.h"
 #include "Libs/Engine/scripting/widgets/i_document_metadata.h"
+#include "Libs/Engine/ui/doc_widget_stub.h"
 #include <QDebug>
 
 #include <map>
@@ -124,7 +125,7 @@ const IDocumentMetadata* WidgetRegistry::documentMetadata(const QString& type) c
 	return it != d->metadataByClass.end() ? it->second.get() : nullptr;
 }
 
-QWidget* WidgetRegistry::build(const QString& type, const WidgetBuildHandler& handler) {
+QWidget* WidgetRegistry::buildWidget(const QString& type, const WidgetBuildHandler& handler) {
 	WidgetFactory* factory = nullptr;
 
 	const auto itxtype = d->factoryByXtype.find(type);
@@ -163,4 +164,19 @@ QWidget* WidgetRegistry::build(const QString& type, const WidgetBuildHandler& ha
 	}
 
 	return (*factory)(type, effective);
+}
+
+DocumentWidget* WidgetRegistry::build(const QString& type, const WidgetBuildHandler& handler) {
+	QWidget* content = buildWidget(type, handler);
+	if (!content) {
+		return nullptr;
+	}
+
+	// Любой документ — как минимум DocumentWidget: у произвольного QWidget
+	// нет контекста документа и корректного жизненного цикла при закрытии.
+	if (auto* document = qobject_cast<DocumentWidget*>(content)) {
+		return document;
+	}
+
+	return new DocumentWidgetStub(content);
 }

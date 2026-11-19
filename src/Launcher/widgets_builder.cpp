@@ -3,15 +3,15 @@
 #include "Content/CodeEditorWidget/documents/code_editor_document_metadata.h"
 #include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
+#include "Content/FetchApiModule/documents/fetch_api_document.h"
+#include "Content/FetchApiModule/documents/fetch_queries_tree_document.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
 #include "Content/FetchApiModule/services/fetch_store_db_service.h"
-#include "Content/FetchApiModule/widgets/fetch_api_widget.h"
-#include "Content/FetchApiModule/widgets/fetch_queries_tree_widget.h"
+#include "Content/UsersModule/documents/login_document.h"
+#include "Content/UsersModule/documents/register_document.h"
+#include "Content/UsersModule/documents/user_document.h"
 #include "Content/UsersModule/services/users_registry_service.h"
 #include "Content/UsersModule/services/users_service.h"
-#include "Content/UsersModule/widgets/login_widget.h"
-#include "Content/UsersModule/widgets/register_widget.h"
-#include "Content/UsersModule/widgets/user_widget.h"
 #include "Libs/Engine/services/services_registry.h"
 #include "Libs/Engine/scripting/command_controller.h"
 #include "Libs/Engine/scripting/command_context.h"
@@ -178,35 +178,28 @@ void WidgetsBuilder::Private::registerAll() {
 			return tree;
 		});
 
-	registry->registerFactory({ "Content.Users.LoginWidget", "user-login", /*singletone*/ true,
+	registry->registerFactory({ "Content.Users.LoginDocument", "user-login", /*singletone*/ true,
 		QStringLiteral("🔑"), QStringLiteral("Вход") },
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* service = requiredService<UsersService>(servicesFor(type, handler), type, "UsersService");
-			return service ? new LoginWidget(service, handler.parent) : nullptr;
+			return service ? new LoginDocument(service, handler.parent) : nullptr;
 		});
 
-	registry->registerFactory({ "Content.Users.RegisterWidget", "user-register", /*singletone*/ true,
+	registry->registerFactory({ "Content.Users.RegisterDocument", "user-register", /*singletone*/ true,
 		QStringLiteral("📝"), QStringLiteral("Регистрация") },
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* service = requiredService<UsersRegistryService>(servicesFor(type, handler), type, "UsersRegistryService");
-			if (!service) {
-				return nullptr;
-			}
-			auto* widget = new RegisterWidget(service, handler.parent);
-			// QDialog по умолчанию является модальным окном, а не страницей панели.
-			widget->setWindowFlags(Qt::Widget);
-			widget->setModal(false);
-			return widget;
+			return service ? new RegisterDocument(service, handler.parent) : nullptr;
 		});
 
-	registry->registerFactory({ "Content.Users.UserWidget", "user-profile", /*singletone*/ true,
+	registry->registerFactory({ "Content.Users.UserDocument", "user-profile", /*singletone*/ true,
 		QStringLiteral("👤"), QStringLiteral("Профиль") },
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* service = requiredService<UsersService>(servicesFor(type, handler), type, "UsersService");
-			return service ? new UserWidget(service, handler.parent) : nullptr;
+			return service ? new UserDocument(service, handler.parent) : nullptr;
 		});
 
-	registry->registerFactory({ "Content.FetchApi.FetchApiWidget", "fetch-api", /*singletone*/ true,
+	registry->registerFactory({ "Content.FetchApi.FetchApiDocument", "fetch-api", /*singletone*/ true,
 		QStringLiteral("🌐"), QStringLiteral("Fetch API") },
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* services = servicesFor(type, handler);
@@ -215,20 +208,14 @@ void WidgetsBuilder::Private::registerAll() {
 				!requiredService<FormatterPluginManager>(services, type, "FormatterPluginManager")) {
 				return nullptr;
 			}
-			return new FetchApiWidget(handler.context, handler.parent);
+			return new FetchApiDocument(handler.context, handler.parent);
 		});
 
-	registry->registerFactory({ "Content.FetchApi.FetchQueriesTreeWidget", "fetch-api-queries-tree",
+	registry->registerFactory({ "Content.FetchApi.FetchQueriesTreeDocument", "fetch-api-queries-tree",
 		/*singletone*/ true, QStringLiteral("🌳"), QStringLiteral("Запросы Fetch API") },
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* service = requiredService<FetchStoreDbService>(servicesFor(type, handler), type, "FetchStoreDbService");
-			if (!service) {
-				return nullptr;
-			}
-			auto* widget = new FetchQueriesTreeWidget(service, handler.parent);
-			// LazyTreeWidget пока не передаёт parent конструктору QWidget.
-			widget->setParent(handler.parent);
-			return widget;
+			return service ? new FetchQueriesTreeDocument(service, handler.parent) : nullptr;
 		});
 
 	// Редактор кода — обычный документ: экземпляров может быть несколько.

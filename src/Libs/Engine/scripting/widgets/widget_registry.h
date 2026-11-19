@@ -7,6 +7,7 @@
 #include <optional>
 
 class CommandContext;
+class DocumentWidget;
 class IDocumentMetadata;
 
 /// Регистрационное описание типа виджета. Тип может быть создан как
@@ -67,7 +68,13 @@ public:
 	/// Метаданные типа по xtype или полному имени класса; nullptr — не заданы.
 	const IDocumentMetadata* documentMetadata(const QString& type) const;
 
-	QWidget* build(const QString& type, const WidgetBuildHandler& handler);
+	/// Создаёт виджет без обёртки-документа. Для вьюпорта и служебных
+	/// виджетов, которые не являются документами.
+	QWidget* buildWidget(const QString& type, const WidgetBuildHandler& handler);
+
+	/// Создаёт документ: результат фабрики оборачивается в DocumentWidgetStub,
+	/// если фабрика вернула не DocumentWidget.
+	DocumentWidget* build(const QString& type, const WidgetBuildHandler& handler);
 
 private:
 	class Private;

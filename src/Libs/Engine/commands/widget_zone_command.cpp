@@ -3,6 +3,7 @@
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/scripting/command_controller.h"
 #include "Libs/Engine/scripting/widgets/widget_registry.h"
+#include "Libs/Engine/ui/doc_widget.h"
 
 #include <QThread>
 #include <QUuid>
