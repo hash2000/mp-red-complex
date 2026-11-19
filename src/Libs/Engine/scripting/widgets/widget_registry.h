@@ -1,0 +1,67 @@
+#pragma once
+#include <QList>
+#include <QString>
+#include <QWidget>
+#include <functional>
+#include <memory>
+#include <optional>
+
+class CommandContext;
+
+/// Регистрационное описание типа виджета. Тип может быть создан как
+/// документ или панель через MainWindow::createWidget.
+struct WidgetTypeHandler {
+	WidgetTypeHandler() = default;
+	/// @param className полное имя класса (для справки и поиска в реестре)
+	/// @param xtype псевдоним типа, которым оперируют описания и команды
+	/// @param singletone обязательный признак: такой документ создаётся
+	///        один на приложение, а его имя (id) всегда равно xtype
+	/// @param glyph иконка UTF-8 по умолчанию
+	/// @param title подпись по умолчанию
+	WidgetTypeHandler(const QString& className, const QString& xtype, bool singletone,
+		const QString& glyph = QString(), const QString& title = QString());
+
+	QString className;
+	QString xtype;
+	bool singletone = false;
+	QString glyph;
+	QString title;
+};
+
+/// Параметры конкретного создания: описание типа плюс экземплярные данные.
+struct WidgetBuildHandler : public WidgetTypeHandler {
+	using WidgetTypeHandler::WidgetTypeHandler;
+
+	QString name;
+	QWidget* parent = nullptr;
+	QVariantMap options;
+	std::shared_ptr<CommandContext> context;
+};
+
+class WidgetRegistry {
+public:
+	WidgetRegistry();
+	virtual ~WidgetRegistry();
+
+	using WidgetFactory = std::function<QWidget*(const QString& type, const WidgetBuildHandler& handler)>;
+
+	/// Регистрирует фабрику типа. singletone, glyph и title берутся из описания.
+	/// Пустой className/xtype и повторная регистрация отклоняются с qWarning().
+	void registerFactory(const WidgetTypeHandler& type, WidgetFactory factory);
+
+	/// Зарегистрированные типы (по одному на xtype), отсортированы по xtype.
+	QList<WidgetTypeHandler> types() const;
+
+	/// Описание типа по xtype или полному имени класса.
+	std::optional<WidgetTypeHandler> typeInfo(const QString& type) const;
+
+	/// Идентификатор создаваемого документа: для singletone — всегда xtype,
+	/// иначе предложенный id. Пустой тип не меняет id.
+	QString documentId(const QString& type, const QString& requestedId) const;
+
+	QWidget* build(const QString& type, const WidgetBuildHandler& handler);
+
+private:
+	class Private;
+	std::unique_ptr<Private> d;
+};

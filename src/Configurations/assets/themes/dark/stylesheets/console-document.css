@@ -1,0 +1,121 @@
+/* Оформление HTML-вывода консоли команд.
+   Применяется через QTextDocument::setDefaultStyleSheet(), поэтому это
+   CSS для HTML, а не QSS: селекторы — классы элементов вывода. */
+
+.timestamp { color: #808080; font-size: 8pt; }
+.command { color: #569cd6; font-weight: bold; }
+.error { color: #f44336; }
+.success { color: #66cc66; }
+.system { color: #79b8ff; font-style: italic; }
+.info { color: #d4d4d4; }
+.warning { color: #FFE66D; }
+
+/* Стили для таблиц */
+table.console-table {
+  border-collapse: collapse;
+  margin: 8px 0;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  display: block;
+}
+
+table.console-table th,
+table.console-table td {
+  border: 1px solid #4a4a4a;
+  padding: 0px 8px;
+  vertical-align: top;
+  white-space: pre-wrap;
+  word-break: break-word;
+  min-width: 80px;
+}
+
+table.console-table th {
+  background-color: #2d2d2d;
+  font-weight: bold;
+  color: #ffffff;
+  position: sticky;
+  top: 0;
+}
+
+table.console-table tr:nth-child(even) {
+  background-color: #252526;
+}
+
+table.console-table tr:nth-child(odd) {
+  background-color: #1e1e1e;
+}
+
+/* Стили для JSON Viewer */
+.json-viewer {
+  margin: 4px 0;
+  border-left: 3px solid #569cd6;
+  display: block;
+}
+
+.json-viewer .json-node {
+  padding: 2px 0;
+}
+
+.json-viewer .json-key {
+  color: #9cdcfe;
+  font-weight: bold;
+}
+
+.json-viewer .json-string {
+  color: #ce9178;
+}
+
+.json-viewer .json-number {
+  color: #b5cea8;
+}
+
+.json-viewer .json-boolean {
+  color: #569cd6;
+  font-weight: bold;
+}
+
+.json-viewer .json-null {
+  color: #808080;
+  font-style: italic;
+}
+
+.json-viewer .json-bracket {
+  color: #d4d4d4;
+  font-weight: bold;
+}
+
+.json-viewer .json-punctuation {
+  color: #d4d4d4;
+}
+
+.json-viewer .json-more {
+  color: #6a9955;
+  font-style: italic;
+  padding-left: 20px;
+}
+
+.json-viewer .json-children {
+  padding-left: 20px;
+  border-left: 1px solid #2d2d30;
+  margin: 2px 0 2px 5px;
+}
+
+/* Стили для разных статусов */
+.json-viewer-success {
+  border-left-color: #66cc66;
+}
+
+.json-viewer-error {
+  border-left-color: #f44336;
+}
+
+.json-viewer-warning {
+  border-left-color: #FFE66D;
+}
+
+/* Подсветка при наведении для QTextEdit (поддерживается) */
+.json-viewer .json-node:hover {
+  background-color: #2d2d30;
+  border-radius: 2px;
+}

@@ -8,10 +8,10 @@ class SQLiteConnection;
 
 class Migration {
 public:
-	Migration(int version, const QString& description);
+	Migration(qint64 version, const QString& description);
 	virtual ~Migration() = default;
 
-	int version() const {
+	qint64 version() const {
 		return _version;
 	}
 	QString description() const {
@@ -22,7 +22,7 @@ public:
 	virtual bool down(SQLiteConnection& db) = 0;
 
 private:
-	int _version;
+	qint64 _version;
 	QString _description;
 };
 
@@ -30,7 +30,7 @@ class SimpleMigration : public Migration {
 public:
 	using MigrationFunc = std::function<bool(SQLiteConnection&)>;
 
-	SimpleMigration(int version, const QString& description, MigrationFunc up, MigrationFunc down = nullptr);
+	SimpleMigration(qint64 version, const QString& description, MigrationFunc up, MigrationFunc down = nullptr);
 
 	bool up(SQLiteConnection& db) override;
 	bool down(SQLiteConnection& db) override;

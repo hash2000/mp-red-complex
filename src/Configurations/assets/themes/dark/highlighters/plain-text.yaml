@@ -1,0 +1,15 @@
+# Подсветка обычного текста: числа и строки.
+language:
+  name: Text File
+  mimeType: text/plane
+  extensions: [.txt]
+  icon: ":/icons/glsl.png"
+
+rules:
+  - pattern: '\b[0-9]+\b'
+    priority: 100
+    foreground: "#B5CEA8"
+
+  - pattern: '"[^"]*"'
+    priority: 0
+    foreground: "#CE9178"

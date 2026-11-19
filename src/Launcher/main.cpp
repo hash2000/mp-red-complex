@@ -1,13 +1,34 @@
-#include "Launcher/main_frame.h"
+#include "Launcher/app_controller.h"
 #include "Libs/Engine/application.h"
+
 #include <QCoreApplication>
 
 class LauncherApplication : public Application {
+public:
+	~LauncherApplication() override;
+
 protected:
-	virtual std::unique_ptr<MainFrame> createMainFrame(Resources* resources) override {
-		return std::make_unique<LauncherMainFrame>(resources);
+
+	QString organizationName() const override {
+		return "Hash2000";
 	}
+	QString organizationDomain() const override {
+		return "ru.hash2000";
+	}
+	QString applicationName() const override {
+		return "red-complex";
+	}
+
+	CommandController* buildCommandController(Resources* resources) override {
+		appController = std::make_unique<ApplicationController>(resources);
+		return appController.get();
+	}
+
+private:
+	std::unique_ptr<ApplicationController> appController;
 };
+
+LauncherApplication::~LauncherApplication() = default;
 
 
 int main(int argc, char *argv[]) {

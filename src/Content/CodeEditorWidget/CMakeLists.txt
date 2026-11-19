@@ -20,4 +20,8 @@ target_link_libraries(RedComplexCodeEditorWidget
 		Qt6::Gui
 		Qt6::Widgets
 		Qt6::Concurrent
+
+		yaml-cpp::yaml-cpp
+
+		RedComplexEngine
 )

@@ -1,0 +1,135 @@
+/* ------------------------------------------------------------------
+   Модуль UsersModule: вход, регистрация и карточка пользователя.
+   ------------------------------------------------------------------ */
+
+/* ---------- Формы входа и регистрации ---------- */
+LoginWidget {
+  background-color: #0f172a;
+}
+
+RegisterWidget {
+  background-color: #0f172a;
+}
+
+QLabel#AuthTitle {
+  color: #e2e8f0;
+  font-weight: 700;
+  font-size: 24px;
+}
+
+QFrame#AuthSeparator {
+  background-color: #4a5568;
+  border: none;
+}
+
+QLineEdit#AuthInput {
+  background-color: rgba(30, 41, 59, 200);
+  border: 1px solid #4a5568;
+  border-radius: 6px;
+  color: #e2e8f0;
+  padding: 0 12px;
+  font-size: 14px;
+}
+QLineEdit#AuthInput:focus {
+  border-color: #3b82f6;
+}
+
+QLabel#AuthError {
+  color: #ef4444;
+  font-size: 13px;
+}
+
+QPushButton#AuthPrimaryButton {
+  background-color: #10b981;
+  color: #0f172a;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 14px;
+}
+QPushButton#AuthPrimaryButton:hover { background-color: #0da271; }
+QPushButton#AuthPrimaryButton:pressed { background-color: #0a8c62; }
+
+QPushButton#AuthSecondaryButton {
+  background-color: #3b82f6;
+  color: #0f172a;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 14px;
+}
+QPushButton#AuthSecondaryButton:hover { background-color: #2563eb; }
+QPushButton#AuthSecondaryButton:pressed { background-color: #1d4ed8; }
+
+QPushButton#AuthNeutralButton {
+  background-color: #4a5568;
+  color: #0f172a;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 14px;
+}
+QPushButton#AuthNeutralButton:hover { background-color: #5a6678; }
+QPushButton#AuthNeutralButton:pressed { background-color: #6a7688; }
+
+/* ---------- Карточка пользователя ---------- */
+#UserWidget {
+  background-color: #1a202c;
+  border: 1px solid #4a5568;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+QFrame#UserHeader {
+  background-color: #2d3748;
+  border: 1px solid #4a5568;
+  border-radius: 4px;
+  padding: 6px;
+}
+
+QLabel#UserIcon {
+  background-color: #1a202c;
+  border: 1px solid #4a5568;
+  border-radius: 4px;
+}
+
+QLabel#UserId {
+  background-color: #1a202c;
+  color: #a0aec0;
+  padding: 1px 6px;
+  border: 1px solid #4a5568;
+  border-radius: 3px;
+  font-size: 9px;
+  font-family: monospace;
+}
+
+QLabel#UserDisplayName {
+  color: #e2e8f0;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+QScrollArea#UserScroll {
+  background-color: #1a202c;
+  border: none;
+  border-left: 2px solid #4a5568;
+  padding-left: 4px;
+}
+
+QScrollArea#UserScroll QScrollBar:vertical {
+  background-color: #2d3748;
+  width: 8px;
+  border-radius: 4px;
+}
+QScrollArea#UserScroll QScrollBar::handle:vertical {
+  background-color: #4a5568;
+  border-radius: 4px;
+  min-height: 20px;
+}
+QScrollArea#UserScroll QScrollBar::handle:vertical:hover {
+  background-color: #718096;
+}
+QScrollArea#UserScroll QScrollBar::add-line:vertical,
+QScrollArea#UserScroll QScrollBar::sub-line:vertical {
+  height: 0px;
+}

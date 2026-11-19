@@ -1,0 +1,73 @@
+/* ------------------------------------------------------------------
+   Модуль FetchApi: панель запроса и ответа.
+   Состояние индикатора и метки статуса задаётся динамическим свойством
+   state ("success" / "error").
+   ------------------------------------------------------------------ */
+
+QComboBox#FetchMethodCombo {
+  padding: 5px;
+  font-weight: bold;
+}
+
+QLineEdit#FetchUrlEdit {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+QPushButton#FetchSendButton {
+  background-color: #2d3748;
+  color: #e2e8f0;
+  border: 1px solid #4a5568;
+  border-radius: 3px;
+  font-size: 12px;
+}
+QPushButton#FetchSendButton:hover {
+  background-color: #4a5568;
+  border: 1px solid #718096;
+}
+QPushButton#FetchSendButton:pressed {
+  background-color: #1a202c;
+}
+
+QPlainTextEdit#FetchBodyEdit {
+  background-color: #2D2D2D;
+  color: #F8F8F2;
+  border: 1px solid #444;
+}
+
+/* Ответ отображается в CodeEditorWidget (наследник QTextEdit), поэтому
+   правило ниже активно, а прежний вариант с QPlainTextEdit не срабатывал —
+   он оставлен закомментированным как история конфликта селекторов.
+QPlainTextEdit#FetchResponseBody {
+  background-color: #2D2D2D;
+  color: #F8F8F2;
+  border: 1px solid #444;
+}
+*/
+CodeEditorWidget#FetchResponseBody {
+  background-color: #2D2D2D;
+  color: #F8F8F2;
+  border: 1px solid #444;
+}
+
+QProgressBar#FetchProgress {
+  border: 1px solid #2d3748;
+  border-radius: 3px;
+  background-color: #4a5568;
+}
+QProgressBar#FetchProgress::chunk {
+  background-color: #FF6C37;
+  border-radius: 2px;
+}
+QProgressBar#FetchProgress[state="error"] {
+  border: 1px solid #ccc;
+  background-color: #f0f0f0;
+}
+QProgressBar#FetchProgress[state="error"]::chunk {
+  background-color: #FF4D4D;
+  border-radius: 2px;
+}
+
+QLabel#FetchStatus[state="success"] { color: green; font-weight: bold; }
+QLabel#FetchStatus[state="error"]   { color: red;   font-weight: bold; }

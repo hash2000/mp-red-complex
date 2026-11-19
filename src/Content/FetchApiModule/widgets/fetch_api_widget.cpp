@@ -1,8 +1,8 @@
 #include "Content/FetchApiModule/widgets/fetch_api_widget.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
 
-#include "Content/ConsoleModule/command_context.h"
-#include "Content/ConsoleModule/command_controller.h"
+#include "Libs/Engine/scripting/command_context.h"
+#include "Libs/Engine/scripting/command_controller.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
 #include "Content/FetchApiModule/models/fetch_opt.h"
 
@@ -10,7 +10,7 @@
 #include "Libs/Base/extensions/text_edit_extensions.h"
 #include "Libs/BaseWidgets/key_value/key_value_editor_widget.h"
 
-#include "Content/CodeEditorWidget/code_editor_widget.h"
+#include "Content/CodeEditorWidget/widgets/code_editor_widget.h"
 #include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
 
@@ -31,6 +31,20 @@
 #include <QUrlQuery>
 #include <QNetworkRequest>
 #include <QJsonDocument>
+#include <QStyle>
+
+namespace {
+/// Переприменяет стиль темы после изменения динамического свойства.
+void refreshStyle(QWidget* widget) {
+	if (!widget) {
+		return;
+	}
+
+	widget->style()->unpolish(widget);
+	widget->style()->polish(widget);
+	widget->update();
+}
+}
 
 class FetchApiWidget::Private {
 public:
@@ -86,35 +100,20 @@ void FetchApiWidget::Private::setupUI() {
 
 	// Выпадающий список методов
 	requestMethodCombo = new QComboBox();
+	requestMethodCombo->setObjectName(QStringLiteral("FetchMethodCombo"));
 	requestMethodCombo->addItems({ "GET", "POST", "PUT", "DELETE", "PATCH", "HEAD" });
 	requestMethodCombo->setMinimumWidth(110);
-	requestMethodCombo->setStyleSheet("QComboBox { padding: 5px; font-weight: bold; }");
 
 	// Поле ввода URL
 	requestUrlEdit = new QLineEdit();
+	requestUrlEdit->setObjectName(QStringLiteral("FetchUrlEdit"));
 	requestUrlEdit->setPlaceholderText("Введите URL запроса (например, https://api.example.com/v1/users)");
-	requestUrlEdit->setStyleSheet("QLineEdit { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }");
 
 	// Кнопка Send 
 	QPushButton* sendBtn = new QPushButton("Send");
+	sendBtn->setObjectName(QStringLiteral("FetchSendButton"));
 	sendBtn->setMinimumWidth(90);
 	sendBtn->setCursor(Qt::PointingHandCursor);
-	sendBtn->setStyleSheet(R"(
-		QPushButton {
-		  background-color: #2d3748;
-		  color: #e2e8f0;
-		  border: 1px solid #4a5568;
-		  border-radius: 3px;
-		  font-size: 12px;
-		}
-		QPushButton:hover {
-		  background-color: #4a5568;
-		  border: 1px solid #718096;
-		}
-		QPushButton:pressed {
-		  background-color: #1a202c;
-		})"
-	);
 
 	topBarLayout->addWidget(requestMethodCombo);
 	topBarLayout->addWidget(requestUrlEdit, 1);
@@ -139,8 +138,8 @@ void FetchApiWidget::Private::setupUI() {
 	if (!monoFont.exactMatch()) {
 		monoFont = QFont("Courier New", 11);
 	}
+	requestBodyEdit->setObjectName(QStringLiteral("FetchBodyEdit"));
 	requestBodyEdit->setFont(monoFont);
-	requestBodyEdit->setStyleSheet("QPlainTextEdit { background-color: #2D2D2D; color: #F8F8F2; border: 1px solid #444; }");
 	Extensions::TextEdit::setTabDistance(requestBodyEdit, 2);
 
 
@@ -163,18 +162,16 @@ void FetchApiWidget::Private::setupUI() {
 	// Строка статуса ответа (как в Postman)
 	QHBoxLayout* statusLayout = new QHBoxLayout();
 	statusLabel = new QLabel("");
+	statusLabel->setObjectName(QStringLiteral("FetchStatus"));
 
 	timeLabel = new QLabel("Time: ... ms");
 	sizeLabel = new QLabel("Size: ... KB");
 
 	requestProgressBar = new QProgressBar();
+	requestProgressBar->setObjectName(QStringLiteral("FetchProgress"));
 	requestProgressBar->setMaximumWidth(120); // Фиксированная небольшая ширина
 	requestProgressBar->setMaximumHeight(16);
 	requestProgressBar->setTextVisible(false); // Скрываем текст "XX%" внутри бара для компактности
-	requestProgressBar->setStyleSheet(
-		"QProgressBar { border: 1px solid #2d3748; border-radius: 3px; background-color: #4a5568; }"
-		"QProgressBar::chunk { background-color: #FF6C37; border-radius: 2px; }" // Оранжевый, как в Postman
-	);
 
 	statusLayout->addWidget(statusLabel);
 	statusLayout->addStretch();
@@ -189,10 +186,10 @@ void FetchApiWidget::Private::setupUI() {
 	responseBodyEdit = new CodeEditorWidget(
 		connamdController->services()->get<HighlightingPluginManager>(),
 		connamdController->services()->get<FormatterPluginManager>());
+	responseBodyEdit->setObjectName(QStringLiteral("FetchResponseBody"));
 	responseBodyEdit->setReadOnly(true);
 	responseBodyEdit->setFont(monoFont);
 	responseBodyEdit->setPlaceholderText("Ответ сервера появится здесь...");
-	responseBodyEdit->setStyleSheet("QPlainTextEdit { background-color: #2D2D2D; color: #F8F8F2; border: 1px solid #444; }"); // Темная тема для ответа
 
 	responseCoocies = new KeyValueEditorWidget();
 	responseCoocies->setReadonly(true);
@@ -247,10 +244,8 @@ void FetchApiWidget::Private::fetchSuccess(int statusCode, const QByteArray& dat
 	responseBodyEdit->setText(QString::fromUtf8(data));
 	responseBodyEdit->formatDocument();
 
-	requestProgressBar->setStyleSheet(
-		"QProgressBar { border: 1px solid #2d3748; border-radius: 3px; background-color: #4a5568; }"
-		"QProgressBar::chunk { background-color: #FF6C37; border-radius: 2px; }" // Оранжевый, как в Postman
-	);
+	requestProgressBar->setProperty("state", QString());
+	refreshStyle(requestProgressBar);
 
 	qint64 elapsedMs = requestTimer.elapsed();
 	timeLabel->setText(QString("Time: %1 ms").arg(elapsedMs));
@@ -263,10 +258,8 @@ void FetchApiWidget::Private::fetchSuccess(int statusCode, const QByteArray& dat
 void FetchApiWidget::Private::fetchError(int errorCode, const QString& errorString, const QHttpHeaders& headers) {
 	requestProgressBar->setRange(0, 100);
 	requestProgressBar->setValue(100);
-	requestProgressBar->setStyleSheet(
-		"QProgressBar { border: 1px solid #ccc; border-radius: 3px; background-color: #f0f0f0; }"
-		"QProgressBar::chunk { background-color: #FF4D4D; border-radius: 2px; }" // Красный цвет
-	);
+	requestProgressBar->setProperty("state", QStringLiteral("error"));
+	refreshStyle(requestProgressBar);
 
 	qint64 elapsedMs = requestTimer.elapsed();
 	timeLabel->setText(QString("Time: %1 ms").arg(elapsedMs));
@@ -296,12 +289,9 @@ void FetchApiWidget::Private::fetchProgress(qint64 received, qint64 total) {
 }
 
 void FetchApiWidget::Private::setStatus(int statusCode, const QString& message) {
-	if (statusCode == 200) {
-		statusLabel->setStyleSheet("color: green; font-weight: bold;");
-	}
-	else {
-		statusLabel->setStyleSheet("color: red; font-weight: bold;");
-	}
+	const bool success = (statusCode == 200);
+	statusLabel->setProperty("state", success ? QStringLiteral("success") : QStringLiteral("error"));
+	refreshStyle(statusLabel);
 
 	statusLabel->setText(QString("%1 %2")
 		.arg(statusCode)

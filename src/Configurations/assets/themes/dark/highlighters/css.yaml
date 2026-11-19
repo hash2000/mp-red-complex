@@ -1,0 +1,116 @@
+# Подсветка CSS / SCSS / Sass / Less.
+language:
+  name: CSS
+  mimeType: text/css
+  extensions: [.css, .scss, .sass, .less]
+
+rules:
+  # Комментарии
+  - pattern: '/\*[\s\S]*?\*/'
+    priority: 5
+    foreground: "#6A9955"
+    italic: true
+
+  # Селекторы: теги
+  - pattern: '^[\s]*[a-zA-Z][\w-]*(?=\s*[{,])'
+    priority: 10
+    foreground: "#D7BA7D"
+    bold: true
+
+  # Селекторы: классы
+  - pattern: '\.[\w-]+'
+    priority: 11
+    foreground: "#D7BA7D"
+    bold: true
+
+  # Селекторы: идентификаторы
+  - pattern: '#[\w-]+'
+    priority: 11
+    foreground: "#D7BA7D"
+    bold: true
+
+  # Псевдоклассы и псевдоэлементы
+  - pattern: '::?[\w-]+'
+    priority: 12
+    foreground: "#D7BA7D"
+    bold: true
+
+  # Атрибутные селекторы
+  - pattern: '\[[^\]]+\]'
+    priority: 13
+    foreground: "#D7BA7D"
+    bold: true
+
+  # Свойства
+  - pattern: '[\w-]+(?=\s*:)'
+    priority: 15
+    foreground: "#9CDCFE"
+
+  # Числовые значения с единицами
+  - pattern: '\b[0-9]+\.?[0-9]*(?:px|em|rem|%|vh|vw|vmin|vmax|cm|mm|in|pt|pc|ex|ch|deg|rad|grad|turn|s|ms|Hz|kHz|dpi|dpcm|dppx)?\b'
+    priority: 16
+    foreground: "#CE9178"
+
+  # Цвета (hex)
+  - pattern: '#[0-9a-fA-F]{3,8}\b'
+    priority: 17
+    foreground: "#CE9178"
+
+  # Цвета (именованные)
+  - pattern: '\b(aliceblue|antiquewhite|aqua|aquamarine|azure|beige|bisque|black|blanchedalmond|blue|blueviolet|brown|burlywood|cadetblue|chartreuse|chocolate|coral|cornflowerblue|cornsilk|crimson|cyan|darkblue|darkcyan|darkgoldenrod|darkgray|darkgreen|darkgrey|darkkhaki|darkmagenta|darkolivegreen|darkorange|darkorchid|darkred|darksalmon|darkseagreen|darkslateblue|darkslategray|darkslategrey|darkturquoise|darkviolet|deeppink|deepskyblue|dimgray|dimgrey|dodgerblue|firebrick|floralwhite|forestgreen|fuchsia|gainsboro|ghostwhite|gold|goldenrod|gray|green|greenyellow|grey|honeydew|hotpink|indianred|indigo|ivory|khaki|lavender|lavenderblush|lawngreen|lemonchiffon|lightblue|lightcoral|lightcyan|lightgoldenrodyellow|lightgray|lightgreen|lightgrey|lightpink|lightsalmon|lightseagreen|lightskyblue|lightslategray|lightslategrey|lightsteelblue|lightyellow|lime|limegreen|linen|magenta|maroon|mediumaquamarine|mediumblue|mediumorchid|mediumpurple|mediumseagreen|mediumslateblue|mediumspringgreen|mediumturquoise|mediumvioletred|midnightblue|mintcream|mistyrose|moccasin|navajowhite|navy|oldlace|olive|olivedrab|orange|orangered|orchid|palegoldenrod|palegreen|paleturquoise|palevioletred|papayawhip|peachpuff|peru|pink|plum|powderblue|purple|red|rosybrown|royalblue|saddlebrown|salmon|sandybrown|seagreen|seashell|sienna|silver|skyblue|slateblue|slategray|slategrey|snow|springgreen|steelblue|tan|teal|thistle|tomato|turquoise|violet|wheat|white|whitesmoke|yellow|yellowgreen)\b'
+    priority: 17
+    foreground: "#CE9178"
+
+  # Цветовые функции
+  - pattern: '\b(rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\s*\([^)]+\)'
+    priority: 17
+    foreground: "#CE9178"
+
+  # Функции
+  - pattern: '\b(url|calc|var|min|max|clamp|attr|cubic-bezier|linear-gradient|radial-gradient|conic-gradient|repeating-linear-gradient|repeating-radial-gradient|repeating-conic-gradient|matrix|matrix3d|perspective|rotate|rotate3d|rotateX|rotateY|rotateZ|scale|scale3d|scaleX|scaleY|scaleZ|skew|skewX|skewY|translate|translate3d|translateX|translateY|translateZ)\s*\('
+    priority: 17
+    foreground: "#CE9178"
+
+  # Строки в двойных кавычках
+  - pattern: '"[^"]*"'
+    priority: 18
+    foreground: "#CE9178"
+
+  # Строки в одинарных кавычках
+  - pattern: "'[^']*'"
+    priority: 18
+    foreground: "#CE9178"
+
+  # !important
+  - pattern: '!important\b'
+    priority: 20
+    foreground: "#FF6B6B"
+    bold: true
+
+  # @-правила
+  - pattern: '@[\w-]+\b'
+    priority: 8
+    foreground: "#C586C0"
+    bold: true
+
+  # Медиа-запросы: условия
+  - pattern: '\([^)]*\)'
+    priority: 25
+    foreground: "#4EC9B0"
+
+  # Медиа-запросы: ключевые слова
+  - pattern: '\b(and|or|not|only|screen|print|all|speech)\b'
+    priority: 25
+    foreground: "#4EC9B0"
+
+  # CSS-переменные
+  - pattern: '--[\w-]+'
+    priority: 14
+    foreground: "#9CDCFE"
+    bold: true
+
+  # Использование переменных var()
+  - pattern: 'var\s*\([^)]+\)'
+    priority: 17
+    foreground: "#9CDCFE"
+    bold: true

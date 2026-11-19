@@ -61,19 +61,23 @@ bool SQLiteConnection::open(const QString& connectionString) {
 		return false;
 	}
 
-	// WAL режим для лучшей конкурентности
-	execute("PRAGMA journal_mode=WAL");
-	execute("PRAGMA synchronous=NORMAL");
-	execute("PRAGMA busy_timeout=5000");
-	execute("PRAGMA foreign_keys=ON");
-
+	// Ключ SQLCipher необходимо установить до первого обращения к содержимому БД.
 	if (!connectionOptions.value().key.isEmpty()) {
-		auto setupDbKeyResult = execute(QString("PRAGMA fPRAGMA key = x'%1'")
-			.arg(connectionOptions.value().key));
-		if (!setupDbKeyResult) {
+		if (!execute(QString("PRAGMA key = \"x'%1'\"").arg(connectionOptions.value().key))) {
 			qWarning() << "Bad Database key.";
+			sqlite3_close_v2(d->db);
+			d->db = nullptr;
 			return false;
 		}
+	}
+
+	if (!execute("PRAGMA journal_mode=WAL") ||
+		!execute("PRAGMA synchronous=NORMAL") ||
+		!execute("PRAGMA busy_timeout=5000") ||
+		!execute("PRAGMA foreign_keys=ON")) {
+		sqlite3_close_v2(d->db);
+		d->db = nullptr;
+		return false;
 	}
 
 	d->isOpen = true;
@@ -188,7 +192,7 @@ std::optional<ConnectionProperties> SQLiteConnection::Private::parseConnectionSt
 
 		const auto paramName = kv[0].toLower();
 		if (paramName == "file") {
-			result.path = kv[1].toLower();
+			result.path = kv[1];
 		}
 		else if (paramName == "token") {
 			result.key = kv[1].toLower();

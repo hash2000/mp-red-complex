@@ -1,10 +1,9 @@
 #include "Content/UsersModule/commands/users_cmd.h"
-#include "Content/ConsoleModule/processors/command_processor.h"
-#include "Content/ConsoleModule/command_context.h"
-#include "Content/ConsoleModule/command_controller.h"
-#include "Content/ConsoleModule/command_console/console_table.h"
-#include "Content/ConsoleModule/command_console/console_image.h"
-#include "Content/ConsoleModule/models/instruction.h"
+#include "Libs/Engine/scripting/command_processor.h"
+#include "Libs/Engine/scripting/command_context.h"
+#include "Libs/Engine/scripting/command_controller.h"
+#include "Libs/Engine/console/console_table.h"
+#include "Libs/Engine/console/console_image.h"
 #include "Libs/Engine/services/services_registry.h"
 
 #include "Content/UsersModule/services/users_service.h"
@@ -34,11 +33,11 @@ UsersCommand::UsersCommand(QObject* parent)
 UsersCommand::~UsersCommand() = default;
 
 QString UsersCommand::help() const {
-	return R"(users action:
+	return R"(users action=<command>[, param=<value>]
 	logout
-	login username:{login} password:{password}
-	register: username:{login} password:{password}
-	restore: seed:{list of seed phrase, all words are separated by a space} password:{new password}
+	login username=<login>, password=<password>
+	register username=<login>, password=<password>
+	restore seed="<list of seed phrase, all words are separated by a space>", password=<new password>
 	)";
 }
 
@@ -133,9 +132,9 @@ bool UsersCommand::Private::restoreAccount(std::shared_ptr<CommandContext> conte
 	return true;
 }
 
-bool UsersCommand::execute(const std::shared_ptr<Instruction> instruction, std::shared_ptr<CommandContext> context) {
+bool UsersCommand::execute(std::shared_ptr<CommandContext> context) {
 	const auto controller = context->commandController();
-	const auto action = instruction->text("action");
+	const auto action = context->variable("action").toString();
 	if (action.isEmpty()) {
 		controller->printError(QString("Usage: %1").arg(help()));
 		return false;
@@ -143,21 +142,21 @@ bool UsersCommand::execute(const std::shared_ptr<Instruction> instruction, std::
 
 	if (action == "login") {
 		return d->login(context,
-			instruction->text("username"),
-			instruction->text("password"));
+			context->variable("username").toString(),
+			context->variable("password").toString());
 	}
 	else if (action == "logout") {
 		return d->logout(context);
 	}
 	else if (action == "register") {
 		return d->registerUser(context,
-			instruction->text("username"),
-			instruction->text("password"));
+			context->variable("username").toString(),
+			context->variable("password").toString());
 	}
 	else if (action == "restore") {
 		return d->restoreAccount(context,
-			instruction->text("seed"),
-			instruction->text("password"));
+			context->variable("seed").toString(),
+			context->variable("password").toString());
 	}
 
 	return true;

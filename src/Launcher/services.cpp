@@ -7,35 +7,34 @@
 #include "Content/FetchApiModule/services/fetch_service.h"
 #include "Content/FetchApiModule/services/fetch_store_db_service.h"
 
-// ShadersModule
-#include "Content/ShadersModule/data_providers/shaders_data_provider_impl.h"
-#include "Content/ShadersModule/services/shaders_service.h"
-
-// MaterialsModule
-#include "Content/MaterialsModule/data_providers/material_data_provider_json_impl.h"
-#include "Content/MaterialsModule/services/materials_service.h"
-
-// TexturesModeule
-#include "Content/TexturesModule/data_providers/images_data_provider_json_impl.h"
-#include "Content/TexturesModule/data_providers/i_images_data_provider.h"
-#include "Content/TexturesModule/data_providers/tile_groups_data_provider_json_impl.h"
-#include "Content/TexturesModule/data_providers/i_tile_groups_data_provider.h"
-#include "Content/TexturesModule/services/images_service.h"
-#include "Content/TexturesModule/services/textures_service.h"
-#include "Content/TexturesModule/services/tiles_selector_service.h"
-
-// Items service
-#include "Content/InventoriesModule/data_providers/items_data_provider_db.h"
-#include "Content/InventoriesModule/data_providers/entities_data_provider_db.h"
-#include "Content/InventoriesModule/services/items_service.h"
-
+//// ShadersModule
+//#include "Content/ShadersModule/data_providers/shaders_data_provider_impl.h"
+//#include "Content/ShadersModule/services/shaders_service.h"
+//
+//// MaterialsModule
+//#include "Content/MaterialsModule/data_providers/material_data_provider_json_impl.h"
+//#include "Content/MaterialsModule/services/materials_service.h"
+//
+//// TexturesModeule
+//#include "Content/TexturesModule/data_providers/images_data_provider_json_impl.h"
+//#include "Content/TexturesModule/data_providers/i_images_data_provider.h"
+//#include "Content/TexturesModule/data_providers/tile_groups_data_provider_json_impl.h"
+//#include "Content/TexturesModule/data_providers/i_tile_groups_data_provider.h"
+//#include "Content/TexturesModule/services/images_service.h"
+//#include "Content/TexturesModule/services/textures_service.h"
+//#include "Content/TexturesModule/services/tiles_selector_service.h"
+//
+//// Items service
+//#include "Content/InventoriesModule/data_providers/items_data_provider_db.h"
+//#include "Content/InventoriesModule/data_providers/entities_data_provider_db.h"
+//#include "Content/InventoriesModule/services/items_service.h"
+//
 // DatabasesService
-#include "Content/DatabaseModule/data_providers/databases_settings_data_provider_json_impl.h"
 #include "Content/DatabaseModule/services/databases_service.h"
 
-// CharactersModule
-#include "Content/CharactersModule/data_providers/character_data_provider_db.h"
-#include "Content/CharactersModule/services/characters_service.h"
+//// CharactersModule
+//#include "Content/CharactersModule/data_providers/character_data_provider_db.h"
+//#include "Content/CharactersModule/services/characters_service.h"
 
 // UsersModule
 #include "Content/UsersModule/services/users_service.h"
@@ -47,46 +46,47 @@
 #include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
 
 #include <mutex>
+#include <utility>
 
 namespace {
 class ServicesFactory : public ServicesRegistry, public IServicesFactory {
 public:
 	~ServicesFactory() = default;
-	ServicesFactory(Resources* res)
+	ServicesFactory(Resources* res, std::shared_ptr<CommandContext> context)
 		// Data Providers
 		: resources(res)
-		, databaseSettingsDataProvider([this] { return std::make_unique<DatabaseSettingsDataProviderJsonImpl>(resources); })
-		, itemsDataProvider([this] { return std::make_unique<ItemsDataProviderDb>(databasesService.get()); })
-		, entitiesDataProvider([this] { return std::make_unique<EntitiesDataProviderDb>(databasesService.get()); })
-		, imagesDataProvider([this] {	return std::make_unique<ImagesDataProviderJsonImpl>(resources);	})
-		, tileGroupsDataProvider([this] {	return std::make_unique<TileGroupsDataProviderJsonImpl>(resources);	})
+		, globalContext(std::move(context))
+		//, itemsDataProvider([this] { return std::make_unique<ItemsDataProviderDb>(databasesService.get()); })
+		//, entitiesDataProvider([this] { return std::make_unique<EntitiesDataProviderDb>(databasesService.get()); })
+		//, imagesDataProvider([this] {	return std::make_unique<ImagesDataProviderJsonImpl>(resources);	})
+		//, tileGroupsDataProvider([this] {	return std::make_unique<TileGroupsDataProviderJsonImpl>(resources);	})
 		, usersRegistryDataProvider([this] {	return std::make_unique<UsersRegistryDataProviderDb>(databasesService.get()); })
-		, characterDataProvider([this] {	return std::make_unique<CharacterDataProviderDb>(databasesService.get());	})
-		, shadersDataProvider([this] { return std::make_unique<ShadersDataProviderLocalImpl>(resources); })
-		, materialsDataProvider([this] { return std::make_unique<MaterialsDataProviderJsonImpl>(resources); })
+		//, characterDataProvider([this] {	return std::make_unique<CharacterDataProviderDb>(databasesService.get());	})
+		//, shadersDataProvider([this] { return std::make_unique<ShadersDataProviderLocalImpl>(resources); })
+		//, materialsDataProvider([this] { return std::make_unique<MaterialsDataProviderJsonImpl>(resources); })
 
 		// Services
 		, databasesService([this] {
 			return std::make_unique<DatabasesService>(
 				resources,
-				databaseSettingsDataProvider.get());
+				globalContext);
 		})
 	{}
 
 private:
 	Resources* resources;
+	std::shared_ptr<CommandContext> globalContext;
 
 private:
 	// Data Providers (остаются для обратной совместимости и writer'ов)
-	LazyPtr<DatabaseSettingsDataProviderJsonImpl> databaseSettingsDataProvider;
-	LazyPtr<IItemsDataProvider> itemsDataProvider;
-	LazyPtr<IEntitiesDataProvider> entitiesDataProvider;
+	//LazyPtr<IItemsDataProvider> itemsDataProvider;
+	//LazyPtr<IEntitiesDataProvider> entitiesDataProvider;
 	LazyPtr<IUsersRegistryDataProvider> usersRegistryDataProvider;
-	LazyPtr<ICharacterDataProvider> characterDataProvider;
-	LazyPtr<IImagesDataProvider> imagesDataProvider;
-	LazyPtr<ITileGroupsDataProvider> tileGroupsDataProvider;
-	LazyPtr<IShadersDataProvider> shadersDataProvider;
-	LazyPtr<IMaterialsDataProvider> materialsDataProvider;
+	//LazyPtr<ICharacterDataProvider> characterDataProvider;
+	//LazyPtr<IImagesDataProvider> imagesDataProvider;
+	//LazyPtr<ITileGroupsDataProvider> tileGroupsDataProvider;
+	//LazyPtr<IShadersDataProvider> shadersDataProvider;
+	//LazyPtr<IMaterialsDataProvider> materialsDataProvider;
 
 	// Services
 	LazyPtr<DatabasesService> databasesService;
@@ -94,19 +94,18 @@ private:
 public:
 	void registerServices() {
 
-		registerFactory<ItemsService>([this] {
-			return std::make_unique<ItemsService>(
-				this->get<ImagesService>(),
-				entitiesDataProvider.get(),
-				itemsDataProvider.get());
-		});
+		//registerFactory<ItemsService>([this] {
+		//	return std::make_unique<ItemsService>(
+		//		this->get<ImagesService>(),
+		//		entitiesDataProvider.get(),
+		//		itemsDataProvider.get());
+		//});
 
 		registerFactory<UsersService>([this] {
 			return std::make_unique<UsersService>(
 				resources,
 				databasesService.get(),
-				usersRegistryDataProvider.get(),
-				this->get<ImagesService>());
+				usersRegistryDataProvider.get());
 		});
 
 		registerFactory<UsersRegistryService>([this] {
@@ -116,39 +115,39 @@ public:
 				this->get<UsersService>());
 		});
 
-		registerFactory<ImagesService>([this] {
-			return std::make_unique<ImagesService>(
-				imagesDataProvider.get());
-		});
+		//registerFactory<ImagesService>([this] {
+		//	return std::make_unique<ImagesService>(
+		//		imagesDataProvider.get());
+		//});
 
-		registerFactory<TilesSelectorService>([this] {
-			return std::make_unique<TilesSelectorService>(
-				tileGroupsDataProvider.get());
-		});
+		//registerFactory<TilesSelectorService>([this] {
+		//	return std::make_unique<TilesSelectorService>(
+		//		tileGroupsDataProvider.get());
+		//});
 
-		registerFactory<TexturesService>([this] {
-			return std::make_unique<TexturesService>(
-				this->get<ImagesService>());
-		});
+		//registerFactory<TexturesService>([this] {
+		//	return std::make_unique<TexturesService>(
+		//		this->get<ImagesService>());
+		//});
 
-		registerFactory<MaterialsService>([this] {
-			return std::make_unique<MaterialsService>(
-				materialsDataProvider.get());
-		});
+		//registerFactory<MaterialsService>([this] {
+		//	return std::make_unique<MaterialsService>(
+		//		materialsDataProvider.get());
+		//});
 
-		registerFactory<CharactersService>([this] {
-			return std::make_unique<CharactersService>(
-				characterDataProvider.get(),
-				this->get<UsersService>(),
-				this->get<ImagesService>());
-		});
+		//registerFactory<CharactersService>([this] {
+		//	return std::make_unique<CharactersService>(
+		//		characterDataProvider.get(),
+		//		this->get<UsersService>(),
+		//		this->get<ImagesService>());
+		//});
 
-		registerFactory<CharactersService>([this] {
-			return std::make_unique<CharactersService>(
-				characterDataProvider.get(),
-				this->get<UsersService>(),
-				this->get<ImagesService>());
-		});
+		//registerFactory<CharactersService>([this] {
+		//	return std::make_unique<CharactersService>(
+		//		characterDataProvider.get(),
+		//		this->get<UsersService>(),
+		//		this->get<ImagesService>());
+		//});
 
 		registerFactory<FetchApiService>([this]() {
 			return std::make_unique<FetchApiService>();
@@ -160,7 +159,7 @@ public:
 		});
 
 		registerFactory<HighlightingPluginManager>([this] {
-			return std::make_unique<HighlightingPluginManager>();
+			return std::make_unique<HighlightingPluginManager>(resources);
 		});
 
 		registerFactory<FormatterPluginManager>([this] {
@@ -176,17 +175,19 @@ public:
 	Private(Services* parent) : q(parent) {}
 	Services* q;
 	Resources* resources;
+	std::shared_ptr<CommandContext> globalContext;
 };
 
-Services::Services(Resources* resources)
+Services::Services(Resources* resources, std::shared_ptr<CommandContext> globalContext)
 	: d(std::make_unique<Private>(this)) {
 	d->resources = resources;
+	d->globalContext = std::move(globalContext);
 }
 
 Services::~Services() = default;
 
 std::unique_ptr<ServicesRegistry> Services::create() {
-	auto factory = std::make_unique<ServicesFactory>(d->resources);
+	auto factory = std::make_unique<ServicesFactory>(d->resources, d->globalContext);
 	factory->registerServices();
 	return factory;
 }

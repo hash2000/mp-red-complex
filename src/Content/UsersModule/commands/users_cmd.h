@@ -1,5 +1,5 @@
 #pragma once
-#include "Content/ConsoleModule/i_command.h"
+#include "Libs/Engine/scripting/i_command.h"
 #include <memory>
 
 class UsersCommand : public ICommand {
@@ -8,7 +8,7 @@ public:
 	UsersCommand(QObject* parent = nullptr);
 	~UsersCommand() override;
 
-	bool execute(const std::shared_ptr<Instruction> instruction, std::shared_ptr<CommandContext> context) override;
+	bool execute(std::shared_ptr<CommandContext> context) override;
 
 	QString name() const override { return "users"; }
 	QString description() const override { return "Operations with users"; }

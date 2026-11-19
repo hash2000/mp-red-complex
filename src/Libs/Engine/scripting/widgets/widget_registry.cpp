@@ -1,0 +1,141 @@
+#include "Libs/Engine/scripting/widgets/widget_registry.h"
+#include <QDebug>
+
+#include <map>
+
+WidgetTypeHandler::WidgetTypeHandler(const QString& className, const QString& xtype, bool singletone,
+	const QString& glyph, const QString& title)
+	: className(className)
+	, xtype(xtype)
+	, singletone(singletone)
+	, glyph(glyph)
+	, title(title) {
+}
+
+class WidgetRegistry::Private {
+public:
+	std::map<QString, WidgetFactory> factoryByXtype;
+	std::map<QString, WidgetFactory> factoryByClass;
+	std::map<QString, WidgetTypeHandler> typeByXtype;
+	std::map<QString, QString> xtypeByClass;
+
+	std::optional<WidgetTypeHandler> typeInfo(const QString& type) const {
+		const auto byXtype = typeByXtype.find(type);
+		if (byXtype != typeByXtype.end()) {
+			return byXtype->second;
+		}
+
+		const auto byClass = xtypeByClass.find(type);
+		if (byClass == xtypeByClass.end()) {
+			return std::nullopt;
+		}
+
+		const auto resolved = typeByXtype.find(byClass->second);
+		if (resolved == typeByXtype.end()) {
+			return std::nullopt;
+		}
+
+		return resolved->second;
+	}
+};
+
+WidgetRegistry::WidgetRegistry() : d(std::make_unique<Private>()) {
+}
+
+WidgetRegistry::~WidgetRegistry() = default;
+
+void WidgetRegistry::registerFactory(const WidgetTypeHandler& type, WidgetFactory factory) {
+	if (type.className.isEmpty() || type.xtype.isEmpty()) {
+		qWarning() << "WidgetRegistry: empty widget class or xtype";
+		return;
+	}
+
+	if (d->factoryByXtype.find(type.xtype) != d->factoryByXtype.end()) {
+		qWarning() << "WidgetRegistry: Widget xtype" << type.xtype << "allready registered";
+		return;
+	}
+
+	if (d->factoryByClass.find(type.className) != d->factoryByClass.end()) {
+		qWarning() << "WidgetRegistry: Widget class" << type.className << "allready registered";
+		return;
+	}
+
+	if (!factory) {
+		qWarning() << "WidgetRegistry: empty factory for" << type.xtype;
+		return;
+	}
+
+	// Подпись по умолчанию: если регистрация её не задала, показываем xtype.
+	WidgetTypeHandler normalized = type;
+	if (normalized.title.isEmpty()) {
+		normalized.title = normalized.xtype;
+	}
+
+	d->factoryByXtype.emplace(normalized.xtype, factory);
+	d->factoryByClass.emplace(normalized.className, factory);
+	d->typeByXtype.emplace(normalized.xtype, normalized);
+	d->xtypeByClass.emplace(normalized.className, normalized.xtype);
+}
+
+QList<WidgetTypeHandler> WidgetRegistry::types() const {
+	QList<WidgetTypeHandler> result;
+	result.reserve(static_cast<int>(d->typeByXtype.size()));
+	for (const auto& entry : d->typeByXtype) {
+		result.append(entry.second);
+	}
+	return result;
+}
+
+std::optional<WidgetTypeHandler> WidgetRegistry::typeInfo(const QString& type) const {
+	return d->typeInfo(type);
+}
+
+QString WidgetRegistry::documentId(const QString& type, const QString& requestedId) const {
+	const auto info = d->typeInfo(type);
+	if (info && info->singletone) {
+		return info->xtype;
+	}
+
+	return requestedId;
+}
+
+QWidget* WidgetRegistry::build(const QString& type, const WidgetBuildHandler& handler) {
+	WidgetFactory* factory = nullptr;
+
+	const auto itxtype = d->factoryByXtype.find(type);
+	if (itxtype != d->factoryByXtype.end()) {
+		factory = &itxtype->second;
+	}
+	else {
+		const auto itclass = d->factoryByClass.find(type);
+		if (itclass == d->factoryByClass.end()) {
+			return nullptr;
+		}
+		factory = &itclass->second;
+	}
+
+	// Фабрика получает описание типа: недостающие значения по умолчанию
+	// (glyph, title) и имя singletone-документа берутся из регистрации.
+	WidgetBuildHandler effective = handler;
+	const auto info = d->typeInfo(type);
+	if (info) {
+		if (effective.className.isEmpty()) {
+			effective.className = info->className;
+		}
+		if (effective.xtype.isEmpty()) {
+			effective.xtype = info->xtype;
+		}
+		if (effective.glyph.isEmpty()) {
+			effective.glyph = info->glyph;
+		}
+		if (effective.title.isEmpty()) {
+			effective.title = info->title;
+		}
+		effective.singletone = info->singletone;
+		if (info->singletone) {
+			effective.name = info->xtype;
+		}
+	}
+
+	return (*factory)(type, effective);
+}

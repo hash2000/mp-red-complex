@@ -1,28 +1,23 @@
 #include "Content/ConsoleModule/commands/echo_cmd.h"
-#include "Content/ConsoleModule/processors/command_processor.h"
-#include "Content/ConsoleModule/command_context.h"
-#include "Content/ConsoleModule/command_controller.h"
-#include "Content/ConsoleModule/i_command.h"
-#include "Content/ConsoleModule/command_console/console_table.h"
-#include "Content/ConsoleModule/command_console/console_json.h"
-#include "Content/ConsoleModule/models/instruction.h"
-#include "Libs/Resources/resources.h"
-#include "Libs/Resources/variables/variables_context.h"
+#include "Libs/Engine/scripting/command_context.h"
+#include "Libs/Engine/scripting/command_controller.h"
+#include "Libs/Engine/console/console_table.h"
 
 #include <QDomDocument>
 #include <QJsonDocument>
 
 QString EchoCommand::help() const {
-		return "echo {param_name}:{text} print all params and text";
+	return "echo name=<text>[, name2=<text2>] print all params and text";
 }
 
-bool EchoCommand::execute(const std::shared_ptr<Instruction> instruction, std::shared_ptr<CommandContext> context) {
+bool EchoCommand::execute(std::shared_ptr<CommandContext> context) {
 	const auto controller = context->commandController();
 
 	ConsoleTable table({ "Name", "mime-type", "text" });
 
-	for (auto it = instruction->parameters.begin(); it != instruction->parameters.end(); it++) {
-		const auto mimeType = instruction->mimetype(it.key());
+	const auto parameters = context->ownVariables();
+	for (auto it = parameters.cbegin(); it != parameters.cend(); it++) {
+		const auto mimeType = context->variableMimeType(it.key());
 		QString text;
 
 		if (mimeType == "application/xml") {

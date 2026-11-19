@@ -16,6 +16,7 @@ include_directories(
 
 message(STATUS "RedComplex_SOURCE_DIR: ${RedComplex_SOURCE_DIR}")
 
+enable_testing()
 add_subdirectory(src)
 add_subdirectory(tests)
 

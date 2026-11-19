@@ -31,15 +31,10 @@ target_link_libraries(Launcher
 
 		RedComplexCodeEditorWidget
 
-		RedComplexCharactersModule
 		RedComplexConsoleModule
 		RedComplexDatabaseModule
 		RedComplexFetchApiModule
-		RedComplexInventoriesModule
-		RedComplexMaterialsModule
 		RedComplexMessagerModule
-		RedComplexShadersModule
-		RedComplexTexturesModule
 		RedComplexUsersModule
 
 )

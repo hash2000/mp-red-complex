@@ -1,6 +1,6 @@
 #include "Libs/Resources/directories/directories_context.h"
 
-std::optional<QDir> DirectoriesContext::get(DirectoryPath path) const {
+std::optional<QDir> DirectoriesContext::get(const QString& path) const {
 	if (!_directories.contains(path)) {
 		return std::nullopt;
 	}
@@ -8,12 +8,12 @@ std::optional<QDir> DirectoriesContext::get(DirectoryPath path) const {
 	return _directories[path];
 }
 
-std::optional<QDir> DirectoriesContext::set(DirectoryPath path, const QDir& dir) {
+std::optional<QDir> DirectoriesContext::set(const QString& path, const QDir& dir) {
 	_directories[path] = dir;
 	return dir;
 }
 
-QList<DirectoryPath> DirectoriesContext::available() const {
+QList<QString> DirectoriesContext::available() const {
 	return _directories.keys();
 }
 

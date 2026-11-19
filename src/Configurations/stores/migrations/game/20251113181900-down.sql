@@ -1,0 +1,11 @@
+DROP TABLE IF EXISTS user_characters;
+UPDATE items SET container_id = NULL;
+DROP TABLE IF EXISTS containers;
+DROP TABLE IF EXISTS items;
+DROP TABLE IF EXISTS entity_permissions_any;
+DROP TABLE IF EXISTS entity_permissions_all;
+DROP TABLE IF EXISTS entity_resource;
+DROP TABLE IF EXISTS item_entities;
+DROP TABLE IF EXISTS resources;
+DROP TABLE IF EXISTS item_entity_sub_types;
+DROP TABLE IF EXISTS item_entity_types;

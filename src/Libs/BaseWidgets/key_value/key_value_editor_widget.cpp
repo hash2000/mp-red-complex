@@ -290,7 +290,7 @@ void KeyValueEditorWidget::Private::setTableReadOnly(bool set) {
 
 		// Для всех элементов устанавливаем read-only флаги
 		for (int i = 0; i < table->rowCount(); i++) {
-			for (int j = 0; j < table->columnCount(); ++j) {
+			for (int j = 0; j < table->columnCount(); j++) {
 				QTableWidgetItem* item = table->item(i, j);
 				if (item) {
 					// Qt::ItemIsSelectable - позволяет выделять для копирования
@@ -309,7 +309,7 @@ void KeyValueEditorWidget::Private::setTableReadOnly(bool set) {
 			QAbstractItemView::AnyKeyPressed);
 
 		for (int i = 0; i < table->rowCount(); i++) {
-			for (int j = 0; j < table->columnCount(); ++j) {
+			for (int j = 0; j < table->columnCount(); j++) {
 				QTableWidgetItem* item = table->item(i, j);
 				if (item) {
 					if (j == 3) { // Колонка чекбоксов

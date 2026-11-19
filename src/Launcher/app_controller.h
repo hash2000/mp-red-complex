@@ -1,5 +1,5 @@
 #pragma once
-#include "Content/ConsoleModule/command_controller.h"
+#include "Libs/Engine/scripting/command_controller.h"
 #include <memory>
 
 class Resources;
@@ -13,7 +13,6 @@ public:
 
 	ServicesRegistry* services() const override;
 	CommandProcessor* commandProcessor() const override;
-	Controllers* controllers() const;
 
 private:
 	void initContext() override;

@@ -1,0 +1,67 @@
+# Подсветка GLSL (вершинные, фрагментные, геометрические и compute-шейдеры).
+language:
+  name: GLSL Shader
+  mimeType: text/x-glsl
+  extensions: [.vert, .frag, .geom, .tesc, .tese, .comp, .glsl]
+  icon: ":/icons/glsl.png"
+
+rules:
+  # Управляющие конструкции
+  - pattern: '\b(if|else|for|while|do|switch|case|default|break|continue|return|discard)\b'
+    priority: 10
+    foreground: "#569CD6"
+    bold: true
+
+  # Квалификаторы переменных
+  - pattern: '\b(uniform|in|out|inout|attribute|varying|const|flat|smooth|noperspective|centroid|sample|patch|invariant|precise|highp|mediump|lowp|readonly|writeonly|coherent|volatile|restrict|layout|shared|packed|std140|std430)\b'
+    priority: 11
+    foreground: "#4EC9B0"
+    bold: true
+
+  # Типы данных
+  - pattern: '\b(void|bool|int|uint|float|double|vec2|vec3|vec4|dvec2|dvec3|dvec4|bvec2|bvec3|bvec4|ivec2|ivec3|ivec4|uvec2|uvec3|uvec4|mat2|mat3|mat4|mat2x2|mat2x3|mat2x4|mat3x2|mat3x3|mat3x4|mat4x2|mat4x3|mat4x4|dmat2|dmat3|dmat4|dmat2x2|dmat2x3|dmat2x4|dmat3x2|dmat3x3|dmat3x4|dmat4x2|dmat4x3|dmat4x4|sampler1D|sampler2D|sampler3D|samplerCube|sampler1DShadow|sampler2DShadow|samplerCubeShadow|sampler1DArray|sampler2DArray|sampler1DArrayShadow|sampler2DArrayShadow|sampler2DMS|sampler2DMSArray|samplerBuffer|sampler2DRect|sampler2DRectShadow|isampler1D|isampler2D|isampler3D|isamplerCube|isampler1DArray|isampler2DArray|isamplerBuffer|isampler2DRect|usampler1D|usampler2D|usampler3D|usamplerCube|usampler1DArray|usampler2DArray|usamplerBuffer|usampler2DRect|samplerCubeArray|samplerCubeArrayShadow|isamplerCubeArray|usamplerCubeArray|image1D|image2D|image3D|imageCube|image1DArray|image2DArray|imageBuffer|image2DRect|iimage1D|iimage2D|iimage3D|iimageCube|iimage1DArray|iimage2DArray|iimageBuffer|iimage2DRect|uimage1D|uimage2D|uimage3D|uimageCube|uimage1DArray|uimage2DArray|uimageBuffer|uimage2DRect|atomic_uint|struct)\b'
+    priority: 12
+    foreground: "#4EC9B0"
+
+  # Встроенные функции
+  - pattern: '\b(radians|degrees|sin|cos|tan|asin|acos|atan|sinh|cosh|tanh|asinh|acosh|atanh|pow|exp|log|exp2|log2|sqrt|inversesqrt|abs|sign|floor|trunc|round|roundEven|ceil|fract|mod|modf|min|max|clamp|mix|step|smoothstep|isnan|isinf|floatBitsToInt|floatBitsToUint|intBitsToFloat|uintBitsToFloat|fma|frexp|ldexp|length|distance|dot|cross|normalize|faceforward|reflect|refract|matrixCompMult|outerProduct|transpose|determinant|inverse|lessThan|lessThanEqual|greaterThan|greaterThanEqual|equal|notEqual|any|all|not|packUnorm2x16|packUnorm4x8|packSnorm4x8|unpackUnorm2x16|unpackUnorm4x8|unpackSnorm4x8|packDouble2x32|unpackDouble2x32|packHalf2x16|unpackHalf2x16|textureSize|textureQueryLod|textureQueryLevels|texture|textureProj|textureLod|textureOffset|texelFetch|texelFetchOffset|textureProjOffset|textureLodOffset|textureProjLod|textureProjLodOffset|textureGrad|textureGradOffset|textureProjGrad|textureProjGradOffset|textureGather|textureGatherOffset|textureGatherOffsets|atomicCounterIncrement|atomicCounterDecrement|atomicCounter|atomicAdd|atomicMin|atomicMax|atomicAnd|atomicOr|atomicXor|atomicExchange|atomicCompSwap|imageLoad|imageStore|imageAtomicAdd|imageAtomicMin|imageAtomicMax|imageAtomicAnd|imageAtomicOr|imageAtomicXor|imageAtomicExchange|imageAtomicCompSwap|memoryBarrier|memoryBarrierAtomicCounter|memoryBarrierBuffer|memoryBarrierShared|memoryBarrierImage|groupMemoryBarrier|barrier|EmitVertex|EndPrimitive)\b'
+    priority: 20
+    foreground: "#DCDCAA"
+
+  # Встроенные константы
+  - pattern: '\b(gl_Position|gl_PointSize|gl_ClipDistance|gl_CullDistance|gl_FragCoord|gl_FrontFacing|gl_FragDepth|gl_FragColor|gl_FragData|gl_VertexID|gl_InstanceID|gl_DrawID|gl_BaseVertex|gl_BaseInstance|gl_PrimitiveID|gl_InvocationID|gl_Layer|gl_ViewportIndex|gl_TessLevelOuter|gl_TessLevelInner|gl_TessCoord|gl_PatchVerticesIn|gl_GlobalInvocationID|gl_LocalInvocationID|gl_WorkGroupSize|gl_WorkGroupID|gl_NumWorkGroups|gl_MaxVertexAttribs|gl_MaxCombinedTextureImageUnits|gl_MaxDrawBuffers|gl_MaxClipDistances|gl_MaxTextureImageUnits|true|false|PI|TAU|E)\b'
+    priority: 15
+    foreground: "#569CD6"
+
+  # Однострочные комментарии
+  - pattern: '//[^\n]*'
+    priority: 5
+    foreground: "#6A9955"
+    italic: true
+
+  # Многострочные комментарии
+  - pattern: '/\*[^*]*\*+(?:[^/*][^*]*\*+)*/'
+    priority: 5
+    foreground: "#6A9955"
+    italic: true
+
+  # Строки
+  - pattern: '"[^"]*"'
+    priority: 6
+    foreground: "#CE9178"
+
+  # Числа
+  - pattern: '\b[0-9]+\.?[0-9]*(?:[eE][+-]?[0-9]+)?[fF]?\b|\b0[xX][0-9a-fA-F]+\b|\b0[0-7]*\b'
+    priority: 7
+    foreground: "#B5CEA8"
+
+  # Препроцессор
+  - pattern: '^\s*#\s*(version|extension|define|undef|if|ifdef|ifndef|else|elif|endif|error|pragma|include|line)\b'
+    priority: 3
+    foreground: "#9B9B9B"
+    bold: true
+
+  # Операторы
+  - pattern: '[\+\-\*\/%=<>!&|^~?:]+|\b(and|or|xor|not|mod)\b'
+    priority: 30
+    foreground: "#D4D4D4"

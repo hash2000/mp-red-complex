@@ -3,10 +3,12 @@
 #include <memory>
 
 class HighlightingPlugin;
+class Resources;
 
 class HighlightingPluginManager {
 public:
-	HighlightingPluginManager();
+	/// Плагины подсветки читаются из темы: `{path.theme}/highlighters/*.yaml`.
+	explicit HighlightingPluginManager(Resources* resources);
 	~HighlightingPluginManager();
 
 	void registerPlugin(std::unique_ptr<HighlightingPlugin> plugin);

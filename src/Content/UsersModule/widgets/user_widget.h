@@ -3,7 +3,6 @@
 #include <memory>
 
 class UsersService;
-class ImagesService;
 class QLabel;
 class QVBoxLayout;
 class QScrollArea;
@@ -12,7 +11,7 @@ class QScrollArea;
 class UserWidget : public QFrame {
 	Q_OBJECT
 public:
-	explicit UserWidget(UsersService* usersService, ImagesService* ImagesService, QWidget* parent = nullptr);
+	explicit UserWidget(UsersService* usersService, QWidget* parent = nullptr);
 	~UserWidget() override;
 
 protected:

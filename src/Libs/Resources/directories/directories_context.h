@@ -1,36 +1,21 @@
 #pragma once
+#include <QString>
 #include <QDir>
 #include <QMap>
 #include <QList>
+
 #include <optional>
-
-enum class DirectoryPath {
-	ResourcesPath,
-	AssetsPath,
-	RecoveryWordsFile,
-	DataPath,
-	DatabasesConfigFile,
-	UsersPath,
-	CurrentUserPath,
-	AutchFile,
-
-	// --- Databases ----
-	AccountsDbFile,
-	FetchApiDbFile,
-	GameDbFile,
-	MessangerDbFile,
-};
 
 class DirectoriesContext {
 public:
-	std::optional<QDir> get(DirectoryPath path) const;
-	std::optional<QDir> set(DirectoryPath path, const QDir& dir);
+	std::optional<QDir> get(const QString& path) const;
+	std::optional<QDir> set(const QString& path, const QDir& dir);
 	void clear();
 	void apply(const DirectoriesContext& values);
 
-	QList<DirectoryPath> available() const;
+	QList<QString> available() const;
 	QStringList paths() const;
 
 private:
-	QMap<DirectoryPath, QDir> _directories;
+	QMap<QString, QDir> _directories;
 };

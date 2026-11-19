@@ -1,11 +1,10 @@
 #include "Content/FetchApiModule/commands/fetch_api_cmd.h"
-#include "Content/ConsoleModule/processors/command_processor.h"
-#include "Content/ConsoleModule/command_context.h"
-#include "Content/ConsoleModule/command_controller.h"
-#include "Content/ConsoleModule/command_console/console_table.h"
-#include "Content/ConsoleModule/command_console/console_image.h"
-#include "Content/ConsoleModule/command_console/console_json.h"
-#include "Content/ConsoleModule/models/instruction.h"
+#include "Libs/Engine/scripting/command_processor.h"
+#include "Libs/Engine/scripting/command_context.h"
+#include "Libs/Engine/scripting/command_controller.h"
+#include "Libs/Engine/console/console_table.h"
+#include "Libs/Engine/console/console_image.h"
+#include "Libs/Engine/console/console_json.h"
 #include "Libs/Resources/resources.h"
 #include "Libs/Engine/services/services_registry.h"
 
@@ -43,10 +42,9 @@ FetchApiCommand::FetchApiCommand(QObject* parent)
 FetchApiCommand::~FetchApiCommand() = default;
 
 QString FetchApiCommand::help() const {
-	return R"(fetch-api action:
+	return R"(fetch-api action=<command>[, param=<value>]
 	show-ssl
-	[post,get,put,delete,...]
-		location:{location}
+	[post,get,put,delete,...] location=<location>
 	)";
 }
 
@@ -115,9 +113,9 @@ bool FetchApiCommand::Private::showSsl(std::shared_ptr<CommandContext> context) 
 	return true;
 }
 
-bool FetchApiCommand::execute(const std::shared_ptr<Instruction> instruction, std::shared_ptr<CommandContext> context) {
+bool FetchApiCommand::execute(std::shared_ptr<CommandContext> context) {
 	const auto controller = context->commandController();
-	const auto action = instruction->text("action");
+	const auto action = context->variable("action").toString();
 	if (action.isEmpty()) {
 		controller->printError(QString("Usage: %1").arg(help()));
 		return false;
@@ -127,14 +125,14 @@ bool FetchApiCommand::execute(const std::shared_ptr<Instruction> instruction, st
 		return d->showSsl(context);
 	}
 
-	const auto showEditor = instruction->text("show-editor", "false") != "false";
-	auto body = instruction->parameter("body")
+	const auto showEditor = context->variable("show-editor", QString("false")).toString() != "false";
+	auto body = context->variable("body")
 		.toJsonDocument()
 		.toJson(QJsonDocument::Compact);
 
 	const auto result = d->sendRequest(context, action,
-		instruction->text("location"),
-		instruction->text("headers"),
+		context->variable("location").toString(),
+		context->variable("headers").toString(),
 		body,
 		showEditor);
 

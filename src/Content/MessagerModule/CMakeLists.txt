@@ -24,6 +24,7 @@ target_link_libraries(RedComplexMessagerModule
 		Qt6::Gui
 		Qt6::Widgets
 
+		RedComplexEngine
 		RedComplexBase
 		RedComplexDataStream
 		RedComplexResources

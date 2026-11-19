@@ -1,0 +1,103 @@
+#include "Content/CharactersModule/commands/characters_cmd.h"
+#include "Libs/Engine/scripting/command_processor.h"
+#include "Libs/Engine/scripting/command_context.h"
+#include "Libs/Engine/scripting/command_controller.h"
+#include "Libs/Engine/console/console_table.h"
+#include "Libs/Engine/console/console_image.h"
+#include "Libs/Engine/scripting/instruction.h"
+#include "Libs/Engine/services/services_registry.h"
+
+#include "Content/CharactersModule/services/characters_service.h"
+#include "Content/CharactersModule/models/character.h"
+
+#include "Content/UsersModule/services/users_service.h"
+#include "Content/UsersModule/models/user_view.h"
+
+
+class CharactersCommand::Private {
+public:
+	Private(CharactersCommand* parent) : q(parent) {}
+	CharactersCommand* q;
+
+	void printCharacter(ConsoleTable& table, const std::shared_ptr<Character> chr);
+	bool showCharacters(std::shared_ptr<CommandContext> context, const QString& userId);
+	bool showCharacter(std::shared_ptr<CommandContext> context, const QUuid& id);
+};
+
+
+CharactersCommand::CharactersCommand(QObject* parent)
+	: d(std::make_unique<Private>(this))
+	, ICommand(parent) {}
+
+CharactersCommand::~CharactersCommand() = default;
+
+QString CharactersCommand::help() const {
+	return R"(characters action:
+	show-user id:{user_id}
+	show-character id:{character_id}
+	)";
+}
+
+void CharactersCommand::Private::printCharacter(ConsoleTable& table, const std::shared_ptr<Character> chr) {
+	table.addRow({
+		chr->icon,
+		chr->id.toString(QUuid::WithoutBraces),
+		chr->name,
+		chr->level,
+		chr->equipmentId.toString(QUuid::WithoutBraces)
+		});
+}
+
+bool CharactersCommand::Private::showCharacters(std::shared_ptr<CommandContext> context, const QString& userId) {
+	const auto controller = context->commandController();
+	const auto services = controller->services();
+	auto charactersService = services->get<CharactersService>();
+	auto chrs = charactersService->charactersByUser(userId);
+
+	ConsoleTable table({ "..", "Id", "Name", "Lvl", "EquipmentId" });
+
+	for (const auto chr : chrs) {
+		printCharacter(table, chr);
+	}
+
+	controller->print(table);
+	return true;
+}
+
+bool CharactersCommand::Private::showCharacter(std::shared_ptr<CommandContext> context, const QUuid& id) {
+	const auto controller = context->commandController();
+	auto services = controller->services();
+	auto charactersService = services->get<CharactersService>();
+	auto chr = charactersService->character(id);
+	if (!chr) {
+		controller->printError("Undefined user");
+		return false;
+	}
+
+	ConsoleTable table({ "..", "Id", "Name", "Lvl", "EquipmentId" });
+	printCharacter(table, chr);
+	controller->print(table);
+	return true;
+}
+
+bool CharactersCommand::execute(const std::shared_ptr<Instruction> instruction, std::shared_ptr<CommandContext> context) {
+	const auto controller = context->commandController();
+	const auto action = instruction->text("action");
+	if (action.isEmpty()) {
+		controller->printError(QString("Usage: %1").arg(help()));
+		return false;
+	}
+
+	if (action == "show-user") {
+		return d->showCharacters(context,
+			instruction->text("id"));
+	}
+	else if (action == "show-character") {
+		return d->showCharacter(context,
+			instruction->parameter("id").toUuid());
+	}
+
+	return true;
+}
+
+

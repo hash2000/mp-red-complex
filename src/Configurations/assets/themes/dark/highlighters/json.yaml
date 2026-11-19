@@ -1,0 +1,68 @@
+# Подсветка JSON / JSONC / JSON5.
+language:
+  name: JSON
+  mimeType: application/json
+  extensions: [.json, .jsonc, .json5, .geojson, .har, .jsonld]
+
+rules:
+  # Ключи объектов
+  - pattern: '"[^"]*"\s*:'
+    priority: 10
+    foreground: "#CE9178"
+    bold: true
+
+  # Строковые значения
+  - pattern: '"[^"]*"'
+    priority: 11
+    foreground: "#CE9178"
+
+  # Числа
+  - pattern: '\b-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?\b'
+    priority: 12
+    foreground: "#B5CEA8"
+
+  # Булевы значения
+  - pattern: '\b(?:true|false)\b'
+    priority: 13
+    foreground: "#569CD6"
+    bold: true
+
+  # null
+  - pattern: '\bnull\b'
+    priority: 13
+    foreground: "#569CD6"
+    bold: true
+
+  # Структурные символы
+  - pattern: '[{}\[\]:,]'
+    priority: 30
+    foreground: "#D4D4D4"
+    bold: true
+
+  # Однострочные комментарии (JSONC/JSON5)
+  - pattern: '//[^\n]*'
+    priority: 5
+    foreground: "#6A9955"
+    italic: true
+
+  # Многострочные комментарии (JSONC/JSON5)
+  - pattern: '/\*[\s\S]*?\*/'
+    priority: 5
+    foreground: "#6A9955"
+    italic: true
+
+  # NaN и Infinity (JSON5)
+  - pattern: '\b(?:NaN|Infinity|-Infinity)\b'
+    priority: 14
+    foreground: "#D7BA7D"
+
+  # Шестнадцатеричные числа (JSON5)
+  - pattern: '\b0[xX][0-9a-fA-F]+\b'
+    priority: 14
+    foreground: "#D7BA7D"
+
+  # Escape-последовательности
+  - pattern: '\\[\\"bfnrt/]|\\u[0-9a-fA-F]{4}'
+    priority: 9
+    foreground: "#D7BA7D"
+    bold: true

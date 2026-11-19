@@ -1,11 +1,11 @@
 #include "Libs/Resources/db/sqlite/migration.h"
 
-Migration::Migration(int version, const QString& description)
+Migration::Migration(qint64 version, const QString& description)
 	: _version(version)
 	, _description(description) {
 }
 
-SimpleMigration::SimpleMigration(int version, const QString& description, MigrationFunc up, MigrationFunc down)
+SimpleMigration::SimpleMigration(qint64 version, const QString& description, MigrationFunc up, MigrationFunc down)
 	: Migration(version, description)
 	, _up(std::move(up))
 	, _down(std::move(down)) {

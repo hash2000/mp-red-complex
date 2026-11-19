@@ -1,12 +1,12 @@
 #pragma once
-#include "Content/ConsoleModule/i_command.h"
+#include "Libs/Engine/scripting/i_command.h"
 
 class FetchApiCommand : public ICommand {
 public:
 	FetchApiCommand(QObject* parent = nullptr);
 	~FetchApiCommand() override;
 
-	bool execute(const std::shared_ptr<Instruction> instruction, std::shared_ptr<CommandContext> context) override;
+	bool execute(std::shared_ptr<CommandContext> context) override;
 
 	QString name() const override {
 		return "fetch-api";

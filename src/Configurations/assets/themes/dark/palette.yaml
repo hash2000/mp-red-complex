@@ -1,0 +1,58 @@
+version: "0.0.1"
+name: palette
+description: Тёмная тема (Dark)
+
+palette:
+ extends: [35, 35, 35]
+ base: [35, 35, 35]
+ colors:
+  Window:
+   Active:
+    value: [50, 50, 50]
+   Inactive:
+    value: [40, 40, 40]
+   Disabled:
+    value: [50, 50, 50]
+    modifiers:
+     darker: 200
+
+  ButtonText:
+   Active:
+    value: [207, 207, 207]
+   Inactive:
+    value: [207, 207, 207]
+   Disabled:
+    value: [207, 207, 207]
+    modifiers:
+     darker: 200
+
+  WindowText:
+   Active:
+    value: [207, 207, 207]
+   Inactive:
+    value: [207, 207, 207]
+   Disabled:
+    value: [207, 207, 207]
+
+  Text:
+   Active:
+    value: [207, 207, 207]
+    modifiers:
+     darker: 115
+   Inactive:
+    value: [207, 207, 207]
+    modifiers:
+     darker: 115
+   Disabled:
+    value: [102, 102, 102]
+
+  Highlight:
+   Active:
+    value: [62, 112, 205]
+    modifiers:
+     darker: 200
+   Inactive:
+    value: [62, 112, 205]
+   Disabled:
+     value: [62, 112, 205]
+

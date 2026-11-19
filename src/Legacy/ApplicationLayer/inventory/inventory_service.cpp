@@ -391,8 +391,8 @@ void InventoryService::removeItem(const ItemMimeData& item) {
 	}
 
 	// Освобождаем ВСЕ ячейки предмета
-	for (int dy = 0; dy < itemPtr->entity->height; ++dy) {
-		for (int dx = 0; dx < itemPtr->entity->width; ++dx) {
+	for (int dy = 0; dy < itemPtr->entity->height; dy++) {
+		for (int dx = 0; dx < itemPtr->entity->width; dx++) {
 			int cellCol = itemPtr->x + dx;
 			int cellRow = itemPtr->y + dy;
 			if (cellCol < d->cols && cellRow < d->rows) {
@@ -459,8 +459,8 @@ bool InventoryService::moveItem(const ItemMimeData& item, int newCol, int newRow
 			// Если исходный стек опустел — полностью удаляем его
 			if (itemPtr->count == 0) {
 				// Освобождаем ВСЕ ячейки исходного предмета
-				for (int dy = 0; dy < itemPtr->entity->height; ++dy) {
-					for (int dx = 0; dx < itemPtr->entity->width; ++dx) {
+				for (int dy = 0; dy < itemPtr->entity->height; dy++) {
+					for (int dx = 0; dx < itemPtr->entity->width; dx++) {
 						int x = oldPos.x() + dx;
 						int y = oldPos.y() + dy;
 						if (x < d->cols && y < d->rows) {
@@ -494,8 +494,8 @@ bool InventoryService::moveItem(const ItemMimeData& item, int newCol, int newRow
 	// === СЛУЧАЙ 2: Полное перемещение без объединения (остаток = 0) ===
 	if (remainingCount == 0) {
 		// Освобождаем старые ячейки
-		for (int dy = 0; dy < itemPtr->entity->height; ++dy) {
-			for (int dx = 0; dx < itemPtr->entity->width; ++dx) {
+		for (int dy = 0; dy < itemPtr->entity->height; dy++) {
+			for (int dx = 0; dx < itemPtr->entity->width; dx++) {
 				int x = oldPos.x() + dx;
 				int y = oldPos.y() + dy;
 				if (x < d->cols && y < d->rows) {
@@ -507,8 +507,8 @@ bool InventoryService::moveItem(const ItemMimeData& item, int newCol, int newRow
 		}
 
 		// Занимаем новые ячейки
-		for (int dy = 0; dy < itemPtr->entity->height; ++dy) {
-			for (int dx = 0; dx < itemPtr->entity->width; ++dx) {
+		for (int dy = 0; dy < itemPtr->entity->height; dy++) {
+			for (int dx = 0; dx < itemPtr->entity->width; dx++) {
 				int x = newCol + dx;
 				int y = newRow + dy;
 				if (x < d->cols && y < d->rows) {
@@ -545,8 +545,8 @@ bool InventoryService::moveItem(const ItemMimeData& item, int newCol, int newRow
 	newItemPtr->y = newRow;
 
 	// Занимаем целевые ячейки новым предметом
-	for (int dy = 0; dy < newItemPtr->entity->height; ++dy) {
-		for (int dx = 0; dx < newItemPtr->entity->width; ++dx) {
+	for (int dy = 0; dy < newItemPtr->entity->height; dy++) {
+		for (int dx = 0; dx < newItemPtr->entity->width; dx++) {
 			int x = newCol + dx;
 			int y = newRow + dy;
 			if (x < d->cols && y < d->rows) {

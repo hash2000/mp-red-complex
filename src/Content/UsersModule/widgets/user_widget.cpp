@@ -1,7 +1,7 @@
 #include "Content/UsersModule/widgets/user_widget.h"
 #include "Content/UsersModule/services/users_service.h"
 #include "Content/UsersModule/models/user_view.h"
-#include "Content/TexturesModule/services/images_service.h"
+//#include "Content/TexturesModule/services/images_service.h"
 #include "Libs/Graphics/textures/extensions/pixmap_extensions.h"
 
 #include <QLabel>
@@ -19,7 +19,7 @@ public:
 
 	UserWidget* q;
 	UsersService* usersService = nullptr;
-	ImagesService* ImagesService = nullptr;
+	//ImagesService* ImagesService = nullptr;
 	std::shared_ptr<UserView> currentUser;
 
 	// Элементы заголовка
@@ -33,24 +33,15 @@ public:
 	QScrollArea* scrollArea = nullptr;
 };
 
-UserWidget::UserWidget(UsersService* usersService, ImagesService* ImagesService, QWidget* parent)
+UserWidget::UserWidget(UsersService* usersService, QWidget* parent)
 	: QFrame(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->usersService = usersService;
-	d->ImagesService = ImagesService;
+	//d->ImagesService = ImagesService;
 
 	setObjectName("UserWidget");
 	setFrameStyle(QFrame::StyledPanel | QFrame::Plain);
 	setLineWidth(1);
-
-	setStyleSheet(R"(
-        #UserWidget {
-            background-color: #1a202c;
-            border: 1px solid #4a5568;
-            border-radius: 8px;
-            padding: 12px;
-        }
-    )");
 
 	setupLayout();
 	loadUserData();
@@ -69,15 +60,8 @@ void UserWidget::setupLayout() {
 
 	// === Заголовок пользователя ===
 	auto* headerFrame = new QFrame(this);
+	headerFrame->setObjectName(QStringLiteral("UserHeader"));
 	headerFrame->setFrameStyle(QFrame::StyledPanel);
-	headerFrame->setStyleSheet(
-		"QFrame { "
-		"  background-color: #2d3748; "
-		"  border: 1px solid #4a5568; "
-		"  border-radius: 4px; "
-		"  padding: 6px; "
-		"}"
-	);
 
 	auto* headerLayout = new QHBoxLayout(headerFrame);
 	headerLayout->setSpacing(10);
@@ -85,13 +69,9 @@ void UserWidget::setupLayout() {
 
 	// Иконка пользователя (слева)
 	d->userIconLabel = new QLabel(headerFrame);
+	d->userIconLabel->setObjectName(QStringLiteral("UserIcon"));
 	d->userIconLabel->setFixedSize(54, 54);
 	d->userIconLabel->setScaledContents(true);
-	d->userIconLabel->setStyleSheet(
-		"background-color: #1a202c; "
-		"border: 1px solid #4a5568; "
-		"border-radius: 4px;"
-	);
 	headerLayout->addWidget(d->userIconLabel, 0, Qt::AlignVCenter);
 
 	// Правая часть заголовка
@@ -100,25 +80,13 @@ void UserWidget::setupLayout() {
 
 	// ID пользователя (серое поле)
 	d->userIdLabel = new QLabel(headerFrame);
-	d->userIdLabel->setStyleSheet(
-		"background-color: #1a202c; "
-		"color: #a0aec0; "
-		"padding: 1px 6px; "
-		"border: 1px solid #4a5568; "
-		"border-radius: 3px; "
-		"font-size: 9px; "
-		"font-family: monospace;"
-	);
+	d->userIdLabel->setObjectName(QStringLiteral("UserId"));
 	d->userIdLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
 	infoLayout->addWidget(d->userIdLabel);
 
 	// DisplayName
 	d->displayNameLabel = new QLabel(headerFrame);
-	d->displayNameLabel->setStyleSheet(
-		"color: #e2e8f0; "
-		"font-size: 14px; "
-		"font-weight: bold;"
-	);
+	d->displayNameLabel->setObjectName(QStringLiteral("UserDisplayName"));
 	infoLayout->addWidget(d->displayNameLabel);
 
 	infoLayout->addStretch();
@@ -129,33 +97,10 @@ void UserWidget::setupLayout() {
 
 	// === Область прокрутки для персонажей (без рамки, линия слева) ===
 	d->scrollArea = new QScrollArea(this);
+	d->scrollArea->setObjectName(QStringLiteral("UserScroll"));
 	d->scrollArea->setWidgetResizable(false);  // ВАЖНО: не растягивать контейнер
 	d->scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 	d->scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-	d->scrollArea->setStyleSheet(
-		"QScrollArea { "
-		"  background-color: #1a202c; "
-		"  border: none; "
-		"  border-left: 2px solid #4a5568; "
-		"  padding-left: 4px; "
-		"}"
-		"QScrollBar:vertical { "
-		"  background-color: #2d3748; "
-		"  width: 8px; "
-		"  border-radius: 4px; "
-		"}"
-		"QScrollBar::handle:vertical { "
-		"  background-color: #4a5568; "
-		"  border-radius: 4px; "
-		"  min-height: 20px; "
-		"}"
-		"QScrollBar::handle:vertical:hover { "
-		"  background-color: #718096; "
-		"}"
-		"QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { "
-		"  height: 0px; "
-		"}"
-	);
 
 	//// Контейнер для персонажей внутри прокрутки
 	//d->charactersContainer = new QWidget();

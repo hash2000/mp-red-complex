@@ -1,0 +1,56 @@
+### Описание приложения base.
+### define — объявление класса виджета: name, extends, xtype, title, content.
+### content у вьюпорта: bottombar / sidebar, внутри — default и content панелей.
+### xtype панели ищется в WidgetRegistry (нативные классы из Launcher)
+### или в yaml-описаниях, подключённых через requires.
+
+define:
+  name: Views.FetchApi
+  extends: System.Forms.FetchApi
+  xtype: fetchapi
+  title: Fetch Api
+
+  requires:
+    - Views.FetchApi
+
+  content:
+    - bottombar:
+        default: console
+        content:
+          - xtype: console
+            name: console
+            glyph: "🖥"
+            title: Консоль
+
+          - xtype: panel
+            name: errors
+            glyph: "📤"
+            title: Вывод
+
+          - xtype: panel
+            name: output
+            glyph: "⚠"
+            title: Список ошибок
+
+    - sidebar:
+        default: explorer
+        content:
+          - xtype: explorer
+            name: explorer
+            glyph: "📁"
+            title: Проводник
+
+          - xtype: panel
+            name: search
+            glyph: "🔍"
+            title: Поиск
+
+          - xtype: panel
+            name: git
+            glyph: "🔀"
+            title: Система контроля версий
+
+          - xtype: properties
+            name: properties
+            glyph: "🛠"
+            title: Свойства

@@ -1,0 +1,135 @@
+/* ------------------------------------------------------------------
+   Базовые стили темы: общие для приложения элементы управления.
+   Файлы подключаются по порядку из stylesheets/index.yaml, поэтому
+   специализированные наборы (console, properties, fetch-api, users)
+   могут переопределять правила отсюда.
+   ------------------------------------------------------------------ */
+
+QTableView {
+  border: none;
+}
+
+QListWidget {
+  border: none;
+}
+
+QListWidget#controlListBox_listWidget {
+  border: none;
+}
+
+QCheckBox#entityDefinition_checkboxWidget {
+  margin-left: 11px;
+}
+
+QToolButton#toolButton_withBorder {
+  border: 1 solid rgba(0, 0, 0, 50);
+  border-radius: 3;
+}
+
+QToolButton#toolButton_withBorder::checked {
+  background-color: rgba(0, 0, 0, 25);
+}
+
+tb--ui--BitmapButton {
+  border: none;
+}
+
+tb--ui--BitmapButton::menu-indicator {
+ image: none;
+}
+
+QToolTip { color:#cccccc; background:#252526; border:1px solid #3c3c3c; padding:3px; }
+
+QMenuBar { background:#1f1f1f; }
+QMenuBar::item { padding:4px 10px; background:transparent; }
+QMenuBar::item:selected { background:#3c3c3c; border-radius:4px; }
+QMenu { background:#252526; border:1px solid #3c3c3c; padding:4px; }
+QMenu::item { padding:4px 24px 4px 20px; border-radius:3px; }
+QMenu::item:selected { background:#7160e8; color:white; }
+QMenu::separator { height:1px; background:#3c3c3c; margin:4px 8px; }
+
+QStatusBar { background:#7160e8; color:white; }
+QStatusBar QLabel { color:white; padding:0 6px; }
+
+QSplitter::handle { background:#2b2b2b; }
+QSplitter::handle:hover { background:#7160e8; }
+
+QScrollArea { border:none; background:transparent; }
+QTreeView, QPlainTextEdit, QTableWidget { border:none; }
+QHeaderView::section { background:#252526; color:#cccccc; border:none;
+                       border-right:1px solid #2b2b2b; padding:3px 6px; }
+
+QLineEdit, QSpinBox { background:#313131; border:1px solid #3c3c3c; border-radius:3px; padding:2px 4px; }
+QLineEdit:focus, QSpinBox:focus { border:1px solid #7160e8; }
+QPushButton { background:#313131; border:1px solid #3c3c3c; border-radius:3px; padding:4px 12px; }
+QPushButton:hover { background:#3c3c3c; }
+
+/* ---------- Общие выпадающие списки ---------- */
+QComboBox {
+  background:#313131;
+  color:#d4d4d4;
+  border:1px solid #3c3c3c;
+  border-radius:3px;
+  padding:2px 6px;
+  min-height:20px;
+}
+QComboBox:hover { border-color:#7160e8; }
+QComboBox QAbstractItemView {
+  background:#252526;
+  color:#d4d4d4;
+  border:1px solid #3c3c3c;
+  selection-background-color:#7160e8;
+  selection-color:#ffffff;
+}
+
+/* ---------- Общие индикаторы выполнения ---------- */
+QProgressBar {
+  background:#313131;
+  border:1px solid #3c3c3c;
+  border-radius:3px;
+  text-align:center;
+}
+QProgressBar::chunk { background:#7160e8; border-radius:2px; }
+
+/* ---------- Общие заголовки панелей ---------- */
+#PanelHeader { background:#181818; border-bottom:1px solid #2b2b2b; }
+#PanelTitle  { color:#bbbbbb; font-weight:600; }
+#PanelCounter{ color:#808080; }
+QToolButton#HeaderButton { border:none; border-radius:4px; padding:2px 4px;
+                           min-width:20px; background:transparent; color:#cccccc; }
+QToolButton#HeaderButton:hover   { background:#3c3c3c; }
+QToolButton#HeaderButton:checked { background:#3a3550; color:#ffffff; }
+
+/* ---------- Левая панель вкладок ---------- */
+#DocumentTabsPanel { background:#181818; border-right:1px solid #2b2b2b; }
+#DocumentTabsList  { background:#181818; }
+#DocumentTabItem   { background:transparent; border-radius:4px; border-left:2px solid transparent; }
+#DocumentTabItem:hover { background:#2a2d2e; }
+#DocumentTabItem[active="true"] { background:#37373d; border-left:2px solid #7160e8; }
+#DocumentTabItem QLabel { background:transparent; }
+#DocTabTitle[modified="true"] { font-style:italic; }
+QToolButton#DocTabButton { border:none; border-radius:3px; background:transparent;
+                           padding:0px; min-width:18px; min-height:18px; color:#cccccc; }
+QToolButton#DocTabButton:hover { background:#4a4a50; color:white; }
+
+/* ---------- Центральная область ---------- */
+#DocumentArea, #EmptyPage { background:#1f1f1f; }
+#EmptyHint { color:#6e6e6e; font-size:13pt; }
+
+/* ---------- Activity Bar (справа) ---------- */
+#ActivityBar { background:#181818; border-left:1px solid #2b2b2b; }
+#ActivityBar[collapsed="true"] { background:#2b2b2b; }
+#ActivityBar[collapsed="true"]:hover { background:#7160e8; }
+QToolButton#ActivityButton { border:none; border-left:2px solid transparent; background:transparent;
+                             font-size:18px; color:#858585; min-height:44px; }
+QToolButton#ActivityButton:hover   { color:#ffffff; }
+QToolButton#ActivityButton:checked { color:#ffffff; border-left:2px solid #7160e8; background:#252526; }
+
+/* ---------- Боковая и нижняя панели ---------- */
+#SideHostPanel { background:#181818; }
+#BottomPanel   { background:#181818; border-top:1px solid #2b2b2b; }
+QTabBar#BottomTabs { background:#181818; }
+QTabBar#BottomTabs::tab { background:transparent; color:#9d9d9d; padding:4px 12px;
+                          border:none; border-top:2px solid transparent; }
+QTabBar#BottomTabs::tab:selected { color:#ffffff; border-top:2px solid #7160e8; background:#1f1f1f; }
+QTabBar#BottomTabs::tab:hover { color:#ffffff; }
