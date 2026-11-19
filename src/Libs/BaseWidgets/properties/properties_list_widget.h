@@ -41,6 +41,12 @@ public:
 	/// Заменяет текущий набор свойств на новый (перестраивает UI)
 	void setProperties(const QList<PropertyData>& properties);
 
+	/// Добавляет одно свойство в конец списка, не перестраивая остальные.
+	void addProperty(const PropertyData& property);
+
+	/// Удаляет свойство по идентификатору (false — свойство не найдено).
+	bool removeProperty(const QString& propertyId);
+
 	/// Изменяет заголовок панели
 	void setHeaderTitle(const QString& title);
 

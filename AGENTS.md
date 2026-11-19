@@ -377,7 +377,7 @@ Launcher              точка входа и композиция: main.cpp, A
 - `CommandConsole` (`ui/command_console.*`) — консоль команд: история ввода, выбор контекста, рендер `outputRequested` по mime-типу; в текущей оболочке это нижняя панель `console` (в старой `LauncherMainFrame` — отдельное окно с Ctrl + обратная кавычка).
 - `PropertiesPanel` — свойства документа, следует за активным документом (на базе `PropertiesListWidget`).
 - `WidgetRegistry` (`ui/widget_registry.*`) — реестр фабрик виджетов по строковому `type` (`WidgetFactory` + `WidgetTypeHandler`), задел под декларативный UI.
-- Вспомогательные: `ActivityBar` (кнопки, позиции top/bottom, auto-hide), `SideHostPanel` (хост правых панелей), `DocumentTabsPanel` (вкладки, контекстное меню «Свойства»), `DocumentArea` (коллекция документов, `closeAll`), `BottomPanel` (сворачивание), `GlyphToolButton`, `NameSelectDialog`, `NewDocumentDialog` (`ui/main_window/`: выбор типа документа, параметры `name`/`glyph`/`title` и обязательные переменные типа из `IDocumentMetadata`, редактируемые через `PropertiesListWidget`; редактор значения выбирается по mime-типу переменной, `variables()` отдаёт значения для контекста нового документа).
+- Вспомогательные: `ActivityBar` (кнопки, позиции top/bottom, auto-hide), `SideHostPanel` (хост правых панелей), `DocumentTabsPanel` (вкладки, контекстное меню «Свойства»), `DocumentArea` (коллекция документов, `closeAll`), `BottomPanel` (сворачивание), `GlyphToolButton`, `NameSelectDialog`, `NewDocumentDialog` (`ui/main_window/`: выбор типа документа, параметры `name`/`glyph`/`title` и переменные типа из `IDocumentMetadata`, редактируемые через `PropertiesListWidget`; кнопки `+`/`−` добавляют и удаляют параметры, при добавлении выбирается mime-тип (по умолчанию обычный текст), редактор значения выбирается по mime-типу; `variables()` отдаёт значения для контекста нового документа).
 
 #### Окна MDI (legacy) и управление зонами
 
@@ -486,7 +486,7 @@ Launcher              точка входа и композиция: main.cpp, A
 
 **Библиотеки**
 - `Libs/Base`: `container_view.h` (`make_deref_view`), `exception.h`, `format.h`, `from.h`, `scoped_timer.h`, `crypto/security_buffer.h`, `crypto/bip_39.h`, `extensions/text_edit_extensions.h`.
-- `Libs/BaseWidgets`: `MdiArea`, `PropertiesListWidget`, `KeyValueEditorWidget`, `FlowLayout`, `ClickableLabel`, lazy tree (`LazyTreeModel`, `LazyTreeView`, `LazyTreeWidget`, `LazyTreeBuilder`, `ILazyNodesDataProvider`, `LazyNodesDataProviderDb`, `HighlightDelegate`, `LazyTreeNodeRole`, `LazyTreeNodeState`).
+- `Libs/BaseWidgets`: `MdiArea`, `PropertiesListWidget` (`setProperties`/`addProperty`/`removeProperty`), `KeyValueEditorWidget`, `FlowLayout`, `ClickableLabel`, lazy tree (`LazyTreeModel`, `LazyTreeView`, `LazyTreeWidget`, `LazyTreeBuilder`, `ILazyNodesDataProvider`, `LazyNodesDataProviderDb`, `HighlightDelegate`, `LazyTreeNodeRole`, `LazyTreeNodeState`).
 - `Libs/Graphics`: `BaseOpenGLWidget`, `Camera`, `ShaderProgram`, `UniformBuffer` + `FrameUniformBuffer`/`ViewMatricesUniformBuffer`, `TextureAtlas`, `UploadedTexture`, `TileRenderer`, `Chunk` + `ChunkDrawTileset`/`ChunkDrawBorder`/`ChunkDrawData`, `TextureRegion`, `TileData`, `PixmapExtensions`.
 - `Libs/DataStream`: `DataStream`, `DataWriteStream`, `DataStreamBuffer`/`DataStreamFile`/`DataStreamContainer`, `DatFile`, `RawDirectory`, `FileReader`.
 - `Libs/DataFormat`: `data_format/{bio,frm,gam,gcd,int,json,map,msg,pal,pixmap,pro,sve,txt}/data_reader` и `proto/*` — модели и константы форматов Fallout 2.

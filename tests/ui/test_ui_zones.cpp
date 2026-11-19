@@ -11,11 +11,17 @@
 #include "Libs/Engine/scripting/widgets/widget_registry.h"
 #include "Libs/Engine/commands/widget_zone_command.h"
 
+#include <QApplication>
 #include <QCheckBox>
+#include <QComboBox>
+#include <QCoreApplication>
+#include <QDialog>
+#include <QEvent>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QSpinBox>
+#include <QTimer>
 #include <QToolButton>
 #include <QtTest/QtTest>
 
@@ -127,6 +133,7 @@ private slots:
 	void commandParametersBecomeDocumentVariables();
 	void newDocumentDialogFiltersTypes();
 	void newDocumentDialogUsesDocumentMetadata();
+	void propertiesListWidgetAddsAndRemoves();
 };
 
 void TestUiZones::createWidgetInEveryZone() {
@@ -687,6 +694,106 @@ void TestUiZones::newDocumentDialogUsesDocumentMetadata() {
 	QCOMPARE(variables.value(QStringLiteral("enabled")).toBool(), true);
 	QCOMPARE(variables.value(QStringLiteral("path")).toString(),
 		QStringLiteral("from-context.txt"));
+
+	auto* addButton = dialog.findChild<QToolButton*>(QStringLiteral("NewDocumentDialogAddVariable"));
+	auto* removeButton = dialog.findChild<QToolButton*>(
+		QStringLiteral("NewDocumentDialogRemoveVariable"));
+	auto* selector = dialog.findChild<QComboBox*>(
+		QStringLiteral("NewDocumentDialogVariableSelector"));
+	QVERIFY(addButton);
+	QVERIFY(removeButton);
+	QVERIFY(selector);
+	QCOMPARE(selector->count(), 4);
+
+	// Обязательную переменную типа удалить нельзя.
+	selector->setCurrentIndex(selector->findData(QStringLiteral("path")));
+	QVERIFY(!removeButton->isEnabled());
+
+	// Добавление параметра через диалог: имя и mime-тип.
+	const auto addVariable = [&](const QString& name, const QString& mimeType) {
+		QTimer::singleShot(0, [name, mimeType] {
+			auto* addDialog = qobject_cast<QDialog*>(QApplication::activeModalWidget());
+			if (!addDialog) {
+				return;
+			}
+			if (auto* nameEdit = addDialog->findChild<QLineEdit*>(
+				QStringLiteral("NewDocumentVariableName"))) {
+				nameEdit->setText(name);
+			}
+			if (auto* mimeCombo = addDialog->findChild<QComboBox*>(
+				QStringLiteral("NewDocumentVariableMime"))) {
+				const int index = mimeCombo->findData(mimeType);
+				if (index >= 0) {
+					mimeCombo->setCurrentIndex(index);
+				}
+			}
+			addDialog->accept();
+		});
+		addButton->click();
+	};
+
+	addVariable(QStringLiteral("extra"), QString::fromLatin1(DocumentVariableMime::kInteger));
+	QVERIFY(dialog.variables().contains(QStringLiteral("extra")));
+	QCOMPARE(dialog.variables().value(QStringLiteral("extra")).toInt(), 0);
+	QVERIFY(selector->findData(QStringLiteral("extra")) >= 0);
+
+	auto* extraSpin = findPropertyEditor<QSpinBox>(properties, QStringLiteral("extra"));
+	QVERIFY(extraSpin);
+	extraSpin->setValue(5);
+	QCOMPARE(dialog.variables().value(QStringLiteral("extra")).toInt(), 5);
+
+	// Без выбора mime-типа параметр считается обычным текстом.
+	addVariable(QStringLiteral("plain"), QString());
+	auto* plainEdit = findPropertyEditor<QLineEdit>(properties, QStringLiteral("plain"));
+	QVERIFY(plainEdit);
+	QTest::keyClicks(plainEdit, QStringLiteral("text"));
+	QCOMPARE(dialog.variables().value(QStringLiteral("plain")).toString(),
+		QStringLiteral("text"));
+
+	// Удаление добавленного параметра.
+	selector->setCurrentIndex(selector->findData(QStringLiteral("extra")));
+	QVERIFY(removeButton->isEnabled());
+	removeButton->click();
+	QVERIFY(!dialog.variables().contains(QStringLiteral("extra")));
+	QVERIFY(selector->findData(QStringLiteral("extra")) < 0);
+	QVERIFY(!findPropertyEditor<QSpinBox>(properties, QStringLiteral("extra")));
+}
+
+void TestUiZones::propertiesListWidgetAddsAndRemoves() {
+	PropertiesListWidget widget;
+
+	PropertyData first;
+	first.id = QStringLiteral("first");
+	first.label = QStringLiteral("Первый");
+	first.type = PropertyType::Text;
+	first.value = QStringLiteral("one");
+	widget.setProperties({ first });
+
+	auto* firstEdit = findPropertyEditor<QLineEdit>(&widget, QStringLiteral("first"));
+	QVERIFY(firstEdit);
+	QCOMPARE(firstEdit->text(), QStringLiteral("one"));
+
+	PropertyData second;
+	second.id = QStringLiteral("second");
+	second.label = QStringLiteral("Второй");
+	second.type = PropertyType::Boolean;
+	second.value = false;
+	widget.addProperty(second);
+
+	auto* secondEdit = findPropertyEditor<QCheckBox>(&widget, QStringLiteral("second"));
+	QVERIFY(secondEdit);
+	QVERIFY(!secondEdit->isChecked());
+	secondEdit->setChecked(true);
+	QVERIFY(secondEdit->isChecked());
+
+	QVERIFY(widget.removeProperty(QStringLiteral("first")));
+	QVERIFY(!findPropertyEditor<QLineEdit>(&widget, QStringLiteral("first")));
+	QVERIFY(findPropertyEditor<QCheckBox>(&widget, QStringLiteral("second")));
+	QVERIFY(!widget.removeProperty(QStringLiteral("missing")));
+
+	widget.clearProperties();
+	QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+	QVERIFY(!findPropertyEditor<QCheckBox>(&widget, QStringLiteral("second")));
 }
 
 void TestUiZones::newDocumentDialogFiltersTypes() {
