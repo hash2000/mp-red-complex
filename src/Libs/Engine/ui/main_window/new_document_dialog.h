@@ -9,7 +9,11 @@ class CommandContext;
 
 /// Диалог создания документа. Слева — поиск по xtype/имени класса и список
 /// зарегистрированных типов, справа — сведения о типе, параметры создания
-/// (name, glyph, title) и переменные текущего контекста.
+/// (name, glyph, title) и обязательные переменные выбранного документа.
+///
+/// Переменные берутся из IDocumentMetadata, зарегистрированных в WidgetRegistry
+/// для класса документа. По mime-типу переменной выбирается редактор значения
+/// в PropertiesListWidget.
 ///
 /// Документ создаёт вызывающая сторона (MainWindow::Private::newDocument):
 /// диалог лишь возвращает выбранные значения. Для типа-синглтона имя
@@ -17,9 +21,10 @@ class CommandContext;
 class NewDocumentDialog : public QDialog {
 	Q_OBJECT
 public:
-	/// @param registry реестр типов виджетов: список типов и значения по умолчанию
-	/// @param context контекст, в котором создаётся документ; его переменные
-	///        показываются в таблице (может быть nullptr)
+	/// @param registry реестр типов виджетов: список типов, значения по умолчанию
+	///        и метаданные документов
+	/// @param context контекст, в котором создаётся документ; из него читаются
+	///        начальные значения переменных (может быть nullptr)
 	NewDocumentDialog(WidgetRegistry* registry, const std::shared_ptr<CommandContext>& context,
 		QWidget* parent = nullptr);
 	~NewDocumentDialog() override;
@@ -30,8 +35,8 @@ public:
 	QString documentGlyph() const;   ///< иконка UTF-8
 	bool isSingletone() const;       ///< выбран тип-синглтон
 
-	/// Переменные, которые пользователь задал в таблице: при создании
-	/// документа они записываются в его контекст до инициализации.
+	/// Обязательные переменные выбранного документа: при создании они
+	/// записываются в его контекст до инициализации.
 	QVariantMap variables() const;
 
 private:

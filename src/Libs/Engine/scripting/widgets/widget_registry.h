@@ -7,6 +7,8 @@
 #include <optional>
 
 class CommandContext;
+class DocumentWidget;
+class IDocumentMetadata;
 
 /// Регистрационное описание типа виджета. Тип может быть создан как
 /// документ или панель через MainWindow::createWidget.
@@ -59,7 +61,20 @@ public:
 	/// иначе предложенный id. Пустой тип не меняет id.
 	QString documentId(const QString& type, const QString& requestedId) const;
 
-	QWidget* build(const QString& type, const WidgetBuildHandler& handler);
+	/// Регистрирует метаданные типа документа по полному имени класса.
+	/// Повторная регистрация и пустые данные отклоняются с qWarning().
+	void registerDocumentMetadata(const QString& className, std::unique_ptr<IDocumentMetadata> metadata);
+
+	/// Метаданные типа по xtype или полному имени класса; nullptr — не заданы.
+	const IDocumentMetadata* documentMetadata(const QString& type) const;
+
+	/// Создаёт виджет без обёртки-документа. Для вьюпорта и служебных
+	/// виджетов, которые не являются документами.
+	QWidget* buildWidget(const QString& type, const WidgetBuildHandler& handler);
+
+	/// Создаёт документ: результат фабрики оборачивается в DocumentWidgetStub,
+	/// если фабрика вернула не DocumentWidget.
+	DocumentWidget* build(const QString& type, const WidgetBuildHandler& handler);
 
 private:
 	class Private;

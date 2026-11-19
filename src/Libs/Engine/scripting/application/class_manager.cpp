@@ -2,6 +2,7 @@
 #include "Libs/Engine/scripting/bootstrap/bootstrap_config.h"
 #include "Libs/Engine/scripting/command_controller.h"
 #include "Libs/Engine/scripting/command_context.h"
+#include "Libs/Engine/ui/doc_widget.h"
 #include "Libs/Engine/ui/main_window.h"
 #include "Libs/Engine/scripting/widgets/widget_registry.h"
 #include "Libs/Resources/resources.h"
@@ -284,7 +285,7 @@ QWidget* ClassManager::Private::buildViewport(Declaration& declaration) {
 	// Зоны оболочки, выключенные описанием, сообщаются фабрике вьюпорта.
 	handler.options = zoneOptions(declaration.content);
 
-	auto* widget = commandController->widgets()->build(nativeType, handler);
+	auto* widget = commandController->widgets()->buildWidget(nativeType, handler);
 	if (!widget) {
 		qWarning() << "ClassManager: viewport widget is not registered:" << nativeType;
 		return nullptr;

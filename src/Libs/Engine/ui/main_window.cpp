@@ -6,8 +6,9 @@
 #include "Libs/Engine/ui/doc_tab_panel.h"
 #include "Libs/Engine/ui/side_host_panel.h"
 #include "Libs/Engine/ui/properties_panel.h"
-#include "Libs/Engine/ui/new_document_dialog.h"
+#include "Libs/Engine/ui/main_window/new_document_dialog.h"
 #include "Libs/Engine/ui/text_document.h"
+#include "Libs/Engine/ui/doc_widget_stub.h"
 #include "Libs/Engine/ui/command_console.h"
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/scripting/command_controller.h"
@@ -44,20 +45,6 @@ QWidget* makePlaceholder(const QString& text) {
 	l->setWordWrap(true);
 	return l;
 }
-// Обычный QWidget получает вкладку и участвует в стандартном закрытии документов.
-class WidgetDocument final : public DocumentWidget {
-public:
-	explicit WidgetDocument(QWidget* content) : _content(content) {
-		auto* layout = new QVBoxLayout(this);
-		layout->setContentsMargins(0, 0, 0, 0);
-		layout->addWidget(content);
-	}
-	bool maybeClose() override {
-		return DocumentWidget::maybeClose() && (!_content || _content->close());
-	}
-private:
-	QPointer<QWidget> _content;
-};
 } // namespace
 
 struct MainWindow::Private {
@@ -551,7 +538,7 @@ QWidget* MainWindow::createWidget(const QString& id, WidgetKind kind, const QStr
 	// в общем дереве документов.
 	auto* document = qobject_cast<DocumentWidget*>(content);
 	if (!document) {
-		document = new WidgetDocument(content);
+		document = new DocumentWidgetStub(content);
 	}
 
 	const auto creator = creatorContext ? creatorContext : d->context;

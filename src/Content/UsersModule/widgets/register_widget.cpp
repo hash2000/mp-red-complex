@@ -31,11 +31,10 @@ public:
 
 RegisterWidget::RegisterWidget(UsersRegistryService* usersRegistryService, QWidget* parent)
 	: d(std::make_unique<Private>(this))
-	, QDialog(parent) {
+	, QWidget(parent) {
 	d->usersRegistryService = usersRegistryService;
 
 	setWindowTitle("Регистрация");
-	setModal(true);
 
 	setupLayout();
 }
@@ -161,8 +160,8 @@ void RegisterWidget::onRegisterClicked() {
 	if (registerResult) {
 		d->resultLogin = login;
 		d->resultPassword = password;
-		accept();
 		emit registerSuccess();
+		hide();
 	}
 	else {
 		d->errorLabel->setText("Ошибка регистрации.");
@@ -171,5 +170,5 @@ void RegisterWidget::onRegisterClicked() {
 }
 
 void RegisterWidget::onCancelClicked() {
-	reject();
+	hide();
 }

@@ -11,8 +11,7 @@ class UsersRegistryService : public QObject {
 public:
 	explicit UsersRegistryService(
 		Resources* resources,
-		IUsersRegistryDataProvider* usersRegistryDataProvider,
-		QObject* parent = nullptr);
+		IUsersRegistryDataProvider* usersRegistryDataProvider);
 
 	~UsersRegistryService() override;
 

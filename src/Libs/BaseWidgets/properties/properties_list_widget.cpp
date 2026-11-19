@@ -15,6 +15,7 @@
 #include <QPushButton>
 #include <QColor>
 #include <QColorDialog>
+#include <QSpacerItem>
 
 class PropertiesListWidget::Private {
 public:
@@ -25,12 +26,14 @@ public:
 	void rebuildUI(const QList<PropertyData>& properties);
 	void clearUI();
 	QWidget* createEditor(const PropertyData& prop);
+	bool insertProperty(const PropertyData& prop, int row);
 
 	QVBoxLayout* mainLayout = nullptr;
 	QLabel* headerLabel = nullptr;
 	QScrollArea* scrollArea = nullptr;
 	QWidget* scrollContent = nullptr;
 	QFormLayout* formLayout = nullptr;
+	QSpacerItem* spacer = nullptr;
 	QString basePath;
 };
 
@@ -84,6 +87,7 @@ void PropertiesListWidget::Private::clearUI() {
 	// Сбрасываем layout
 	delete formLayout;
 	formLayout = nullptr;
+	spacer = nullptr;
 
 	// Создаём заново для чистого состояния
 	formLayout = new QFormLayout(scrollContent);
@@ -99,20 +103,28 @@ void PropertiesListWidget::Private::clearUI() {
 void PropertiesListWidget::Private::rebuildUI(const QList<PropertyData>& properties) {
 	clearUI();
 
+	int row = 0;
 	for (const auto& prop : properties) {
-		QWidget* editor = createEditor(prop);
-		if (!editor) {
-			continue;
+		if (insertProperty(prop, row)) {
+			row++;
 		}
-
-		auto* label = new QLabel(prop.label);
-		label->setToolTip(prop.tooltip);
-		formLayout->addRow(label, editor);
 	}
 
 	// Распорка внизу
-	auto* spacer = new QSpacerItem(0, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
+	spacer = new QSpacerItem(0, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
 	formLayout->addItem(spacer);
+}
+
+bool PropertiesListWidget::Private::insertProperty(const PropertyData& prop, int row) {
+	QWidget* editor = createEditor(prop);
+	if (!editor) {
+		return false;
+	}
+
+	auto* label = new QLabel(prop.label);
+	label->setToolTip(prop.tooltip);
+	formLayout->insertRow(row, label, editor);
+	return true;
 }
 
 
@@ -381,6 +393,36 @@ PropertiesListWidget::~PropertiesListWidget() = default;
 
 void PropertiesListWidget::setProperties(const QList<PropertyData>& properties) {
 	d->rebuildUI(properties);
+}
+
+void PropertiesListWidget::addProperty(const PropertyData& property) {
+	// Новое свойство вставляется перед распоркой, чтобы она осталась внизу.
+	int row = d->formLayout->rowCount();
+	if (d->spacer) {
+		row = qMax(0, row - 1);
+	}
+
+	d->insertProperty(property, row);
+}
+
+bool PropertiesListWidget::removeProperty(const QString& propertyId) {
+	if (!d->formLayout || propertyId.isEmpty()) {
+		return false;
+	}
+
+	for (int row = 0; row < d->formLayout->rowCount(); row++) {
+		auto* item = d->formLayout->itemAt(row, QFormLayout::FieldRole);
+		auto* editor = item ? item->widget() : nullptr;
+		if (!editor || editor->property("propertyId").toString() != propertyId) {
+			continue;
+		}
+
+		// removeRow удаляет и подпись, и редактор свойства.
+		d->formLayout->removeRow(row);
+		return true;
+	}
+
+	return false;
 }
 
 void PropertiesListWidget::setHeaderTitle(const QString& title) {

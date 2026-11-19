@@ -1,5 +1,5 @@
 #pragma once
-#include <QDialog>
+#include <QWidget>
 #include <memory>
 
 class UsersRegistryService;
@@ -8,7 +8,7 @@ class QPushButton;
 class QLabel;
 
 /// Виджет регистрации нового пользователя
-class RegisterWidget : public QDialog {
+class RegisterWidget : public QWidget {
 	Q_OBJECT
 public:
 	explicit RegisterWidget(UsersRegistryService* usersRegistryService, QWidget* parent = nullptr);

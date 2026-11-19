@@ -1,3 +1,4 @@
+#include "Libs/BaseWidgets/properties/properties_list_widget.h"
 #include "Libs/Engine/scripting/command_controller.h"
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/scripting/command_processor.h"
@@ -5,14 +6,23 @@
 #include "Libs/Engine/ui/doc_area.h"
 #include "Libs/Engine/ui/doc_widget.h"
 #include "Libs/Engine/ui/main_window.h"
-#include "Libs/Engine/ui/new_document_dialog.h"
+#include "Libs/Engine/ui/main_window/new_document_dialog.h"
+#include "Libs/Engine/ui/doc_widget_stub.h"
+#include "Libs/Engine/scripting/widgets/i_document_metadata.h"
 #include "Libs/Engine/scripting/widgets/widget_registry.h"
 #include "Libs/Engine/commands/widget_zone_command.h"
 
+#include <QApplication>
+#include <QCheckBox>
+#include <QComboBox>
+#include <QCoreApplication>
+#include <QDialog>
+#include <QEvent>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
-#include <QTableWidget>
+#include <QSpinBox>
+#include <QTimer>
 #include <QToolButton>
 #include <QtTest/QtTest>
 
@@ -53,6 +63,38 @@ struct WidgetFixture {
 	}
 };
 
+/// Метаданные тестового документа: по переменной каждого типа редактора.
+class TestDocumentMetadata final : public IDocumentMetadata {
+public:
+	QList<DocumentVariable> variables() const override {
+		return {
+			{ QStringLiteral("path"), QString::fromLatin1(DocumentVariableMime::kFilePath) },
+			{ QStringLiteral("count"), QString::fromLatin1(DocumentVariableMime::kInteger) },
+			{ QStringLiteral("enabled"), QString::fromLatin1(DocumentVariableMime::kBoolean) },
+			{ QStringLiteral("note"), QString::fromLatin1(DocumentVariableMime::kText) }
+		};
+	}
+};
+
+/// Редактор свойства в PropertiesListWidget по идентификатору переменной.
+template<typename T>
+T* findPropertyEditor(PropertiesListWidget* properties, const QString& id) {
+	for (auto* child : properties->findChildren<QWidget*>()) {
+		if (child->property("propertyId").toString() != id) {
+			continue;
+		}
+
+		if (auto* editor = qobject_cast<T*>(child)) {
+			return editor;
+		}
+		if (auto* nested = child->findChild<T*>()) {
+			return nested;
+		}
+	}
+
+	return nullptr;
+}
+
 std::shared_ptr<CommandContext> commandContext(CommandController& controller,
 	const QMap<QString, QVariant>& variables) {
 	static int counter = 0;
@@ -91,7 +133,9 @@ private slots:
 	void documentStateIsStoredInContext();
 	void commandParametersBecomeDocumentVariables();
 	void newDocumentDialogFiltersTypes();
-	void newDocumentDialogEditsVariables();
+	void newDocumentDialogUsesDocumentMetadata();
+	void propertiesListWidgetAddsAndRemoves();
+	void registryBuildWrapsWidgetIntoDocument();
 };
 
 void TestUiZones::createWidgetInEveryZone() {
@@ -452,6 +496,18 @@ void TestUiZones::registryDescribesTypes() {
 		QStringLiteral("custom")), QStringLiteral("test-singleton"));
 	QCOMPARE(controller.widgets()->documentId(QStringLiteral("test-widget"),
 		QStringLiteral("custom")), QStringLiteral("custom"));
+
+	// Метаданные документа ищутся и по xtype, и по полному имени класса.
+	QVERIFY(!controller.widgets()->documentMetadata(QStringLiteral("test-widget")));
+	controller.widgets()->registerDocumentMetadata(QStringLiteral("Test.Widget"),
+		std::make_unique<TestDocumentMetadata>());
+
+	const auto* metadata = controller.widgets()->documentMetadata(QStringLiteral("test-widget"));
+	QVERIFY(metadata);
+	QCOMPARE(metadata->variables().size(), 4);
+	QCOMPARE(metadata->variables().first().name, QStringLiteral("path"));
+	QCOMPARE(controller.widgets()->documentMetadata(QStringLiteral("Test.Widget")), metadata);
+	QVERIFY(!controller.widgets()->documentMetadata(QStringLiteral("test-singleton")));
 }
 
 void TestUiZones::singletoneDocumentKeepsXtypeName() {
@@ -595,41 +651,173 @@ void TestUiZones::commandParametersBecomeDocumentVariables() {
 	QVERIFY(!context->ownVariables().contains(QStringLiteral("target")));
 }
 
-void TestUiZones::newDocumentDialogEditsVariables() {
+void TestUiZones::newDocumentDialogUsesDocumentMetadata() {
+	TestCommandController controller;
+	WidgetFixture fixture(controller);
+	controller.widgets()->registerDocumentMetadata(QStringLiteral("Test.Widget"),
+		std::make_unique<TestDocumentMetadata>());
+	// Начальное значение обязательной переменной берётся из контекста.
+	controller.globalContext()->setVariable(QStringLiteral("path"), QStringLiteral("from-context.txt"));
+
+	NewDocumentDialog dialog(controller.widgets(), controller.globalContext());
+
+	auto* list = dialog.findChild<QListWidget*>(QStringLiteral("NewDocumentDialogTypes"));
+	auto* properties = dialog.findChild<PropertiesListWidget*>(
+		QStringLiteral("NewDocumentDialogVariables"));
+	QVERIFY(list);
+	QVERIFY(properties);
+	QCOMPARE(list->count(), 1);
+	list->setCurrentRow(0);
+
+	// Список заполнен обязательными переменными из метаданных типа.
+	auto variables = dialog.variables();
+	QCOMPARE(variables.size(), 4);
+	QCOMPARE(variables.value(QStringLiteral("path")).toString(),
+		QStringLiteral("from-context.txt"));
+	QCOMPARE(variables.value(QStringLiteral("count")).toInt(), 0);
+	QCOMPARE(variables.value(QStringLiteral("enabled")).toBool(), false);
+	QCOMPARE(variables.value(QStringLiteral("note")).toString(), QString());
+
+	// Значения, изменённые в редакторах PropertiesListWidget, попадают в результат.
+	auto* noteEdit = findPropertyEditor<QLineEdit>(properties, QStringLiteral("note"));
+	auto* countEdit = findPropertyEditor<QSpinBox>(properties, QStringLiteral("count"));
+	auto* enabledEdit = findPropertyEditor<QCheckBox>(properties, QStringLiteral("enabled"));
+	QVERIFY(noteEdit);
+	QVERIFY(countEdit);
+	QVERIFY(enabledEdit);
+
+	QTest::keyClicks(noteEdit, QStringLiteral("hello"));
+	countEdit->setValue(7);
+	enabledEdit->setChecked(true);
+
+	variables = dialog.variables();
+	QCOMPARE(variables.value(QStringLiteral("note")).toString(), QStringLiteral("hello"));
+	QCOMPARE(variables.value(QStringLiteral("count")).toInt(), 7);
+	QCOMPARE(variables.value(QStringLiteral("enabled")).toBool(), true);
+	QCOMPARE(variables.value(QStringLiteral("path")).toString(),
+		QStringLiteral("from-context.txt"));
+
+	auto* addButton = dialog.findChild<QToolButton*>(QStringLiteral("NewDocumentDialogAddVariable"));
+	auto* removeButton = dialog.findChild<QToolButton*>(
+		QStringLiteral("NewDocumentDialogRemoveVariable"));
+	auto* selector = dialog.findChild<QComboBox*>(
+		QStringLiteral("NewDocumentDialogVariableSelector"));
+	QVERIFY(addButton);
+	QVERIFY(removeButton);
+	QVERIFY(selector);
+	QCOMPARE(selector->count(), 4);
+
+	// Обязательную переменную типа удалить нельзя.
+	selector->setCurrentIndex(selector->findData(QStringLiteral("path")));
+	QVERIFY(!removeButton->isEnabled());
+
+	// Добавление параметра через диалог: имя и mime-тип.
+	const auto addVariable = [&](const QString& name, const QString& mimeType) {
+		QTimer::singleShot(0, [name, mimeType] {
+			auto* addDialog = qobject_cast<QDialog*>(QApplication::activeModalWidget());
+			if (!addDialog) {
+				return;
+			}
+			if (auto* nameEdit = addDialog->findChild<QLineEdit*>(
+				QStringLiteral("NewDocumentVariableName"))) {
+				nameEdit->setText(name);
+			}
+			if (auto* mimeCombo = addDialog->findChild<QComboBox*>(
+				QStringLiteral("NewDocumentVariableMime"))) {
+				const int index = mimeCombo->findData(mimeType);
+				if (index >= 0) {
+					mimeCombo->setCurrentIndex(index);
+				}
+			}
+			addDialog->accept();
+		});
+		addButton->click();
+	};
+
+	addVariable(QStringLiteral("extra"), QString::fromLatin1(DocumentVariableMime::kInteger));
+	QVERIFY(dialog.variables().contains(QStringLiteral("extra")));
+	QCOMPARE(dialog.variables().value(QStringLiteral("extra")).toInt(), 0);
+	QVERIFY(selector->findData(QStringLiteral("extra")) >= 0);
+
+	auto* extraSpin = findPropertyEditor<QSpinBox>(properties, QStringLiteral("extra"));
+	QVERIFY(extraSpin);
+	extraSpin->setValue(5);
+	QCOMPARE(dialog.variables().value(QStringLiteral("extra")).toInt(), 5);
+
+	// Без выбора mime-типа параметр считается обычным текстом.
+	addVariable(QStringLiteral("plain"), QString());
+	auto* plainEdit = findPropertyEditor<QLineEdit>(properties, QStringLiteral("plain"));
+	QVERIFY(plainEdit);
+	QTest::keyClicks(plainEdit, QStringLiteral("text"));
+	QCOMPARE(dialog.variables().value(QStringLiteral("plain")).toString(),
+		QStringLiteral("text"));
+
+	// Удаление добавленного параметра.
+	selector->setCurrentIndex(selector->findData(QStringLiteral("extra")));
+	QVERIFY(removeButton->isEnabled());
+	removeButton->click();
+	QVERIFY(!dialog.variables().contains(QStringLiteral("extra")));
+	QVERIFY(selector->findData(QStringLiteral("extra")) < 0);
+	QVERIFY(!findPropertyEditor<QSpinBox>(properties, QStringLiteral("extra")));
+}
+
+void TestUiZones::propertiesListWidgetAddsAndRemoves() {
+	PropertiesListWidget widget;
+
+	PropertyData first;
+	first.id = QStringLiteral("first");
+	first.label = QStringLiteral("Первый");
+	first.type = PropertyType::Text;
+	first.value = QStringLiteral("one");
+	widget.setProperties({ first });
+
+	auto* firstEdit = findPropertyEditor<QLineEdit>(&widget, QStringLiteral("first"));
+	QVERIFY(firstEdit);
+	QCOMPARE(firstEdit->text(), QStringLiteral("one"));
+
+	PropertyData second;
+	second.id = QStringLiteral("second");
+	second.label = QStringLiteral("Второй");
+	second.type = PropertyType::Boolean;
+	second.value = false;
+	widget.addProperty(second);
+
+	auto* secondEdit = findPropertyEditor<QCheckBox>(&widget, QStringLiteral("second"));
+	QVERIFY(secondEdit);
+	QVERIFY(!secondEdit->isChecked());
+	secondEdit->setChecked(true);
+	QVERIFY(secondEdit->isChecked());
+
+	QVERIFY(widget.removeProperty(QStringLiteral("first")));
+	QVERIFY(!findPropertyEditor<QLineEdit>(&widget, QStringLiteral("first")));
+	QVERIFY(findPropertyEditor<QCheckBox>(&widget, QStringLiteral("second")));
+	QVERIFY(!widget.removeProperty(QStringLiteral("missing")));
+
+	widget.clearProperties();
+	QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+	QVERIFY(!findPropertyEditor<QCheckBox>(&widget, QStringLiteral("second")));
+}
+
+void TestUiZones::registryBuildWrapsWidgetIntoDocument() {
 	TestCommandController controller;
 	WidgetFixture fixture(controller);
 
-	NewDocumentDialog dialog(controller.widgets(), controller.globalContext());
-	auto* table = dialog.findChild<QTableWidget*>(QStringLiteral("NewDocumentDialogVariables"));
-	auto* add = dialog.findChild<QToolButton*>(QStringLiteral("NewDocumentDialogAddVariable"));
-	auto* remove = dialog.findChild<QToolButton*>(QStringLiteral("NewDocumentDialogRemoveVariable"));
-	QVERIFY(table);
-	QVERIFY(add);
-	QVERIFY(remove);
-	QCOMPARE(table->rowCount(), 0);
+	WidgetBuildHandler handler;
+	auto* document = controller.widgets()->build(QStringLiteral("test-widget"), handler);
+	QVERIFY(document);
+	QCOMPARE(fixture.built, 1);
+	// Фабрика вернула QLabel — build обернул его в документ.
+	QVERIFY(qobject_cast<DocumentWidgetStub*>(document));
 
-	// Добавление и изменение переменной.
-	add->click();
-	QCOMPARE(table->rowCount(), 1);
-	table->item(0, 0)->setText(QStringLiteral("path"));
-	table->item(0, 1)->setText(QStringLiteral("file.txt"));
-	QCOMPARE(table->item(0, 2)->text(), QStringLiteral("QString"));
+	// buildWidget возвращает содержимое без обёртки (для вьюпорта).
+	auto* raw = controller.widgets()->buildWidget(QStringLiteral("test-widget"), handler);
+	QVERIFY(raw);
+	QCOMPARE(fixture.built, 2);
+	QVERIFY(!qobject_cast<DocumentWidget*>(raw));
+	QVERIFY(!qobject_cast<DocumentWidgetStub*>(raw));
 
-	// Тип значения определяется по тексту.
-	add->click();
-	table->item(1, 0)->setText(QStringLiteral("modified"));
-	table->item(1, 1)->setText(QStringLiteral("true"));
-	QCOMPARE(table->item(1, 2)->text(), QStringLiteral("bool"));
-
-	auto variables = dialog.variables();
-	QCOMPARE(variables.value(QStringLiteral("path")).toString(), QStringLiteral("file.txt"));
-	QCOMPARE(variables.value(QStringLiteral("modified")).toBool(), true);
-
-	// Удаление выбранной переменной.
-	table->selectRow(0);
-	remove->click();
-	QCOMPARE(table->rowCount(), 1);
-	QVERIFY(!dialog.variables().contains(QStringLiteral("path")));
+	delete raw;
+	delete document;
 }
 
 void TestUiZones::newDocumentDialogFiltersTypes() {
@@ -640,7 +828,6 @@ void TestUiZones::newDocumentDialogFiltersTypes() {
 		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 			return new QLabel(handler.title, handler.parent);
 		});
-	controller.globalContext()->setVariable(QStringLiteral("test.var"), 42);
 
 	NewDocumentDialog dialog(controller.widgets(), controller.globalContext());
 
@@ -650,14 +837,15 @@ void TestUiZones::newDocumentDialogFiltersTypes() {
 	auto* glyph = dialog.findChild<QLineEdit*>(QStringLiteral("NewDocumentDialogGlyph"));
 	auto* title = dialog.findChild<QLineEdit*>(QStringLiteral("NewDocumentDialogTitle"));
 	auto* random = dialog.findChild<QToolButton*>(QStringLiteral("NewDocumentDialogRandomName"));
-	auto* variables = dialog.findChild<QTableWidget*>(QStringLiteral("NewDocumentDialogVariables"));
+	auto* properties = dialog.findChild<PropertiesListWidget*>(
+		QStringLiteral("NewDocumentDialogVariables"));
 	QVERIFY(list);
 	QVERIFY(search);
 	QVERIFY(name);
 	QVERIFY(glyph);
 	QVERIFY(title);
 	QVERIFY(random);
-	QVERIFY(variables);
+	QVERIFY(properties);
 
 	QCOMPARE(list->count(), 2);
 	QCOMPARE(list->item(0)->text(), QStringLiteral("(test-singleton) Test.Singleton"));
@@ -684,16 +872,8 @@ void TestUiZones::newDocumentDialogFiltersTypes() {
 	QCOMPARE(glyph->text(), QStringLiteral("🧪"));
 	QCOMPARE(title->text(), QStringLiteral("Тестовый виджет"));
 
-	// Переменные текущего контекста попадают в таблицу.
-	bool foundVariable = false;
-	for (int row = 0; row < variables->rowCount(); row++) {
-		if (variables->item(row, 0)
-			&& variables->item(row, 0)->text() == QStringLiteral("test.var")) {
-			foundVariable = true;
-			QCOMPARE(variables->item(row, 1)->text(), QStringLiteral("42"));
-		}
-	}
-	QVERIFY(foundVariable);
+	// Без метаданных обязательных переменных нет — список пуст.
+	QVERIFY(dialog.variables().isEmpty());
 
 	// Поиск по вхождению в xtype/класс: остаётся только совпавший тип.
 	search->setText(QStringLiteral("singleton"));

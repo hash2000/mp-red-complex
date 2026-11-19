@@ -1,19 +1,26 @@
 #include "Content/CodeEditorWidget/documents/code_editor_document.h"
+#include "Content/CodeEditorWidget/documents/code_editor_document_metadata.h"
 #include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
 #include "Content/CodeEditorWidget/widgets/code_editor_search_panel.h"
+#include "Libs/BaseWidgets/properties/properties_list_widget.h"
 #include "Libs/Engine/scripting/command_controller.h"
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/scripting/widgets/widget_registry.h"
 #include "Libs/Engine/ui/main_window.h"
+#include "Libs/Engine/ui/main_window/new_document_dialog.h"
 #include "Libs/Resources/resources.h"
 
 #include <QDir>
 #include <QFile>
+#include <QLineEdit>
+#include <QListWidget>
 #include <QScrollBar>
 #include <QTemporaryDir>
 #include <QTextEdit>
 #include <QtTest/QtTest>
+
+#include <memory>
 
 namespace {
 class TestCommandController : public CommandController {
@@ -52,6 +59,8 @@ private slots:
 	void longLineScrollsToMatchStart();
 	void documentPathComesFromContext();
 	void documentPathFromCreationVariables();
+	void documentMetadataDeclaresPath();
+	void newDocumentDialogShowsCodeEditorPath();
 
 private:
 	QTextEdit* _editor = nullptr;
@@ -258,6 +267,58 @@ void TestCodeEditorSearch::documentPathFromCreationVariables() {
 	auto context = window.documentContext(QStringLiteral("editor"));
 	QVERIFY(context);
 	QCOMPARE(context->ownVariables().value(QStringLiteral("path")).toString(), path);
+}
+
+void TestCodeEditorSearch::documentMetadataDeclaresPath() {
+	CodeEditorDocumentMetadata metadata;
+	const auto variables = metadata.variables();
+	QCOMPARE(variables.size(), 1);
+	QCOMPARE(variables.first().name, QStringLiteral("path"));
+	QCOMPARE(variables.first().mimeType,
+		QString::fromLatin1(DocumentVariableMime::kFilePath));
+}
+
+void TestCodeEditorSearch::newDocumentDialogShowsCodeEditorPath() {
+	TestCommandController controller;
+	auto* registry = controller.widgets();
+	registry->registerFactory({ QStringLiteral("Content.CodeEditor.CodeEditorDocument"),
+		QStringLiteral("code-editor"), /*singletone*/ false,
+		QStringLiteral("📝"), QStringLiteral("Редактор кода") },
+		[](const QString&, const WidgetBuildHandler&) -> QWidget* {
+			return nullptr;
+		});
+	registry->registerDocumentMetadata(
+		QStringLiteral("Content.CodeEditor.CodeEditorDocument"),
+		std::make_unique<CodeEditorDocumentMetadata>());
+
+	NewDocumentDialog dialog(registry, controller.globalContext());
+
+	auto* list = dialog.findChild<QListWidget*>(QStringLiteral("NewDocumentDialogTypes"));
+	auto* properties = dialog.findChild<PropertiesListWidget*>(
+		QStringLiteral("NewDocumentDialogVariables"));
+	QVERIFY(list);
+	QVERIFY(properties);
+
+	// Обязательная переменная редактора — path; путь редактируется через
+	// выбор файла (PropertyType::PathFile), поэтому поле только для чтения.
+	QCOMPARE(list->count(), 1);
+	QCOMPARE(dialog.documentType(), QStringLiteral("code-editor"));
+	QCOMPARE(dialog.variables().size(), 1);
+	QVERIFY(dialog.variables().contains(QStringLiteral("path")));
+
+	QLineEdit* pathEdit = nullptr;
+	for (auto* child : properties->findChildren<QWidget*>()) {
+		if (child->property("propertyId").toString() != QStringLiteral("path")) {
+			continue;
+		}
+
+		pathEdit = qobject_cast<QLineEdit*>(child);
+		if (!pathEdit) {
+			pathEdit = child->findChild<QLineEdit*>();
+		}
+	}
+	QVERIFY(pathEdit);
+	QVERIFY(pathEdit->isReadOnly());
 }
 
 QTEST_MAIN(TestCodeEditorSearch)

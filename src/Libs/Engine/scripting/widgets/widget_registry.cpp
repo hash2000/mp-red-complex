@@ -1,4 +1,6 @@
 #include "Libs/Engine/scripting/widgets/widget_registry.h"
+#include "Libs/Engine/scripting/widgets/i_document_metadata.h"
+#include "Libs/Engine/ui/doc_widget_stub.h"
 #include <QDebug>
 
 #include <map>
@@ -18,6 +20,7 @@ public:
 	std::map<QString, WidgetFactory> factoryByClass;
 	std::map<QString, WidgetTypeHandler> typeByXtype;
 	std::map<QString, QString> xtypeByClass;
+	std::map<QString, std::unique_ptr<IDocumentMetadata>> metadataByClass;
 
 	std::optional<WidgetTypeHandler> typeInfo(const QString& type) const {
 		const auto byXtype = typeByXtype.find(type);
@@ -99,7 +102,30 @@ QString WidgetRegistry::documentId(const QString& type, const QString& requested
 	return requestedId;
 }
 
-QWidget* WidgetRegistry::build(const QString& type, const WidgetBuildHandler& handler) {
+void WidgetRegistry::registerDocumentMetadata(const QString& className,
+	std::unique_ptr<IDocumentMetadata> metadata) {
+	if (className.isEmpty() || !metadata) {
+		qWarning() << "WidgetRegistry: empty document metadata for class" << className;
+		return;
+	}
+
+	if (d->metadataByClass.find(className) != d->metadataByClass.end()) {
+		qWarning() << "WidgetRegistry: document metadata for class" << className
+			<< "allready registered";
+		return;
+	}
+
+	d->metadataByClass.emplace(className, std::move(metadata));
+}
+
+const IDocumentMetadata* WidgetRegistry::documentMetadata(const QString& type) const {
+	const auto info = d->typeInfo(type);
+	const auto className = info ? info->className : type;
+	const auto it = d->metadataByClass.find(className);
+	return it != d->metadataByClass.end() ? it->second.get() : nullptr;
+}
+
+QWidget* WidgetRegistry::buildWidget(const QString& type, const WidgetBuildHandler& handler) {
 	WidgetFactory* factory = nullptr;
 
 	const auto itxtype = d->factoryByXtype.find(type);
@@ -138,4 +164,19 @@ QWidget* WidgetRegistry::build(const QString& type, const WidgetBuildHandler& ha
 	}
 
 	return (*factory)(type, effective);
+}
+
+DocumentWidget* WidgetRegistry::build(const QString& type, const WidgetBuildHandler& handler) {
+	QWidget* content = buildWidget(type, handler);
+	if (!content) {
+		return nullptr;
+	}
+
+	// Любой документ — как минимум DocumentWidget: у произвольного QWidget
+	// нет контекста документа и корректного жизненного цикла при закрытии.
+	if (auto* document = qobject_cast<DocumentWidget*>(content)) {
+		return document;
+	}
+
+	return new DocumentWidgetStub(content);
 }
