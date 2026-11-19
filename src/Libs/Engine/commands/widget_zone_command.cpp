@@ -128,6 +128,17 @@ bool WidgetZoneCommand::executeCreate(const std::shared_ptr<CommandContext>& con
 	}
 	const auto tooltip = context->variable("tooltip").toString();
 
+	// Остальные параметры команды становятся начальными переменными
+	// контекста документа (например, path=...).
+	QVariantMap documentVariables;
+	const auto commandVariables = context->ownVariables();
+	const QStringList reserved = { "action", "target", "id", "name", "title", "glyph", "tooltip" };
+	for (auto it = commandVariables.cbegin(); it != commandVariables.cend(); it++) {
+		if (!reserved.contains(it.key())) {
+			documentVariables.insert(it.key(), it.value());
+		}
+	}
+
 	WidgetBuildHandler handler;
 	handler.className = typeInfo ? typeInfo->className : target;
 	handler.xtype = typeInfo ? typeInfo->xtype : target;
@@ -150,7 +161,7 @@ bool WidgetZoneCommand::executeCreate(const std::shared_ptr<CommandContext>& con
 
 	auto* widget = window->createWidget(id, _kind, title, glyph,
 		[registry, target, handler]() { return registry->build(target, handler); },
-		tooltip, handler.xtype, creator);
+		tooltip, handler.xtype, creator, documentVariables);
 	if (!widget) {
 		controller->printError(QString("%1: не удалось создать %2").arg(_name, target));
 		return false;

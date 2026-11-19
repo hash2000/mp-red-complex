@@ -88,7 +88,10 @@ private slots:
 	void singletoneDocumentKeepsXtypeName();
 	void singletoneCreateWidgetNormalizesId();
 	void commandUsesRegistryDefaults();
+	void documentStateIsStoredInContext();
+	void commandParametersBecomeDocumentVariables();
 	void newDocumentDialogFiltersTypes();
+	void newDocumentDialogEditsVariables();
 };
 
 void TestUiZones::createWidgetInEveryZone() {
@@ -527,6 +530,106 @@ void TestUiZones::commandUsesRegistryDefaults() {
 	QCOMPARE(document->title(), QStringLiteral("Тестовый виджет"));
 	QCOMPARE(document->glyph(), QStringLiteral("🧪"));
 	QCOMPARE(window.widgetType(QStringLiteral("defaults")), QStringLiteral("test-widget"));
+}
+
+void TestUiZones::documentStateIsStoredInContext() {
+	TestCommandController controller;
+	WidgetFixture fixture(controller);
+	MainWindow window(controller.globalContext(), nullptr, false);
+
+	QVERIFY(window.createWidget(QStringLiteral("doc"), MainWindow::WidgetKind::Document,
+		QStringLiteral("Заголовок"), QStringLiteral("#"),
+		[&fixture] { return fixture.built++, new QLabel(QStringLiteral("doc")); },
+		QString(), QStringLiteral("test-widget"), controller.globalContext(),
+		{ { QStringLiteral("path"), QStringLiteral("notes.txt") },
+		  { QStringLiteral("count"), 42 } }));
+
+	auto* document = window.document(QStringLiteral("doc"));
+	auto context = window.documentContext(QStringLiteral("doc"));
+	QVERIFY(document);
+	QVERIFY(context);
+
+	// Состояние документа живёт в переменных его контекста.
+	QCOMPARE(context->ownVariables().value(QStringLiteral("title")).toString(),
+		QStringLiteral("Заголовок"));
+	QCOMPARE(context->ownVariables().value(QStringLiteral("glyph")).toString(),
+		QStringLiteral("#"));
+	QCOMPARE(context->ownVariables().value(QStringLiteral("path")).toString(),
+		QStringLiteral("notes.txt"));
+	QCOMPARE(context->ownVariables().value(QStringLiteral("count")).toInt(), 42);
+
+	// Изменение свойства документа обновляет контекст.
+	document->setTitle(QStringLiteral("Новый"));
+	QCOMPARE(context->variable(QStringLiteral("title")).toString(), QStringLiteral("Новый"));
+
+	// Изменение переменной контекста обновляет документ.
+	context->setVariable(QStringLiteral("title"), QStringLiteral("Из контекста"));
+	QCOMPARE(document->title(), QStringLiteral("Из контекста"));
+
+	// Значения по умолчанию создаются в контексте при чтении.
+	QCOMPARE(document->variable(QStringLiteral("missing"), QStringLiteral("default")).toString(),
+		QStringLiteral("default"));
+	QCOMPARE(context->ownVariables().value(QStringLiteral("missing")).toString(),
+		QStringLiteral("default"));
+}
+
+void TestUiZones::commandParametersBecomeDocumentVariables() {
+	TestCommandController controller;
+	WidgetFixture fixture(controller);
+	MainWindow window(controller.globalContext(), nullptr, false);
+	WidgetZoneCommand documents(QStringLiteral("documents"), MainWindow::WidgetKind::Document);
+
+	// Остальные параметры команды становятся переменными контекста документа.
+	QVERIFY(documents.execute(commandContext(controller, {
+		{ "action", "create" }, { "target", "test-widget" }, { "id", "vars" },
+		{ "path", "hello.txt" }, { "count", 3 }
+	})));
+
+	auto context = window.documentContext(QStringLiteral("vars"));
+	QVERIFY(context);
+	QCOMPARE(context->ownVariables().value(QStringLiteral("path")).toString(),
+		QStringLiteral("hello.txt"));
+	QCOMPARE(context->ownVariables().value(QStringLiteral("count")).toInt(), 3);
+	// Служебные параметры команды в контекст документа не попадают.
+	QVERIFY(!context->ownVariables().contains(QStringLiteral("action")));
+	QVERIFY(!context->ownVariables().contains(QStringLiteral("target")));
+}
+
+void TestUiZones::newDocumentDialogEditsVariables() {
+	TestCommandController controller;
+	WidgetFixture fixture(controller);
+
+	NewDocumentDialog dialog(controller.widgets(), controller.globalContext());
+	auto* table = dialog.findChild<QTableWidget*>(QStringLiteral("NewDocumentDialogVariables"));
+	auto* add = dialog.findChild<QToolButton*>(QStringLiteral("NewDocumentDialogAddVariable"));
+	auto* remove = dialog.findChild<QToolButton*>(QStringLiteral("NewDocumentDialogRemoveVariable"));
+	QVERIFY(table);
+	QVERIFY(add);
+	QVERIFY(remove);
+	QCOMPARE(table->rowCount(), 0);
+
+	// Добавление и изменение переменной.
+	add->click();
+	QCOMPARE(table->rowCount(), 1);
+	table->item(0, 0)->setText(QStringLiteral("path"));
+	table->item(0, 1)->setText(QStringLiteral("file.txt"));
+	QCOMPARE(table->item(0, 2)->text(), QStringLiteral("QString"));
+
+	// Тип значения определяется по тексту.
+	add->click();
+	table->item(1, 0)->setText(QStringLiteral("modified"));
+	table->item(1, 1)->setText(QStringLiteral("true"));
+	QCOMPARE(table->item(1, 2)->text(), QStringLiteral("bool"));
+
+	auto variables = dialog.variables();
+	QCOMPARE(variables.value(QStringLiteral("path")).toString(), QStringLiteral("file.txt"));
+	QCOMPARE(variables.value(QStringLiteral("modified")).toBool(), true);
+
+	// Удаление выбранной переменной.
+	table->selectRow(0);
+	remove->click();
+	QCOMPARE(table->rowCount(), 1);
+	QVERIFY(!dialog.variables().contains(QStringLiteral("path")));
 }
 
 void TestUiZones::newDocumentDialogFiltersTypes() {

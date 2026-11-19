@@ -15,7 +15,13 @@ public:
 	void refresh() override;
 	bool save() override;
 
+protected:
+	void onContextAttached() override;
+	void onContextVariableChanged(const QString& name, const QVariant& value) override;
+
 private:
+	void setPath(const QString& path);
+
 	struct Private;
 	std::unique_ptr<Private> d;   // скрывает DocumentWidget::d (тот private) — это нормально
 };

@@ -1,5 +1,6 @@
 #pragma once
 #include <QWidget>
+#include <QVariant>
 #include <memory>
 
 class CommandContext;
@@ -8,6 +9,9 @@ class CommandContext;
 /// Каждому DocumentWidget автоматически соответствует вкладка слева.
 /// Документ связан с остальными документами через свой CommandContext
 /// (`.documents.{id}`), поэтому изменение свойств и вызовы видны соседям.
+///
+/// Состояние документа хранится в переменных его контекста: `title`, `glyph`,
+/// `modified` и переменные конкретного документа (например, `path`).
 class DocumentWidget : public QWidget {
 	Q_OBJECT
 public:
@@ -27,6 +31,17 @@ public:
 	/// напрямую (например, в тестах или legacy-окнах).
 	std::shared_ptr<CommandContext> context() const;
 	void setContext(const std::shared_ptr<CommandContext>& context);
+
+	/// Значение переменной контекста. Если переменной нет (ни собственной,
+	/// ни унаследованной), она создаётся со значением defaultValue.
+	QVariant variable(const QString& name, const QVariant& defaultValue = QVariant());
+
+	/// Записать переменную в контекст документа (false — контекст только для чтения
+	/// или отсутствует).
+	bool setVariable(const QString& name, const QVariant& value);
+
+	/// true, если переменная видна в контексте (собственная или унаследованная).
+	bool hasVariable(const QString& name) const;
 
 	/// Редактор свойств (показывается в панели «Свойства»).
 	/// Базовая реализация возвращает QWidget с QFormLayout — наследники
@@ -51,6 +66,16 @@ signals:
 	void propertiesChanged();   // попросить панель свойств перестроить редактор
 
 protected:
+	/// Документу назначен контекст: наследник читает состояние из переменных
+	/// и создаёт недостающие значения по умолчанию (см. variable()).
+	virtual void onContextAttached() {}
+
+	/// Изменилась собственная переменная контекста документа.
+	virtual void onContextVariableChanged(const QString& name, const QVariant& value) {
+		Q_UNUSED(name);
+		Q_UNUSED(value);
+	}
+
 	void closeEvent(QCloseEvent* e) override;
 
 private:

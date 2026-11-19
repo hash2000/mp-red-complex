@@ -47,12 +47,15 @@ public:
 	/// type — xtype/класс, которым создан виджет (для списков и справки).
 	/// creatorContext — контекст, создающий документ: новый документ получает
 	/// контекст `{creator}.documents.{id}`; nullptr — контекст вьюпорта.
+	/// variables — начальные переменные контекста документа: записываются
+	/// до привязки контекста, поэтому документ читает их при инициализации.
 	/// Любой виджет любой зоны является документом (оборачивается в
 	/// DocumentWidget), поэтому связан с остальными через CommandContext.
 	QWidget* createWidget(const QString& id, WidgetKind kind, const QString& title,
 		const QString& glyph, const WidgetFactory& factory, const QString& tooltip = QString(),
 		const QString& type = QString(),
-		const std::shared_ptr<CommandContext>& creatorContext = std::shared_ptr<CommandContext>());
+		const std::shared_ptr<CommandContext>& creatorContext = std::shared_ptr<CommandContext>(),
+		const QVariantMap& variables = QVariantMap());
 	QWidget* widget(const QString& id) const;
 	/// Документ виджета (обёртка DocumentWidget) либо nullptr.
 	DocumentWidget* document(const QString& id) const;

@@ -7,11 +7,19 @@
 #include <QLineEdit>
 #include <QMessageBox>
 
+namespace {
+/// Общие переменные контекста, в которых документ хранит своё состояние.
+const QString kTitleVariable = QStringLiteral("title");
+const QString kGlyphVariable = QStringLiteral("glyph");
+const QString kModifiedVariable = QStringLiteral("modified");
+}
+
 struct DocumentWidget::Private {
 	QString title;
 	QString glyph = QStringLiteral("📄");
 	bool modified = false;
 	std::shared_ptr<CommandContext> context;
+	QMetaObject::Connection variableConnection;
 };
 
 DocumentWidget::DocumentWidget(QWidget* parent)
@@ -29,6 +37,9 @@ void DocumentWidget::setTitle(const QString& title) {
 	if (d->title == title)
 		return;
 	d->title = title;
+	if (d->context) {
+		d->context->setVariable(kTitleVariable, title);
+	}
 	emit titleChanged(title);
 }
 
@@ -40,6 +51,9 @@ void DocumentWidget::setGlyph(const QString& glyph) {
 	if (d->glyph == glyph)
 		return;
 	d->glyph = glyph;
+	if (d->context) {
+		d->context->setVariable(kGlyphVariable, glyph);
+	}
 	emit glyphChanged(glyph);
 }
 
@@ -51,6 +65,9 @@ void DocumentWidget::setModified(bool modified) {
 	if (d->modified == modified)
 		return;
 	d->modified = modified;
+	if (d->context) {
+		d->context->setVariable(kModifiedVariable, modified);
+	}
 	emit modifiedChanged(modified);
 }
 
@@ -59,7 +76,117 @@ std::shared_ptr<CommandContext> DocumentWidget::context() const {
 }
 
 void DocumentWidget::setContext(const std::shared_ptr<CommandContext>& context) {
+	if (d->context == context) {
+		return;
+	}
+
+	if (d->context) {
+		QObject::disconnect(d->variableConnection);
+	}
+
 	d->context = context;
+	if (context) {
+		// Собственные переменные контекста — источник состояния документа.
+		// Если их ещё нет, в контекст записываются текущие значения.
+		const auto own = context->ownVariables();
+
+		if (own.contains(kTitleVariable)) {
+			const auto value = own.value(kTitleVariable).toString();
+			if (d->title != value) {
+				d->title = value;
+				emit titleChanged(value);
+			}
+		}
+		else {
+			context->setVariable(kTitleVariable, d->title);
+		}
+
+		if (own.contains(kGlyphVariable)) {
+			const auto value = own.value(kGlyphVariable).toString();
+			if (d->glyph != value) {
+				d->glyph = value;
+				emit glyphChanged(value);
+			}
+		}
+		else {
+			context->setVariable(kGlyphVariable, d->glyph);
+		}
+
+		if (own.contains(kModifiedVariable)) {
+			const auto value = own.value(kModifiedVariable).toBool();
+			if (d->modified != value) {
+				d->modified = value;
+				emit modifiedChanged(value);
+			}
+		}
+		else {
+			context->setVariable(kModifiedVariable, d->modified);
+		}
+
+		// Изменения переменных контекста извне подхватываются документом.
+		d->variableConnection = QObject::connect(context.get(), &CommandContext::variableChanged,
+			this,
+			[this](const QString& contextName, const QString& name, const QVariant& oldValue,
+				const QVariant& newValue) {
+				Q_UNUSED(oldValue);
+				if (!d->context || contextName != d->context->nameSpace()) {
+					return;
+				}
+
+				if (name == kTitleVariable) {
+					const auto value = newValue.toString();
+					if (d->title != value) {
+						d->title = value;
+						emit titleChanged(value);
+					}
+				}
+				else if (name == kGlyphVariable) {
+					const auto value = newValue.toString();
+					if (d->glyph != value) {
+						d->glyph = value;
+						emit glyphChanged(value);
+					}
+				}
+				else if (name == kModifiedVariable) {
+					const auto value = newValue.toBool();
+					if (d->modified != value) {
+						d->modified = value;
+						emit modifiedChanged(value);
+					}
+				}
+
+				onContextVariableChanged(name, newValue);
+			});
+	}
+
+	onContextAttached();
+}
+
+QVariant DocumentWidget::variable(const QString& name, const QVariant& defaultValue) {
+	if (!d->context || name.isEmpty()) {
+		return defaultValue;
+	}
+
+	if (d->context->hasVariable(name)) {
+		return d->context->variable(name);
+	}
+
+	// Значения нет ни в собственном, ни в базовом контексте:
+	// создаём переменную со значением по умолчанию.
+	d->context->setVariable(name, defaultValue);
+	return defaultValue;
+}
+
+bool DocumentWidget::setVariable(const QString& name, const QVariant& value) {
+	if (!d->context || name.isEmpty()) {
+		return false;
+	}
+
+	return d->context->setVariable(name, value);
+}
+
+bool DocumentWidget::hasVariable(const QString& name) const {
+	return d->context && !name.isEmpty() && d->context->hasVariable(name);
 }
 
 QWidget* DocumentWidget::createPropertiesEditor(QWidget* parent) {

@@ -361,7 +361,7 @@ void MainWindow::Private::newDocument() {
 	const auto glyph = dialog.documentGlyph();
 	auto* document = q->createWidget(id, WidgetKind::Document, title, glyph,
 		[registry, type = info->xtype, handler]() { return registry->build(type, handler); },
-		QString(), info->xtype, context);
+		QString(), info->xtype, context, dialog.variables());
 	if (!document) {
 		q->log(MainWindow::tr("Не удалось создать документ: %1").arg(info->xtype));
 	}
@@ -490,7 +490,8 @@ MainWindow::~MainWindow() {
 
 QWidget* MainWindow::createWidget(const QString& id, WidgetKind kind, const QString& title,
 	const QString& glyph, const WidgetFactory& factory, const QString& tooltip,
-	const QString& type, const std::shared_ptr<CommandContext>& creatorContext) {
+	const QString& type, const std::shared_ptr<CommandContext>& creatorContext,
+	const QVariantMap& variables) {
 	if (QThread::currentThread() != thread() || id.isEmpty() ||
 		(kind != WidgetKind::Document && kind != WidgetKind::BottomPanel && kind != WidgetKind::SidePanel))
 		return nullptr;
@@ -511,6 +512,13 @@ QWidget* MainWindow::createWidget(const QString& id, WidgetKind kind, const QStr
 	if (auto* existing = widget(documentId)) {
 		// Документ уже создан: другой документ его вызывает.
 		const auto it = d->entries.constFind(documentId);
+		if (it != d->entries.cend() && it->document && it->document->context()) {
+			// Начальные переменные применяются и к существующему документу:
+			// повторный вызов с path=... обновляет его состояние.
+			for (auto variable = variables.cbegin(); variable != variables.cend(); variable++) {
+				it->document->context()->setVariable(variable.key(), variable.value());
+			}
+		}
 		if (it != d->entries.cend() && creatorContext) {
 			creatorContext->notifyDocumentInvoked(documentId);
 			if (it->document && it->document->context()) {
@@ -547,8 +555,19 @@ QWidget* MainWindow::createWidget(const QString& id, WidgetKind kind, const QStr
 	}
 
 	const auto creator = creatorContext ? creatorContext : d->context;
-	if (creator && document->context() == nullptr) {
-		document->setContext(creator->createDocumentContext(documentId));
+	std::shared_ptr<CommandContext> documentContext = document->context();
+	if (!documentContext && creator) {
+		documentContext = creator->createDocumentContext(documentId);
+	}
+	if (documentContext) {
+		// Начальные переменные пишутся до setContext: документ читает
+		// их в onContextAttached() и создаёт недостающие значения.
+		for (auto it = variables.cbegin(); it != variables.cend(); it++) {
+			documentContext->setVariable(it.key(), it.value());
+		}
+		if (document->context() != documentContext) {
+			document->setContext(documentContext);
+		}
 	}
 
 	if (!title.isEmpty()) {

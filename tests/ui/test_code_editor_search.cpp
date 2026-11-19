@@ -1,8 +1,38 @@
+#include "Content/CodeEditorWidget/documents/code_editor_document.h"
+#include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
+#include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
 #include "Content/CodeEditorWidget/widgets/code_editor_search_panel.h"
+#include "Libs/Engine/scripting/command_controller.h"
+#include "Libs/Engine/scripting/command_context.h"
+#include "Libs/Engine/scripting/widgets/widget_registry.h"
+#include "Libs/Engine/ui/main_window.h"
+#include "Libs/Resources/resources.h"
 
+#include <QDir>
+#include <QFile>
 #include <QScrollBar>
+#include <QTemporaryDir>
 #include <QTextEdit>
 #include <QtTest/QtTest>
+
+namespace {
+class TestCommandController : public CommandController {
+public:
+	TestCommandController() : CommandController(nullptr, nullptr) {}
+	~TestCommandController() override = default;
+
+	CommandProcessor* commandProcessor() const override {
+		return nullptr;
+	}
+	ServicesRegistry* services() const override {
+		return nullptr;
+	}
+
+private:
+	void initContext() override {
+	}
+};
+} // namespace
 
 class TestCodeEditorSearch : public QObject {
 	Q_OBJECT
@@ -20,6 +50,8 @@ private slots:
 	void nextAndPreviousWrapAround();
 	void clearRemovesHighlights();
 	void longLineScrollsToMatchStart();
+	void documentPathComesFromContext();
+	void documentPathFromCreationVariables();
 
 private:
 	QTextEdit* _editor = nullptr;
@@ -144,6 +176,88 @@ void TestCodeEditorSearch::longLineScrollsToMatchStart() {
 	start.setPosition(_editor->textCursor().selectionStart());
 	const int left = _editor->cursorRect(start).left();
 	QVERIFY2(left >= -2, qPrintable(QStringLiteral("match start x = %1").arg(left)));
+}
+
+void TestCodeEditorSearch::documentPathComesFromContext() {
+	// Каталог объявлен раньше документа: он уничтожается после него,
+	// когда поток чтения файла уже остановлен.
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+
+	Resources resources;
+	HighlightingPluginManager highlighting(&resources);
+	FormatterPluginManager formatters(&resources);
+	TestCommandController controller;
+
+	CodeEditorDocument document(&highlighting, &formatters);
+	auto context = controller.globalContext()->createDocumentContext(QStringLiteral("editor"));
+	QVERIFY(context);
+
+	// При привязке контекста документ создаёт path со значением по умолчанию.
+	document.setContext(context);
+	QVERIFY(context->ownVariables().contains(QStringLiteral("path")));
+	QCOMPARE(context->ownVariables().value(QStringLiteral("path")).toString(), QString());
+	QCOMPARE(document.filePath(), QString());
+
+	const auto path = dir.filePath(QStringLiteral("sample.md"));
+	QFile file(path);
+	QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Text));
+	file.write("# sample");
+	file.close();
+
+	// Изменение переменной контекста открывает файл в документе.
+	context->setVariable(QStringLiteral("path"), path);
+	QCOMPARE(document.filePath(), path);
+	QCOMPARE(document.title(), QStringLiteral("sample.md"));
+	QCOMPARE(document.variable(QStringLiteral("path")).toString(), path);
+
+	// «Новый файл» очищает path в контексте.
+	document.newFile();
+	QCOMPARE(context->ownVariables().value(QStringLiteral("path")).toString(), QString());
+	QCOMPARE(document.filePath(), QString());
+}
+
+void TestCodeEditorSearch::documentPathFromCreationVariables() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto path = dir.filePath(QStringLiteral("created.md"));
+	QFile file(path);
+	QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Text));
+	file.write("# created");
+	file.close();
+
+	Resources resources;
+	HighlightingPluginManager highlighting(&resources);
+	FormatterPluginManager formatters(&resources);
+	TestCommandController controller;
+
+	auto* registry = controller.widgets();
+	registry->registerFactory({ QStringLiteral("Test.CodeEditor"), QStringLiteral("code-editor"),
+		/*singletone*/ false, QStringLiteral("📝"), QStringLiteral("Редактор") },
+		[&highlighting, &formatters](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
+			return new CodeEditorDocument(&highlighting, &formatters, handler.parent);
+		});
+
+	MainWindow window(controller.globalContext(), nullptr, false);
+
+	// Переменные создания записываются в контекст документа до его привязки.
+	QVERIFY(window.createWidget(QStringLiteral("editor"), MainWindow::WidgetKind::Document,
+		QStringLiteral("Редактор"), QStringLiteral("📝"),
+		[registry] { return registry->build(QStringLiteral("code-editor"), WidgetBuildHandler()); },
+		QString(), QStringLiteral("code-editor"), controller.globalContext(),
+		{ { QStringLiteral("path"), path } }));
+
+	// Открытие файла из onContextAttached() отложено до следующего цикла событий.
+	QCoreApplication::processEvents();
+
+	auto* document = qobject_cast<CodeEditorDocument*>(window.document(QStringLiteral("editor")));
+	QVERIFY(document);
+	QCOMPARE(document->filePath(), path);
+	QCOMPARE(document->title(), QStringLiteral("created.md"));
+
+	auto context = window.documentContext(QStringLiteral("editor"));
+	QVERIFY(context);
+	QCOMPARE(context->ownVariables().value(QStringLiteral("path")).toString(), path);
 }
 
 QTEST_MAIN(TestCodeEditorSearch)

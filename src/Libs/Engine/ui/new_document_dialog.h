@@ -1,5 +1,6 @@
 #pragma once
 #include <QDialog>
+#include <QVariant>
 
 #include <memory>
 
@@ -28,6 +29,10 @@ public:
 	QString documentTitle() const;   ///< подпись документа
 	QString documentGlyph() const;   ///< иконка UTF-8
 	bool isSingletone() const;       ///< выбран тип-синглтон
+
+	/// Переменные, которые пользователь задал в таблице: при создании
+	/// документа они записываются в его контекст до инициализации.
+	QVariantMap variables() const;
 
 private:
 	class Private;

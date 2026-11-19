@@ -36,6 +36,15 @@ TextDocument::TextDocument(QWidget* parent)
 
 TextDocument::~TextDocument() = default;
 
+void TextDocument::setPath(const QString& path) {
+	if (d->path == path)
+		return;
+
+	d->path = path;
+	// Путь — состояние документа, оно живёт в переменной контекста.
+	setVariable(QStringLiteral("path"), path);
+}
+
 bool TextDocument::loadFile(const QString& path) {
 	QFile f(path);
 	if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
@@ -43,7 +52,7 @@ bool TextDocument::loadFile(const QString& path) {
 
 	d->editor->setPlainText(QString::fromUtf8(f.readAll()));
 	d->editor->document()->setModified(false);
-	d->path = path;
+	setPath(path);
 	setToolTip(QDir::toNativeSeparators(path));
 	setTitle(QFileInfo(path).fileName());
 	emit propertiesChanged();
@@ -59,7 +68,7 @@ bool TextDocument::save() {
 		const QString p = QFileDialog::getSaveFileName(this, tr("Сохранить как"),
 			title() + QStringLiteral(".txt"));
 		if (p.isEmpty()) return false;
-		d->path = p;
+		setPath(p);
 	}
 	QFile f(d->path);
 	if (!f.open(QIODevice::WriteOnly | QIODevice::Text))
@@ -75,6 +84,40 @@ bool TextDocument::save() {
 void TextDocument::refresh() {
 	if (!d->path.isEmpty() && !isModified())
 		loadFile(d->path);
+}
+
+void TextDocument::onContextAttached() {
+	const auto path = variable(QStringLiteral("path"), QString()).toString();
+	if (path.isEmpty()) {
+		return;
+	}
+
+	QMetaObject::invokeMethod(this, [this, path] {
+		loadFile(path);
+	}, Qt::QueuedConnection);
+}
+
+void TextDocument::onContextVariableChanged(const QString& name, const QVariant& value) {
+	if (name != QLatin1String("path")) {
+		return;
+	}
+
+	const auto path = value.toString();
+	if (path == d->path) {
+		return;
+	}
+
+	if (path.isEmpty()) {
+		d->editor->clear();
+		d->editor->document()->setModified(false);
+		setPath(QString());
+		setTitle(tr("Без имени"));
+		setToolTip(QString());
+		emit propertiesChanged();
+		return;
+	}
+
+	loadFile(path);
 }
 
 QWidget* TextDocument::createPropertiesEditor(QWidget* parent) {

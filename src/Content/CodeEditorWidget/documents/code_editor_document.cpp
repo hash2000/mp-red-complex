@@ -77,6 +77,7 @@ public:
 	void setSearchOption(CodeEditorSearchPanel::Option option, bool enabled);
 	QString currentMimeType() const;
 	QString currentLanguageName() const;
+	void setPath(const QString& path);
 };
 
 void CodeEditorDocument::Private::setupUi() {
@@ -401,6 +402,16 @@ QString CodeEditorDocument::Private::currentLanguageName() const {
 	return info.name.isEmpty() ? info.mimeType : info.name;
 }
 
+void CodeEditorDocument::Private::setPath(const QString& value) {
+	if (path == value) {
+		return;
+	}
+
+	path = value;
+	// Путь — состояние документа, оно живёт в переменной контекста.
+	q->setVariable(QStringLiteral("path"), value);
+}
+
 CodeEditorDocument::CodeEditorDocument(
 	HighlightingPluginManager* highlighting,
 	FormatterPluginManager* formatters,
@@ -420,7 +431,7 @@ CodeEditorDocument::CodeEditorDocument(
 		if (!success) {
 			QMessageBox::warning(this, tr("Открытие файла"),
 				tr("Не удалось открыть файл:\n%1").arg(QDir::toNativeSeparators(path)));
-			d->path.clear();
+			d->setPath(QString());
 			setTitle(tr("Без имени"));
 			setToolTip(QString());
 			emit propertiesChanged();
@@ -470,7 +481,7 @@ QString CodeEditorDocument::filePath() const {
 }
 
 void CodeEditorDocument::newFile() {
-	d->path.clear();
+	d->setPath(QString());
 	d->editor->setText(QString());
 	d->editor->document()->setModified(false);
 	setModified(false);
@@ -493,7 +504,7 @@ bool CodeEditorDocument::openFile(const QString& path) {
 		return false;
 	}
 
-	d->path = path;
+	d->setPath(path);
 	setTitle(info.fileName());
 	setToolTip(QDir::toNativeSeparators(path));
 	d->editor->openFile(path);
@@ -535,7 +546,7 @@ bool CodeEditorDocument::save() {
 
 	file.close();
 
-	d->path = path;
+	d->setPath(path);
 	d->editor->setHoghlighterByPath(path);
 	d->editor->document()->setModified(false);
 	setModified(false);
@@ -561,6 +572,39 @@ void CodeEditorDocument::refresh() {
 	d->editor->openFile(d->path);
 	d->syncLanguageCombo();
 	d->updateRibbonState();
+}
+
+void CodeEditorDocument::onContextAttached() {
+	// Путь читается из контекста документа; если переменной нет,
+	// variable() создаёт её со значением по умолчанию (пустая строка).
+	const auto path = variable(QStringLiteral("path"), QString()).toString();
+	if (path.isEmpty()) {
+		return;
+	}
+
+	// Заголовок задаётся при создании уже после привязки контекста,
+	// поэтому открытие отложено: openFile() уточнит заголовок по файлу.
+	QMetaObject::invokeMethod(this, [this, path] {
+		openFile(path);
+	}, Qt::QueuedConnection);
+}
+
+void CodeEditorDocument::onContextVariableChanged(const QString& name, const QVariant& value) {
+	if (name != QLatin1String("path")) {
+		return;
+	}
+
+	const auto path = value.toString();
+	if (path == d->path) {
+		return;
+	}
+
+	if (path.isEmpty()) {
+		newFile();
+		return;
+	}
+
+	openFile(path);
 }
 
 QWidget* CodeEditorDocument::createPropertiesEditor(QWidget* parent) {

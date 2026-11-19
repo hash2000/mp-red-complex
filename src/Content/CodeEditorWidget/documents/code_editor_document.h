@@ -33,6 +33,10 @@ public:
 	void refresh() override;
 	bool save() override;
 
+protected:
+	void onContextAttached() override;
+	void onContextVariableChanged(const QString& name, const QVariant& value) override;
+
 private:
 	struct Private;
 	std::unique_ptr<Private> d;

@@ -12,17 +12,45 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QPushButton>
+#include <QSet>
+#include <QSignalBlocker>
 #include <QSplitter>
 #include <QTableWidget>
 #include <QToolButton>
 #include <QUuid>
 #include <QVBoxLayout>
 
+#include <algorithm>
 #include <optional>
 
 namespace {
 /// Роль элемента списка: xtype зарегистрированного типа.
 constexpr int kTypeXtypeRole = Qt::UserRole + 1;
+/// Роль ячейки значения: исходный QVariant переменной.
+constexpr int kValueRole = Qt::UserRole + 1;
+
+/// Значение из текстовой ячейки: bool, целое, дробное или строка.
+QVariant parseVariableValue(const QString& text) {
+	if (text.compare(QLatin1String("true"), Qt::CaseInsensitive) == 0) {
+		return true;
+	}
+	if (text.compare(QLatin1String("false"), Qt::CaseInsensitive) == 0) {
+		return false;
+	}
+
+	bool ok = false;
+	const auto integer = text.toLongLong(&ok);
+	if (ok) {
+		return integer;
+	}
+
+	const auto real = text.toDouble(&ok);
+	if (ok) {
+		return real;
+	}
+
+	return text;
+}
 } // namespace
 
 class NewDocumentDialog::Private {
@@ -43,18 +71,23 @@ public:
 	QLineEdit* glyphEdit = nullptr;
 	QLineEdit* titleEdit = nullptr;
 
+	QToolButton* addVariableButton = nullptr;
+	QToolButton* removeVariableButton = nullptr;
 	QTableWidget* variablesTable = nullptr;
 	QDialogButtonBox* buttons = nullptr;
 
 	void setupUi(NewDocumentDialog* q);
 	void fillTypes();
 	void fillVariables();
+	void addVariableRow();
+	void removeSelectedVariables();
 	void applyFilter(const QString& text);
 	void updateDetails();
 	void updateAcceptState();
 	void randomizeName();
 	void selectType(QListWidgetItem* item);
 	void acceptDialog(NewDocumentDialog* q);
+	QVariantMap variables() const;
 	std::optional<WidgetTypeHandler> currentType() const;
 };
 
@@ -147,7 +180,8 @@ void NewDocumentDialog::Private::setupUi(NewDocumentDialog* q) {
 	paramsForm->addRow(NewDocumentDialog::tr("Значок:"), glyphEdit);
 	paramsForm->addRow(NewDocumentDialog::tr("Заголовок:"), titleEdit);
 
-	// Переменные текущего контекста, в котором создаётся документ.
+	// Переменные, которые попадут в контекст создаваемого документа.
+	// Начальные строки берутся из текущего контекста и редактируются.
 	const auto namespaceName = context && !context->isGlobalContext()
 		? context->nameSpace() : QStringLiteral(".");
 	auto* variablesGroup = new QGroupBox(
@@ -155,18 +189,43 @@ void NewDocumentDialog::Private::setupUi(NewDocumentDialog* q) {
 	auto* variablesLayout = new QVBoxLayout(variablesGroup);
 	variablesLayout->setContentsMargins(6, 6, 6, 6);
 
+	auto* variablesTools = new QHBoxLayout;
+	variablesTools->setContentsMargins(0, 0, 0, 0);
+	variablesTools->setSpacing(4);
+
+	addVariableButton = new QToolButton(variablesGroup);
+	addVariableButton->setObjectName(QStringLiteral("NewDocumentDialogAddVariable"));
+	addVariableButton->setText(QStringLiteral("+"));
+	addVariableButton->setToolTip(NewDocumentDialog::tr("Добавить переменную"));
+	removeVariableButton = new QToolButton(variablesGroup);
+	removeVariableButton->setObjectName(QStringLiteral("NewDocumentDialogRemoveVariable"));
+	removeVariableButton->setText(QStringLiteral("−"));
+	removeVariableButton->setToolTip(NewDocumentDialog::tr("Удалить выбранные переменные"));
+
+	variablesTools->addWidget(addVariableButton);
+	variablesTools->addWidget(removeVariableButton);
+	variablesTools->addStretch(1);
+
+	auto* variablesHint = new QLabel(
+		NewDocumentDialog::tr("Начальные переменные контекста документа"), variablesGroup);
+	variablesHint->setWordWrap(true);
+
 	variablesTable = new QTableWidget(0, 3, variablesGroup);
 	variablesTable->setObjectName(QStringLiteral("NewDocumentDialogVariables"));
 	variablesTable->setHorizontalHeaderLabels({ NewDocumentDialog::tr("Имя"),
 		NewDocumentDialog::tr("Значение"), NewDocumentDialog::tr("Тип") });
 	variablesTable->verticalHeader()->setVisible(false);
-	variablesTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+	variablesTable->setEditTriggers(QAbstractItemView::DoubleClicked
+		| QAbstractItemView::SelectedClicked | QAbstractItemView::EditKeyPressed);
 	variablesTable->setSelectionBehavior(QAbstractItemView::SelectRows);
 	variablesTable->setAlternatingRowColors(true);
 	variablesTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
 	variablesTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
 	variablesTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
-	variablesLayout->addWidget(variablesTable);
+
+	variablesLayout->addWidget(variablesHint);
+	variablesLayout->addLayout(variablesTools);
+	variablesLayout->addWidget(variablesTable, 1);
 
 	rightLayout->addWidget(infoGroup);
 	rightLayout->addWidget(paramsGroup);
@@ -196,6 +255,27 @@ void NewDocumentDialog::Private::setupUi(NewDocumentDialog* q) {
 	QObject::connect(nameRandomButton, &QToolButton::clicked, q, [this] {
 		randomizeName();
 	});
+	QObject::connect(addVariableButton, &QToolButton::clicked, q, [this] {
+		addVariableRow();
+	});
+	QObject::connect(removeVariableButton, &QToolButton::clicked, q, [this] {
+		removeSelectedVariables();
+	});
+	QObject::connect(variablesTable, &QTableWidget::itemChanged, q,
+		[this](QTableWidgetItem* item) {
+			if (!item || item->column() != 1) {
+				return;
+			}
+
+			// Отображаемый тип и записываемое значение следуют за текстом.
+			const QSignalBlocker blocker(variablesTable);
+			const auto value = parseVariableValue(item->text());
+			item->setData(kValueRole, value);
+			item->setToolTip(item->text());
+			if (auto* typeItem = variablesTable->item(item->row(), 2)) {
+				typeItem->setText(QString::fromLatin1(value.typeName()));
+			}
+		});
 	QObject::connect(buttons, &QDialogButtonBox::accepted, q, [this, q] {
 		acceptDialog(q);
 	});
@@ -227,6 +307,7 @@ void NewDocumentDialog::Private::fillTypes() {
 }
 
 void NewDocumentDialog::Private::fillVariables() {
+	const QSignalBlocker blocker(variablesTable);
 	variablesTable->setRowCount(0);
 	if (!context) {
 		return;
@@ -238,10 +319,9 @@ void NewDocumentDialog::Private::fillVariables() {
 	int row = 0;
 	for (auto it = variables.cbegin(); it != variables.cend(); it++, row++) {
 		auto* nameItem = new QTableWidgetItem(it.key());
-		nameItem->setFlags(nameItem->flags() & ~Qt::ItemIsEditable);
 
 		auto* valueItem = new QTableWidgetItem(it.value().toString());
-		valueItem->setFlags(valueItem->flags() & ~Qt::ItemIsEditable);
+		valueItem->setData(kValueRole, it.value());
 		valueItem->setToolTip(it.value().toString());
 
 		auto* typeItem = new QTableWidgetItem(QString::fromLatin1(it.value().typeName()));
@@ -251,6 +331,68 @@ void NewDocumentDialog::Private::fillVariables() {
 		variablesTable->setItem(row, 1, valueItem);
 		variablesTable->setItem(row, 2, typeItem);
 	}
+}
+
+void NewDocumentDialog::Private::addVariableRow() {
+	const QSignalBlocker blocker(variablesTable);
+	const int row = variablesTable->rowCount();
+	variablesTable->insertRow(row);
+
+	auto* nameItem = new QTableWidgetItem(NewDocumentDialog::tr("variable"));
+	auto* valueItem = new QTableWidgetItem(QString());
+	valueItem->setData(kValueRole, QString());
+
+	auto* typeItem = new QTableWidgetItem(
+		QString::fromLatin1(QVariant(QString()).typeName()));
+	typeItem->setFlags(typeItem->flags() & ~Qt::ItemIsEditable);
+
+	variablesTable->setItem(row, 0, nameItem);
+	variablesTable->setItem(row, 1, valueItem);
+	variablesTable->setItem(row, 2, typeItem);
+	variablesTable->setCurrentCell(row, 1);
+}
+
+void NewDocumentDialog::Private::removeSelectedVariables() {
+	QSet<int> selectedRows;
+	for (auto* item : variablesTable->selectedItems()) {
+		selectedRows.insert(item->row());
+	}
+	if (selectedRows.isEmpty() && variablesTable->currentRow() >= 0) {
+		selectedRows.insert(variablesTable->currentRow());
+	}
+
+	QList<int> rows = selectedRows.values();
+	std::sort(rows.begin(), rows.end());
+	for (auto it = rows.crbegin(); it != rows.crend(); it++) {
+		variablesTable->removeRow(*it);
+	}
+}
+
+QVariantMap NewDocumentDialog::Private::variables() const {
+	QVariantMap result;
+	for (int row = 0; row < variablesTable->rowCount(); row++) {
+		auto* nameItem = variablesTable->item(row, 0);
+		if (!nameItem) {
+			continue;
+		}
+
+		const auto name = nameItem->text().trimmed();
+		if (name.isEmpty()) {
+			continue;
+		}
+
+		QVariant value;
+		if (auto* valueItem = variablesTable->item(row, 1)) {
+			value = valueItem->data(kValueRole);
+			if (!value.isValid()) {
+				value = parseVariableValue(valueItem->text());
+			}
+		}
+
+		result.insert(name, value);
+	}
+
+	return result;
 }
 
 void NewDocumentDialog::Private::applyFilter(const QString& text) {
@@ -433,4 +575,8 @@ QString NewDocumentDialog::documentGlyph() const {
 bool NewDocumentDialog::isSingletone() const {
 	const auto type = d->currentType();
 	return type && type->singletone;
+}
+
+QVariantMap NewDocumentDialog::variables() const {
+	return d->variables();
 }
