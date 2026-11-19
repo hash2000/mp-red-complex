@@ -8,9 +8,18 @@
 using LazyTreeNodePtr = std::shared_ptr<class ILazyTreeNode>;
 using LazyTreeNodeList = std::vector<LazyTreeNodePtr>;
 
+/// Узел дерева с ленивой загрузкой.
+///
+/// Контракт children():
+///  - std::nullopt            — обычный лист, дочерних узлов нет;
+///  - пустой список           — дочерние узлы есть, но их нужно загрузить
+///                              отдельным запросом при раскрытии узла;
+///  - непустой список         — дети уже переданы и используются как есть,
+///                              дополнительный запрос при раскрытии не нужен.
 class ILazyTreeNode {
 public:
 	virtual ~ILazyTreeNode() = default;
+
 	virtual void setId(QVariant id) = 0;
 	virtual QVariant id() const = 0;
 	virtual void setParentId(QVariant parentId) = 0;
@@ -25,6 +34,7 @@ public:
 	virtual void clearChildren() = 0;
 	virtual std::optional<LazyTreeNodeList> children() const = 0;
 
+	/// Произвольные свойства узла. В базе сохраняются как JSON-объект.
 	virtual QVariantMap properties() const = 0;
 	virtual bool setProperty(const QString& name, const QVariant& value) = 0;
 };

@@ -4,8 +4,13 @@
 #include "Libs/Resources/resources.h"
 
 // FetchApiModule
+#include "Content/FetchApiModule/data_providers/fetch_queries_data_provider_db.h"
+#include "Content/FetchApiModule/services/fetch_queries_service.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
-#include "Content/FetchApiModule/services/fetch_store_db_service.h"
+
+// SystemMenu
+#include "Content/SystemMenu/data_providers/system_menu_data_provider_db.h"
+#include "Content/SystemMenu/services/system_menu_service.h"
 
 //// ShadersModule
 //#include "Content/ShadersModule/data_providers/shaders_data_provider_impl.h"
@@ -61,6 +66,8 @@ public:
 		//, imagesDataProvider([this] {	return std::make_unique<ImagesDataProviderJsonImpl>(resources);	})
 		//, tileGroupsDataProvider([this] {	return std::make_unique<TileGroupsDataProviderJsonImpl>(resources);	})
 		, usersRegistryDataProvider([this] {	return std::make_unique<UsersRegistryDataProviderDb>(databasesService.get()); })
+		, fetchQueriesDataProvider([this] {	return std::make_unique<FetchQueriesDataProviderDb>(databasesService.get()); })
+		, systemMenuDataProvider([this] {	return std::make_unique<SystemMenuDataProviderDb>(databasesService.get()); })
 		//, characterDataProvider([this] {	return std::make_unique<CharacterDataProviderDb>(databasesService.get());	})
 		//, shadersDataProvider([this] { return std::make_unique<ShadersDataProviderLocalImpl>(resources); })
 		//, materialsDataProvider([this] { return std::make_unique<MaterialsDataProviderJsonImpl>(resources); })
@@ -82,6 +89,8 @@ private:
 	//LazyPtr<IItemsDataProvider> itemsDataProvider;
 	//LazyPtr<IEntitiesDataProvider> entitiesDataProvider;
 	LazyPtr<IUsersRegistryDataProvider> usersRegistryDataProvider;
+	LazyPtr<FetchQueriesDataProviderDb> fetchQueriesDataProvider;
+	LazyPtr<SystemMenuDataProviderDb> systemMenuDataProvider;
 	//LazyPtr<ICharacterDataProvider> characterDataProvider;
 	//LazyPtr<IImagesDataProvider> imagesDataProvider;
 	//LazyPtr<ITileGroupsDataProvider> tileGroupsDataProvider;
@@ -152,9 +161,14 @@ public:
 			return std::make_unique<FetchApiService>();
 		});
 
-		registerFactory<FetchStoreDbService>([this]() {
-			return std::make_unique<FetchStoreDbService>(
-				databasesService.get());
+		registerFactory<FetchQueriesService>([this]() {
+			return std::make_unique<FetchQueriesService>(
+				fetchQueriesDataProvider.get());
+		});
+
+		registerFactory<SystemMenuService>([this]() {
+			return std::make_unique<SystemMenuService>(
+				systemMenuDataProvider.get());
 		});
 
 		registerFactory<HighlightingPluginManager>([this] {

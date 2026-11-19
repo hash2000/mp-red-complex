@@ -38,8 +38,13 @@ define:
             title: Список ошибок
 
     - sidebar:
-        default: explorer
+        default: system-menu
         content:
+          - xtype: system-menu
+            name: system-menu
+            glyph: "🏢"
+            title: Системное меню
+
           - xtype: explorer
             name: explorer
             glyph: "📁"

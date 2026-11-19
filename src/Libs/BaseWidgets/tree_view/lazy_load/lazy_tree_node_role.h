@@ -4,13 +4,15 @@
 
 #include <QStandardItem>
 
+/// Доступ к данным узла, прикреплённым к элементу QStandardItemModel.
+///
+/// Все методы допускают nullptr и элементы без прикреплённых данных:
+/// так проще обрабатывать заглушки и элементы чужих моделей.
 class LazyTreeNodeRole {
 public:
 	static LazyTreeNodePtr nodeByItem(QStandardItem* item);
-
 	static LazyTreeNodeStatePtr nodeStateByItem(QStandardItem* item);
 
 	static void updateNodeRaw(QStandardItem* item, LazyTreeNodePtr node);
-
 	static void updateNodeState(QStandardItem* item, LazyTreeNodeStatePtr nodeState);
 };

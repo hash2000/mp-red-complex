@@ -1,271 +1,432 @@
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_widget.h"
-#include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_highlight_delegate.h"
-#include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_view.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/i_lazy_tree_data_provider.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/i_lazy_tree_node.h"
+#include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_highlight_delegate.h"
+#include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_node_role.h"
+#include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_view.h"
 
-#include <QVBoxLayout>
-#include <QStandardItemModel>
+#include <QAction>
+#include <QHBoxLayout>
 #include <QLineEdit>
-#include <QTimer>
-#include <QToolButton>
-#include <QStackedWidget>
-#include <QTreeView>
 #include <QMenu>
 #include <QMessageBox>
+#include <QSignalBlocker>
+#include <QStackedWidget>
+#include <QStandardItem>
+#include <QTimer>
+#include <QToolButton>
+#include <QVBoxLayout>
 
 class LazyTreeWidget::Private {
 public:
-	Private(LazyTreeWidget* parent) : q(parent) {}
+	explicit Private(LazyTreeWidget* parent)
+		: q(parent) {
+	}
+
 	LazyTreeWidget* q;
+	ILazyNodesDataProvider* provider = nullptr;
 
-	ILazyNodesDataProvider* provider;
+	QLineEdit* searchLineEdit = nullptr;
+	QTimer* searchTimer = nullptr;
 
-	QLineEdit* searchLineEdit;
-	QTimer* searchTimer;
+	QToolButton* btnAdd = nullptr;
+	QToolButton* btnDelete = nullptr;
+	QToolButton* btnEdit = nullptr;
+	QToolButton* btnRefresh = nullptr;
+	QToolButton* btnBack = nullptr;
 
-	QToolButton* btnAdd;
-	QToolButton* btnDelete;
-	QToolButton* btnEdit;
-	QToolButton* btnBack;
-	QToolButton* btnShowSearch;
+	QStackedWidget* stackedViews = nullptr;
+	LazyTreeView* normalTreeView = nullptr;
+	LazyTreeView* searchTreeView = nullptr;
 
-	QStackedWidget* stackedViews;
-	LazyTreeView* normalTreeView;
-	LazyTreeView* searchTreeView;
-
-	HighlightDelegate* normalDelegate;
-	HighlightDelegate* searchDelegate;
+	HighlightDelegate* normalDelegate = nullptr;
+	HighlightDelegate* searchDelegate = nullptr;
 
 	bool isSearchMode = false;
-	bool isAddingNode = false;
+	bool confirmDelete = true;
 
-	void setupUI();
-	void setupToolbar();
+	void setupUi();
+	void setupConnections();
 	void loadTreeData();
 	void loadSearchResults(const QString& searchText);
+	void updateActions();
+	LazyTreeView* activeView() const;
 };
 
 LazyTreeWidget::LazyTreeWidget(ILazyNodesDataProvider* provider, QWidget* parent)
-	: d(std::make_unique<Private>(this)) {
+	: QWidget(parent)
+	, d(std::make_unique<Private>(this)) {
 	d->provider = provider;
+	setObjectName(QStringLiteral("LazyTreeWidget"));
 
-	d->normalDelegate = new HighlightDelegate("", this);
-	d->searchDelegate = new HighlightDelegate("", this);
+	d->normalDelegate = new HighlightDelegate(QString(), this);
+	d->searchDelegate = new HighlightDelegate(QString(), this);
 
-	d->setupUI();
-	d->setupToolbar();
-
-	// Настройка обычного дерева
-	d->normalTreeView->setItemDelegate(d->normalDelegate);
-	d->normalTreeView->setHeaderHidden(true);
-	d->normalTreeView->setContextMenuPolicy(Qt::CustomContextMenu);
-	d->normalTreeView->viewport()->installEventFilter(this);
-	connect(d->normalTreeView, &QWidget::customContextMenuRequested, this, &LazyTreeWidget::onContextMenu);
-	connect(d->normalTreeView, &LazyTreeView::nodeMoved, this, &LazyTreeWidget::nodeMoved);
-	connect(d->normalTreeView, &LazyTreeView::nodeRenamed, this, &LazyTreeWidget::nodeRenamed);
-	connect(d->normalTreeView, &LazyTreeView::nodeRemoved, this, &LazyTreeWidget::nodeRemoved);
-	connect(d->normalTreeView, &LazyTreeView::nodeAdded, this, &LazyTreeWidget::nodeAdded);
-	connect(d->normalTreeView, &LazyTreeView::emptyAreaClicked, this, &LazyTreeWidget::emptyAreaClicked);
-	connect(d->normalTreeView, &LazyTreeView::nodeActivated, this, &LazyTreeWidget::nodeActivated);
-	connect(d->normalTreeView, &LazyTreeView::selectionChanged, this, &LazyTreeWidget::selectionChanged);
-
-	// Настройка дерева поиска
-	d->searchTreeView->setItemDelegate(d->searchDelegate);
-	d->searchTreeView->setHeaderHidden(true);
-	d->searchTreeView->viewport()->installEventFilter(this);
-
-	// Таймер для debounce поиска (300 мс)
-	d->searchTimer = new QTimer(this);
-	d->searchTimer->setSingleShot(true);
-
-	connect(d->searchTimer, &QTimer::timeout, this, &LazyTreeWidget::onSearchPerform);
-	connect(d->searchLineEdit, &QLineEdit::textChanged, this, &LazyTreeWidget::onSearchTextChanged);
-	connect(d->searchTreeView, &LazyTreeView::nodeMoved, this, &LazyTreeWidget::nodeMoved);
-	connect(d->searchTreeView, &LazyTreeView::nodeRenamed, this, &LazyTreeWidget::nodeRenamed);
-	connect(d->searchTreeView, &LazyTreeView::nodeAdded, this, &LazyTreeWidget::nodeAdded);
-	connect(d->searchTreeView, &LazyTreeView::emptyAreaClicked, this, &LazyTreeWidget::emptyAreaClicked);
-	connect(d->searchTreeView, &LazyTreeView::nodeActivated, this, &LazyTreeWidget::nodeActivated);
-	connect(d->searchTreeView, &LazyTreeView::selectionChanged, this, &LazyTreeWidget::selectionChanged);
-
+	d->setupUi();
+	d->setupConnections();
 	d->loadTreeData();
+	d->updateActions();
 }
 
 LazyTreeWidget::~LazyTreeWidget() = default;
 
-void LazyTreeWidget::Private::setupUI() {
-	auto mainLayout = new QVBoxLayout(q);
+ILazyNodesDataProvider* LazyTreeWidget::provider() const {
+	return d->provider;
+}
+
+LazyTreeView* LazyTreeWidget::treeView() const {
+	return d->normalTreeView;
+}
+
+LazyTreeView* LazyTreeWidget::searchView() const {
+	return d->searchTreeView;
+}
+
+QLineEdit* LazyTreeWidget::searchLineEdit() const {
+	return d->searchLineEdit;
+}
+
+bool LazyTreeWidget::isSearchMode() const {
+	return d->isSearchMode;
+}
+
+void LazyTreeWidget::setConfirmDelete(bool confirm) {
+	d->confirmDelete = confirm;
+}
+
+bool LazyTreeWidget::confirmDelete() const {
+	return d->confirmDelete;
+}
+
+void LazyTreeWidget::Private::setupUi() {
+	auto* mainLayout = new QVBoxLayout(q);
 	mainLayout->setContentsMargins(2, 2, 2, 2);
 	mainLayout->setSpacing(2);
 
 	searchLineEdit = new QLineEdit(q);
-	searchLineEdit->setPlaceholderText("🔍 Поиск узлов...");
+	searchLineEdit->setObjectName(QStringLiteral("LazyTreeSearchEdit"));
+	searchLineEdit->setPlaceholderText(LazyTreeWidget::tr("Поиск узлов…"));
+	searchLineEdit->setClearButtonEnabled(true);
 	mainLayout->addWidget(searchLineEdit);
 
-	auto toolbarLayout = new QHBoxLayout();
-	toolbarLayout->setSpacing(5);
+	auto* toolbarLayout = new QHBoxLayout();
+	toolbarLayout->setSpacing(4);
 
-	btnAdd = new QToolButton(q);
-	btnDelete = new QToolButton(q);
-	btnEdit = new QToolButton(q);
-	btnBack = new QToolButton(q);
-	btnShowSearch = new QToolButton(q);
+	const auto createButton = [this, toolbarLayout](const QString& objectName, const QString& text,
+		const QString& tooltip) {
+		auto* button = new QToolButton(q);
+		button->setObjectName(objectName);
+		button->setText(text);
+		button->setToolTip(tooltip);
+		button->setToolButtonStyle(Qt::ToolButtonTextOnly);
+		toolbarLayout->addWidget(button);
+		return button;
+	};
 
-	toolbarLayout->addWidget(btnShowSearch);
-	toolbarLayout->addWidget(btnBack);
-	toolbarLayout->addWidget(btnAdd);
-	toolbarLayout->addWidget(btnDelete);
-	toolbarLayout->addWidget(btnEdit);
+	btnAdd = createButton(QStringLiteral("LazyTreeAddButton"), QStringLiteral("+"),
+		LazyTreeWidget::tr("Добавить"));
+	btnDelete = createButton(QStringLiteral("LazyTreeDeleteButton"), QStringLiteral("⌫"),
+		LazyTreeWidget::tr("Удалить"));
+	btnEdit = createButton(QStringLiteral("LazyTreeEditButton"), QStringLiteral("✎"),
+		LazyTreeWidget::tr("Переименовать"));
+	btnRefresh = createButton(QStringLiteral("LazyTreeRefreshButton"), QStringLiteral("🗘"),
+		LazyTreeWidget::tr("Обновить"));
+	btnBack = createButton(QStringLiteral("LazyTreeBackButton"), QStringLiteral("🔙"),
+		LazyTreeWidget::tr("Вернуться к обычному виду"));
+	btnBack->hide();
+
 	toolbarLayout->addStretch();
-
 	mainLayout->addLayout(toolbarLayout);
 
 	stackedViews = new QStackedWidget(q);
 	normalTreeView = new LazyTreeView(provider, q);
+	normalTreeView->setObjectName(QStringLiteral("LazyTreeView"));
+	normalTreeView->setItemDelegate(normalDelegate);
+	normalTreeView->setHeaderHidden(true);
+	normalTreeView->setContextMenuPolicy(Qt::CustomContextMenu);
+
 	searchTreeView = new LazyTreeView(provider, q);
+	searchTreeView->setObjectName(QStringLiteral("LazyTreeSearchView"));
+	searchTreeView->setItemDelegate(searchDelegate);
+	searchTreeView->setHeaderHidden(true);
 
 	stackedViews->addWidget(normalTreeView);
 	stackedViews->addWidget(searchTreeView);
-
 	mainLayout->addWidget(stackedViews);
+
+	searchTimer = new QTimer(q);
+	searchTimer->setSingleShot(true);
+	searchTimer->setInterval(300);
 }
 
-void LazyTreeWidget::Private::setupToolbar() {
-	// UTF-8 иконки и тултипы
-	btnAdd->setText("+");
-	btnAdd->setToolTip("Добавить");
-	btnAdd->setToolButtonStyle(Qt::ToolButtonIconOnly);
-	connect(btnAdd, &QToolButton::clicked, q, &LazyTreeWidget::onAddNode);
+void LazyTreeWidget::Private::setupConnections() {
+	const auto connectView = [this](LazyTreeView* view) {
+		QObject::connect(view, &LazyTreeView::nodeMoved, q, &LazyTreeWidget::nodeMoved);
+		QObject::connect(view, &LazyTreeView::nodeRenamed, q, &LazyTreeWidget::nodeRenamed);
+		QObject::connect(view, &LazyTreeView::nodeRemoved, q, &LazyTreeWidget::nodeRemoved);
+		QObject::connect(view, &LazyTreeView::nodeAdded, q, &LazyTreeWidget::nodeAdded);
+		QObject::connect(view, &LazyTreeView::emptyAreaClicked, q, &LazyTreeWidget::emptyAreaClicked);
+		QObject::connect(view, &LazyTreeView::nodeActivated, q, &LazyTreeWidget::nodeActivated);
+		QObject::connect(view, &LazyTreeView::currentNodeChanged, q, &LazyTreeWidget::selectionChanged);
+		QObject::connect(view, &LazyTreeView::currentNodeChanged, q, &LazyTreeWidget::onCurrentNodeChanged);
+		QObject::connect(view, &LazyTreeView::errorOccurred, q, &LazyTreeWidget::errorOccurred);
+	};
 
-	btnDelete->setText("⌫");
-	btnDelete->setToolTip("Удалить");
-	btnDelete->setToolButtonStyle(Qt::ToolButtonIconOnly);
-	connect(btnDelete, &QToolButton::clicked, q, &LazyTreeWidget::onDeleteNode);
+	connectView(normalTreeView);
+	connectView(searchTreeView);
 
-	btnEdit->setText("✎");
-	btnEdit->setToolTip("Редактировать");
-	btnEdit->setToolButtonStyle(Qt::ToolButtonIconOnly);
-	connect(btnEdit, &QToolButton::clicked, q, &LazyTreeWidget::onEditNode);
+	QObject::connect(searchLineEdit, &QLineEdit::textChanged, q, &LazyTreeWidget::onSearchTextChanged);
+	QObject::connect(searchLineEdit, &QLineEdit::returnPressed, q, &LazyTreeWidget::onSearchPerform);
+	QObject::connect(searchTimer, &QTimer::timeout, q, &LazyTreeWidget::onSearchPerform);
+	QObject::connect(btnAdd, &QToolButton::clicked, q, &LazyTreeWidget::onAddNode);
+	QObject::connect(btnDelete, &QToolButton::clicked, q, &LazyTreeWidget::onDeleteNode);
+	QObject::connect(btnEdit, &QToolButton::clicked, q, &LazyTreeWidget::onEditNode);
+	QObject::connect(btnRefresh, &QToolButton::clicked, q, &LazyTreeWidget::onRefreshNode);
+	QObject::connect(btnBack, &QToolButton::clicked, q, &LazyTreeWidget::onBackToNormalView);
+	QObject::connect(normalTreeView, &QWidget::customContextMenuRequested, q, &LazyTreeWidget::onContextMenu);
+}
 
-	btnShowSearch->setText("🔍");
-	btnShowSearch->setToolTip("Результат поиска");
-	btnShowSearch->setToolButtonStyle(Qt::ToolButtonIconOnly);
-	connect(btnShowSearch, &QToolButton::clicked, q, &LazyTreeWidget::onShowSearch);
+LazyTreeView* LazyTreeWidget::Private::activeView() const {
+	return isSearchMode ? searchTreeView : normalTreeView;
+}
 
-	btnBack->setText("🔙");
-	btnBack->setToolTip("Вернуться к обычному виду");
-	btnBack->setToolButtonStyle(Qt::ToolButtonIconOnly);
-	btnBack->hide(); // Скрыта по умолчанию
-	connect(btnBack, &QToolButton::clicked, q, &LazyTreeWidget::onBackToNormalView);
+void LazyTreeWidget::Private::updateActions() {
+	LazyTreeView* view = activeView();
+	const bool hasProvider = provider != nullptr;
+	const bool hasNode = view && view->selectedNode() != nullptr;
+
+	btnAdd->setEnabled(!isSearchMode && hasProvider);
+	btnDelete->setEnabled(hasNode && hasProvider);
+	btnEdit->setEnabled(hasNode && hasProvider);
+	btnRefresh->setEnabled(hasProvider);
 }
 
 void LazyTreeWidget::onSearchTextChanged(const QString& text) {
-	d->searchTimer->start(300); // Debounce 300ms
+	if (text.trimmed().isEmpty()) {
+		d->searchTimer->stop();
+		if (d->isSearchMode) {
+			onBackToNormalView();
+		}
+		return;
+	}
+
+	d->searchTimer->start();
 }
 
 void LazyTreeWidget::onSearchPerform() {
-	QString text = d->searchLineEdit->text().trimmed();
+	d->searchTimer->stop();
 
+	if (!d->provider) {
+		return;
+	}
+
+	const QString text = d->searchLineEdit->text().trimmed();
 	if (text.isEmpty()) {
-		d->searchDelegate->setHighlightText("");
-		d->normalDelegate->setHighlightText("");
 		onBackToNormalView();
 		return;
 	}
 
 	d->isSearchMode = true;
-	d->btnBack->show();
-	d->btnShowSearch->hide();
-	d->btnAdd->hide();
-	d->btnDelete->hide();
-	d->stackedViews->setCurrentWidget(d->searchTreeView);
-
 	d->loadSearchResults(text);
 	d->searchDelegate->setHighlightText(text);
 	d->normalDelegate->setHighlightText(text);
+	d->btnBack->show();
+	d->stackedViews->setCurrentWidget(d->searchTreeView);
+	d->updateActions();
+}
+
+void LazyTreeWidget::Private::loadSearchResults(const QString& searchText) {
+	const auto results = provider->search(searchText);
+	searchTreeView->setNodes(results);
+
+	const auto error = provider->lastError();
+	if (!error.isEmpty()) {
+		emit q->errorOccurred(error);
+	}
 }
 
 void LazyTreeWidget::onAddNode() {
-	auto index = d->normalTreeView->currentIndex();
-	auto item = d->normalTreeView->itemFromIndex(index);
-	auto newNode = d->provider->createTreeNode();
+	if (!d->provider) {
+		return;
+	}
+
+	if (d->isSearchMode) {
+		onBackToNormalView();
+	}
+
+	auto* item = d->normalTreeView->itemFromIndex(d->normalTreeView->currentIndex());
+	if (d->normalTreeView->isDummyItem(item) || d->normalTreeView->isTemporaryItem(item)) {
+		item = nullptr;
+	}
+
+	const auto newNode = d->provider->createTreeNode();
+	if (!newNode) {
+		return;
+	}
+
 	d->normalTreeView->addNodeAndStartEdit(item, newNode);
 }
 
 void LazyTreeWidget::onDeleteNode() {
-	if (d->isSearchMode) {
+	LazyTreeView* view = d->activeView();
+	if (!view) {
 		return;
 	}
 
-	if (QMessageBox::question(this, "Удаление", "Удалить узел?") == QMessageBox::Yes) {
-		d->normalTreeView->removeSelectedNode();
+	const auto node = view->selectedNode();
+	if (!node) {
+		return;
 	}
+
+	if (d->confirmDelete) {
+		const auto answer = QMessageBox::question(this, tr("Удаление"),
+			tr("Удалить узел «%1»?").arg(node->name()));
+		if (answer != QMessageBox::Yes) {
+			return;
+		}
+	}
+
+	view->removeSelectedNode();
+
+	if (d->isSearchMode) {
+		onSearchPerform();
+	}
+
+	d->updateActions();
 }
 
 void LazyTreeWidget::onEditNode() {
-	auto tree = d->isSearchMode ? d->searchTreeView : d->normalTreeView;
-	auto index = tree->currentIndex();
-	if (!index.isValid()) {
-		return;
+	LazyTreeView* view = d->activeView();
+	if (view) {
+		view->startEdit(view->currentIndex());
 	}
-
-	tree->startEdit(index);
-}
-
-void LazyTreeWidget::onShowSearch() {
-	d->isSearchMode = true;
-	d->btnBack->show();
-	d->btnShowSearch->hide();
-	d->btnAdd->hide();
-	d->btnDelete->hide();
-	d->stackedViews->setCurrentWidget(d->searchTreeView);
 }
 
 void LazyTreeWidget::onBackToNormalView() {
-	// Запоминаем выбранный ID в поиске, если он есть
 	QVariant selected;
 	if (d->isSearchMode) {
 		selected = d->searchTreeView->selectedNodeId();
 	}
 
 	d->isSearchMode = false;
+	d->searchTimer->stop();
 	d->btnBack->hide();
-	d->btnShowSearch->show();
-	d->btnAdd->show();
-	d->btnDelete->show();
 	d->stackedViews->setCurrentWidget(d->normalTreeView);
+	d->searchDelegate->setHighlightText(QString());
+	d->normalDelegate->setHighlightText(QString());
 
 	if (selected.isValid()) {
 		d->normalTreeView->expandAndSelectNode(selected);
+	}
+
+	d->updateActions();
+}
+
+void LazyTreeWidget::onRefreshNode() {
+	if (!d->provider) {
+		return;
+	}
+
+	if (d->isSearchMode) {
+		onSearchPerform();
+		return;
+	}
+
+	const QVariant nodeId = d->normalTreeView->selectedNodeId();
+	if (!nodeId.isValid()) {
+		refreshAll();
+		return;
+	}
+
+	const auto children = d->provider->get(nodeId);
+	d->normalTreeView->setChildren(nodeId, children);
+
+	const auto error = d->provider->lastError();
+	if (!error.isEmpty()) {
+		emit errorOccurred(error);
 	}
 }
 
 void LazyTreeWidget::onContextMenu(const QPoint& pos) {
 	QMenu menu(this);
-	menu.addAction("+ Добавить", this, &LazyTreeWidget::onAddNode);
-	menu.addAction("⌫ Удалить", this, &LazyTreeWidget::onDeleteNode);
-	menu.addAction("✎ Редактировать", this, &LazyTreeWidget::onEditNode);
-	menu.addAction("🗘 Обновить", this, &LazyTreeWidget::onRefreshNode);
+
+	QAction* addAction = menu.addAction(tr("+ Добавить"), this, &LazyTreeWidget::onAddNode);
+	QAction* deleteAction = menu.addAction(tr("⌫ Удалить"), this, &LazyTreeWidget::onDeleteNode);
+	QAction* editAction = menu.addAction(tr("✎ Переименовать"), this, &LazyTreeWidget::onEditNode);
+	menu.addSeparator();
+	menu.addAction(tr("🗘 Обновить"), this, &LazyTreeWidget::onRefreshNode);
+
+	const bool hasNode = d->normalTreeView->selectedNode() != nullptr;
+	const bool hasProvider = d->provider != nullptr;
+	deleteAction->setEnabled(hasNode && hasProvider);
+	editAction->setEnabled(hasNode && hasProvider);
+	addAction->setEnabled(hasProvider);
+
 	menu.exec(d->normalTreeView->viewport()->mapToGlobal(pos));
 }
 
+void LazyTreeWidget::onCurrentNodeChanged(const LazyTreeNodePtr& node) {
+	Q_UNUSED(node);
+	d->updateActions();
+}
+
 void LazyTreeWidget::refreshAll() {
+	if (!d->provider) {
+		return;
+	}
+
+	if (d->isSearchMode) {
+		d->searchTreeView->setNodes(LazyTreeNodeList());
+		onBackToNormalView();
+	}
+
 	d->loadTreeData();
-}
-
-void LazyTreeWidget::onRefreshNode() {
-	auto tree = d->isSearchMode ? d->searchTreeView : d->normalTreeView;
-	auto nodeId = tree->selectedNodeId();
-	auto items = d->provider->get(nodeId);
-	tree->setChildren(nodeId, items);
-}
-
-void LazyTreeWidget::Private::loadSearchResults(const QString& searchText) {
-	auto results = provider->search(searchText);
-	searchTreeView->setNodes(results);
+	d->updateActions();
 }
 
 void LazyTreeWidget::Private::loadTreeData() {
-	auto roots = provider->get(QVariant());
+	if (!provider) {
+		return;
+	}
+
+	const auto roots = provider->get(QVariant());
 	normalTreeView->setNodes(roots);
+
+	const auto error = provider->lastError();
+	if (!error.isEmpty()) {
+		emit q->errorOccurred(error);
+	}
+}
+
+void LazyTreeWidget::clearSearch() {
+	QSignalBlocker blocker(d->searchLineEdit);
+	d->searchLineEdit->clear();
+	d->searchTimer->stop();
+	onBackToNormalView();
+}
+
+bool LazyTreeWidget::updateNode(const QVariant& nodeId, const LazyTreeNodePtr& nodeData) {
+	if (!d->provider || !nodeData) {
+		return false;
+	}
+
+	if (!d->provider->update(nodeData)) {
+		const auto error = d->provider->lastError();
+		if (!error.isEmpty()) {
+			emit errorOccurred(error);
+		}
+		return false;
+	}
+
+	QStandardItem* item = d->normalTreeView->findNode(nodeId);
+	if (!item) {
+		item = d->searchTreeView->findNode(nodeId);
+	}
+
+	if (item) {
+		item->setText(nodeData->name());
+		LazyTreeNodeRole::updateNodeRaw(item, nodeData);
+	}
+
+	return true;
 }

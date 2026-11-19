@@ -24,6 +24,15 @@ stores:
       wal:
         checkInterval: 60000
         maxSizeMb: 40
+    system_menu:
+      wal:
+        checkInterval: 60000
+        maxSizeMb: 20
+      migrations:
+        - version: 20261119180000
+          description: Initialize system menu
+          up: stores/migrations/system_menu/20261119180000-up-Initialize-database.sql
+          down: stores/migrations/system_menu/20261119180000-down.sql
     accounts:
       wal:
         checkInterval: 120000
