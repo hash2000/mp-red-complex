@@ -6,7 +6,7 @@
 #include "Libs/Engine/ui/doc_tab_panel.h"
 #include "Libs/Engine/ui/side_host_panel.h"
 #include "Libs/Engine/ui/properties_panel.h"
-#include "Libs/Engine/ui/new_document_dialog.h"
+#include "Libs/Engine/ui/main_window/new_document_dialog.h"
 #include "Libs/Engine/ui/text_document.h"
 #include "Libs/Engine/ui/command_console.h"
 #include "Libs/Engine/scripting/command_context.h"

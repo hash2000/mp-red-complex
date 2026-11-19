@@ -1,55 +1,116 @@
-#include "Libs/Engine/ui/new_document_dialog.h"
+#include "Libs/Engine/ui/main_window/new_document_dialog.h"
+#include "Libs/BaseWidgets/properties/properties_list_widget.h"
 #include "Libs/Engine/scripting/command_context.h"
+#include "Libs/Engine/scripting/widgets/i_document_metadata.h"
 #include "Libs/Engine/scripting/widgets/widget_registry.h"
 
 #include <QAbstractItemView>
+#include <QColor>
 #include <QDialogButtonBox>
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
-#include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QPushButton>
-#include <QSet>
-#include <QSignalBlocker>
 #include <QSplitter>
-#include <QTableWidget>
 #include <QToolButton>
 #include <QUuid>
 #include <QVBoxLayout>
 
-#include <algorithm>
+#include <limits>
 #include <optional>
 
 namespace {
 /// Роль элемента списка: xtype зарегистрированного типа.
 constexpr int kTypeXtypeRole = Qt::UserRole + 1;
-/// Роль ячейки значения: исходный QVariant переменной.
-constexpr int kValueRole = Qt::UserRole + 1;
 
-/// Значение из текстовой ячейки: bool, целое, дробное или строка.
-QVariant parseVariableValue(const QString& text) {
-	if (text.compare(QLatin1String("true"), Qt::CaseInsensitive) == 0) {
-		return true;
+/// Редактор значения переменной по mime-типу.
+PropertyType propertyTypeForMime(const QString& mimeType) {
+	const auto mime = mimeType.trimmed().toLower();
+	if (mime == QLatin1String(DocumentVariableMime::kFilePath)
+		|| mime == QLatin1String("text/uri-list")) {
+		return PropertyType::PathFile;
 	}
-	if (text.compare(QLatin1String("false"), Qt::CaseInsensitive) == 0) {
-		return false;
+	if (mime == QLatin1String(DocumentVariableMime::kDirectoryPath)) {
+		return PropertyType::PathDir;
+	}
+	if (mime == QLatin1String(DocumentVariableMime::kBoolean)) {
+		return PropertyType::Boolean;
+	}
+	if (mime == QLatin1String(DocumentVariableMime::kInteger)
+		|| mime == QLatin1String(DocumentVariableMime::kNumber)) {
+		return PropertyType::Number;
+	}
+	if (mime == QLatin1String(DocumentVariableMime::kColor)) {
+		return PropertyType::Color;
+	}
+	if (mime == QLatin1String(DocumentVariableMime::kMultiline)
+		|| mime == QLatin1String("application/json")
+		|| mime == QLatin1String("application/xml")) {
+		return PropertyType::Multiline;
 	}
 
-	bool ok = false;
-	const auto integer = text.toLongLong(&ok);
-	if (ok) {
-		return integer;
+	return PropertyType::Text;
+}
+
+bool isIntegerMime(const QString& mimeType) {
+	return mimeType.trimmed().compare(QLatin1String(DocumentVariableMime::kInteger),
+		Qt::CaseInsensitive) == 0;
+}
+
+/// Значение переменной по умолчанию для mime-типа.
+QVariant defaultValueForMime(const QString& mimeType) {
+	switch (propertyTypeForMime(mimeType)) {
+		case PropertyType::Boolean:
+			return false;
+		case PropertyType::Number:
+			return isIntegerMime(mimeType) ? QVariant(0) : QVariant(0.0);
+		case PropertyType::Color:
+			return QColor(Qt::black);
+		default:
+			return QString();
+	}
+}
+
+/// Приводит значение из контекста к типу, который ожидает редактор.
+QVariant normalizeValue(const QVariant& value, const QString& mimeType) {
+	if (!value.isValid()) {
+		return defaultValueForMime(mimeType);
 	}
 
-	const auto real = text.toDouble(&ok);
-	if (ok) {
-		return real;
+	switch (propertyTypeForMime(mimeType)) {
+		case PropertyType::Boolean:
+			return value.toBool();
+		case PropertyType::Number:
+			return isIntegerMime(mimeType)
+				? QVariant(value.toLongLong())
+				: QVariant(value.toDouble());
+		case PropertyType::Color: {
+			if (value.metaType().id() == QMetaType::QColor) {
+				return value;
+			}
+			const QColor color(value.toString());
+			return color.isValid() ? QVariant(color) : defaultValueForMime(mimeType);
+		}
+		default:
+			return value.toString();
 	}
+}
 
-	return text;
+/// Ограничения редактора числа: целые и дробные значения.
+void applyNumberLimits(PropertyData& property, const QString& mimeType) {
+	if (isIntegerMime(mimeType)) {
+		property.minVal = std::numeric_limits<int>::min();
+		property.maxVal = std::numeric_limits<int>::max();
+		property.step = 1;
+	}
+	else {
+		property.minVal = -1e12;
+		property.maxVal = 1e12;
+		property.step = 0.001;
+	}
 }
 } // namespace
 
@@ -71,16 +132,15 @@ public:
 	QLineEdit* glyphEdit = nullptr;
 	QLineEdit* titleEdit = nullptr;
 
-	QToolButton* addVariableButton = nullptr;
-	QToolButton* removeVariableButton = nullptr;
-	QTableWidget* variablesTable = nullptr;
+	PropertiesListWidget* variablesList = nullptr;
 	QDialogButtonBox* buttons = nullptr;
+
+	/// Текущие значения обязательных переменных выбранного документа.
+	QVariantMap documentVariables;
 
 	void setupUi(NewDocumentDialog* q);
 	void fillTypes();
-	void fillVariables();
-	void addVariableRow();
-	void removeSelectedVariables();
+	void fillDocumentVariables();
 	void applyFilter(const QString& text);
 	void updateDetails();
 	void updateAcceptState();
@@ -180,56 +240,14 @@ void NewDocumentDialog::Private::setupUi(NewDocumentDialog* q) {
 	paramsForm->addRow(NewDocumentDialog::tr("Значок:"), glyphEdit);
 	paramsForm->addRow(NewDocumentDialog::tr("Заголовок:"), titleEdit);
 
-	// Переменные, которые попадут в контекст создаваемого документа.
-	// Начальные строки берутся из текущего контекста и редактируются.
-	const auto namespaceName = context && !context->isGlobalContext()
-		? context->nameSpace() : QStringLiteral(".");
-	auto* variablesGroup = new QGroupBox(
-		NewDocumentDialog::tr("Переменные контекста %1").arg(namespaceName), right);
-	auto* variablesLayout = new QVBoxLayout(variablesGroup);
-	variablesLayout->setContentsMargins(6, 6, 6, 6);
-
-	auto* variablesTools = new QHBoxLayout;
-	variablesTools->setContentsMargins(0, 0, 0, 0);
-	variablesTools->setSpacing(4);
-
-	addVariableButton = new QToolButton(variablesGroup);
-	addVariableButton->setObjectName(QStringLiteral("NewDocumentDialogAddVariable"));
-	addVariableButton->setText(QStringLiteral("+"));
-	addVariableButton->setToolTip(NewDocumentDialog::tr("Добавить переменную"));
-	removeVariableButton = new QToolButton(variablesGroup);
-	removeVariableButton->setObjectName(QStringLiteral("NewDocumentDialogRemoveVariable"));
-	removeVariableButton->setText(QStringLiteral("−"));
-	removeVariableButton->setToolTip(NewDocumentDialog::tr("Удалить выбранные переменные"));
-
-	variablesTools->addWidget(addVariableButton);
-	variablesTools->addWidget(removeVariableButton);
-	variablesTools->addStretch(1);
-
-	auto* variablesHint = new QLabel(
-		NewDocumentDialog::tr("Начальные переменные контекста документа"), variablesGroup);
-	variablesHint->setWordWrap(true);
-
-	variablesTable = new QTableWidget(0, 3, variablesGroup);
-	variablesTable->setObjectName(QStringLiteral("NewDocumentDialogVariables"));
-	variablesTable->setHorizontalHeaderLabels({ NewDocumentDialog::tr("Имя"),
-		NewDocumentDialog::tr("Значение"), NewDocumentDialog::tr("Тип") });
-	variablesTable->verticalHeader()->setVisible(false);
-	variablesTable->setEditTriggers(QAbstractItemView::DoubleClicked
-		| QAbstractItemView::SelectedClicked | QAbstractItemView::EditKeyPressed);
-	variablesTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-	variablesTable->setAlternatingRowColors(true);
-	variablesTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
-	variablesTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
-	variablesTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
-
-	variablesLayout->addWidget(variablesHint);
-	variablesLayout->addLayout(variablesTools);
-	variablesLayout->addWidget(variablesTable, 1);
+	// Обязательные переменные документа: редактор выбирается по mime-типу.
+	variablesList = new PropertiesListWidget(right);
+	variablesList->setObjectName(QStringLiteral("NewDocumentDialogVariables"));
+	variablesList->setHeaderTitle(NewDocumentDialog::tr("Переменные документа"));
 
 	rightLayout->addWidget(infoGroup);
 	rightLayout->addWidget(paramsGroup);
-	rightLayout->addWidget(variablesGroup, 1);
+	rightLayout->addWidget(variablesList, 1);
 
 	splitter->addWidget(left);
 	splitter->addWidget(right);
@@ -255,26 +273,9 @@ void NewDocumentDialog::Private::setupUi(NewDocumentDialog* q) {
 	QObject::connect(nameRandomButton, &QToolButton::clicked, q, [this] {
 		randomizeName();
 	});
-	QObject::connect(addVariableButton, &QToolButton::clicked, q, [this] {
-		addVariableRow();
-	});
-	QObject::connect(removeVariableButton, &QToolButton::clicked, q, [this] {
-		removeSelectedVariables();
-	});
-	QObject::connect(variablesTable, &QTableWidget::itemChanged, q,
-		[this](QTableWidgetItem* item) {
-			if (!item || item->column() != 1) {
-				return;
-			}
-
-			// Отображаемый тип и записываемое значение следуют за текстом.
-			const QSignalBlocker blocker(variablesTable);
-			const auto value = parseVariableValue(item->text());
-			item->setData(kValueRole, value);
-			item->setToolTip(item->text());
-			if (auto* typeItem = variablesTable->item(item->row(), 2)) {
-				typeItem->setText(QString::fromLatin1(value.typeName()));
-			}
+	QObject::connect(variablesList, &PropertiesListWidget::propertyChanged, q,
+		[this](const QString& id, const QVariant& value) {
+			documentVariables.insert(id, value);
 		});
 	QObject::connect(buttons, &QDialogButtonBox::accepted, q, [this, q] {
 		acceptDialog(q);
@@ -282,10 +283,7 @@ void NewDocumentDialog::Private::setupUi(NewDocumentDialog* q) {
 	QObject::connect(buttons, &QDialogButtonBox::rejected, q, &QDialog::reject);
 
 	fillTypes();
-	fillVariables();
-	if (typeList->count() == 0) {
-		updateDetails();
-	}
+	updateDetails();
 }
 
 void NewDocumentDialog::Private::fillTypes() {
@@ -306,93 +304,45 @@ void NewDocumentDialog::Private::fillTypes() {
 	}
 }
 
-void NewDocumentDialog::Private::fillVariables() {
-	const QSignalBlocker blocker(variablesTable);
-	variablesTable->setRowCount(0);
-	if (!context) {
-		return;
-	}
+void NewDocumentDialog::Private::fillDocumentVariables() {
+	documentVariables.clear();
 
-	const auto variables = context->variables();
-	variablesTable->setRowCount(static_cast<int>(variables.size()));
+	QList<PropertyData> properties;
+	const auto type = currentType();
+	const auto* metadata = (type && registry)
+		? registry->documentMetadata(type->xtype) : nullptr;
 
-	int row = 0;
-	for (auto it = variables.cbegin(); it != variables.cend(); it++, row++) {
-		auto* nameItem = new QTableWidgetItem(it.key());
+	if (metadata) {
+		for (const auto& variable : metadata->variables()) {
+			const auto mimeType = variable.mimeType.trimmed().isEmpty()
+				? QString::fromLatin1(DocumentVariableMime::kText)
+				: variable.mimeType.trimmed();
+			const auto propertyType = propertyTypeForMime(mimeType);
 
-		auto* valueItem = new QTableWidgetItem(it.value().toString());
-		valueItem->setData(kValueRole, it.value());
-		valueItem->setToolTip(it.value().toString());
+			const auto contextValue = context ? context->variable(variable.name) : QVariant();
+			const auto value = normalizeValue(contextValue, mimeType);
+			documentVariables.insert(variable.name, value);
 
-		auto* typeItem = new QTableWidgetItem(QString::fromLatin1(it.value().typeName()));
-		typeItem->setFlags(typeItem->flags() & ~Qt::ItemIsEditable);
+			PropertyData property;
+			property.id = variable.name;
+			property.label = variable.name;
+			property.type = propertyType;
+			property.value = value;
+			property.defaultValue = defaultValueForMime(mimeType);
+			property.tooltip = NewDocumentDialog::tr("Mime-тип: %1").arg(mimeType);
 
-		variablesTable->setItem(row, 0, nameItem);
-		variablesTable->setItem(row, 1, valueItem);
-		variablesTable->setItem(row, 2, typeItem);
-	}
-}
-
-void NewDocumentDialog::Private::addVariableRow() {
-	const QSignalBlocker blocker(variablesTable);
-	const int row = variablesTable->rowCount();
-	variablesTable->insertRow(row);
-
-	auto* nameItem = new QTableWidgetItem(NewDocumentDialog::tr("variable"));
-	auto* valueItem = new QTableWidgetItem(QString());
-	valueItem->setData(kValueRole, QString());
-
-	auto* typeItem = new QTableWidgetItem(
-		QString::fromLatin1(QVariant(QString()).typeName()));
-	typeItem->setFlags(typeItem->flags() & ~Qt::ItemIsEditable);
-
-	variablesTable->setItem(row, 0, nameItem);
-	variablesTable->setItem(row, 1, valueItem);
-	variablesTable->setItem(row, 2, typeItem);
-	variablesTable->setCurrentCell(row, 1);
-}
-
-void NewDocumentDialog::Private::removeSelectedVariables() {
-	QSet<int> selectedRows;
-	for (auto* item : variablesTable->selectedItems()) {
-		selectedRows.insert(item->row());
-	}
-	if (selectedRows.isEmpty() && variablesTable->currentRow() >= 0) {
-		selectedRows.insert(variablesTable->currentRow());
-	}
-
-	QList<int> rows = selectedRows.values();
-	std::sort(rows.begin(), rows.end());
-	for (auto it = rows.crbegin(); it != rows.crend(); it++) {
-		variablesTable->removeRow(*it);
-	}
-}
-
-QVariantMap NewDocumentDialog::Private::variables() const {
-	QVariantMap result;
-	for (int row = 0; row < variablesTable->rowCount(); row++) {
-		auto* nameItem = variablesTable->item(row, 0);
-		if (!nameItem) {
-			continue;
-		}
-
-		const auto name = nameItem->text().trimmed();
-		if (name.isEmpty()) {
-			continue;
-		}
-
-		QVariant value;
-		if (auto* valueItem = variablesTable->item(row, 1)) {
-			value = valueItem->data(kValueRole);
-			if (!value.isValid()) {
-				value = parseVariableValue(valueItem->text());
+			if (propertyType == PropertyType::PathFile) {
+				property.fileFilter = NewDocumentDialog::tr("Все файлы (*.*)");
 			}
-		}
+			else if (propertyType == PropertyType::Number) {
+				applyNumberLimits(property, mimeType);
+			}
 
-		result.insert(name, value);
+			properties.append(property);
+		}
 	}
 
-	return result;
+	variablesList->setProperties(properties);
 }
 
 void NewDocumentDialog::Private::applyFilter(const QString& text) {
@@ -459,6 +409,7 @@ void NewDocumentDialog::Private::updateDetails() {
 		glyphEdit->clear();
 		titleEdit->clear();
 		nameHint->clear();
+		fillDocumentVariables();
 		updateAcceptState();
 		return;
 	}
@@ -474,6 +425,7 @@ void NewDocumentDialog::Private::updateDetails() {
 
 	glyphEdit->setText(type->glyph);
 	titleEdit->setText(type->title.isEmpty() ? type->xtype : type->title);
+	fillDocumentVariables();
 	updateAcceptState();
 }
 
@@ -521,6 +473,10 @@ void NewDocumentDialog::Private::acceptDialog(NewDocumentDialog* q) {
 	const auto title = titleEdit->text().trimmed();
 	titleEdit->setText(title.isEmpty() ? type->xtype : title);
 	q->accept();
+}
+
+QVariantMap NewDocumentDialog::Private::variables() const {
+	return documentVariables;
 }
 
 std::optional<WidgetTypeHandler> NewDocumentDialog::Private::currentType() const {

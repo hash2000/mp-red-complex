@@ -1,5 +1,6 @@
 #include "Launcher/widgets_builder.h"
 #include "Content/CodeEditorWidget/documents/code_editor_document.h"
+#include "Content/CodeEditorWidget/documents/code_editor_document_metadata.h"
 #include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
@@ -239,6 +240,10 @@ void WidgetsBuilder::Private::registerAll() {
 			auto* formatter = requiredService<FormatterPluginManager>(services, type, "FormatterPluginManager");
 			return highlighter && formatter ? new CodeEditorDocument(highlighter, formatter, handler.parent) : nullptr;
 		});
+
+	// Обязательные переменные документа-редактора: путь к файлу.
+	registry->registerDocumentMetadata(QStringLiteral("Content.CodeEditor.CodeEditorDocument"),
+		std::make_unique<CodeEditorDocumentMetadata>());
 
 	//registry->registerFactory({ "Launcher.WarmupWidget", "warmup" },
 	//	[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {

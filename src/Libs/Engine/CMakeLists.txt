@@ -28,6 +28,7 @@ target_link_libraries(RedComplexEngine
 		yaml-cpp::yaml-cpp
 
 		RedComplexBase
+		RedComplexBaseWidgets
 		RedComplexGraphics
 )
 
