@@ -1,5 +1,7 @@
 #pragma once
 #include <QString>
+#include <QStringList>
+#include <QHash>
 #include <QVariant>
 #include <vector>
 #include <memory>
@@ -37,4 +39,35 @@ public:
 	/// Произвольные свойства узла. В базе сохраняются как JSON-объект.
 	virtual QVariantMap properties() const = 0;
 	virtual bool setProperty(const QString& name, const QVariant& value) = 0;
+
+	/// Удалить свойство вместе с его mime-типами.
+	/// Реализация по умолчанию недоступна: поставщик должен её поддержать,
+	/// если свойства редактируются.
+	virtual bool removeProperty(const QString& name) {
+		Q_UNUSED(name);
+		return false;
+	}
+
+	/// Набор mime-типов свойства. Один mime-тип задаёт редактор значения,
+	/// остальные описывают альтернативные представления значения.
+	virtual QStringList propertyMimeTypes(const QString& name) const {
+		Q_UNUSED(name);
+		return {};
+	}
+
+	virtual bool setPropertyMimeTypes(const QString& name, const QStringList& mimeTypes) {
+		Q_UNUSED(name);
+		Q_UNUSED(mimeTypes);
+		return false;
+	}
+
+	/// Mime-типы всех свойств: имя свойства -> список mime-типов.
+	virtual QHash<QString, QStringList> propertyMimeTypes() const {
+		QHash<QString, QStringList> result;
+		for (const auto& name : properties().keys()) {
+			result.insert(name, propertyMimeTypes(name));
+		}
+
+		return result;
+	}
 };

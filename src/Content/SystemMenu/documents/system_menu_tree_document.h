@@ -20,6 +20,9 @@ public:
 
 	LazyTreeWidget* tree() const;
 
+	/// Открыть документ параметров узла (двойной щелчок или контекстное меню).
+	void openNodeProperties(const LazyTreeNodePtr& node);
+
 	void refresh() override;
 	bool save() override;
 	QWidget* createPropertiesEditor(QWidget* parent) override;

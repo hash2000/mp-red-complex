@@ -29,6 +29,10 @@ public:
 
 	QVariantMap properties() const override;
 	bool setProperty(const QString& name, const QVariant& value) override;
+	bool removeProperty(const QString& name) override;
+	QStringList propertyMimeTypes(const QString& name) const override;
+	bool setPropertyMimeTypes(const QString& name, const QStringList& mimeTypes) override;
+	QHash<QString, QStringList> propertyMimeTypes() const override;
 
 private:
 	class Private;

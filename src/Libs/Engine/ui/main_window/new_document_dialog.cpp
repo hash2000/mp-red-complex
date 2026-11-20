@@ -32,89 +32,26 @@ constexpr int kTypeXtypeRole = Qt::UserRole + 1;
 
 /// Редактор значения переменной по mime-типу.
 PropertyType propertyTypeForMime(const QString& mimeType) {
-	const auto mime = mimeType.trimmed().toLower();
-	if (mime == QLatin1String(DocumentVariableMime::kFilePath)
-		|| mime == QLatin1String("text/uri-list")) {
-		return PropertyType::PathFile;
-	}
-	if (mime == QLatin1String(DocumentVariableMime::kDirectoryPath)) {
-		return PropertyType::PathDir;
-	}
-	if (mime == QLatin1String(DocumentVariableMime::kBoolean)) {
-		return PropertyType::Boolean;
-	}
-	if (mime == QLatin1String(DocumentVariableMime::kInteger)
-		|| mime == QLatin1String(DocumentVariableMime::kNumber)) {
-		return PropertyType::Number;
-	}
-	if (mime == QLatin1String(DocumentVariableMime::kColor)) {
-		return PropertyType::Color;
-	}
-	if (mime == QLatin1String(DocumentVariableMime::kMultiline)
-		|| mime == QLatin1String("application/json")
-		|| mime == QLatin1String("application/xml")) {
-		return PropertyType::Multiline;
-	}
-
-	return PropertyType::Text;
+	return PropertyMime::editorType(mimeType);
 }
 
 bool isIntegerMime(const QString& mimeType) {
-	return mimeType.trimmed().compare(QLatin1String(DocumentVariableMime::kInteger),
-		Qt::CaseInsensitive) == 0;
+	return PropertyMime::isInteger(mimeType);
 }
 
 /// Значение переменной по умолчанию для mime-типа.
 QVariant defaultValueForMime(const QString& mimeType) {
-	switch (propertyTypeForMime(mimeType)) {
-		case PropertyType::Boolean:
-			return false;
-		case PropertyType::Number:
-			return isIntegerMime(mimeType) ? QVariant(0) : QVariant(0.0);
-		case PropertyType::Color:
-			return QColor(Qt::black);
-		default:
-			return QString();
-	}
+	return PropertyMime::defaultValue(mimeType);
 }
 
 /// Приводит значение из контекста к типу, который ожидает редактор.
 QVariant normalizeValue(const QVariant& value, const QString& mimeType) {
-	if (!value.isValid()) {
-		return defaultValueForMime(mimeType);
-	}
-
-	switch (propertyTypeForMime(mimeType)) {
-		case PropertyType::Boolean:
-			return value.toBool();
-		case PropertyType::Number:
-			return isIntegerMime(mimeType)
-				? QVariant(value.toLongLong())
-				: QVariant(value.toDouble());
-		case PropertyType::Color: {
-			if (value.metaType().id() == QMetaType::QColor) {
-				return value;
-			}
-			const QColor color(value.toString());
-			return color.isValid() ? QVariant(color) : defaultValueForMime(mimeType);
-		}
-		default:
-			return value.toString();
-	}
+	return PropertyMime::normalizeValue(value, mimeType);
 }
 
 /// Ограничения редактора числа: целые и дробные значения.
 void applyNumberLimits(PropertyData& property, const QString& mimeType) {
-	if (isIntegerMime(mimeType)) {
-		property.minVal = std::numeric_limits<int>::min();
-		property.maxVal = std::numeric_limits<int>::max();
-		property.step = 1;
-	}
-	else {
-		property.minVal = -1e12;
-		property.maxVal = 1e12;
-		property.step = 0.001;
-	}
+	PropertyMime::applyNumberLimits(property, mimeType);
 }
 } // namespace
 

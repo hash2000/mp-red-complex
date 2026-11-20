@@ -12,6 +12,7 @@ using LazyTreeNodeList = std::vector<LazyTreeNodePtr>;
 class ILazyNodesDataProvider;
 class LazyTreeView;
 class QLineEdit;
+class QMenu;
 
 /// Обёртка над LazyTreeView: панель инструментов и окно поиска.
 ///
@@ -53,6 +54,11 @@ signals:
 	void nodeActivated(const LazyTreeNodePtr& node);
 	void selectionChanged(const LazyTreeNodePtr& node);
 	void errorOccurred(const QString& message);
+
+protected:
+	/// Добавить доменные пункты в контекстное меню узла. Вызывается перед
+	/// показом меню; node == nullptr для пустой области.
+	virtual void extendContextMenu(QMenu& menu, const LazyTreeNodePtr& node);
 
 private slots:
 	void onSearchTextChanged(const QString& text);

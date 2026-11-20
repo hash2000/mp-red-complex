@@ -348,6 +348,14 @@ void LazyTreeWidget::onRefreshNode() {
 }
 
 void LazyTreeWidget::onContextMenu(const QPoint& pos) {
+	auto* item = d->normalTreeView->itemFromIndex(d->normalTreeView->indexAt(pos));
+	LazyTreeNodePtr node;
+	if (item && !d->normalTreeView->isDummyItem(item)
+		&& !d->normalTreeView->isTemporaryItem(item)) {
+		d->normalTreeView->setCurrentIndex(item->index());
+		node = LazyTreeNodeRole::nodeByItem(item);
+	}
+
 	QMenu menu(this);
 
 	QAction* addAction = menu.addAction(tr("+ Добавить"), this, &LazyTreeWidget::onAddNode);
@@ -356,13 +364,19 @@ void LazyTreeWidget::onContextMenu(const QPoint& pos) {
 	menu.addSeparator();
 	menu.addAction(tr("🗘 Обновить"), this, &LazyTreeWidget::onRefreshNode);
 
-	const bool hasNode = d->normalTreeView->selectedNode() != nullptr;
+	const bool hasNode = node != nullptr;
 	const bool hasProvider = d->provider != nullptr;
 	deleteAction->setEnabled(hasNode && hasProvider);
 	editAction->setEnabled(hasNode && hasProvider);
 	addAction->setEnabled(hasProvider);
 
+	extendContextMenu(menu, node);
 	menu.exec(d->normalTreeView->viewport()->mapToGlobal(pos));
+}
+
+void LazyTreeWidget::extendContextMenu(QMenu& menu, const LazyTreeNodePtr& node) {
+	Q_UNUSED(menu);
+	Q_UNUSED(node);
 }
 
 void LazyTreeWidget::onCurrentNodeChanged(const LazyTreeNodePtr& node) {

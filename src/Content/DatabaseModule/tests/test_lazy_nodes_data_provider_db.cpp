@@ -4,8 +4,13 @@
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_data_node.h"
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/scripting/command_controller.h"
+#include "Libs/Resources/db/sqlite/sqlite_connection.h"
+#include "Libs/Resources/db/sqlite/sqlite_reader.h"
 #include "Libs/Resources/resources.h"
 
+#include <QColor>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -66,6 +71,8 @@ private slots:
 	void searchBuildsHierarchy();
 	void removeCascadesChildren();
 	void getNodeReturnsProperties();
+	void storesPropertyMimeTypes();
+	void readsPropertyMimeObject();
 	void emptyPropertiesRoundTrip();
 	void lastErrorForMissingTable();
 
@@ -228,6 +235,79 @@ void TestLazyNodesDataProviderDb::getNodeReturnsProperties() {
 	QCOMPARE(loaded->properties().value(QStringLiteral("number")).toInt(), 42);
 	QVERIFY(!_provider->getNode(999999));
 }
+
+void TestLazyNodesDataProviderDb::storesPropertyMimeTypes() {
+	auto node = addNode(QStringLiteral("Узел"));
+	QVERIFY(node);
+
+	node->setProperty(QStringLiteral("color"), QColor(Qt::red));
+	node->setPropertyMimeTypes(QStringLiteral("color"),
+		{ QStringLiteral("application/x-color"), QStringLiteral("text/plain") });
+	node->setProperty(QStringLiteral("title"), QStringLiteral("Заголовок"));
+	node->setPropertyMimeTypes(QStringLiteral("title"),
+		{ QStringLiteral("text/plain"), QStringLiteral("text/x-multiline") });
+	QVERIFY(_provider->update(node));
+
+	const auto loaded = _provider->getNode(node->id());
+	QVERIFY(loaded);
+	QCOMPARE(loaded->propertyMimeTypes(QStringLiteral("color")),
+		QStringList({ QStringLiteral("application/x-color"), QStringLiteral("text/plain") }));
+	QCOMPARE(loaded->propertyMimeTypes(QStringLiteral("title")),
+		QStringList({ QStringLiteral("text/plain"), QStringLiteral("text/x-multiline") }));
+	QVERIFY(loaded->properties().value(QStringLiteral("color")).value<QColor>().isValid());
+
+	// Формат колонки data: { "property": { "mime": [...], "value": ... } }.
+	auto* connection = _databases->connection(QStringLiteral("system_menu"));
+	QVERIFY(connection);
+	auto reader = connection->executeQuery(
+		QStringLiteral("select data from menu_items where id = %1").arg(node->id().toLongLong()));
+	QVERIFY(reader);
+	QVERIFY(reader->next());
+	const auto object = QJsonDocument::fromJson(reader->value(QStringLiteral("data")).toString().toUtf8()).object();
+	const auto colorEntry = object.value(QStringLiteral("color")).toObject();
+	QVERIFY(colorEntry.value(QStringLiteral("mime")).isArray());
+	QCOMPARE(colorEntry.value(QStringLiteral("value")).toString(),
+		QColor(Qt::red).name(QColor::HexArgb));
+
+	QVERIFY(loaded->removeProperty(QStringLiteral("title")));
+	QVERIFY(_provider->update(loaded));
+	const auto afterRemove = _provider->getNode(node->id());
+	QVERIFY(afterRemove);
+	QVERIFY(!afterRemove->properties().contains(QStringLiteral("title")));
+	QVERIFY(afterRemove->propertyMimeTypes(QStringLiteral("title")).isEmpty());
+}
+
+void TestLazyNodesDataProviderDb::readsPropertyMimeObject() {
+	auto node = addNode(QStringLiteral("Узел"));
+	QVERIFY(node);
+
+	// Требование допускает mime как объект, а не только массив.
+	QJsonObject mimeObject;
+	mimeObject.insert(QStringLiteral("image/png"), true);
+	QJsonObject entry;
+	entry.insert(QStringLiteral("value"), QStringLiteral("image.png"));
+	entry.insert(QStringLiteral("mime"), mimeObject);
+	QJsonObject data;
+	data.insert(QStringLiteral("image"), entry);
+
+	auto* connection = _databases->connection(QStringLiteral("system_menu"));
+	QVERIFY(connection);
+	auto update = connection->prepare(
+		QStringLiteral("update menu_items set data = :data where id = :id"));
+	QVERIFY(update);
+	update->bindValue(QStringLiteral(":data"),
+		QString::fromUtf8(QJsonDocument(data).toJson(QJsonDocument::Compact)));
+	update->bindValue(QStringLiteral(":id"), node->id());
+	QVERIFY(update->exec());
+
+	const auto loaded = _provider->getNode(node->id());
+	QVERIFY(loaded);
+	QCOMPARE(loaded->propertyMimeTypes(QStringLiteral("image")),
+		QStringList({ QStringLiteral("image/png") }));
+	QCOMPARE(loaded->properties().value(QStringLiteral("image")).toString(),
+		QStringLiteral("image.png"));
+}
+
 
 void TestLazyNodesDataProviderDb::emptyPropertiesRoundTrip() {
 	auto node = addNode(QStringLiteral("Узел"));

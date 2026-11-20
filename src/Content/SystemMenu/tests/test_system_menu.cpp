@@ -1,5 +1,8 @@
+#include "Content/SystemMenu/documents/system_menu_node_properties_document.h"
 #include "Content/SystemMenu/documents/system_menu_tree_document.h"
 #include "Content/SystemMenu/services/system_menu_service.h"
+#include "Content/SystemMenu/widgets/system_menu_tree_widget.h"
+#include "Libs/BaseWidgets/properties/properties_list_widget.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_view.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_widget.h"
 #include "basewidgets/mock_lazy_tree_provider.h"
@@ -19,6 +22,8 @@ private slots:
 	void renamesAndMovesItems();
 	void rejectsEmptyNameAndProviderErrors();
 	void documentHostsLazyTreeWidget();
+	void nodePropertiesDocument();
+	void doubleClickRequestsProperties();
 
 private:
 	std::unique_ptr<MockLazyTreeProvider> _provider;
@@ -108,6 +113,71 @@ void TestSystemMenu::documentHostsLazyTreeWidget() {
 	QVERIFY(model);
 	QCOMPARE(model->invisibleRootItem()->rowCount(), 1);
 	QCOMPARE(model->invisibleRootItem()->child(0)->text(), QStringLiteral("Пункт"));
+}
+
+void TestSystemMenu::nodePropertiesDocument() {
+	auto item = _service->createItem(QVariant(), QStringLiteral("Узел"));
+	QVERIFY(item);
+
+	item->setProperty(QStringLiteral("count"), 1);
+	item->setPropertyMimeTypes(QStringLiteral("count"),
+		{ QStringLiteral("application/x-integer") });
+	item->setProperty(QStringLiteral("title"), QStringLiteral("Текст"));
+	item->setPropertyMimeTypes(QStringLiteral("title"),
+		{ QStringLiteral("text/plain") });
+	QVERIFY(_service->updateItem(item));
+
+	SystemMenuNodePropertiesDocument document(_service.get(), item->id());
+	auto* list = document.findChild<PropertiesListWidget*>(
+		QStringLiteral("SystemMenuNodePropertiesList"));
+	QVERIFY(list);
+	QCOMPARE(list->propertyCount(), 2);
+
+	QVERIFY(document.addProperty(QStringLiteral("flag"),
+		{ QStringLiteral("application/x-boolean") }));
+	QCOMPARE(list->propertyCount(), 3);
+	QCOMPARE(item->properties().value(QStringLiteral("flag")).toBool(), false);
+	QCOMPARE(item->propertyMimeTypes(QStringLiteral("flag")),
+		QStringList({ QStringLiteral("application/x-boolean") }));
+
+	QVERIFY(document.setPropertyValue(QStringLiteral("count"), 42));
+	QCOMPARE(item->properties().value(QStringLiteral("count")).toInt(), 42);
+
+	QVERIFY(document.setPropertyMimeTypes(QStringLiteral("count"),
+		{ QStringLiteral("text/plain"), QStringLiteral("application/x-integer") }));
+	QCOMPARE(item->propertyMimeTypes(QStringLiteral("count")),
+		QStringList({ QStringLiteral("text/plain"), QStringLiteral("application/x-integer") }));
+
+	QVERIFY(document.removeProperty(QStringLiteral("flag")));
+	QCOMPARE(list->propertyCount(), 2);
+	QVERIFY(!document.removeProperty(QStringLiteral("missing")));
+}
+
+void TestSystemMenu::doubleClickRequestsProperties() {
+	auto item = _service->createItem(QVariant(), QStringLiteral("Узел"));
+	QVERIFY(item);
+	_provider->setChildren(QVariant(), { item });
+
+	SystemMenuTreeWidget widget(_service.get());
+	int requested = 0;
+	LazyTreeNodePtr requestedNode;
+	connect(&widget, &SystemMenuTreeWidget::propertiesRequested, this,
+		[&requested, &requestedNode](const LazyTreeNodePtr& node) {
+			requested++;
+			requestedNode = node;
+		});
+
+	auto* model = qobject_cast<QStandardItemModel*>(widget.treeView()->model());
+	QVERIFY(model);
+	QVERIFY(model->rowCount() > 0);
+	const QModelIndex index = model->index(0, 0);
+
+	// QTreeView::activated — путь двойного щелчка/Enter.
+	const bool invoked = QMetaObject::invokeMethod(widget.treeView(), "activated",
+		Qt::DirectConnection, Q_ARG(QModelIndex, index));
+	QVERIFY(invoked);
+	QCOMPARE(requested, 1);
+	QVERIFY(requestedNode == item);
 }
 
 QTEST_MAIN(TestSystemMenu)

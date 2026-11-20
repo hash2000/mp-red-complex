@@ -7,6 +7,7 @@
 #include "Content/FetchApiModule/documents/fetch_queries_tree_document.h"
 #include "Content/FetchApiModule/services/fetch_queries_service.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
+#include "Content/SystemMenu/documents/system_menu_node_properties_document.h"
 #include "Content/SystemMenu/documents/system_menu_tree_document.h"
 #include "Content/SystemMenu/services/system_menu_service.h"
 #include "Content/UsersModule/documents/login_document.h"
@@ -225,6 +226,15 @@ void WidgetsBuilder::Private::registerAll() {
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* service = requiredService<SystemMenuService>(servicesFor(type, handler), type, "SystemMenuService");
 			return service ? new SystemMenuTreeDocument(service, handler.parent) : nullptr;
+		});
+
+	// Параметры узла: обычный документ, один на узел (id задаёт вызывающая сторона).
+	registry->registerFactory({ "Content.SystemMenu.SystemMenuNodePropertiesDocument",
+		"system-menu-node-properties", /*singletone*/ false, QStringLiteral("🛠"),
+		QStringLiteral("Параметры узла") },
+		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
+			auto* service = requiredService<SystemMenuService>(servicesFor(type, handler), type, "SystemMenuService");
+			return service ? new SystemMenuNodePropertiesDocument(service, {}, handler.parent) : nullptr;
 		});
 
 	// Редактор кода — обычный документ: экземпляров может быть несколько.

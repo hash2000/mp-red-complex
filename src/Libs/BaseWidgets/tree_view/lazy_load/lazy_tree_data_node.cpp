@@ -1,5 +1,6 @@
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_data_node.h"
 
+#include <QSet>
 #include <QVariantMap>
 
 class LazyTreeDataNode::Private {
@@ -9,6 +10,7 @@ public:
 	QString name;
 	bool expanded = false;
 	QVariantMap properties;
+	QHash<QString, QStringList> propertyMimeTypes;
 	std::optional<LazyTreeNodeList> children;
 };
 
@@ -92,4 +94,48 @@ bool LazyTreeDataNode::setProperty(const QString& name, const QVariant& value) {
 
 	d->properties.insert(name, value);
 	return true;
+}
+
+bool LazyTreeDataNode::removeProperty(const QString& name) {
+	if (name.isEmpty()) {
+		return false;
+	}
+
+	d->propertyMimeTypes.remove(name);
+	return d->properties.remove(name) > 0;
+}
+
+QStringList LazyTreeDataNode::propertyMimeTypes(const QString& name) const {
+	return d->propertyMimeTypes.value(name);
+}
+
+bool LazyTreeDataNode::setPropertyMimeTypes(const QString& name, const QStringList& mimeTypes) {
+	if (name.isEmpty()) {
+		return false;
+	}
+
+	QStringList normalized;
+	QSet<QString> seen;
+	for (const auto& mimeType : mimeTypes) {
+		const auto trimmed = mimeType.trimmed();
+		if (trimmed.isEmpty() || seen.contains(trimmed)) {
+			continue;
+		}
+
+		seen.insert(trimmed);
+		normalized.append(trimmed);
+	}
+
+	if (normalized.isEmpty()) {
+		d->propertyMimeTypes.remove(name);
+	}
+	else {
+		d->propertyMimeTypes.insert(name, normalized);
+	}
+
+	return true;
+}
+
+QHash<QString, QStringList> LazyTreeDataNode::propertyMimeTypes() const {
+	return d->propertyMimeTypes;
 }

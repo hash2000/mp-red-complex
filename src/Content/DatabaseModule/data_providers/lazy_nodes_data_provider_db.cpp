@@ -1,4 +1,5 @@
 #include "Content/DatabaseModule/data_providers/lazy_nodes_data_provider_db.h"
+#include "Libs/BaseWidgets/properties/property_mime.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_builder.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_data_node.h"
 
@@ -6,11 +7,14 @@
 #include "Libs/Resources/db/sqlite/sqlite_connection.h"
 #include "Libs/Resources/db/sqlite/sqlite_reader.h"
 
+#include <QColor>
 #include <QDebug>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonParseError>
 #include <QRegularExpression>
+#include <QSet>
 
 namespace {
 
@@ -139,6 +143,112 @@ QString quoteIdentifier(const QString& identifier) {
 	return QStringLiteral("\"%1\"").arg(quoted);
 }
 
+/// Mime-типы свойства в JSON. Каноническая запись — массив строк.
+QJsonArray mimeTypesToJson(const QStringList& mimeTypes) {
+	QJsonArray result;
+	QSet<QString> seen;
+
+	for (const auto& mimeType : mimeTypes) {
+		const auto trimmed = mimeType.trimmed();
+		if (trimmed.isEmpty() || seen.contains(trimmed)) {
+			continue;
+		}
+
+		seen.insert(trimmed);
+		result.append(trimmed);
+	}
+
+	return result;
+}
+
+/// Чтение mime-типов свойства. Поддерживаются оба варианта из требований:
+/// массив строк и объект, где mime-типы — ключи (или значения при числовых
+/// ключах, например после преобразования списка в объект).
+QStringList mimeTypesFromJson(const QJsonValue& value) {
+	QStringList result;
+	QSet<QString> seen;
+
+	const auto add = [&result, &seen](const QString& raw) {
+		const auto trimmed = raw.trimmed();
+		if (trimmed.isEmpty() || seen.contains(trimmed)) {
+			return;
+		}
+
+		seen.insert(trimmed);
+		result.append(trimmed);
+	};
+
+	if (value.isArray()) {
+		for (const auto& item : value.toArray()) {
+			if (item.isString()) {
+				add(item.toString());
+			}
+		}
+	}
+	else if (value.isObject()) {
+		const auto object = value.toObject();
+		bool numericKeys = !object.isEmpty();
+		for (auto it = object.constBegin(); it != object.constEnd(); it++) {
+			bool ok = false;
+			it.key().toInt(&ok);
+			if (!ok) {
+				numericKeys = false;
+				break;
+			}
+		}
+
+		for (auto it = object.constBegin(); it != object.constEnd(); it++) {
+			if (numericKeys) {
+				if (it.value().isString()) {
+					add(it.value().toString());
+				}
+			}
+			else {
+				add(it.key());
+			}
+		}
+	}
+	else if (value.isString()) {
+		add(value.toString());
+	}
+
+	return result;
+}
+
+QJsonValue propertyValueToJson(const QVariant& value) {
+	if (!value.isValid() || value.isNull()) {
+		return QJsonValue::Null;
+	}
+
+	// QColor не сериализуется QJsonValue напрямую: храним цвет строкой.
+	if (value.metaType().id() == QMetaType::QColor) {
+		return QJsonValue(value.value<QColor>().name(QColor::HexArgb));
+	}
+
+	if (value.metaType().id() == QMetaType::QByteArray) {
+		return QJsonValue(QString::fromLatin1(value.toByteArray().toBase64()));
+	}
+
+	const auto json = QJsonValue::fromVariant(value);
+	return json.isUndefined() ? QJsonValue(value.toString()) : json;
+}
+
+QVariant propertyValueFromJson(const QJsonValue& value, const QStringList& mimeTypes) {
+	if (value.isNull() || value.isUndefined()) {
+		return {};
+	}
+
+	const auto primary = PropertyMime::primaryMimeType(mimeTypes);
+	if (PropertyMime::editorType(primary) == PropertyType::Color && value.isString()) {
+		const QColor color(value.toString());
+		if (color.isValid()) {
+			return color;
+		}
+	}
+
+	return value.toVariant();
+}
+
 } // namespace
 
 class LazyNodesDataProviderDb::Private {
@@ -181,7 +291,7 @@ public:
 	SQLiteConnection* connection() const;
 	LazyTreeNodeList readNodes(const std::unique_ptr<SQLiteReader>& reader) const;
 	static void readProperties(const std::unique_ptr<SQLiteReader>& reader, const LazyTreeNodePtr& node);
-	static void bindProperties(SQLiteReader& reader, const QVariantMap& properties);
+	static void bindProperties(SQLiteReader& reader, const LazyTreeNodePtr& node);
 };
 
 SQLiteConnection* LazyNodesDataProviderDb::Private::connection() const {
@@ -256,21 +366,50 @@ void LazyNodesDataProviderDb::Private::readProperties(
 		return;
 	}
 
-	const auto values = document.object().toVariantMap();
-	for (auto it = values.constBegin(); it != values.constEnd(); it++) {
-		node->setProperty(it.key(), it.value());
+	const auto object = document.object();
+	for (auto it = object.constBegin(); it != object.constEnd(); it++) {
+		const auto name = it.key();
+		const auto entry = it.value();
+
+		// Старый формат: значение свойства лежало прямо в JSON.
+		if (!entry.isObject()) {
+			node->setProperty(name, entry.toVariant());
+			continue;
+		}
+
+		const auto entryObject = entry.toObject();
+		const bool structured = entryObject.contains(QStringLiteral("value"))
+			|| entryObject.contains(QStringLiteral("mime"));
+		if (!structured) {
+			node->setProperty(name, entry.toVariant());
+			continue;
+		}
+
+		const auto mimeTypes = mimeTypesFromJson(entryObject.value(QStringLiteral("mime")));
+		node->setPropertyMimeTypes(name, mimeTypes);
+		node->setProperty(name,
+			propertyValueFromJson(entryObject.value(QStringLiteral("value")), mimeTypes));
 	}
 }
 
 void LazyNodesDataProviderDb::Private::bindProperties(SQLiteReader& reader,
-	const QVariantMap& properties) {
-	if (properties.isEmpty()) {
+	const LazyTreeNodePtr& node) {
+	if (!node || node->properties().isEmpty()) {
 		reader.bindValue(":data", QStringLiteral("{}"));
 		return;
 	}
 
-	const QJsonObject json = QJsonObject::fromVariantMap(properties);
-	const QJsonDocument document(json);
+	QJsonObject root;
+	const auto properties = node->properties();
+	for (auto it = properties.constBegin(); it != properties.constEnd(); it++) {
+		QJsonObject entry;
+		entry.insert(QStringLiteral("value"), propertyValueToJson(it.value()));
+		entry.insert(QStringLiteral("mime"),
+			mimeTypesToJson(node->propertyMimeTypes(it.key())));
+		root.insert(it.key(), entry);
+	}
+
+	const QJsonDocument document(root);
 	const QString text = QString::fromUtf8(document.toJson(QJsonDocument::Compact));
 	reader.bindValue(":data", text);
 }
@@ -409,7 +548,7 @@ bool LazyNodesDataProviderDb::update(const LazyTreeNodePtr& node) {
 		return false;
 	}
 
-	Private::bindProperties(*statement, node->properties());
+	Private::bindProperties(*statement, node);
 	statement->bindValue(":parent_id", node->parentId());
 	statement->bindValue(":name", node->name());
 	statement->bindValue(":id", node->id());
@@ -441,7 +580,7 @@ bool LazyNodesDataProviderDb::add(const LazyTreeNodePtr& node) {
 
 	statement->bindValue(":parent_id", node->parentId());
 	statement->bindValue(":name", node->name());
-	Private::bindProperties(*statement, node->properties());
+	Private::bindProperties(*statement, node);
 
 	if (!statement->exec()) {
 		d->lastError = connection->lastError();
