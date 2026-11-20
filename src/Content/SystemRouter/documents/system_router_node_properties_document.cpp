@@ -1,5 +1,6 @@
-#include "Content/SystemMenu/documents/system_menu_node_properties_document.h"
-#include "Content/SystemMenu/services/system_menu_service.h"
+#include "Content/SystemRouter/documents/system_router_node_properties_document.h"
+#include "Content/SystemRouter/models/system_router_mime.h"
+#include "Content/SystemRouter/services/system_router_service.h"
 #include "Libs/BaseWidgets/properties/properties_list_widget.h"
 #include "Libs/BaseWidgets/properties/property_mime.h"
 
@@ -30,35 +31,62 @@ struct PropertyDescriptor {
 	QStringList mimeTypes;
 };
 
+/// Mime-типы, определяющие редактор значения: служебные mime-типы
+/// маршрутизатора (команда/параметр) не влияют на тип редактора.
+QStringList valueMimeTypes(const QStringList& mimeTypes) {
+	QStringList result;
+	for (const auto& raw : mimeTypes) {
+		const auto mime = raw.trimmed();
+		if (mime.compare(QLatin1String(SystemRouterMime::kCommand), Qt::CaseInsensitive) == 0
+			|| mime.compare(QLatin1String(SystemRouterMime::kCommandParameter),
+				Qt::CaseInsensitive) == 0) {
+			continue;
+		}
+		result.append(mime);
+	}
+	return result;
+}
+
+QString primaryValueMimeType(const QStringList& mimeTypes) {
+	return PropertyMime::primaryMimeType(valueMimeTypes(mimeTypes));
+}
+
 /// Диалог имени и набора mime-типов свойства.
 /// Поддерживает произвольные mime-типы: их можно ввести вручную.
 std::optional<PropertyDescriptor> requestPropertyDescriptor(QWidget* parent,
 	const QString& title, const QString& name, const QStringList& mimeTypes,
 	bool nameEditable) {
 	QDialog dialog(parent);
-	dialog.setObjectName(QStringLiteral("SystemMenuPropertyDialog"));
+	dialog.setObjectName(QStringLiteral("SystemRouterPropertyDialog"));
 	dialog.setWindowTitle(title);
 	dialog.resize(420, 460);
 
 	auto* layout = new QVBoxLayout(&dialog);
 
 	auto* nameEdit = new QLineEdit(name, &dialog);
-	nameEdit->setObjectName(QStringLiteral("SystemMenuPropertyName"));
+	nameEdit->setObjectName(QStringLiteral("SystemRouterPropertyName"));
 	nameEdit->setEnabled(nameEditable);
 
 	auto* form = new QFormLayout;
-	form->addRow(QCoreApplication::translate("SystemMenuNodePropertiesDocument", "Имя:"), nameEdit);
+	form->addRow(QCoreApplication::translate("SystemRouterNodePropertiesDocument", "Имя:"), nameEdit);
 	layout->addLayout(form);
 
 	auto* mimeGroup = new QGroupBox(
-		QCoreApplication::translate("SystemMenuNodePropertiesDocument", "Mime-типы"), &dialog);
+		QCoreApplication::translate("SystemRouterNodePropertiesDocument", "Mime-типы"), &dialog);
 	auto* mimeLayout = new QVBoxLayout(mimeGroup);
 
 	auto* mimeList = new QListWidget(mimeGroup);
-	mimeList->setObjectName(QStringLiteral("SystemMenuPropertyMimeList"));
+	mimeList->setObjectName(QStringLiteral("SystemRouterPropertyMimeList"));
 
-	// Сначала текущие mime-типы (первый — основной), затем распространённые.
+	// Сначала текущие mime-типы (первый — основной), затем mime-типы
+	// маршрутизатора и распространённые.
 	QStringList ordered = mimeTypes;
+	for (const auto* routerMime : { SystemRouterMime::kCommand,
+		SystemRouterMime::kCommandParameter }) {
+		if (!ordered.contains(QLatin1String(routerMime), Qt::CaseInsensitive)) {
+			ordered.append(QLatin1String(routerMime));
+		}
+	}
 	for (const auto& common : PropertyMime::commonMimeTypes()) {
 		if (!ordered.contains(common, Qt::CaseInsensitive)) {
 			ordered.append(common);
@@ -85,13 +113,13 @@ std::optional<PropertyDescriptor> requestPropertyDescriptor(QWidget* parent,
 
 	auto* customRow = new QHBoxLayout;
 	auto* customEdit = new QLineEdit(mimeGroup);
-	customEdit->setObjectName(QStringLiteral("SystemMenuPropertyCustomMime"));
+	customEdit->setObjectName(QStringLiteral("SystemRouterPropertyCustomMime"));
 	customEdit->setPlaceholderText(QCoreApplication::translate(
-		"SystemMenuNodePropertiesDocument", "Другой mime-тип"));
+		"SystemRouterNodePropertiesDocument", "Другой mime-тип"));
 	auto* customAdd = new QToolButton(mimeGroup);
 	customAdd->setText(QStringLiteral("+"));
 	customAdd->setToolTip(QCoreApplication::translate(
-		"SystemMenuNodePropertiesDocument", "Добавить mime-тип"));
+		"SystemRouterNodePropertiesDocument", "Добавить mime-тип"));
 	customRow->addWidget(customEdit, 1);
 	customRow->addWidget(customAdd);
 
@@ -169,14 +197,14 @@ std::optional<PropertyDescriptor> requestPropertyDescriptor(QWidget* parent,
 
 } // namespace
 
-class SystemMenuNodePropertiesDocument::Private {
+class SystemRouterNodePropertiesDocument::Private {
 public:
-	explicit Private(SystemMenuNodePropertiesDocument* parent)
+	explicit Private(SystemRouterNodePropertiesDocument* parent)
 		: q(parent) {
 	}
 
-	SystemMenuNodePropertiesDocument* q;
-	SystemMenuService* service = nullptr;
+	SystemRouterNodePropertiesDocument* q;
+	SystemRouterService* service = nullptr;
 	QVariant nodeId;
 	LazyTreeNodePtr node;
 
@@ -199,13 +227,13 @@ public:
 	PropertyData propertyData(const QString& name, const QVariant& value) const;
 };
 
-void SystemMenuNodePropertiesDocument::Private::setupUi() {
+void SystemRouterNodePropertiesDocument::Private::setupUi() {
 	auto* layout = new QVBoxLayout(q);
 	layout->setContentsMargins(6, 6, 6, 6);
 	layout->setSpacing(6);
 
 	header = new QLabel(q);
-	header->setObjectName(QStringLiteral("SystemMenuNodeHeader"));
+	header->setObjectName(QStringLiteral("SystemRouterNodeHeader"));
 	header->setTextInteractionFlags(Qt::TextSelectableByMouse);
 	header->setWordWrap(true);
 	layout->addWidget(header);
@@ -214,25 +242,25 @@ void SystemMenuNodePropertiesDocument::Private::setupUi() {
 	tools->setContentsMargins(0, 0, 0, 0);
 	tools->setSpacing(4);
 
-	auto* selectorLabel = new QLabel(SystemMenuNodePropertiesDocument::tr("Свойство:"), q);
+	auto* selectorLabel = new QLabel(SystemRouterNodePropertiesDocument::tr("Свойство:"), q);
 	selector = new QComboBox(q);
-	selector->setObjectName(QStringLiteral("SystemMenuPropertySelector"));
+	selector->setObjectName(QStringLiteral("SystemRouterPropertySelector"));
 	selector->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
 	addButton = new QToolButton(q);
-	addButton->setObjectName(QStringLiteral("SystemMenuAddProperty"));
+	addButton->setObjectName(QStringLiteral("SystemRouterAddProperty"));
 	addButton->setText(QStringLiteral("+"));
-	addButton->setToolTip(SystemMenuNodePropertiesDocument::tr("Добавить свойство"));
+	addButton->setToolTip(SystemRouterNodePropertiesDocument::tr("Добавить свойство"));
 
 	removeButton = new QToolButton(q);
-	removeButton->setObjectName(QStringLiteral("SystemMenuRemoveProperty"));
+	removeButton->setObjectName(QStringLiteral("SystemRouterRemoveProperty"));
 	removeButton->setText(QStringLiteral("−"));
-	removeButton->setToolTip(SystemMenuNodePropertiesDocument::tr("Удалить свойство"));
+	removeButton->setToolTip(SystemRouterNodePropertiesDocument::tr("Удалить свойство"));
 
 	mimeButton = new QToolButton(q);
-	mimeButton->setObjectName(QStringLiteral("SystemMenuEditPropertyMime"));
-	mimeButton->setText(SystemMenuNodePropertiesDocument::tr("Mime-типы…"));
-	mimeButton->setToolTip(SystemMenuNodePropertiesDocument::tr("Изменить набор mime-типов"));
+	mimeButton->setObjectName(QStringLiteral("SystemRouterEditPropertyMime"));
+	mimeButton->setText(SystemRouterNodePropertiesDocument::tr("Mime-типы…"));
+	mimeButton->setToolTip(SystemRouterNodePropertiesDocument::tr("Изменить набор mime-типов"));
 
 	tools->addWidget(selectorLabel);
 	tools->addWidget(selector, 1);
@@ -242,18 +270,18 @@ void SystemMenuNodePropertiesDocument::Private::setupUi() {
 	layout->addLayout(tools);
 
 	list = new PropertiesListWidget(q);
-	list->setObjectName(QStringLiteral("SystemMenuNodePropertiesList"));
-	list->setHeaderTitle(SystemMenuNodePropertiesDocument::tr("Параметры узла"));
+	list->setObjectName(QStringLiteral("SystemRouterNodePropertiesList"));
+	list->setHeaderTitle(SystemRouterNodePropertiesDocument::tr("Параметры узла"));
 	layout->addWidget(list, 1);
 
 	status = new QLabel(q);
-	status->setObjectName(QStringLiteral("SystemMenuNodeStatus"));
+	status->setObjectName(QStringLiteral("SystemRouterNodeStatus"));
 	status->setWordWrap(true);
 	layout->addWidget(status);
 
 	QObject::connect(addButton, &QToolButton::clicked, q, [this]() {
 		const auto descriptor = requestPropertyDescriptor(q,
-			SystemMenuNodePropertiesDocument::tr("Добавить свойство"), {}, {},
+			SystemRouterNodePropertiesDocument::tr("Добавить свойство"), {}, {},
 			/*nameEditable*/ true);
 		if (!descriptor) {
 			return;
@@ -283,7 +311,7 @@ void SystemMenuNodePropertiesDocument::Private::setupUi() {
 		}
 
 		const auto descriptor = requestPropertyDescriptor(q,
-			SystemMenuNodePropertiesDocument::tr("Mime-типы свойства"), name,
+			SystemRouterNodePropertiesDocument::tr("Mime-типы свойства"), name,
 			node->propertyMimeTypes(name), /*nameEditable*/ false);
 		if (!descriptor) {
 			return;
@@ -303,7 +331,7 @@ void SystemMenuNodePropertiesDocument::Private::setupUi() {
 		});
 }
 
-void SystemMenuNodePropertiesDocument::Private::loadNode() {
+void SystemRouterNodePropertiesDocument::Private::loadNode() {
 	node = nullptr;
 	if (service && nodeId.isValid() && !nodeId.isNull()) {
 		node = service->item(nodeId);
@@ -311,21 +339,21 @@ void SystemMenuNodePropertiesDocument::Private::loadNode() {
 
 	rebuild();
 	if (service && !node && nodeId.isValid() && !nodeId.isNull()) {
-		setStatus(SystemMenuNodePropertiesDocument::tr("Узел не найден"), true);
+		setStatus(SystemRouterNodePropertiesDocument::tr("Узел не найден"), true);
 	}
 }
 
-void SystemMenuNodePropertiesDocument::Private::rebuild(const QString& preferredProperty) {
+void SystemRouterNodePropertiesDocument::Private::rebuild(const QString& preferredProperty) {
 	if (!q) {
 		return;
 	}
 
 	if (node) {
-		header->setText(SystemMenuNodePropertiesDocument::tr("Узел: %1\nid: %2")
+		header->setText(SystemRouterNodePropertiesDocument::tr("Узел: %1\nid: %2")
 			.arg(node->name(), node->id().toString()));
 	}
 	else {
-		header->setText(SystemMenuNodePropertiesDocument::tr("Узел не выбран"));
+		header->setText(SystemRouterNodePropertiesDocument::tr("Узел не выбран"));
 	}
 
 	if (list) {
@@ -344,10 +372,10 @@ void SystemMenuNodePropertiesDocument::Private::rebuild(const QString& preferred
 	updateActions();
 }
 
-PropertyData SystemMenuNodePropertiesDocument::Private::propertyData(const QString& name,
+PropertyData SystemRouterNodePropertiesDocument::Private::propertyData(const QString& name,
 	const QVariant& value) const {
 	const auto mimeTypes = node ? node->propertyMimeTypes(name) : QStringList();
-	const auto primary = PropertyMime::primaryMimeType(mimeTypes);
+	const auto primary = primaryValueMimeType(mimeTypes);
 
 	PropertyData data;
 	data.id = name;
@@ -356,20 +384,20 @@ PropertyData SystemMenuNodePropertiesDocument::Private::propertyData(const QStri
 	data.value = PropertyMime::normalizeValue(value, primary);
 	data.defaultValue = PropertyMime::defaultValue(primary);
 	data.tooltip = mimeTypes.isEmpty()
-		? SystemMenuNodePropertiesDocument::tr("Mime-типы не заданы")
-		: SystemMenuNodePropertiesDocument::tr("Mime-типы: %1").arg(mimeTypes.join(QStringLiteral(", ")));
+		? SystemRouterNodePropertiesDocument::tr("Mime-типы не заданы")
+		: SystemRouterNodePropertiesDocument::tr("Mime-типы: %1").arg(mimeTypes.join(QStringLiteral(", ")));
 
 	if (data.type == PropertyType::Number) {
 		PropertyMime::applyNumberLimits(data, primary);
 	}
 	else if (data.type == PropertyType::PathFile) {
-		data.fileFilter = SystemMenuNodePropertiesDocument::tr("Все файлы (*.*)");
+		data.fileFilter = SystemRouterNodePropertiesDocument::tr("Все файлы (*.*)");
 	}
 
 	return data;
 }
 
-void SystemMenuNodePropertiesDocument::Private::refreshSelector(const QString& preferredProperty) {
+void SystemRouterNodePropertiesDocument::Private::refreshSelector(const QString& preferredProperty) {
 	if (!selector) {
 		return;
 	}
@@ -395,7 +423,7 @@ void SystemMenuNodePropertiesDocument::Private::refreshSelector(const QString& p
 	updateActions();
 }
 
-void SystemMenuNodePropertiesDocument::Private::updateActions() {
+void SystemRouterNodePropertiesDocument::Private::updateActions() {
 	const bool hasNode = node != nullptr;
 	const bool hasProperty = hasNode && !selectedProperty().isEmpty();
 	addButton->setEnabled(hasNode);
@@ -403,11 +431,11 @@ void SystemMenuNodePropertiesDocument::Private::updateActions() {
 	mimeButton->setEnabled(hasProperty);
 }
 
-QString SystemMenuNodePropertiesDocument::Private::selectedProperty() const {
+QString SystemRouterNodePropertiesDocument::Private::selectedProperty() const {
 	return selector ? selector->currentData().toString() : QString();
 }
 
-void SystemMenuNodePropertiesDocument::Private::setStatus(const QString& message, bool error) {
+void SystemRouterNodePropertiesDocument::Private::setStatus(const QString& message, bool error) {
 	if (!status) {
 		return;
 	}
@@ -418,32 +446,32 @@ void SystemMenuNodePropertiesDocument::Private::setStatus(const QString& message
 	status->style()->polish(status);
 }
 
-bool SystemMenuNodePropertiesDocument::Private::persist() {
+bool SystemRouterNodePropertiesDocument::Private::persist() {
 	if (!service || !node) {
 		return false;
 	}
 
 	if (!service->updateItem(node)) {
 		const auto message = service->lastError().isEmpty()
-			? SystemMenuNodePropertiesDocument::tr("Не удалось сохранить параметры узла")
+			? SystemRouterNodePropertiesDocument::tr("Не удалось сохранить параметры узла")
 			: service->lastError();
 		setStatus(message, true);
 		emit q->errorOccurred(message);
 		return false;
 	}
 
-	setStatus(SystemMenuNodePropertiesDocument::tr("Сохранено"), false);
+	setStatus(SystemRouterNodePropertiesDocument::tr("Сохранено"), false);
 	return true;
 }
 
-SystemMenuNodePropertiesDocument::SystemMenuNodePropertiesDocument(SystemMenuService* service,
+SystemRouterNodePropertiesDocument::SystemRouterNodePropertiesDocument(SystemRouterService* service,
 	const QVariant& nodeId, QWidget* parent)
 	: DocumentWidget(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->service = service;
 	d->nodeId = nodeId;
 
-	setObjectName(QStringLiteral("SystemMenuNodePropertiesDocument"));
+	setObjectName(QStringLiteral("SystemRouterNodePropertiesDocument"));
 	setGlyph(QStringLiteral("🛠"));
 	setTitle(tr("Параметры узла"));
 
@@ -451,17 +479,17 @@ SystemMenuNodePropertiesDocument::SystemMenuNodePropertiesDocument(SystemMenuSer
 	d->loadNode();
 }
 
-SystemMenuNodePropertiesDocument::~SystemMenuNodePropertiesDocument() = default;
+SystemRouterNodePropertiesDocument::~SystemRouterNodePropertiesDocument() = default;
 
-QVariant SystemMenuNodePropertiesDocument::nodeId() const {
+QVariant SystemRouterNodePropertiesDocument::nodeId() const {
 	return d->nodeId;
 }
 
-LazyTreeNodePtr SystemMenuNodePropertiesDocument::node() const {
+LazyTreeNodePtr SystemRouterNodePropertiesDocument::node() const {
 	return d->node;
 }
 
-bool SystemMenuNodePropertiesDocument::addProperty(const QString& name,
+bool SystemRouterNodePropertiesDocument::addProperty(const QString& name,
 	const QStringList& mimeTypes, const QVariant& value) {
 	if (!d->node || !d->service) {
 		return false;
@@ -473,7 +501,7 @@ bool SystemMenuNodePropertiesDocument::addProperty(const QString& name,
 		return false;
 	}
 
-	const auto primary = PropertyMime::primaryMimeType(mimeTypes);
+	const auto primary = primaryValueMimeType(mimeTypes);
 	const auto actualValue = value.isValid()
 		? PropertyMime::normalizeValue(value, primary)
 		: PropertyMime::defaultValue(primary);
@@ -491,7 +519,7 @@ bool SystemMenuNodePropertiesDocument::addProperty(const QString& name,
 	return true;
 }
 
-bool SystemMenuNodePropertiesDocument::removeProperty(const QString& name) {
+bool SystemRouterNodePropertiesDocument::removeProperty(const QString& name) {
 	if (!d->node || !d->service) {
 		return false;
 	}
@@ -520,7 +548,7 @@ bool SystemMenuNodePropertiesDocument::removeProperty(const QString& name) {
 	return true;
 }
 
-bool SystemMenuNodePropertiesDocument::setPropertyValue(const QString& name,
+bool SystemRouterNodePropertiesDocument::setPropertyValue(const QString& name,
 	const QVariant& value) {
 	if (!d->node || !d->service) {
 		return false;
@@ -546,7 +574,7 @@ bool SystemMenuNodePropertiesDocument::setPropertyValue(const QString& name,
 	return true;
 }
 
-bool SystemMenuNodePropertiesDocument::setPropertyMimeTypes(const QString& name,
+bool SystemRouterNodePropertiesDocument::setPropertyMimeTypes(const QString& name,
 	const QStringList& mimeTypes) {
 	if (!d->node || !d->service || !d->node->properties().contains(name)) {
 		return false;
@@ -568,7 +596,7 @@ bool SystemMenuNodePropertiesDocument::setPropertyMimeTypes(const QString& name,
 	return true;
 }
 
-void SystemMenuNodePropertiesDocument::refresh() {
+void SystemRouterNodePropertiesDocument::refresh() {
 	if (!d->service) {
 		return;
 	}
@@ -576,12 +604,12 @@ void SystemMenuNodePropertiesDocument::refresh() {
 	d->loadNode();
 }
 
-bool SystemMenuNodePropertiesDocument::save() {
+bool SystemRouterNodePropertiesDocument::save() {
 	// Изменения сохраняются сразу при редактировании.
 	return true;
 }
 
-void SystemMenuNodePropertiesDocument::onContextAttached() {
+void SystemRouterNodePropertiesDocument::onContextAttached() {
 	if (!d->service) {
 		return;
 	}

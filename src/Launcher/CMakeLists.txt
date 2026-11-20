@@ -35,7 +35,7 @@ target_link_libraries(Launcher
 		RedComplexDatabaseModule
 		RedComplexFetchApiModule
 		RedComplexMessagerModule
-		RedComplexSystemMenuModule
+		RedComplexSystemRouterModule
 		RedComplexUsersModule
 
 )

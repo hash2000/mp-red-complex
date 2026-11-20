@@ -38,12 +38,12 @@ define:
             title: Список ошибок
 
     - sidebar:
-        default: system-menu
+        default: system-router
         content:
-          - xtype: system-menu
-            name: system-menu
-            glyph: "🏢"
-            title: Системное меню
+          - xtype: system-router
+            name: system-router
+            glyph: "🧭"
+            title: Системный маршрутизатор
 
           - xtype: explorer
             name: explorer

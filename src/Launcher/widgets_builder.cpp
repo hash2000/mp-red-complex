@@ -7,9 +7,10 @@
 #include "Content/FetchApiModule/documents/fetch_queries_tree_document.h"
 #include "Content/FetchApiModule/services/fetch_queries_service.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
-#include "Content/SystemMenu/documents/system_menu_node_properties_document.h"
-#include "Content/SystemMenu/documents/system_menu_tree_document.h"
-#include "Content/SystemMenu/services/system_menu_service.h"
+#include "Content/SystemRouter/documents/system_router_node_properties_document.h"
+#include "Content/SystemRouter/documents/system_router_tree_document.h"
+#include "Content/SystemRouter/services/system_router_command_service.h"
+#include "Content/SystemRouter/services/system_router_service.h"
 #include "Content/UsersModule/documents/login_document.h"
 #include "Content/UsersModule/documents/register_document.h"
 #include "Content/UsersModule/documents/user_document.h"
@@ -221,20 +222,23 @@ void WidgetsBuilder::Private::registerAll() {
 			return service ? new FetchQueriesTreeDocument(service->dataProvider(), handler.parent) : nullptr;
 		});
 
-	registry->registerFactory({ "Content.SystemMenu.SystemMenuTreeDocument", "system-menu",
-		/*singletone*/ true, QStringLiteral("🗂"), QStringLiteral("Системное меню") },
+	registry->registerFactory({ "Content.SystemRouter.SystemRouterTreeDocument", "system-router",
+		/*singletone*/ true, QStringLiteral("🗂"), QStringLiteral("Системный маршрутизатор") },
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
-			auto* service = requiredService<SystemMenuService>(servicesFor(type, handler), type, "SystemMenuService");
-			return service ? new SystemMenuTreeDocument(service, handler.parent) : nullptr;
+			auto* services = servicesFor(type, handler);
+			auto* service = requiredService<SystemRouterService>(services, type, "SystemRouterService");
+			auto* commandService = requiredService<SystemRouterCommandService>(services, type,
+				"SystemRouterCommandService");
+			return service ? new SystemRouterTreeDocument(service, commandService, handler.parent) : nullptr;
 		});
 
 	// Параметры узла: обычный документ, один на узел (id задаёт вызывающая сторона).
-	registry->registerFactory({ "Content.SystemMenu.SystemMenuNodePropertiesDocument",
-		"system-menu-node-properties", /*singletone*/ false, QStringLiteral("🛠"),
+	registry->registerFactory({ "Content.SystemRouter.SystemRouterNodePropertiesDocument",
+		"system-router-node-properties", /*singletone*/ false, QStringLiteral("🛠"),
 		QStringLiteral("Параметры узла") },
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
-			auto* service = requiredService<SystemMenuService>(servicesFor(type, handler), type, "SystemMenuService");
-			return service ? new SystemMenuNodePropertiesDocument(service, {}, handler.parent) : nullptr;
+			auto* service = requiredService<SystemRouterService>(servicesFor(type, handler), type, "SystemRouterService");
+			return service ? new SystemRouterNodePropertiesDocument(service, {}, handler.parent) : nullptr;
 		});
 
 	// Редактор кода — обычный документ: экземпляров может быть несколько.

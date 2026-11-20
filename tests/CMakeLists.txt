@@ -21,11 +21,12 @@ add_subdirectory(basewidgets)
 enable_testing()
 add_test(NAME TestDatabasesService COMMAND TestDatabasesService)
 add_test(NAME TestLazyNodesDataProviderDb COMMAND TestLazyNodesDataProviderDb)
-add_test(NAME TestSystemMenu COMMAND TestSystemMenu)
+add_test(NAME TestSystemRouter COMMAND TestSystemRouter)
+add_test(NAME TestSystemRouterCommandsDb COMMAND TestSystemRouterCommandsDb)
 
 # Цель для запуска всех тестов
 add_custom_target(run_tests
     COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
-    DEPENDS TestItemsService TestInventoriesService TestEngine TestDatabasesService TestUiZones TestClassManager TestHighlighters TestCodeEditorSearch TestLazyTreeView TestLazyTreeWidget TestLazyNodesDataProviderDb TestSystemMenu
+    DEPENDS TestItemsService TestInventoriesService TestEngine TestDatabasesService TestUiZones TestClassManager TestHighlighters TestCodeEditorSearch TestLazyTreeView TestLazyTreeWidget TestLazyNodesDataProviderDb TestSystemRouter TestSystemRouterCommandsDb
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )

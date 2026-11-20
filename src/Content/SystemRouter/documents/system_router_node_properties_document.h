@@ -10,21 +10,21 @@ class PropertiesListWidget;
 class QComboBox;
 class QLabel;
 class QToolButton;
-class SystemMenuService;
+class SystemRouterService;
 
-/// Документ параметров узла системного меню.
+/// Документ параметров узла системного маршрутизатора.
 ///
 /// Показывает `ILazyTreeNode::properties()` в PropertiesListWidget и позволяет
 /// добавлять, удалять и изменять свойства вместе с их mime-типами.
-/// Изменения сразу сохраняются через SystemMenuService.
-class SystemMenuNodePropertiesDocument final : public DocumentWidget {
+/// Изменения сразу сохраняются через SystemRouterService.
+class SystemRouterNodePropertiesDocument final : public DocumentWidget {
 	Q_OBJECT
 public:
 	/// @param nodeId идентификатор узла; пустой — узел будет прочитан из
 	///        переменной контекста документа `nodeId` при привязке контекста.
-	explicit SystemMenuNodePropertiesDocument(SystemMenuService* service,
+	explicit SystemRouterNodePropertiesDocument(SystemRouterService* service,
 		const QVariant& nodeId = {}, QWidget* parent = nullptr);
-	~SystemMenuNodePropertiesDocument() override;
+	~SystemRouterNodePropertiesDocument() override;
 
 	QVariant nodeId() const;
 	LazyTreeNodePtr node() const;

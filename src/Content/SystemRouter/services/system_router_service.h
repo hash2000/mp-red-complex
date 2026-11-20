@@ -4,16 +4,16 @@
 #include <QObject>
 #include <memory>
 
-/// Сервис системного меню.
+/// Сервис системного маршрутизатора.
 ///
-/// Принимает поставщика данных и выполняет операции над пунктами меню:
+/// Принимает поставщика данных и выполняет операции над узлами:
 /// создание, переименование, перемещение, удаление и выборку. Поставщик
 /// отвечает только за хранение и ленивую загрузку узлов.
-class SystemMenuService : public QObject {
+class SystemRouterService : public QObject {
 	Q_OBJECT
 public:
-	explicit SystemMenuService(ILazyNodesDataProvider* provider, QObject* parent = nullptr);
-	~SystemMenuService() override;
+	explicit SystemRouterService(ILazyNodesDataProvider* provider, QObject* parent = nullptr);
+	~SystemRouterService() override;
 
 	ILazyNodesDataProvider* dataProvider() const;
 
@@ -22,7 +22,7 @@ public:
 	LazyTreeNodeList search(const QString& text) const;
 	LazyTreeNodePtr item(const QVariant& id) const;
 
-	/// Создать пункт меню; nullptr — операция не выполнена (см. lastError()).
+	/// Создать узел; nullptr — операция не выполнена (см. lastError()).
 	LazyTreeNodePtr createItem(const QVariant& parentId, const QString& name,
 		const QVariantMap& properties = {});
 

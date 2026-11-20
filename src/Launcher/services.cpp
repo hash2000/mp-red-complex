@@ -8,9 +8,11 @@
 #include "Content/FetchApiModule/services/fetch_queries_service.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
 
-// SystemMenu
-#include "Content/SystemMenu/data_providers/system_menu_data_provider_db.h"
-#include "Content/SystemMenu/services/system_menu_service.h"
+// SystemRouter
+#include "Content/SystemRouter/data_providers/system_router_commands_provider_db.h"
+#include "Content/SystemRouter/data_providers/system_router_data_provider_db.h"
+#include "Content/SystemRouter/services/system_router_command_service.h"
+#include "Content/SystemRouter/services/system_router_service.h"
 
 //// ShadersModule
 //#include "Content/ShadersModule/data_providers/shaders_data_provider_impl.h"
@@ -67,7 +69,8 @@ public:
 		//, tileGroupsDataProvider([this] {	return std::make_unique<TileGroupsDataProviderJsonImpl>(resources);	})
 		, usersRegistryDataProvider([this] {	return std::make_unique<UsersRegistryDataProviderDb>(databasesService.get()); })
 		, fetchQueriesDataProvider([this] {	return std::make_unique<FetchQueriesDataProviderDb>(databasesService.get()); })
-		, systemMenuDataProvider([this] {	return std::make_unique<SystemMenuDataProviderDb>(databasesService.get()); })
+		, systemRouterDataProvider([this] {	return std::make_unique<SystemRouterDataProviderDb>(databasesService.get()); })
+		, systemRouterCommandsProvider([this] {	return std::make_unique<SystemRouterCommandsProviderDb>(databasesService.get()); })
 		//, characterDataProvider([this] {	return std::make_unique<CharacterDataProviderDb>(databasesService.get());	})
 		//, shadersDataProvider([this] { return std::make_unique<ShadersDataProviderLocalImpl>(resources); })
 		//, materialsDataProvider([this] { return std::make_unique<MaterialsDataProviderJsonImpl>(resources); })
@@ -90,7 +93,8 @@ private:
 	//LazyPtr<IEntitiesDataProvider> entitiesDataProvider;
 	LazyPtr<IUsersRegistryDataProvider> usersRegistryDataProvider;
 	LazyPtr<FetchQueriesDataProviderDb> fetchQueriesDataProvider;
-	LazyPtr<SystemMenuDataProviderDb> systemMenuDataProvider;
+	LazyPtr<SystemRouterDataProviderDb> systemRouterDataProvider;
+	LazyPtr<SystemRouterCommandsProviderDb> systemRouterCommandsProvider;
 	//LazyPtr<ICharacterDataProvider> characterDataProvider;
 	//LazyPtr<IImagesDataProvider> imagesDataProvider;
 	//LazyPtr<ITileGroupsDataProvider> tileGroupsDataProvider;
@@ -166,9 +170,14 @@ public:
 				fetchQueriesDataProvider.get());
 		});
 
-		registerFactory<SystemMenuService>([this]() {
-			return std::make_unique<SystemMenuService>(
-				systemMenuDataProvider.get());
+		registerFactory<SystemRouterService>([this]() {
+			return std::make_unique<SystemRouterService>(
+				systemRouterDataProvider.get());
+		});
+
+		registerFactory<SystemRouterCommandService>([this]() {
+			return std::make_unique<SystemRouterCommandService>(
+				systemRouterCommandsProvider.get());
 		});
 
 		registerFactory<HighlightingPluginManager>([this] {

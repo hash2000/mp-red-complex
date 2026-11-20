@@ -1,14 +1,14 @@
-#include "Content/SystemMenu/services/system_menu_service.h"
+#include "Content/SystemRouter/services/system_router_service.h"
 
 #include <QSet>
 
-class SystemMenuService::Private {
+class SystemRouterService::Private {
 public:
-	explicit Private(SystemMenuService* parent)
+	explicit Private(SystemRouterService* parent)
 		: q(parent) {
 	}
 
-	SystemMenuService* q;
+	SystemRouterService* q;
 	ILazyNodesDataProvider* provider = nullptr;
 	QString lastError;
 
@@ -68,57 +68,57 @@ public:
 	}
 };
 
-SystemMenuService::SystemMenuService(ILazyNodesDataProvider* provider, QObject* parent)
+SystemRouterService::SystemRouterService(ILazyNodesDataProvider* provider, QObject* parent)
 	: QObject(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->provider = provider;
 }
 
-SystemMenuService::~SystemMenuService() = default;
+SystemRouterService::~SystemRouterService() = default;
 
-ILazyNodesDataProvider* SystemMenuService::dataProvider() const {
+ILazyNodesDataProvider* SystemRouterService::dataProvider() const {
 	return d->provider;
 }
 
-LazyTreeNodeList SystemMenuService::rootNodes() const {
+LazyTreeNodeList SystemRouterService::rootNodes() const {
 	return d->provider ? d->provider->get(QVariant()) : LazyTreeNodeList();
 }
 
-LazyTreeNodeList SystemMenuService::children(const QVariant& parentId) const {
+LazyTreeNodeList SystemRouterService::children(const QVariant& parentId) const {
 	return d->provider ? d->provider->get(parentId) : LazyTreeNodeList();
 }
 
-LazyTreeNodeList SystemMenuService::search(const QString& text) const {
+LazyTreeNodeList SystemRouterService::search(const QString& text) const {
 	return d->provider ? d->provider->search(text) : LazyTreeNodeList();
 }
 
-LazyTreeNodePtr SystemMenuService::item(const QVariant& id) const {
+LazyTreeNodePtr SystemRouterService::item(const QVariant& id) const {
 	return d->provider ? d->provider->getNode(id) : nullptr;
 }
 
-LazyTreeNodePtr SystemMenuService::createItem(const QVariant& parentId, const QString& name,
+LazyTreeNodePtr SystemRouterService::createItem(const QVariant& parentId, const QString& name,
 	const QVariantMap& properties) {
 	d->clearError();
 
 	if (!d->provider) {
-		d->fail(tr("Поставщик данных системного меню не задан"));
+		d->fail(tr("Поставщик данных системного маршрутизатора не задан"));
 		return nullptr;
 	}
 
 	const QString trimmed = name.trimmed();
 	if (trimmed.isEmpty()) {
-		d->fail(tr("Имя пункта меню не может быть пустым"));
+		d->fail(tr("Имя узла не может быть пустым"));
 		return nullptr;
 	}
 
 	if (d->siblingNameExists(parentId, trimmed)) {
-		d->fail(tr("Пункт меню с именем «%1» уже существует").arg(trimmed));
+		d->fail(tr("Узел с именем «%1» уже существует").arg(trimmed));
 		return nullptr;
 	}
 
 	const auto node = d->provider->createTreeNode();
 	if (!node) {
-		d->fail(tr("Не удалось создать узел системного меню"));
+		d->fail(tr("Не удалось создать узел системного маршрутизатора"));
 		return nullptr;
 	}
 
@@ -137,11 +137,11 @@ LazyTreeNodePtr SystemMenuService::createItem(const QVariant& parentId, const QS
 	return node;
 }
 
-bool SystemMenuService::updateItem(const LazyTreeNodePtr& node) {
+bool SystemRouterService::updateItem(const LazyTreeNodePtr& node) {
 	d->clearError();
 
 	if (!d->provider || !node) {
-		return d->fail(tr("Поставщик данных системного меню не задан"));
+		return d->fail(tr("Поставщик данных системного маршрутизатора не задан"));
 	}
 
 	if (!d->provider->update(node)) {
@@ -152,25 +152,25 @@ bool SystemMenuService::updateItem(const LazyTreeNodePtr& node) {
 	return true;
 }
 
-bool SystemMenuService::renameItem(const QVariant& id, const QString& name) {
+bool SystemRouterService::renameItem(const QVariant& id, const QString& name) {
 	d->clearError();
 
 	if (!d->provider) {
-		return d->fail(tr("Поставщик данных системного меню не задан"));
+		return d->fail(tr("Поставщик данных системного маршрутизатора не задан"));
 	}
 
 	const QString trimmed = name.trimmed();
 	if (trimmed.isEmpty()) {
-		return d->fail(tr("Имя пункта меню не может быть пустым"));
+		return d->fail(tr("Имя узла не может быть пустым"));
 	}
 
 	const auto node = d->provider->getNode(id);
 	if (!node) {
-		return d->fail(tr("Пункт меню не найден"));
+		return d->fail(tr("Узел не найден"));
 	}
 
 	if (d->siblingNameExists(node->parentId(), trimmed, id)) {
-		return d->fail(tr("Пункт меню с именем «%1» уже существует").arg(trimmed));
+		return d->fail(tr("Узел с именем «%1» уже существует").arg(trimmed));
 	}
 
 	node->setName(trimmed);
@@ -182,24 +182,24 @@ bool SystemMenuService::renameItem(const QVariant& id, const QString& name) {
 	return true;
 }
 
-bool SystemMenuService::moveItem(const QVariant& id, const QVariant& parentId) {
+bool SystemRouterService::moveItem(const QVariant& id, const QVariant& parentId) {
 	d->clearError();
 
 	if (!d->provider) {
-		return d->fail(tr("Поставщик данных системного меню не задан"));
+		return d->fail(tr("Поставщик данных системного маршрутизатора не задан"));
 	}
 
 	if (id == parentId) {
-		return d->fail(tr("Пункт меню не может быть родителем самому себе"));
+		return d->fail(tr("Узел не может быть родителем самому себе"));
 	}
 
 	if (d->wouldCreateCycle(id, parentId)) {
-		return d->fail(tr("Нельзя переместить пункт меню внутрь его поддерева"));
+		return d->fail(tr("Нельзя переместить узел внутрь его поддерева"));
 	}
 
 	const auto node = d->provider->getNode(id);
 	if (!node) {
-		return d->fail(tr("Пункт меню не найден"));
+		return d->fail(tr("Узел не найден"));
 	}
 
 	node->setParentId(parentId);
@@ -211,11 +211,11 @@ bool SystemMenuService::moveItem(const QVariant& id, const QVariant& parentId) {
 	return true;
 }
 
-bool SystemMenuService::removeItem(const QVariant& id) {
+bool SystemRouterService::removeItem(const QVariant& id) {
 	d->clearError();
 
 	if (!d->provider) {
-		return d->fail(tr("Поставщик данных системного меню не задан"));
+		return d->fail(tr("Поставщик данных системного маршрутизатора не задан"));
 	}
 
 	if (!d->provider->remove(id)) {
@@ -226,6 +226,6 @@ bool SystemMenuService::removeItem(const QVariant& id) {
 	return true;
 }
 
-QString SystemMenuService::lastError() const {
+QString SystemRouterService::lastError() const {
 	return d->lastError;
 }
