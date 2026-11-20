@@ -43,6 +43,7 @@ protected:
 
 private:
 	void onNodeActivated(const LazyTreeNodePtr& node);
+	void toggleNodeExpansion(const LazyTreeNodePtr& node);
 	void executePreview(const LazyTreeNodePtr& node,
 		const SystemRouterScriptPreview& preview);
 

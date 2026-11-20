@@ -15,6 +15,7 @@
 
 #include <QFormLayout>
 #include <QLabel>
+#include <QStandardItem>
 #include <QUuid>
 #include <QVBoxLayout>
 #include <QVariantMap>
@@ -137,16 +138,16 @@ void SystemRouterTreeDocument::onNodeActivated(const LazyTreeNodePtr& node) {
 		return;
 	}
 
-	// Без сервиса команд или без привязанных скриптов сохраняем прежнее
-	// поведение: двойной щелчок открывает параметры узла.
+	// Без сервиса команд или без привязанных скриптов узел ведёт себя как
+	// обычный элемент дерева: двойной щелчок разворачивает/сворачивает его.
 	if (!d->commandService) {
-		openNodeProperties(node);
+		toggleNodeExpansion(node);
 		return;
 	}
 
 	const auto previews = d->commandService->previewsForNode(node);
 	if (previews.isEmpty()) {
-		openNodeProperties(node);
+		toggleNodeExpansion(node);
 		return;
 	}
 
@@ -159,6 +160,25 @@ void SystemRouterTreeDocument::onNodeActivated(const LazyTreeNodePtr& node) {
 	if (dialog.exec() == QDialog::Accepted) {
 		executePreview(node, dialog.selectedPreview());
 	}
+}
+
+void SystemRouterTreeDocument::toggleNodeExpansion(const LazyTreeNodePtr& node) {
+	if (!d->tree || !node) {
+		return;
+	}
+
+	auto* view = d->tree->treeView();
+	if (!view) {
+		return;
+	}
+
+	auto* item = view->findNode(node->id());
+	if (!item || item->rowCount() == 0) {
+		return;
+	}
+
+	const QModelIndex index = item->index();
+	view->setExpanded(index, !view->isExpanded(index));
 }
 
 void SystemRouterTreeDocument::executePreview(const LazyTreeNodePtr& node,

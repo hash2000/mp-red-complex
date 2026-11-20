@@ -77,6 +77,7 @@ private slots:
 	void nodePropertiesDocument();
 	void codeEditorPropertyUsesButton();
 	void doubleClickEmitsNodeActivated();
+	void doubleClickWithoutCommandTogglesNode();
 	void commandServiceCrud();
 	void rendersScriptParameters();
 	void previewsForNodeFindsCommands();
@@ -263,6 +264,33 @@ void TestSystemRouter::doubleClickEmitsNodeActivated() {
 	QVERIFY(invoked);
 	QCOMPARE(activated, 1);
 	QVERIFY(activatedNode == item);
+}
+
+void TestSystemRouter::doubleClickWithoutCommandTogglesNode() {
+	auto root = _service->createItem(QVariant(), QStringLiteral("Root"));
+	QVERIFY(root);
+	auto child = _service->createItem(root->id(), QStringLiteral("Child"));
+	QVERIFY(child);
+
+	// Узел должен быть ленивым, чтобы у него был дочерний элемент для
+	// разворачивания.
+	root->setChildren(LazyTreeNodeList());
+	_provider->setChildren(root->id(), { child });
+
+	SystemRouterTreeDocument document(_service.get(), nullptr);
+	auto* view = document.tree()->treeView();
+	auto* model = qobject_cast<QStandardItemModel*>(view->model());
+	QVERIFY(model);
+	const QModelIndex index = model->index(0, 0);
+	QVERIFY(index.isValid());
+
+	QVERIFY(!view->isExpanded(index));
+	QVERIFY(QMetaObject::invokeMethod(view, "activated", Qt::DirectConnection,
+		Q_ARG(QModelIndex, index)));
+	QVERIFY(view->isExpanded(index));
+	QVERIFY(QMetaObject::invokeMethod(view, "activated", Qt::DirectConnection,
+		Q_ARG(QModelIndex, index)));
+	QVERIFY(!view->isExpanded(index));
 }
 
 void TestSystemRouter::commandServiceCrud() {
