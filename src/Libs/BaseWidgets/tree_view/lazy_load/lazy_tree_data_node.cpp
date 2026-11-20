@@ -11,6 +11,7 @@ public:
 	bool expanded = false;
 	QVariantMap properties;
 	QHash<QString, QStringList> propertyMimeTypes;
+	QHash<QString, QString> propertyValueBlobIds;
 	std::optional<LazyTreeNodeList> children;
 };
 
@@ -102,6 +103,7 @@ bool LazyTreeDataNode::removeProperty(const QString& name) {
 	}
 
 	d->propertyMimeTypes.remove(name);
+	d->propertyValueBlobIds.remove(name);
 	return d->properties.remove(name) > 0;
 }
 
@@ -138,4 +140,23 @@ bool LazyTreeDataNode::setPropertyMimeTypes(const QString& name, const QStringLi
 
 QHash<QString, QStringList> LazyTreeDataNode::propertyMimeTypes() const {
 	return d->propertyMimeTypes;
+}
+
+QString LazyTreeDataNode::propertyValueBlobId(const QString& name) const {
+	return d->propertyValueBlobIds.value(name);
+}
+
+bool LazyTreeDataNode::setPropertyValueBlobId(const QString& name, const QString& blobId) {
+	if (name.isEmpty()) {
+		return false;
+	}
+
+	if (blobId.isEmpty()) {
+		d->propertyValueBlobIds.remove(name);
+	}
+	else {
+		d->propertyValueBlobIds.insert(name, blobId);
+	}
+
+	return true;
 }

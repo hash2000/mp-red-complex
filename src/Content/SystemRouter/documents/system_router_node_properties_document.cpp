@@ -1,8 +1,13 @@
 #include "Content/SystemRouter/documents/system_router_node_properties_document.h"
 #include "Content/SystemRouter/models/system_router_mime.h"
+#include "Content/SystemRouter/services/system_router_blob_service.h"
 #include "Content/SystemRouter/services/system_router_service.h"
 #include "Libs/BaseWidgets/properties/properties_list_widget.h"
 #include "Libs/BaseWidgets/properties/property_mime.h"
+#include "Libs/Engine/scripting/command_context.h"
+#include "Libs/Engine/scripting/command_controller.h"
+#include "Libs/Engine/scripting/command_processor.h"
+#include "Libs/Engine/ui/main_window.h"
 
 #include <QComboBox>
 #include <QCoreApplication>
@@ -11,17 +16,21 @@
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
+#include <QJsonDocument>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QListWidgetItem>
+#include <QPointer>
 #include <QPushButton>
 #include <QSet>
 #include <QSignalBlocker>
 #include <QStyle>
 #include <QToolButton>
+#include <QUuid>
 #include <QVBoxLayout>
 
+#include <algorithm>
 #include <optional>
 
 namespace {
@@ -39,6 +48,9 @@ QStringList valueMimeTypes(const QStringList& mimeTypes) {
 		const auto mime = raw.trimmed();
 		if (mime.compare(QLatin1String(SystemRouterMime::kCommand), Qt::CaseInsensitive) == 0
 			|| mime.compare(QLatin1String(SystemRouterMime::kCommandParameter),
+				Qt::CaseInsensitive) == 0
+			|| mime.compare(QLatin1String(SystemRouterMime::kShared), Qt::CaseInsensitive) == 0
+			|| mime.compare(QLatin1String(SystemRouterMime::kContextVariable),
 				Qt::CaseInsensitive) == 0) {
 			continue;
 		}
@@ -82,7 +94,8 @@ std::optional<PropertyDescriptor> requestPropertyDescriptor(QWidget* parent,
 	// маршрутизатора и распространённые.
 	QStringList ordered = mimeTypes;
 	for (const auto* routerMime : { SystemRouterMime::kCommand,
-		SystemRouterMime::kCommandParameter }) {
+		SystemRouterMime::kCommandParameter, SystemRouterMime::kShared,
+		SystemRouterMime::kContextVariable }) {
 		if (!ordered.contains(QLatin1String(routerMime), Qt::CaseInsensitive)) {
 			ordered.append(QLatin1String(routerMime));
 		}
@@ -205,8 +218,10 @@ public:
 
 	SystemRouterNodePropertiesDocument* q;
 	SystemRouterService* service = nullptr;
+	SystemRouterBlobService* blobService = nullptr;
 	QVariant nodeId;
 	LazyTreeNodePtr node;
+	QSet<CommandContext*> connectedEditors;
 
 	QLabel* header = nullptr;
 	QComboBox* selector = nullptr;
@@ -222,9 +237,16 @@ public:
 	void refreshSelector(const QString& preferredProperty = {});
 	void updateActions();
 	void setStatus(const QString& message, bool error);
+	void reportError(const QString& message);
+	void reportWarning(const QString& message);
 	bool persist();
 	QString selectedProperty() const;
 	PropertyData propertyData(const QString& name, const QVariant& value) const;
+	void onPropertyButtonClick(const QString& name);
+	QString ensureBlob(const QString& name);
+	QString valueToBlobText(const QVariant& value) const;
+	void openBlobEditor(const QString& name);
+	void connectEditorContext(const std::shared_ptr<CommandContext>& context);
 };
 
 void SystemRouterNodePropertiesDocument::Private::setupUi() {
@@ -329,6 +351,11 @@ void SystemRouterNodePropertiesDocument::Private::setupUi() {
 		[this](const QString& name, const QVariant& value) {
 			q->setPropertyValue(name, value);
 		});
+
+	QObject::connect(list, &PropertiesListWidget::propertyButtonClick, q,
+		[this](const QString& name) {
+			onPropertyButtonClick(name);
+		});
 }
 
 void SystemRouterNodePropertiesDocument::Private::loadNode() {
@@ -380,12 +407,23 @@ PropertyData SystemRouterNodePropertiesDocument::Private::propertyData(const QSt
 	PropertyData data;
 	data.id = name;
 	data.label = name;
-	data.type = PropertyMime::editorType(primary);
-	data.value = PropertyMime::normalizeValue(value, primary);
-	data.defaultValue = PropertyMime::defaultValue(primary);
 	data.tooltip = mimeTypes.isEmpty()
 		? SystemRouterNodePropertiesDocument::tr("Mime-типы не заданы")
 		: SystemRouterNodePropertiesDocument::tr("Mime-типы: %1").arg(mimeTypes.join(QStringLiteral(", ")));
+
+	if (SystemRouterMime::isCodeEditorProperty(mimeTypes)) {
+		data.type = PropertyType::Button;
+		data.tooltip += SystemRouterNodePropertiesDocument::tr("\nОткрыть в редакторе кода");
+		const auto command = node ? node->properties().value(name).toString() : QString();
+		if (!command.isEmpty()) {
+			data.tooltip += SystemRouterNodePropertiesDocument::tr("\nКоманда: %1").arg(command);
+		}
+		return data;
+	}
+
+	data.type = PropertyMime::editorType(primary);
+	data.value = PropertyMime::normalizeValue(value, primary);
+	data.defaultValue = PropertyMime::defaultValue(primary);
 
 	if (data.type == PropertyType::Number) {
 		PropertyMime::applyNumberLimits(data, primary);
@@ -395,6 +433,210 @@ PropertyData SystemRouterNodePropertiesDocument::Private::propertyData(const QSt
 	}
 
 	return data;
+}
+
+void SystemRouterNodePropertiesDocument::Private::reportError(const QString& message) {
+	if (auto* controller = q->context() ? q->context()->commandController() : nullptr) {
+		controller->printError(message);
+	}
+
+	setStatus(message, true);
+	emit q->errorOccurred(message);
+}
+
+void SystemRouterNodePropertiesDocument::Private::reportWarning(const QString& message) {
+	if (auto* controller = q->context() ? q->context()->commandController() : nullptr) {
+		controller->printWarning(message);
+	}
+
+	setStatus(message, false);
+}
+
+QString SystemRouterNodePropertiesDocument::Private::valueToBlobText(const QVariant& value) const {
+	const auto type = value.metaType().id();
+	if (type == QMetaType::QVariantMap || type == QMetaType::QVariantList) {
+		return QString::fromUtf8(
+			QJsonDocument::fromVariant(value).toJson(QJsonDocument::Compact));
+	}
+
+	return value.toString();
+}
+
+QString SystemRouterNodePropertiesDocument::Private::ensureBlob(const QString& name) {
+	if (!node) {
+		return {};
+	}
+
+	const auto mimeTypes = node->propertyMimeTypes(name);
+	const bool command = std::any_of(mimeTypes.cbegin(), mimeTypes.cend(),
+		[](const QString& mime) {
+			return mime.trimmed().compare(QLatin1String(SystemRouterMime::kCommand),
+				Qt::CaseInsensitive) == 0;
+		});
+
+	if (command) {
+		// Для команды значение свойства — GUID, он же идентификатор блока
+		// со скриптом в data_blobs.
+		const auto raw = node->properties().value(name).toString().trimmed();
+		if (raw.isEmpty()) {
+			reportError(SystemRouterNodePropertiesDocument::tr("Ссылка на команду не задана"));
+			return {};
+		}
+
+		const auto uuid = QUuid::fromString(raw);
+		const auto blobId = uuid.isNull() ? raw : uuid.toString(QUuid::WithoutBraces);
+		if (!blobService) {
+			reportError(SystemRouterNodePropertiesDocument::tr("Сервис блоков данных недоступен"));
+			return {};
+		}
+
+		if (!blobService->blob(blobId).has_value()
+			&& !blobService->saveData(blobId, QString())) {
+			reportError(blobService->lastError().isEmpty()
+				? SystemRouterNodePropertiesDocument::tr("Не удалось создать блок команды")
+				: blobService->lastError());
+			return {};
+		}
+
+		return blobId;
+	}
+
+	auto blobId = node->propertyValueBlobId(name).trimmed();
+	if (!blobId.isEmpty()) {
+		return blobId;
+	}
+
+	if (!blobService) {
+		reportError(SystemRouterNodePropertiesDocument::tr("Сервис блоков данных недоступен"));
+		return {};
+	}
+
+	blobId = blobService->createData(valueToBlobText(node->properties().value(name)));
+	if (blobId.isEmpty()) {
+		reportError(blobService->lastError().isEmpty()
+			? SystemRouterNodePropertiesDocument::tr("Не удалось создать блок данных")
+			: blobService->lastError());
+		return {};
+	}
+
+	node->setPropertyValueBlobId(name, blobId);
+	if (!persist()) {
+		blobService->removeBlob(blobId);
+		node->setPropertyValueBlobId(name, {});
+		return {};
+	}
+
+	return blobId;
+}
+
+void SystemRouterNodePropertiesDocument::Private::connectEditorContext(
+	const std::shared_ptr<CommandContext>& context) {
+	if (!context || connectedEditors.contains(context.get())) {
+		return;
+	}
+
+	connectedEditors.insert(context.get());
+	QPointer<CommandContext> editorContext(context.get());
+	QObject::connect(context.get(), &CommandContext::eventFired, q,
+		[this, editorContext](const QString& eventName) {
+			if (!editorContext || eventName != CommandContext::documentSaveCompleteEvent()) {
+				return;
+			}
+
+			auto editor = editorContext->shared_from_this();
+			if (!editor) {
+				return;
+			}
+
+			auto* controller = editor->commandController();
+			auto* processor = controller ? controller->commandProcessor() : nullptr;
+			if (!processor) {
+				reportError(SystemRouterNodePropertiesDocument::tr(
+					"Процессор команд недоступен"));
+				return;
+			}
+
+			processor->execute(QStringLiteral("system-router-save-blob"), editor);
+			q->refresh();
+		});
+	QObject::connect(context.get(), &QObject::destroyed, q, [this, raw = context.get()] {
+		connectedEditors.remove(raw);
+	});
+}
+
+void SystemRouterNodePropertiesDocument::Private::openBlobEditor(const QString& name) {
+	if (!node || !q->context()) {
+		return;
+	}
+
+	const auto mimeTypes = node->propertyMimeTypes(name);
+	if (!SystemRouterMime::isCodeEditorProperty(mimeTypes)) {
+		return;
+	}
+
+	const auto blobId = ensureBlob(name);
+	if (blobId.isEmpty()) {
+		return;
+	}
+
+	if (!blobService) {
+		reportError(SystemRouterNodePropertiesDocument::tr("Сервис блоков данных недоступен"));
+		return;
+	}
+
+	const auto blob = blobService->blob(blobId);
+	if (!blob.has_value()) {
+		reportError(SystemRouterNodePropertiesDocument::tr("Блок данных не найден: %1")
+			.arg(blobId));
+		return;
+	}
+
+	auto* controller = q->context()->commandController();
+	auto* processor = controller ? controller->commandProcessor() : nullptr;
+	auto* window = controller ? controller->mainWindow() : nullptr;
+	if (!processor || !window) {
+		reportError(SystemRouterNodePropertiesDocument::tr(
+			"Не удалось открыть редактор: контроллер или окно недоступны"));
+		return;
+	}
+
+	const auto editorId = QStringLiteral("edit-value-blob-%1").arg(blobId);
+	auto commandContext = q->context()->createScopedContext(
+		QStringLiteral("system-router-open-blob"));
+	commandContext->setVariable(QStringLiteral("data"), blob->data);
+	commandContext->setVariableMimeType(QStringLiteral("data"),
+		QString::fromLatin1(PropertyMimeType::kShared));
+	commandContext->setVariable(QStringLiteral("blobId"), blobId);
+	commandContext->setVariableMimeType(QStringLiteral("blobId"),
+		QString::fromLatin1(PropertyMimeType::kShared));
+
+	const auto command = QStringLiteral("documents action=create, target=code-editor, id=%1")
+		.arg(editorId);
+	if (!processor->execute(command, commandContext)) {
+		reportError(SystemRouterNodePropertiesDocument::tr(
+			"Не удалось открыть редактор кода"));
+		return;
+	}
+
+	auto* editor = window->document(editorId);
+	if (!editor || !editor->context()) {
+		reportError(SystemRouterNodePropertiesDocument::tr(
+			"Документ редактора кода не создан"));
+		return;
+	}
+
+	auto editorContext = editor->context();
+	editorContext->setVariable(QStringLiteral("data"), blob->data);
+	editorContext->setVariable(QStringLiteral("blobId"), blobId);
+	editorContext->setVariableMimeType(QStringLiteral("data"),
+		QString::fromLatin1(PropertyMimeType::kShared));
+	editorContext->setVariableMimeType(QStringLiteral("blobId"),
+		QString::fromLatin1(PropertyMimeType::kShared));
+	connectEditorContext(editorContext);
+}
+
+void SystemRouterNodePropertiesDocument::Private::onPropertyButtonClick(const QString& name) {
+	openBlobEditor(name);
 }
 
 void SystemRouterNodePropertiesDocument::Private::refreshSelector(const QString& preferredProperty) {
@@ -455,8 +697,7 @@ bool SystemRouterNodePropertiesDocument::Private::persist() {
 		const auto message = service->lastError().isEmpty()
 			? SystemRouterNodePropertiesDocument::tr("Не удалось сохранить параметры узла")
 			: service->lastError();
-		setStatus(message, true);
-		emit q->errorOccurred(message);
+		reportError(message);
 		return false;
 	}
 
@@ -465,10 +706,11 @@ bool SystemRouterNodePropertiesDocument::Private::persist() {
 }
 
 SystemRouterNodePropertiesDocument::SystemRouterNodePropertiesDocument(SystemRouterService* service,
-	const QVariant& nodeId, QWidget* parent)
+	SystemRouterBlobService* blobService, const QVariant& nodeId, QWidget* parent)
 	: DocumentWidget(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->service = service;
+	d->blobService = blobService;
 	d->nodeId = nodeId;
 
 	setObjectName(QStringLiteral("SystemRouterNodePropertiesDocument"));
@@ -502,9 +744,18 @@ bool SystemRouterNodePropertiesDocument::addProperty(const QString& name,
 	}
 
 	const auto primary = primaryValueMimeType(mimeTypes);
-	const auto actualValue = value.isValid()
+	auto actualValue = value.isValid()
 		? PropertyMime::normalizeValue(value, primary)
 		: PropertyMime::defaultValue(primary);
+
+	const bool commandProperty = std::any_of(mimeTypes.cbegin(), mimeTypes.cend(),
+		[](const QString& mime) {
+			return mime.trimmed().compare(QLatin1String(SystemRouterMime::kCommand),
+				Qt::CaseInsensitive) == 0;
+		});
+	if (commandProperty && actualValue.toString().trimmed().isEmpty()) {
+		actualValue = QUuid::createUuid().toString(QUuid::WithoutBraces);
+	}
 
 	d->node->setProperty(trimmed, actualValue);
 	d->node->setPropertyMimeTypes(trimmed, mimeTypes);
@@ -581,12 +832,23 @@ bool SystemRouterNodePropertiesDocument::setPropertyMimeTypes(const QString& nam
 	}
 
 	const auto oldMimeTypes = d->node->propertyMimeTypes(name);
+	const auto oldValue = d->node->properties().value(name);
 	if (!d->node->setPropertyMimeTypes(name, mimeTypes)) {
 		return false;
 	}
 
+	const bool commandProperty = std::any_of(mimeTypes.cbegin(), mimeTypes.cend(),
+		[](const QString& mime) {
+			return mime.trimmed().compare(QLatin1String(SystemRouterMime::kCommand),
+				Qt::CaseInsensitive) == 0;
+		});
+	if (commandProperty && QUuid::fromString(oldValue.toString().trimmed()).isNull()) {
+		d->node->setProperty(name, QUuid::createUuid().toString(QUuid::WithoutBraces));
+	}
+
 	if (!d->persist()) {
 		d->node->setPropertyMimeTypes(name, oldMimeTypes);
+		d->node->setProperty(name, oldValue);
 		d->rebuild(name);
 		return false;
 	}

@@ -1,4 +1,5 @@
 #include "Content/DatabaseModule/data_providers/lazy_nodes_data_provider_db.h"
+#include "Content/DatabaseModule/data_providers/data_blobs_provider_db.h"
 #include "Libs/BaseWidgets/properties/property_mime.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_builder.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_data_node.h"
@@ -15,6 +16,7 @@
 #include <QJsonParseError>
 #include <QRegularExpression>
 #include <QSet>
+#include <QUuid>
 
 namespace {
 
@@ -249,6 +251,65 @@ QVariant propertyValueFromJson(const QJsonValue& value, const QStringList& mimeT
 	return value.toVariant();
 }
 
+/// Текстовое представление значения для таблицы data_blobs.
+QString propertyValueToBlobText(const QVariant& value) {
+	if (!value.isValid() || value.isNull()) {
+		return {};
+	}
+
+	const auto type = value.metaType().id();
+	if (type == QMetaType::QVariantMap || type == QMetaType::QVariantList) {
+		return QString::fromUtf8(
+			QJsonDocument::fromVariant(value).toJson(QJsonDocument::Compact));
+	}
+	if (type == QMetaType::QColor) {
+		return value.value<QColor>().name(QColor::HexArgb);
+	}
+	if (type == QMetaType::QByteArray) {
+		return QString::fromUtf8(value.toByteArray());
+	}
+	if (type == QMetaType::Bool) {
+		return value.toBool() ? QStringLiteral("true") : QStringLiteral("false");
+	}
+	if (type == QMetaType::Int || type == QMetaType::LongLong
+		|| type == QMetaType::UInt || type == QMetaType::ULongLong) {
+		return QString::number(value.toLongLong());
+	}
+	if (type == QMetaType::Double || type == QMetaType::Float) {
+		return QString::number(value.toDouble(), 'g', 15);
+	}
+
+	return value.toString();
+}
+
+/// Восстанавливает значение свойства из текста data_blobs по mime-типам.
+QVariant propertyValueFromBlobText(const QString& text, const QStringList& mimeTypes) {
+	const auto primary = PropertyMime::primaryMimeType(mimeTypes);
+	const auto type = PropertyMime::editorType(primary);
+
+	if (type == PropertyType::Boolean) {
+		return text.trimmed().compare(QStringLiteral("true"), Qt::CaseInsensitive) == 0;
+	}
+	if (type == PropertyType::Number) {
+		bool ok = false;
+		if (PropertyMime::isInteger(primary)) {
+			const auto number = text.toLongLong(&ok);
+			return ok ? QVariant(number) : QVariant(0);
+		}
+
+		const auto number = text.toDouble(&ok);
+		return ok ? QVariant(number) : QVariant(0.0);
+	}
+	if (type == PropertyType::Color) {
+		const QColor color(text);
+		if (color.isValid()) {
+			return color;
+		}
+	}
+
+	return text;
+}
+
 } // namespace
 
 class LazyNodesDataProviderDb::Private {
@@ -259,6 +320,7 @@ public:
 		, databasesService(databasesService)
 		, databaseName(databaseName)
 		, tableName(tableName) {
+		blobs = std::make_unique<DataBlobsProviderDb>(databasesService, databaseName);
 		const QString quotedTable = quoteIdentifier(tableName);
 
 		const auto build = [&quotedTable](const QString& sql) {
@@ -278,6 +340,7 @@ public:
 	DatabasesService* databasesService;
 	QString databaseName;
 	QString tableName;
+	std::unique_ptr<DataBlobsProviderDb> blobs;
 
 	QString sqlSelect;
 	QString sqlSelectById;
@@ -290,8 +353,8 @@ public:
 
 	SQLiteConnection* connection() const;
 	LazyTreeNodeList readNodes(const std::unique_ptr<SQLiteReader>& reader) const;
-	static void readProperties(const std::unique_ptr<SQLiteReader>& reader, const LazyTreeNodePtr& node);
-	static void bindProperties(SQLiteReader& reader, const LazyTreeNodePtr& node);
+	void readProperties(const std::unique_ptr<SQLiteReader>& reader, const LazyTreeNodePtr& node) const;
+	bool bindProperties(SQLiteReader& reader, const LazyTreeNodePtr& node);
 };
 
 SQLiteConnection* LazyNodesDataProviderDb::Private::connection() const {
@@ -348,7 +411,7 @@ LazyTreeNodeList LazyNodesDataProviderDb::Private::readNodes(
 }
 
 void LazyNodesDataProviderDb::Private::readProperties(
-	const std::unique_ptr<SQLiteReader>& reader, const LazyTreeNodePtr& node) {
+	const std::unique_ptr<SQLiteReader>& reader, const LazyTreeNodePtr& node) const {
 	const QString raw = reader->value("data").toString();
 	if (raw.isEmpty()) {
 		return;
@@ -379,6 +442,7 @@ void LazyNodesDataProviderDb::Private::readProperties(
 
 		const auto entryObject = entry.toObject();
 		const bool structured = entryObject.contains(QStringLiteral("value"))
+			|| entryObject.contains(QStringLiteral("value_blob"))
 			|| entryObject.contains(QStringLiteral("mime"));
 		if (!structured) {
 			node->setProperty(name, entry.toVariant());
@@ -387,31 +451,90 @@ void LazyNodesDataProviderDb::Private::readProperties(
 
 		const auto mimeTypes = mimeTypesFromJson(entryObject.value(QStringLiteral("mime")));
 		node->setPropertyMimeTypes(name, mimeTypes);
-		node->setProperty(name,
-			propertyValueFromJson(entryObject.value(QStringLiteral("value")), mimeTypes));
+
+		const auto blobId = entryObject.value(QStringLiteral("value_blob")).toString().trimmed();
+		if (!blobId.isEmpty()) {
+			node->setPropertyValueBlobId(name, blobId);
+		}
+
+		// Если записаны оба поля, приоритет у value.
+		if (entryObject.contains(QStringLiteral("value"))) {
+			node->setProperty(name,
+				propertyValueFromJson(entryObject.value(QStringLiteral("value")), mimeTypes));
+			continue;
+		}
+
+		if (blobId.isEmpty()) {
+			node->setProperty(name, QVariant());
+			continue;
+		}
+
+		const auto blob = blobs ? blobs->blob(blobId) : std::nullopt;
+		if (!blob.has_value()) {
+			qWarning() << "LazyNodesDataProviderDb: blob not found" << blobId;
+			node->setProperty(name, QVariant());
+			continue;
+		}
+
+		node->setProperty(name, propertyValueFromBlobText(blob->data, mimeTypes));
 	}
 }
 
-void LazyNodesDataProviderDb::Private::bindProperties(SQLiteReader& reader,
+bool LazyNodesDataProviderDb::Private::bindProperties(SQLiteReader& reader,
 	const LazyTreeNodePtr& node) {
+	lastError.clear();
+
 	if (!node || node->properties().isEmpty()) {
 		reader.bindValue(":data", QStringLiteral("{}"));
-		return;
+		return true;
 	}
 
 	QJsonObject root;
 	const auto properties = node->properties();
 	for (auto it = properties.constBegin(); it != properties.constEnd(); it++) {
+		const auto name = it.key();
+		const auto mimeTypes = node->propertyMimeTypes(name);
 		QJsonObject entry;
-		entry.insert(QStringLiteral("value"), propertyValueToJson(it.value()));
-		entry.insert(QStringLiteral("mime"),
-			mimeTypesToJson(node->propertyMimeTypes(it.key())));
-		root.insert(it.key(), entry);
+		entry.insert(QStringLiteral("mime"), mimeTypesToJson(mimeTypes));
+
+		if (node->propertyValueIsBlob(name)) {
+			auto blobId = node->propertyValueBlobId(name).trimmed();
+			if (blobId.isEmpty()) {
+				blobId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+				node->setPropertyValueBlobId(name, blobId);
+			}
+
+			DataBlob blob;
+			blob.id = blobId;
+			if (blobs) {
+				const auto existing = blobs->blob(blobId);
+				if (existing.has_value()) {
+					blob.version = existing->version;
+					blob.description = existing->description;
+				}
+			}
+			blob.data = propertyValueToBlobText(it.value());
+
+			if (!blobs || !blobs->saveBlob(blob)) {
+				lastError = blobs ? blobs->lastError()
+					: QStringLiteral("Поставщик блоков данных не задан");
+				qWarning() << "LazyNodesDataProviderDb: blob save failed" << blobId << lastError;
+				return false;
+			}
+
+			entry.insert(QStringLiteral("value_blob"), blobId);
+		}
+		else {
+			entry.insert(QStringLiteral("value"), propertyValueToJson(it.value()));
+		}
+
+		root.insert(name, entry);
 	}
 
 	const QJsonDocument document(root);
 	const QString text = QString::fromUtf8(document.toJson(QJsonDocument::Compact));
 	reader.bindValue(":data", text);
+	return true;
 }
 
 LazyNodesDataProviderDb::LazyNodesDataProviderDb(DatabasesService* databasesService,
@@ -548,7 +671,9 @@ bool LazyNodesDataProviderDb::update(const LazyTreeNodePtr& node) {
 		return false;
 	}
 
-	Private::bindProperties(*statement, node);
+	if (!d->bindProperties(*statement, node)) {
+		return false;
+	}
 	statement->bindValue(":parent_id", node->parentId());
 	statement->bindValue(":name", node->name());
 	statement->bindValue(":id", node->id());
@@ -580,7 +705,9 @@ bool LazyNodesDataProviderDb::add(const LazyTreeNodePtr& node) {
 
 	statement->bindValue(":parent_id", node->parentId());
 	statement->bindValue(":name", node->name());
-	Private::bindProperties(*statement, node);
+	if (!d->bindProperties(*statement, node)) {
+		return false;
+	}
 
 	if (!statement->exec()) {
 		d->lastError = connection->lastError();

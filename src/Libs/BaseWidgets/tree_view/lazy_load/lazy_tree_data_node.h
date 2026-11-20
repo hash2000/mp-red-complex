@@ -33,6 +33,8 @@ public:
 	QStringList propertyMimeTypes(const QString& name) const override;
 	bool setPropertyMimeTypes(const QString& name, const QStringList& mimeTypes) override;
 	QHash<QString, QStringList> propertyMimeTypes() const override;
+	QString propertyValueBlobId(const QString& name) const override;
+	bool setPropertyValueBlobId(const QString& name, const QString& blobId) override;
 
 private:
 	class Private;

@@ -10,6 +10,7 @@ class PropertiesListWidget;
 class QComboBox;
 class QLabel;
 class QToolButton;
+class SystemRouterBlobService;
 class SystemRouterService;
 
 /// Документ параметров узла системного маршрутизатора.
@@ -23,7 +24,8 @@ public:
 	/// @param nodeId идентификатор узла; пустой — узел будет прочитан из
 	///        переменной контекста документа `nodeId` при привязке контекста.
 	explicit SystemRouterNodePropertiesDocument(SystemRouterService* service,
-		const QVariant& nodeId = {}, QWidget* parent = nullptr);
+		SystemRouterBlobService* blobService = nullptr, const QVariant& nodeId = {},
+		QWidget* parent = nullptr);
 	~SystemRouterNodePropertiesDocument() override;
 
 	QVariant nodeId() const;

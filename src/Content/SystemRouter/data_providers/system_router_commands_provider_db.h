@@ -7,7 +7,8 @@ class DatabasesService;
 
 /// Поставщик команд SystemRouter в SQLite.
 ///
-/// Таблица `commands`: id (GUID), version, description, script.
+/// Команды — записи таблицы `data_blobs`:
+/// id (GUID), version, description, data (текст скрипта).
 class SystemRouterCommandsProviderDb final : public ISystemRouterCommandsProvider {
 public:
 	explicit SystemRouterCommandsProviderDb(DatabasesService* databasesService);

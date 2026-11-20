@@ -3,8 +3,8 @@ name: palette
 description: Тёмная тема (Dark)
 
 palette:
- extends: [35, 35, 35]
- base: [35, 35, 35]
+ Extends: [35, 35, 35]
+ Base: [35, 35, 35]
  colors:
   Window:
    Active:

@@ -5,6 +5,8 @@
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin.h"
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
 #include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
+#include "Libs/Engine/scripting/command_context.h"
+#include "Libs/Engine/scripting/command_controller.h"
 
 #include <QComboBox>
 #include <QDebug>
@@ -16,7 +18,6 @@
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
-#include <QMessageBox>
 #include <QPair>
 #include <QSignalBlocker>
 #include <QStringConverter>
@@ -62,6 +63,9 @@ public:
 	QToolButton* wholeWordButton = nullptr;
 
 	QString path;
+	bool dataMode = false;
+	bool dataFromFile = false;
+	bool settingPath = false;
 
 	void setupUi();
 	QWidget* createRibbon();
@@ -78,6 +82,11 @@ public:
 	QString currentMimeType() const;
 	QString currentLanguageName() const;
 	void setPath(const QString& path);
+	CommandController* controller() const;
+	void printError(const QString& message) const;
+	void printWarning(const QString& message) const;
+	bool writeFile(const QString& path, const QString& text, QString* error) const;
+	void applyDataText(const QString& data);
 };
 
 void CodeEditorDocument::Private::setupUi() {
@@ -201,8 +210,7 @@ QWidget* CodeEditorDocument::Private::createRibbon() {
 	connect(addButton(formatGroup, QStringLiteral("✨"), q->tr("Форматировать документ")),
 		&QToolButton::clicked, q, [this] {
 			if (!editor->formatDocument()) {
-				QMessageBox::information(q, q->tr("Форматирование"),
-					q->tr("Для текущего языка форматирование недоступно."));
+				printWarning(q->tr("Для текущего языка форматирование недоступно."));
 			}
 		});
 
@@ -402,6 +410,55 @@ QString CodeEditorDocument::Private::currentLanguageName() const {
 	return info.name.isEmpty() ? info.mimeType : info.name;
 }
 
+CommandController* CodeEditorDocument::Private::controller() const {
+	auto context = q->context();
+	return context ? context->commandController() : nullptr;
+}
+
+void CodeEditorDocument::Private::printError(const QString& message) const {
+	if (auto* c = controller()) {
+		c->printError(message);
+	}
+}
+
+void CodeEditorDocument::Private::printWarning(const QString& message) const {
+	if (auto* c = controller()) {
+		c->printWarning(message);
+	}
+}
+
+bool CodeEditorDocument::Private::writeFile(const QString& path, const QString& text,
+	QString* error) const {
+	QFile file(path);
+	if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+		if (error) {
+			*error = q->tr("Не удалось записать файл:\n%1\n%2")
+				.arg(QDir::toNativeSeparators(path), file.errorString());
+		}
+		return false;
+	}
+
+	QTextStream stream(&file);
+	stream.setEncoding(QStringConverter::Utf8);
+	stream << text;
+	stream.flush();
+	if (stream.status() != QTextStream::Ok) {
+		if (error) {
+			*error = q->tr("Не удалось записать файл:\n%1")
+				.arg(QDir::toNativeSeparators(path));
+		}
+		return false;
+	}
+
+	return true;
+}
+
+void CodeEditorDocument::Private::applyDataText(const QString& data) {
+	editor->setText(data);
+	editor->document()->setModified(false);
+	q->setModified(false);
+}
+
 void CodeEditorDocument::Private::setPath(const QString& value) {
 	if (path == value) {
 		return;
@@ -409,7 +466,9 @@ void CodeEditorDocument::Private::setPath(const QString& value) {
 
 	path = value;
 	// Путь — состояние документа, оно живёт в переменной контекста.
+	settingPath = true;
 	q->setVariable(QStringLiteral("path"), value);
+	settingPath = false;
 }
 
 CodeEditorDocument::CodeEditorDocument(
@@ -429,9 +488,10 @@ CodeEditorDocument::CodeEditorDocument(
 		this, &DocumentWidget::setModified);
 	connect(d->editor, &CodeEditorWidget::fileOpened, this, [this](const QString& path, bool success) {
 		if (!success) {
-			QMessageBox::warning(this, tr("Открытие файла"),
-				tr("Не удалось открыть файл:\n%1").arg(QDir::toNativeSeparators(path)));
+			d->printError(tr("Не удалось открыть файл:\n%1")
+				.arg(QDir::toNativeSeparators(path)));
 			d->setPath(QString());
+			d->dataFromFile = false;
 			setTitle(tr("Без имени"));
 			setToolTip(QString());
 			emit propertiesChanged();
@@ -445,7 +505,7 @@ CodeEditorDocument::CodeEditorDocument(
 		emit propertiesChanged();
 	});
 	connect(d->editor, &CodeEditorWidget::formattedFailed, this, [this](const QString& message) {
-		QMessageBox::warning(this, tr("Ошибка форматирования"), message);
+		d->printWarning(message);
 	});
 	connect(d->editor, &CodeEditorWidget::fontSizeChanged, this, [this](int size) {
 		const QSignalBlocker blocker(d->fontSizeCombo);
@@ -485,6 +545,10 @@ void CodeEditorDocument::newFile() {
 	d->editor->setText(QString());
 	d->editor->document()->setModified(false);
 	setModified(false);
+	d->dataFromFile = false;
+	if (d->dataMode) {
+		setVariable(QStringLiteral("data"), QString());
+	}
 	setTitle(tr("Без имени"));
 	setToolTip(QString());
 	d->syncLanguageCombo();
@@ -499,12 +563,13 @@ bool CodeEditorDocument::openFile(const QString& path) {
 
 	const QFileInfo info(path);
 	if (!info.exists() || !info.isFile() || !info.isReadable()) {
-		QMessageBox::warning(this, tr("Открытие файла"),
-			tr("Не удалось открыть файл:\n%1").arg(QDir::toNativeSeparators(path)));
+		d->printError(tr("Не удалось открыть файл:\n%1")
+			.arg(QDir::toNativeSeparators(path)));
 		return false;
 	}
 
 	d->setPath(path);
+	d->dataFromFile = d->dataMode;
 	setTitle(info.fileName());
 	setToolTip(QDir::toNativeSeparators(path));
 	d->editor->openFile(path);
@@ -515,8 +580,11 @@ bool CodeEditorDocument::openFile(const QString& path) {
 }
 
 bool CodeEditorDocument::save() {
+	const auto text = d->editor->toPlainText();
 	QString path = d->path;
-	if (path.isEmpty()) {
+
+	// В режиме data файл не обязателен: данные сохраняются в контекст.
+	if (!d->dataMode && path.isEmpty()) {
 		path = QFileDialog::getSaveFileName(this, tr("Сохранить файл"),
 			QDir::current().filePath(title() + QStringLiteral(".txt")),
 			tr("Все файлы (*.*)"));
@@ -525,47 +593,47 @@ bool CodeEditorDocument::save() {
 		}
 	}
 
-	QFile file(path);
-	if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-		QMessageBox::warning(this, tr("Сохранение файла"),
-			tr("Не удалось записать файл:\n%1\n%2")
-				.arg(QDir::toNativeSeparators(path), file.errorString()));
-		return false;
+	if (!path.isEmpty()) {
+		QString error;
+		if (!d->writeFile(path, text, &error)) {
+			d->printError(error);
+			return false;
+		}
+
+		d->setPath(path);
+		d->editor->setHoghlighterByPath(path);
+		setTitle(QFileInfo(path).fileName());
+		setToolTip(QDir::toNativeSeparators(path));
 	}
 
-	QTextStream stream(&file);
-	stream.setEncoding(QStringConverter::Utf8);
-	stream << d->editor->toPlainText();
-	stream.flush();
-
-	if (stream.status() != QTextStream::Ok) {
-		QMessageBox::warning(this, tr("Сохранение файла"),
-			tr("Не удалось записать файл:\n%1").arg(QDir::toNativeSeparators(path)));
-		return false;
+	if (d->dataMode && !d->dataFromFile) {
+		setVariable(QStringLiteral("data"), text);
 	}
 
-	file.close();
-
-	d->setPath(path);
-	d->editor->setHoghlighterByPath(path);
 	d->editor->document()->setModified(false);
 	setModified(false);
-	setTitle(QFileInfo(path).fileName());
-	setToolTip(QDir::toNativeSeparators(path));
 	d->syncLanguageCombo();
 	d->updateRibbonState();
+
+	if (auto context = this->context()) {
+		context->fireEvent(CommandContext::documentSaveCompleteEvent());
+	}
 	emit propertiesChanged();
 	return true;
 }
 
 void CodeEditorDocument::refresh() {
+	if (d->dataMode) {
+		return;
+	}
+
 	if (d->path.isEmpty() || isModified()) {
 		return;
 	}
 
 	if (!QFileInfo::exists(d->path)) {
-		QMessageBox::warning(this, tr("Обновление документа"),
-			tr("Файл не найден:\n%1").arg(QDir::toNativeSeparators(d->path)));
+		d->printWarning(tr("Файл не найден:\n%1")
+			.arg(QDir::toNativeSeparators(d->path)));
 		return;
 	}
 
@@ -575,9 +643,48 @@ void CodeEditorDocument::refresh() {
 }
 
 void CodeEditorDocument::onContextAttached() {
-	// Путь читается из контекста документа; если переменной нет,
-	// variable() создаёт её со значением по умолчанию (пустая строка).
 	const auto path = variable(QStringLiteral("path"), QString()).toString();
+	const bool hasData = hasVariable(QStringLiteral("data"));
+	d->dataMode = hasData;
+
+	if (hasData) {
+		const auto data = variable(QStringLiteral("data")).toString();
+		if (path.isEmpty()) {
+			d->dataFromFile = false;
+			d->applyDataText(data);
+			setTitle(tr("Данные"));
+			setToolTip(QString());
+			d->syncLanguageCombo();
+			d->updateRibbonState();
+			emit propertiesChanged();
+			return;
+		}
+
+		const QFileInfo info(path);
+		if (info.exists() && info.isFile()) {
+			// Источник истины — файл; data не трогаем, но предупреждаем.
+			d->dataFromFile = true;
+			d->printWarning(tr("Есть и файл, и data: данные открыты из файла; "
+				"переменная data не изменяется"));
+			QMetaObject::invokeMethod(this, [this, path] {
+				openFile(path);
+			}, Qt::QueuedConnection);
+			return;
+		}
+
+		// Файла ещё нет: данные берём из data, путь нужен для сохранения.
+		d->dataFromFile = false;
+		d->applyDataText(data);
+		d->setPath(path);
+		setTitle(info.fileName());
+		setToolTip(QDir::toNativeSeparators(path));
+		d->syncLanguageCombo();
+		d->updateRibbonState();
+		emit propertiesChanged();
+		return;
+	}
+
+	d->dataFromFile = false;
 	if (path.isEmpty()) {
 		return;
 	}
@@ -590,6 +697,26 @@ void CodeEditorDocument::onContextAttached() {
 }
 
 void CodeEditorDocument::onContextVariableChanged(const QString& name, const QVariant& value) {
+	if (d->settingPath) {
+		return;
+	}
+
+	if (name == QLatin1String("data") && d->dataMode) {
+		if (isModified()) {
+			return;
+		}
+
+		const auto data = value.toString();
+		if (d->editor->toPlainText() == data) {
+			return;
+		}
+
+		d->dataFromFile = false;
+		d->applyDataText(data);
+		emit propertiesChanged();
+		return;
+	}
+
 	if (name != QLatin1String("path")) {
 		return;
 	}

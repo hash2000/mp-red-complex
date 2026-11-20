@@ -16,6 +16,8 @@ inline constexpr const char* kBoolean = PropertyMimeType::kBoolean;
 inline constexpr const char* kInteger = PropertyMimeType::kInteger;
 inline constexpr const char* kNumber = PropertyMimeType::kNumber;
 inline constexpr const char* kColor = PropertyMimeType::kColor;
+inline constexpr const char* kShared = PropertyMimeType::kShared;
+inline constexpr const char* kContextVariable = PropertyMimeType::kContextVariable;
 } // namespace DocumentVariableMime
 
 /// Обязательная переменная документа.

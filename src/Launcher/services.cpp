@@ -9,8 +9,11 @@
 #include "Content/FetchApiModule/services/fetch_service.h"
 
 // SystemRouter
+#include "Content/DatabaseModule/data_providers/data_blobs_provider_db.h"
 #include "Content/SystemRouter/data_providers/system_router_commands_provider_db.h"
 #include "Content/SystemRouter/data_providers/system_router_data_provider_db.h"
+#include "Content/SystemRouter/data_providers/system_router_db.h"
+#include "Content/SystemRouter/services/system_router_blob_service.h"
 #include "Content/SystemRouter/services/system_router_command_service.h"
 #include "Content/SystemRouter/services/system_router_service.h"
 
@@ -71,6 +74,11 @@ public:
 		, fetchQueriesDataProvider([this] {	return std::make_unique<FetchQueriesDataProviderDb>(databasesService.get()); })
 		, systemRouterDataProvider([this] {	return std::make_unique<SystemRouterDataProviderDb>(databasesService.get()); })
 		, systemRouterCommandsProvider([this] {	return std::make_unique<SystemRouterCommandsProviderDb>(databasesService.get()); })
+		, systemRouterBlobsProvider([this] {
+			return std::make_unique<DataBlobsProviderDb>(databasesService.get(),
+				QString::fromLatin1(SystemRouterDb::kDatabase),
+				QString::fromLatin1(SystemRouterDb::kDataBlobsTable));
+		})
 		//, characterDataProvider([this] {	return std::make_unique<CharacterDataProviderDb>(databasesService.get());	})
 		//, shadersDataProvider([this] { return std::make_unique<ShadersDataProviderLocalImpl>(resources); })
 		//, materialsDataProvider([this] { return std::make_unique<MaterialsDataProviderJsonImpl>(resources); })
@@ -95,6 +103,7 @@ private:
 	LazyPtr<FetchQueriesDataProviderDb> fetchQueriesDataProvider;
 	LazyPtr<SystemRouterDataProviderDb> systemRouterDataProvider;
 	LazyPtr<SystemRouterCommandsProviderDb> systemRouterCommandsProvider;
+	LazyPtr<DataBlobsProviderDb> systemRouterBlobsProvider;
 	//LazyPtr<ICharacterDataProvider> characterDataProvider;
 	//LazyPtr<IImagesDataProvider> imagesDataProvider;
 	//LazyPtr<ITileGroupsDataProvider> tileGroupsDataProvider;
@@ -178,6 +187,11 @@ public:
 		registerFactory<SystemRouterCommandService>([this]() {
 			return std::make_unique<SystemRouterCommandService>(
 				systemRouterCommandsProvider.get());
+		});
+
+		registerFactory<SystemRouterBlobService>([this]() {
+			return std::make_unique<SystemRouterBlobService>(
+				systemRouterBlobsProvider.get());
 		});
 
 		registerFactory<HighlightingPluginManager>([this] {

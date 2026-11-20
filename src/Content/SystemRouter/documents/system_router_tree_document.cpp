@@ -1,5 +1,7 @@
 #include "Content/SystemRouter/documents/system_router_tree_document.h"
 #include "Content/SystemRouter/documents/system_router_node_properties_document.h"
+#include "Content/SystemRouter/models/system_router_mime.h"
+#include "Content/SystemRouter/services/system_router_blob_service.h"
 #include "Content/SystemRouter/services/system_router_command_service.h"
 #include "Content/SystemRouter/services/system_router_service.h"
 #include "Content/SystemRouter/widgets/system_router_script_dialog.h"
@@ -8,31 +10,45 @@
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_widget.h"
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/scripting/command_controller.h"
+#include "Libs/Engine/scripting/command_processor.h"
 #include "Libs/Engine/ui/main_window.h"
 
 #include <QFormLayout>
 #include <QLabel>
-#include <QMessageBox>
+#include <QUuid>
 #include <QVBoxLayout>
 #include <QVariantMap>
 
 namespace {
 const QString kSelectedNodeVariable = QStringLiteral("selectedNodeId");
+
+bool hasMime(const QStringList& mimeTypes, const char* mimeType) {
+	for (const auto& raw : mimeTypes) {
+		if (raw.trimmed().compare(QLatin1String(mimeType), Qt::CaseInsensitive) == 0) {
+			return true;
+		}
+	}
+
+	return false;
+}
 }
 
 struct SystemRouterTreeDocument::Private {
 	SystemRouterService* service = nullptr;
 	SystemRouterCommandService* commandService = nullptr;
+	SystemRouterBlobService* blobService = nullptr;
 	SystemRouterTreeWidget* tree = nullptr;
 	bool updatingVariable = false;
 };
 
 SystemRouterTreeDocument::SystemRouterTreeDocument(SystemRouterService* service,
-	SystemRouterCommandService* commandService, QWidget* parent)
+	SystemRouterCommandService* commandService, SystemRouterBlobService* blobService,
+	QWidget* parent)
 	: DocumentWidget(parent)
 	, d(std::make_unique<Private>()) {
 	d->service = service;
 	d->commandService = commandService;
+	d->blobService = blobService;
 	d->tree = new SystemRouterTreeWidget(service, this);
 
 	auto* layout = new QVBoxLayout(this);
@@ -44,7 +60,12 @@ SystemRouterTreeDocument::SystemRouterTreeDocument(SystemRouterService* service,
 
 	connect(d->tree, &LazyTreeWidget::nodeActivated, this, &SystemRouterTreeDocument::nodeActivated);
 	connect(d->tree, &LazyTreeWidget::nodeActivated, this, &SystemRouterTreeDocument::onNodeActivated);
-	connect(d->tree, &LazyTreeWidget::errorOccurred, this, &SystemRouterTreeDocument::errorOccurred);
+	connect(d->tree, &LazyTreeWidget::errorOccurred, this, [this](const QString& message) {
+		if (auto* controller = context() ? context()->commandController() : nullptr) {
+			controller->printError(message);
+		}
+		emit errorOccurred(message);
+	});
 	connect(d->tree, &SystemRouterTreeWidget::propertiesRequested, this,
 		&SystemRouterTreeDocument::openNodeProperties);
 	connect(d->tree, &LazyTreeWidget::selectionChanged, this,
@@ -76,11 +97,15 @@ void SystemRouterTreeDocument::openNodeProperties(const LazyTreeNodePtr& node) {
 	auto* controller = context ? context->commandController() : nullptr;
 	auto* window = controller ? controller->mainWindow() : nullptr;
 	if (!window) {
+		if (controller) {
+			controller->printError(tr("Не удалось открыть параметры узла: окно приложения недоступно"));
+		}
 		emit errorOccurred(tr("Не удалось открыть параметры узла: окно приложения недоступно"));
 		return;
 	}
 
 	auto* service = d->service;
+	auto* blobService = d->blobService;
 	const auto title = tr("Параметры: %1").arg(node->name());
 	const auto documentId = QStringLiteral("system-router-node-%1").arg(nodeId.toString());
 	const QVariantMap variables = {
@@ -90,15 +115,20 @@ void SystemRouterTreeDocument::openNodeProperties(const LazyTreeNodePtr& node) {
 
 	auto* document = window->createWidget(documentId, MainWindow::WidgetKind::Document,
 		title, QStringLiteral("🛠"),
-		[service, nodeId]() {
-			return new SystemRouterNodePropertiesDocument(service, nodeId);
+		[service, blobService, nodeId]() {
+			return new SystemRouterNodePropertiesDocument(service, blobService, nodeId);
 		},
 		tr("Параметры узла системного маршрутизатора"),
 		QStringLiteral("system-router-node-properties"),
 		context, variables);
 
 	if (!document) {
-		emit errorOccurred(tr("Не удалось открыть документ параметров узла «%1»").arg(node->name()));
+		if (controller) {
+			controller->printError(tr("Не удалось открыть документ параметров узла «%1»")
+				.arg(node->name()));
+		}
+		emit errorOccurred(tr("Не удалось открыть документ параметров узла «%1»")
+			.arg(node->name()));
 	}
 }
 
@@ -121,23 +151,18 @@ void SystemRouterTreeDocument::onNodeActivated(const LazyTreeNodePtr& node) {
 	}
 
 	if (previews.size() == 1) {
-		executePreview(previews.first());
+		executePreview(node, previews.first());
 		return;
 	}
 
 	SystemRouterScriptDialog dialog(previews, this);
 	if (dialog.exec() == QDialog::Accepted) {
-		executePreview(dialog.selectedPreview());
+		executePreview(node, dialog.selectedPreview());
 	}
 }
 
-void SystemRouterTreeDocument::executePreview(const SystemRouterScriptPreview& preview) {
-	if (!preview.commandFound) {
-		QMessageBox::warning(this, tr("Скрипт"),
-			preview.error.isEmpty() ? tr("Команда не найдена") : preview.error);
-		return;
-	}
-
+void SystemRouterTreeDocument::executePreview(const LazyTreeNodePtr& node,
+	const SystemRouterScriptPreview& preview) {
 	auto context = this->context();
 	auto* controller = context ? context->commandController() : nullptr;
 	if (!controller) {
@@ -145,10 +170,45 @@ void SystemRouterTreeDocument::executePreview(const SystemRouterScriptPreview& p
 		return;
 	}
 
-	if (!controller->execute(preview.renderedScript, this)) {
-		QMessageBox::warning(this, tr("Скрипт"),
-			tr("Не удалось выполнить скрипт «%1». Подробности — в консоли.")
-				.arg(preview.propertyName));
+	if (!preview.commandFound) {
+		controller->printError(preview.error.isEmpty()
+			? tr("Команда не найдена")
+			: preview.error);
+		return;
+	}
+
+	auto* processor = controller->commandProcessor();
+	if (!processor) {
+		controller->printError(tr("Процессор команд недоступен"));
+		return;
+	}
+
+	// Параметры с application/x-mp-context-variable передаются в контекст
+	// команды как переменные, а не подставляются в текст скрипта.
+	auto executionContext = context->createScopedContext(
+		QStringLiteral("system-router-command-%1")
+			.arg(QUuid::createUuid().toString(QUuid::WithoutBraces)));
+	if (node) {
+		const auto properties = node->properties();
+		for (auto it = properties.constBegin(); it != properties.constEnd(); it++) {
+			const auto mimeTypes = node->propertyMimeTypes(it.key());
+			if (!hasMime(mimeTypes, SystemRouterMime::kContextVariable)) {
+				continue;
+			}
+
+			executionContext->setVariable(it.key(), it.value());
+			executionContext->setVariableMimeType(it.key(), mimeTypes.join(QStringLiteral(", ")));
+		}
+	}
+
+	if (!preview.missingParameters.isEmpty()) {
+		controller->printWarning(tr("Не найдены параметры: %1")
+			.arg(preview.missingParameters.join(QStringLiteral(", "))));
+	}
+
+	if (!processor->execute(preview.renderedScript, executionContext)) {
+		controller->printError(tr("Не удалось выполнить скрипт «%1»")
+			.arg(preview.propertyName));
 	}
 }
 

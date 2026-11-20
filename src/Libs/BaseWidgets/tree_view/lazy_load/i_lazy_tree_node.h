@@ -70,4 +70,25 @@ public:
 
 		return result;
 	}
+
+	/// Хранить значение свойства отдельно, в таблице блоков (`data_blobs`).
+	/// Конкретная реализация решает это по mime-типам свойства. По умолчанию
+	/// значение пишется в JSON свойства (`value`).
+	virtual bool propertyValueIsBlob(const QString& name) const {
+		Q_UNUSED(name);
+		return false;
+	}
+
+	/// GUID блока значения свойства (если значение уже сохранено как блок).
+	virtual QString propertyValueBlobId(const QString& name) const {
+		Q_UNUSED(name);
+		return {};
+	}
+
+	/// Запомнить GUID блока значения свойства.
+	virtual bool setPropertyValueBlobId(const QString& name, const QString& blobId) {
+		Q_UNUSED(name);
+		Q_UNUSED(blobId);
+		return false;
+	}
 };

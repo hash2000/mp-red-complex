@@ -18,6 +18,7 @@ public:
 	ILazyNodesDataProvider* dataProvider() const;
 
 	LazyTreeNodeList rootNodes() const;
+	LazyTreeNodeList allNodes() const;
 	LazyTreeNodeList children(const QVariant& parentId) const;
 	LazyTreeNodeList search(const QString& text) const;
 	LazyTreeNodePtr item(const QVariant& id) const;

@@ -19,6 +19,10 @@ inline constexpr const char* kColor = "application/x-color";
 inline constexpr const char* kJson = "application/json";
 inline constexpr const char* kXml = "application/xml";
 inline constexpr const char* kUriList = "text/uri-list";
+/// Переменная, которую можно передать в контекст создаваемого документа.
+inline constexpr const char* kShared = "application/x-mp-shared";
+/// Значение свойства передаётся в CommandContext как переменная.
+inline constexpr const char* kContextVariable = "application/x-mp-context-variable";
 } // namespace PropertyMimeType
 
 namespace PropertyMime {

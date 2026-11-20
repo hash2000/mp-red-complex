@@ -9,6 +9,7 @@
 #include "Content/FetchApiModule/services/fetch_service.h"
 #include "Content/SystemRouter/documents/system_router_node_properties_document.h"
 #include "Content/SystemRouter/documents/system_router_tree_document.h"
+#include "Content/SystemRouter/services/system_router_blob_service.h"
 #include "Content/SystemRouter/services/system_router_command_service.h"
 #include "Content/SystemRouter/services/system_router_service.h"
 #include "Content/UsersModule/documents/login_document.h"
@@ -229,7 +230,10 @@ void WidgetsBuilder::Private::registerAll() {
 			auto* service = requiredService<SystemRouterService>(services, type, "SystemRouterService");
 			auto* commandService = requiredService<SystemRouterCommandService>(services, type,
 				"SystemRouterCommandService");
-			return service ? new SystemRouterTreeDocument(service, commandService, handler.parent) : nullptr;
+			auto* blobService = requiredService<SystemRouterBlobService>(services, type,
+				"SystemRouterBlobService");
+			return service ? new SystemRouterTreeDocument(service, commandService, blobService,
+				handler.parent) : nullptr;
 		});
 
 	// Параметры узла: обычный документ, один на узел (id задаёт вызывающая сторона).
@@ -237,8 +241,12 @@ void WidgetsBuilder::Private::registerAll() {
 		"system-router-node-properties", /*singletone*/ false, QStringLiteral("🛠"),
 		QStringLiteral("Параметры узла") },
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
-			auto* service = requiredService<SystemRouterService>(servicesFor(type, handler), type, "SystemRouterService");
-			return service ? new SystemRouterNodePropertiesDocument(service, {}, handler.parent) : nullptr;
+			auto* services = servicesFor(type, handler);
+			auto* service = requiredService<SystemRouterService>(services, type, "SystemRouterService");
+			auto* blobService = requiredService<SystemRouterBlobService>(services, type,
+				"SystemRouterBlobService");
+			return service ? new SystemRouterNodePropertiesDocument(service, blobService, {},
+				handler.parent) : nullptr;
 		});
 
 	// Редактор кода — обычный документ: экземпляров может быть несколько.

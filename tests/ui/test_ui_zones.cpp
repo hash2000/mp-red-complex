@@ -132,6 +132,7 @@ private slots:
 	void commandUsesRegistryDefaults();
 	void documentStateIsStoredInContext();
 	void commandParametersBecomeDocumentVariables();
+	void sharedVariablesCopiedToCreator();
 	void newDocumentDialogFiltersTypes();
 	void newDocumentDialogUsesDocumentMetadata();
 	void propertiesListWidgetAddsAndRemoves();
@@ -649,6 +650,44 @@ void TestUiZones::commandParametersBecomeDocumentVariables() {
 	// Служебные параметры команды в контекст документа не попадают.
 	QVERIFY(!context->ownVariables().contains(QStringLiteral("action")));
 	QVERIFY(!context->ownVariables().contains(QStringLiteral("target")));
+}
+
+void TestUiZones::sharedVariablesCopiedToCreator() {
+	TestCommandController controller;
+	WidgetFixture fixture(controller);
+	MainWindow window(controller.globalContext(), nullptr, false);
+
+	QVERIFY(window.createWidget(QStringLiteral("explorer"), MainWindow::WidgetKind::Document,
+		QStringLiteral("Проводник"), QString(), [&fixture] {
+			return fixture.built++, new QLabel(QStringLiteral("explorer"));
+		}, QString(), QStringLiteral("test-widget"), controller.globalContext()));
+	auto explorerContext = window.documentContext(QStringLiteral("explorer"));
+	QVERIFY(explorerContext);
+
+	auto caller = explorerContext->createScopedContext(QStringLiteral("open-editor"));
+	caller->setVariable(QStringLiteral("action"), QStringLiteral("create"));
+	caller->setVariable(QStringLiteral("target"), QStringLiteral("test-widget"));
+	caller->setVariable(QStringLiteral("id"), QStringLiteral("editor"));
+	caller->setVariable(QStringLiteral("data"), QStringLiteral("blob data"));
+	caller->setVariableMimeType(QStringLiteral("data"),
+		QString::fromLatin1(DocumentVariableMime::kShared));
+	caller->setVariable(QStringLiteral("secret"), QStringLiteral("hidden"));
+	caller->setVariableMimeType(QStringLiteral("secret"), QStringLiteral("text/plain"));
+
+	WidgetZoneCommand documents(QStringLiteral("documents"), MainWindow::WidgetKind::Document);
+	QVERIFY(documents.execute(caller));
+
+	// Переменная, помеченная shared, скопирована в контекст создателя документа.
+	QCOMPARE(explorerContext->variable(QStringLiteral("data")).toString(),
+		QStringLiteral("blob data"));
+	QCOMPARE(explorerContext->variableMimeType(QStringLiteral("data")),
+		QString::fromLatin1(DocumentVariableMime::kShared));
+	QVERIFY(!explorerContext->ownVariables().contains(QStringLiteral("secret")));
+
+	auto editorContext = window.documentContext(QStringLiteral("editor"));
+	QVERIFY(editorContext);
+	QCOMPARE(editorContext->variable(QStringLiteral("data")).toString(),
+		QStringLiteral("blob data"));
 }
 
 void TestUiZones::newDocumentDialogUsesDocumentMetadata() {

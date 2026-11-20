@@ -18,7 +18,9 @@ QString formatMimeType(const QStringList& mimeTypes) {
 		const auto mime = raw.trimmed().toLower();
 		if (mime.isEmpty()
 			|| mime == QLatin1String(SystemRouterMime::kCommand)
-			|| mime == QLatin1String(SystemRouterMime::kCommandParameter)) {
+			|| mime == QLatin1String(SystemRouterMime::kCommandParameter)
+			|| mime == QLatin1String(SystemRouterMime::kShared)
+			|| mime == QLatin1String(SystemRouterMime::kContextVariable)) {
 			continue;
 		}
 

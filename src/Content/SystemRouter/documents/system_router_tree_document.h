@@ -5,6 +5,7 @@
 #include <memory>
 
 class LazyTreeWidget;
+class SystemRouterBlobService;
 class SystemRouterCommandService;
 class SystemRouterService;
 struct SystemRouterScriptPreview;
@@ -19,7 +20,8 @@ class SystemRouterTreeDocument final : public DocumentWidget {
 	Q_OBJECT
 public:
 	explicit SystemRouterTreeDocument(SystemRouterService* service,
-		SystemRouterCommandService* commandService = nullptr, QWidget* parent = nullptr);
+		SystemRouterCommandService* commandService = nullptr,
+		SystemRouterBlobService* blobService = nullptr, QWidget* parent = nullptr);
 	~SystemRouterTreeDocument() override;
 
 	LazyTreeWidget* tree() const;
@@ -41,7 +43,8 @@ protected:
 
 private:
 	void onNodeActivated(const LazyTreeNodePtr& node);
-	void executePreview(const SystemRouterScriptPreview& preview);
+	void executePreview(const LazyTreeNodePtr& node,
+		const SystemRouterScriptPreview& preview);
 
 	struct Private;
 	std::unique_ptr<Private> d;

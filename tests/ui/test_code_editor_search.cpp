@@ -3,6 +3,7 @@
 #include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
 #include "Content/CodeEditorWidget/widgets/code_editor_search_panel.h"
+#include "Content/CodeEditorWidget/widgets/code_editor_widget.h"
 #include "Libs/BaseWidgets/properties/properties_list_widget.h"
 #include "Libs/Engine/scripting/command_controller.h"
 #include "Libs/Engine/scripting/command_context.h"
@@ -13,9 +14,11 @@
 
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QScrollBar>
+#include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTextEdit>
 #include <QtTest/QtTest>
@@ -59,6 +62,10 @@ private slots:
 	void longLineScrollsToMatchStart();
 	void documentPathComesFromContext();
 	void documentPathFromCreationVariables();
+	void dataVariablePopulatesEditor();
+	void saveDataUpdatesContextVariable();
+	void dataAndExistingFilePrefersFile();
+	void dataAndMissingFileSavesBoth();
 	void documentMetadataDeclaresPath();
 	void newDocumentDialogShowsCodeEditorPath();
 
@@ -267,6 +274,106 @@ void TestCodeEditorSearch::documentPathFromCreationVariables() {
 	auto context = window.documentContext(QStringLiteral("editor"));
 	QVERIFY(context);
 	QCOMPARE(context->ownVariables().value(QStringLiteral("path")).toString(), path);
+}
+
+void TestCodeEditorSearch::dataVariablePopulatesEditor() {
+	Resources resources;
+	HighlightingPluginManager highlighting(&resources);
+	FormatterPluginManager formatters(&resources);
+	TestCommandController controller;
+
+	CodeEditorDocument document(&highlighting, &formatters);
+	auto context = controller.globalContext()->createDocumentContext(QStringLiteral("editor"));
+	QVERIFY(context);
+	context->setVariable(QStringLiteral("data"), QStringLiteral("line1\nline2"));
+	document.setContext(context);
+
+	QCOMPARE(document.editor()->toPlainText(), QStringLiteral("line1\nline2"));
+	QCOMPARE(document.title(), QStringLiteral("Данные"));
+}
+
+void TestCodeEditorSearch::saveDataUpdatesContextVariable() {
+	Resources resources;
+	HighlightingPluginManager highlighting(&resources);
+	FormatterPluginManager formatters(&resources);
+	TestCommandController controller;
+
+	CodeEditorDocument document(&highlighting, &formatters);
+	auto context = controller.globalContext()->createDocumentContext(QStringLiteral("editor"));
+	context->setVariable(QStringLiteral("data"), QStringLiteral("old"));
+	document.setContext(context);
+
+	QSignalSpy spy(context.get(), &CommandContext::eventFired);
+	document.editor()->setPlainText(QStringLiteral("updated\nvalue"));
+	QVERIFY(document.save());
+
+	QCOMPARE(context->variable(QStringLiteral("data")).toString(),
+		QStringLiteral("updated\nvalue"));
+	QVERIFY(spy.count() >= 1);
+	QCOMPARE(spy.last().at(0).toString(), CommandContext::documentSaveCompleteEvent());
+}
+
+void TestCodeEditorSearch::dataAndExistingFilePrefersFile() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto path = dir.filePath(QStringLiteral("blob.txt"));
+	{
+		QFile file(path);
+		QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Text));
+		file.write("from file");
+	}
+
+	Resources resources;
+	HighlightingPluginManager highlighting(&resources);
+	FormatterPluginManager formatters(&resources);
+	TestCommandController controller;
+
+	CodeEditorDocument document(&highlighting, &formatters);
+	auto context = controller.globalContext()->createDocumentContext(QStringLiteral("editor"));
+	context->setVariable(QStringLiteral("path"), path);
+	context->setVariable(QStringLiteral("data"), QStringLiteral("from context"));
+	document.setContext(context);
+
+	QTRY_COMPARE(document.editor()->toPlainText().trimmed(), QStringLiteral("from file"));
+
+	document.editor()->setPlainText(QStringLiteral("saved"));
+	QVERIFY(document.save());
+
+	QFile file(path);
+	QVERIFY(file.open(QIODevice::ReadOnly | QIODevice::Text));
+	QCOMPARE(QString::fromUtf8(file.readAll()), QStringLiteral("saved"));
+	// Источник истины — файл: data не перезаписывается.
+	QCOMPARE(context->variable(QStringLiteral("data")).toString(),
+		QStringLiteral("from context"));
+}
+
+void TestCodeEditorSearch::dataAndMissingFileSavesBoth() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto path = dir.filePath(QStringLiteral("new.txt"));
+	QVERIFY(!QFileInfo::exists(path));
+
+	Resources resources;
+	HighlightingPluginManager highlighting(&resources);
+	FormatterPluginManager formatters(&resources);
+	TestCommandController controller;
+
+	CodeEditorDocument document(&highlighting, &formatters);
+	auto context = controller.globalContext()->createDocumentContext(QStringLiteral("editor"));
+	context->setVariable(QStringLiteral("path"), path);
+	context->setVariable(QStringLiteral("data"), QStringLiteral("from context"));
+	document.setContext(context);
+
+	QCOMPARE(document.editor()->toPlainText(), QStringLiteral("from context"));
+
+	document.editor()->setPlainText(QStringLiteral("updated"));
+	QVERIFY(document.save());
+
+	QFile file(path);
+	QVERIFY(file.open(QIODevice::ReadOnly | QIODevice::Text));
+	QCOMPARE(QString::fromUtf8(file.readAll()), QStringLiteral("updated"));
+	QCOMPARE(context->variable(QStringLiteral("data")).toString(),
+		QStringLiteral("updated"));
 }
 
 void TestCodeEditorSearch::documentMetadataDeclaresPath() {

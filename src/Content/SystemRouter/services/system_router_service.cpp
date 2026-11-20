@@ -2,6 +2,8 @@
 
 #include <QSet>
 
+#include <functional>
+
 class SystemRouterService::Private {
 public:
 	explicit Private(SystemRouterService* parent)
@@ -82,6 +84,52 @@ ILazyNodesDataProvider* SystemRouterService::dataProvider() const {
 
 LazyTreeNodeList SystemRouterService::rootNodes() const {
 	return d->provider ? d->provider->get(QVariant()) : LazyTreeNodeList();
+}
+
+LazyTreeNodeList SystemRouterService::allNodes() const {
+	d->clearError();
+
+	if (!d->provider) {
+		d->lastError = tr("Поставщик данных системного маршрутизатора не задан");
+		return {};
+	}
+
+	LazyTreeNodeList result;
+	QSet<QString> visited;
+
+	std::function<void(const QVariant&)> visit = [&](const QVariant& parentId) {
+		const auto nodes = d->provider->get(parentId);
+		for (const auto& node : nodes) {
+			if (!node) {
+				continue;
+			}
+
+			const auto key = node->id().toString();
+			if (visited.contains(key)) {
+				continue;
+			}
+
+			visited.insert(key);
+			result.push_back(node);
+
+			// Для листа children() == nullopt, для узла с детьми — пустой
+			// список или уже загруженный набор. В обоих случаях обходим
+			// потомков через поставщика, чтобы получить плоский список.
+			if (node->children().has_value()) {
+				visit(node->id());
+			}
+		}
+	};
+
+	visit(QVariant());
+
+	const auto providerError = d->provider->lastError();
+	if (!providerError.isEmpty()) {
+		d->lastError = providerError;
+		return {};
+	}
+
+	return result;
 }
 
 LazyTreeNodeList SystemRouterService::children(const QVariant& parentId) const {

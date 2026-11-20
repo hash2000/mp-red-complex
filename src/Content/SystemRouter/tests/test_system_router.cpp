@@ -13,6 +13,7 @@
 #include <QListWidget>
 #include <QPlainTextEdit>
 #include <QStandardItemModel>
+#include <QToolButton>
 #include <QtTest/QtTest>
 
 #include <memory>
@@ -74,6 +75,7 @@ private slots:
 	void rejectsEmptyNameAndProviderErrors();
 	void documentHostsLazyTreeWidget();
 	void nodePropertiesDocument();
+	void codeEditorPropertyUsesButton();
 	void doubleClickEmitsNodeActivated();
 	void commandServiceCrud();
 	void rendersScriptParameters();
@@ -182,7 +184,7 @@ void TestSystemRouter::nodePropertiesDocument() {
 		{ QStringLiteral("text/plain") });
 	QVERIFY(_service->updateItem(item));
 
-	SystemRouterNodePropertiesDocument document(_service.get(), item->id());
+	SystemRouterNodePropertiesDocument document(_service.get(), nullptr, item->id());
 	auto* list = document.findChild<PropertiesListWidget*>(
 		QStringLiteral("SystemRouterNodePropertiesList"));
 	QVERIFY(list);
@@ -211,6 +213,29 @@ void TestSystemRouter::nodePropertiesDocument() {
 	QVERIFY(document.removeProperty(QStringLiteral("flag")));
 	QCOMPARE(list->propertyCount(), 3);
 	QVERIFY(!document.removeProperty(QStringLiteral("missing")));
+}
+
+void TestSystemRouter::codeEditorPropertyUsesButton() {
+	auto item = _service->createItem(QVariant(), QStringLiteral("Узел"));
+	QVERIFY(item);
+	item->setProperty(QStringLiteral("script"), kCommandId);
+	item->setPropertyMimeTypes(QStringLiteral("script"),
+		{ QString::fromLatin1(SystemRouterMime::kCommand),
+			QString::fromLatin1(SystemRouterMime::kCommandParameter),
+			QString::fromLatin1(SystemRouterMime::kContextVariable) });
+	QVERIFY(_service->updateItem(item));
+
+	SystemRouterNodePropertiesDocument document(_service.get(), nullptr, item->id());
+	QToolButton* editor = nullptr;
+	for (auto* button : document.findChildren<QToolButton*>()) {
+		if (button->property("propertyId").toString() == QStringLiteral("script")) {
+			editor = button;
+			break;
+		}
+	}
+
+	QVERIFY(editor);
+	QCOMPARE(editor->text(), QStringLiteral("..."));
 }
 
 void TestSystemRouter::doubleClickEmitsNodeActivated() {
