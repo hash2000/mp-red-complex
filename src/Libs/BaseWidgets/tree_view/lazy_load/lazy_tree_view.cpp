@@ -7,6 +7,7 @@
 
 #include <QDataStream>
 #include <QDebug>
+#include <QDrag>
 #include <QDropEvent>
 #include <QIODevice>
 #include <QItemSelectionModel>
@@ -115,6 +116,40 @@ void LazyTreeView::mousePressEvent(QMouseEvent* event) {
 	}
 
 	QTreeView::mousePressEvent(event);
+}
+
+void LazyTreeView::startDrag(Qt::DropActions supportedActions) {
+	// Базовая реализация QAbstractItemView после успешного InternalMove
+	// вызывает clearOrRemove(), потому что модель не сообщает ей о том, что
+	// перемещение уже выполнено в dropEvent(). В результате выбранный узел
+	// удаляется из модели (данные при этом остаются в базе) и пропадает из
+	// дерева до обновления. Перемещение выполняет наш dropEvent(), поэтому
+	// повторное удаление здесь недопустимо.
+	const auto indexes = selectedIndexes();
+	if (indexes.isEmpty()) {
+		return;
+	}
+
+	auto* mimeData = model()->mimeData(indexes);
+	if (!mimeData) {
+		return;
+	}
+
+	if (dragDropMode() == QAbstractItemView::InternalMove) {
+		supportedActions &= ~Qt::CopyAction;
+	}
+
+	auto* drag = new QDrag(this);
+	const auto index = indexes.first();
+	const auto rect = visualRect(index);
+	if (rect.isValid()) {
+		drag->setPixmap(viewport()->grab(rect));
+		drag->setHotSpot(rect.center() - rect.topLeft());
+	}
+
+	drag->setMimeData(mimeData);
+	drag->exec(supportedActions, Qt::MoveAction);
+	drag->deleteLater();
 }
 
 void LazyTreeView::dropEvent(QDropEvent* event) {

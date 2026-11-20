@@ -38,6 +38,7 @@ private slots:
 	void removeFailureKeepsNode();
 
 	void moveNodePersists();
+	void addedNodeSurvivesMove();
 	void moveNodeRejectsDescendant();
 
 	void findNodeSkipsRootAndMissingIds();
@@ -404,6 +405,27 @@ void TestLazyTreeView::moveNodePersists() {
 	QCOMPARE(rootItem(0)->rowCount(), 1);
 	QCOMPARE(rootItem(0)->child(0)->text(), QStringLiteral("A"));
 	QCOMPARE(moved, 1);
+}
+
+void TestLazyTreeView::addedNodeSurvivesMove() {
+	auto first = makeLazyTestNode(1, QVariant(), QStringLiteral("A"));
+	markLeafTestNode(first);
+	auto second = makeLazyTestNode(2, QVariant(), QStringLiteral("B"));
+	markLeafTestNode(second);
+	_provider->setChildren(QVariant(), { first, second });
+	_view->setNodes({ first, second });
+
+	QVERIFY(_view->addNodeAndStartEdit(nullptr, std::make_shared<LazyTreeDataNode>()));
+	typeAndCommit(QStringLiteral("C"));
+	QCOMPARE(model()->invisibleRootItem()->rowCount(), 3);
+
+	QVERIFY(_view->moveNode(first->id(), second->id()));
+
+	QCOMPARE(model()->invisibleRootItem()->rowCount(), 2);
+	QCOMPARE(rootItem(0)->text(), QStringLiteral("B"));
+	QCOMPARE(rootItem(1)->text(), QStringLiteral("C"));
+	QCOMPARE(rootItem(0)->rowCount(), 1);
+	QCOMPARE(rootItem(0)->child(0)->text(), QStringLiteral("A"));
 }
 
 void TestLazyTreeView::moveNodeRejectsDescendant() {

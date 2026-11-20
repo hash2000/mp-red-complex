@@ -82,6 +82,7 @@ signals:
 
 protected:
 	void mousePressEvent(QMouseEvent* event) override;
+	void startDrag(Qt::DropActions supportedActions) override;
 	void dropEvent(QDropEvent* event) override;
 	void closeEditor(QWidget* editor, QAbstractItemDelegate::EndEditHint hint) override;
 
