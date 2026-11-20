@@ -1,53 +1,65 @@
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_highlight_delegate.h"
+
+#include <QApplication>
+#include <QFontMetrics>
 #include <QPainter>
+#include <QStyle>
 
 HighlightDelegate::HighlightDelegate(const QString& highlightText, QObject* parent)
 	: QStyledItemDelegate(parent)
-	, _highlightText(highlightText) {}
+	, _highlightText(highlightText) {
+}
 
 void HighlightDelegate::setHighlightText(const QString& text) {
 	_highlightText = text;
 }
 
-void HighlightDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const {
+QString HighlightDelegate::highlightText() const {
+	return _highlightText;
+}
+
+void HighlightDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option,
+	const QModelIndex& index) const {
+	// Базовая отрисовка сохраняет выделение, фокус, иконки и элидирование.
+	QStyledItemDelegate::paint(painter, option, index);
+
+	if (_highlightText.isEmpty()) {
+		return;
+	}
+
 	QStyleOptionViewItem opt = option;
 	initStyleOption(&opt, index);
 
-	QString text = opt.text;
+	const QString text = opt.text;
+	if (text.isEmpty()) {
+		return;
+	}
+
+	QStyle* style = opt.widget ? opt.widget->style() : QApplication::style();
+	const QRect textRect = style->subElementRect(QStyle::SE_ItemViewItemText, &opt, opt.widget);
+	if (!textRect.isValid() || textRect.isEmpty()) {
+		return;
+	}
+
+	QColor highlight = opt.palette.color(QPalette::Highlight);
+	highlight.setAlpha(80);
+
+	const QFontMetrics metrics(opt.font);
 	painter->save();
+	painter->setClipRect(textRect);
 
-	// Рисуем фон выделения (если строка выбрана)
-	if (opt.state & QStyle::State_Selected) {
-		painter->fillRect(opt.rect, opt.palette.highlight());
-		painter->setPen(opt.palette.highlightedText().color());
-	}
-	else {
-		painter->setPen(opt.palette.text().color());
-	}
+	int from = 0;
+	while (from < text.size()) {
+		const int position = text.indexOf(_highlightText, from, Qt::CaseInsensitive);
+		if (position < 0) {
+			break;
+		}
 
-	// Логика подсветки
-	int highlightStart = text.indexOf(_highlightText, 0, Qt::CaseInsensitive);
-	if (highlightStart >= 0 && !_highlightText.isEmpty()) {
-		int highlightLength = _highlightText.length();
+		const int left = textRect.x() + metrics.horizontalAdvance(text.left(position));
+		const int width = metrics.horizontalAdvance(text.mid(position, _highlightText.size()));
+		painter->fillRect(QRect(left, textRect.y(), width, textRect.height()), highlight);
 
-		// Рисуем обычный текст до совпадения
-		QString preText = text.left(highlightStart);
-		QFontMetrics fm(opt.font);
-		int preWidth = fm.horizontalAdvance(preText);
-		painter->drawText(opt.rect.x(), opt.rect.y() + fm.ascent(), preText);
-
-		// Рисуем подсвеченный текст
-		QRect highlightRect(opt.rect.x() + preWidth, opt.rect.y(), fm.horizontalAdvance(text.mid(highlightStart, highlightLength)), opt.rect.height());
-		painter->fillRect(highlightRect, QColor(255, 255, 0, 100)); // Полупрозрачный желтый
-		painter->drawText(highlightRect, Qt::AlignLeft | Qt::AlignVCenter, text.mid(highlightStart, highlightLength));
-
-		// Рисуем остаток текста
-		int postX = highlightRect.right() + 1;
-		painter->drawText(postX, opt.rect.y() + fm.ascent(), text.mid(highlightStart + highlightLength));
-	}
-	else {
-		// Без подсветки
-		painter->drawText(opt.rect, Qt::AlignLeft | Qt::AlignVCenter, text);
+		from = position + _highlightText.size();
 	}
 
 	painter->restore();

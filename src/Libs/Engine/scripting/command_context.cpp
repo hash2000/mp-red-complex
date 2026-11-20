@@ -248,6 +248,11 @@ const QString& CommandContext::variablesBatchCompleteEvent() {
 	return event;
 }
 
+const QString& CommandContext::documentSaveCompleteEvent() {
+	static const QString event = QStringLiteral("document.save.complete");
+	return event;
+}
+
 void CommandContext::beginVariablesBatch() {
 	d->variablesBatchActive = true;
 	d->batchChangedVariables.clear();

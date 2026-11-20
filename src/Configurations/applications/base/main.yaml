@@ -38,8 +38,13 @@ define:
             title: Список ошибок
 
     - sidebar:
-        default: explorer
+        default: system-router
         content:
+          - xtype: system-router
+            name: system-router
+            glyph: "🧭"
+            title: Системный маршрутизатор
+
           - xtype: explorer
             name: explorer
             glyph: "📁"

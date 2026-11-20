@@ -5,8 +5,13 @@
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
 #include "Content/FetchApiModule/documents/fetch_api_document.h"
 #include "Content/FetchApiModule/documents/fetch_queries_tree_document.h"
+#include "Content/FetchApiModule/services/fetch_queries_service.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
-#include "Content/FetchApiModule/services/fetch_store_db_service.h"
+#include "Content/SystemRouter/documents/system_router_node_properties_document.h"
+#include "Content/SystemRouter/documents/system_router_tree_document.h"
+#include "Content/SystemRouter/services/system_router_blob_service.h"
+#include "Content/SystemRouter/services/system_router_command_service.h"
+#include "Content/SystemRouter/services/system_router_service.h"
 #include "Content/UsersModule/documents/login_document.h"
 #include "Content/UsersModule/documents/register_document.h"
 #include "Content/UsersModule/documents/user_document.h"
@@ -214,8 +219,34 @@ void WidgetsBuilder::Private::registerAll() {
 	registry->registerFactory({ "Content.FetchApi.FetchQueriesTreeDocument", "fetch-api-queries-tree",
 		/*singletone*/ true, QStringLiteral("🌳"), QStringLiteral("Запросы Fetch API") },
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
-			auto* service = requiredService<FetchStoreDbService>(servicesFor(type, handler), type, "FetchStoreDbService");
-			return service ? new FetchQueriesTreeDocument(service, handler.parent) : nullptr;
+			auto* service = requiredService<FetchQueriesService>(servicesFor(type, handler), type, "FetchQueriesService");
+			return service ? new FetchQueriesTreeDocument(service->dataProvider(), handler.parent) : nullptr;
+		});
+
+	registry->registerFactory({ "Content.SystemRouter.SystemRouterTreeDocument", "system-router",
+		/*singletone*/ true, QStringLiteral("🗂"), QStringLiteral("Системный маршрутизатор") },
+		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
+			auto* services = servicesFor(type, handler);
+			auto* service = requiredService<SystemRouterService>(services, type, "SystemRouterService");
+			auto* commandService = requiredService<SystemRouterCommandService>(services, type,
+				"SystemRouterCommandService");
+			auto* blobService = requiredService<SystemRouterBlobService>(services, type,
+				"SystemRouterBlobService");
+			return service ? new SystemRouterTreeDocument(service, commandService, blobService,
+				handler.parent) : nullptr;
+		});
+
+	// Параметры узла: обычный документ, один на узел (id задаёт вызывающая сторона).
+	registry->registerFactory({ "Content.SystemRouter.SystemRouterNodePropertiesDocument",
+		"system-router-node-properties", /*singletone*/ false, QStringLiteral("🛠"),
+		QStringLiteral("Параметры узла") },
+		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
+			auto* services = servicesFor(type, handler);
+			auto* service = requiredService<SystemRouterService>(services, type, "SystemRouterService");
+			auto* blobService = requiredService<SystemRouterBlobService>(services, type,
+				"SystemRouterBlobService");
+			return service ? new SystemRouterNodePropertiesDocument(service, blobService, {},
+				handler.parent) : nullptr;
 		});
 
 	// Редактор кода — обычный документ: экземпляров может быть несколько.

@@ -2,6 +2,7 @@
 #include "Libs/Engine/console/console_table.h"
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/scripting/command_controller.h"
+#include "Libs/Engine/scripting/widgets/i_document_metadata.h"
 #include "Libs/Engine/scripting/widgets/widget_registry.h"
 #include "Libs/Engine/ui/doc_widget.h"
 
@@ -16,6 +17,16 @@ constexpr const char* kActionList = "list";
 constexpr const char* kActionCreate = "create";
 constexpr const char* kActionClose = "close";
 constexpr const char* kActionShow = "show";
+
+bool hasMimeToken(const QString& mimeTypes, const char* token) {
+	for (const auto& part : mimeTypes.split(QLatin1Char(','), Qt::SkipEmptyParts)) {
+		if (part.trimmed().compare(QLatin1String(token), Qt::CaseInsensitive) == 0) {
+			return true;
+		}
+	}
+
+	return false;
+}
 
 } // namespace
 
@@ -158,6 +169,22 @@ bool WidgetZoneCommand::executeCreate(const std::shared_ptr<CommandContext>& con
 	auto creator = context->owningDocumentContext();
 	if (!creator) {
 		creator = context->globalContext();
+	}
+
+	// Переменные, помеченные application/x-mp-shared, передаются в контекст
+	// создателя документа. Так code-editor и другие документы видят данные,
+	// которые не должны попадать в JSON/командную строку.
+	if (creator) {
+		const auto visibleVariables = context->variables();
+		for (auto it = visibleVariables.cbegin(); it != visibleVariables.cend(); it++) {
+			const auto mimeType = context->variableMimeType(it.key());
+			if (!hasMimeToken(mimeType, DocumentVariableMime::kShared)) {
+				continue;
+			}
+
+			creator->setVariable(it.key(), it.value());
+			creator->setVariableMimeType(it.key(), mimeType);
+		}
 	}
 
 	auto* widget = window->createWidget(id, _kind, title, glyph,

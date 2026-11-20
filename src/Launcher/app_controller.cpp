@@ -12,6 +12,9 @@
 #include "Content/FetchApiModule/commands/fetch_api_cmd.h"
 #include "Content/UsersModule/commands/users_cmd.h"
 #include "Content/ConsoleModule/commands/echo_cmd.h"
+#include "Content/SystemRouter/commands/system_router_save_blob_command.h"
+#include "Content/SystemRouter/commands/system_router_blobs_command.h"
+#include "Content/SystemRouter/commands/system_router_routes_command.h"
 
 class ApplicationController::Private {
 public:
@@ -50,6 +53,9 @@ void ApplicationController::initContext() {
 	commands->registerCommand(std::make_unique<WidgetZoneCommand>("side-panels", MainWindow::WidgetKind::SidePanel, this));
 	commands->registerCommand(std::make_unique<UsersCommand>(this));
 	commands->registerCommand(std::make_unique<FetchApiCommand>(this));
+	commands->registerCommand(std::make_unique<SystemRouterSaveBlobCommand>(this));
+	commands->registerCommand(std::make_unique<SystemRouterBlobsCommand>(this));
+	commands->registerCommand(std::make_unique<SystemRouterRoutesCommand>(this));
 }
 
 CommandProcessor* ApplicationController::commandProcessor() const {

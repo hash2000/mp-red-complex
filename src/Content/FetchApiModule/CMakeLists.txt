@@ -26,6 +26,7 @@ target_link_libraries(RedComplexFetchApiModule
 		RedComplexBaseWidgets
 		RedComplexDataStream
 		RedComplexResources
+		RedComplexDatabaseModule
 )
 
 qt_import_plugins(RedComplexFetchApiModule

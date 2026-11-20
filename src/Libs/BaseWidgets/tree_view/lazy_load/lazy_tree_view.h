@@ -1,78 +1,95 @@
 #pragma once
+#include <QAbstractItemDelegate>
+#include <QPersistentModelIndex>
 #include <QTreeView>
-#include <QStandardItem>
+
 #include <memory>
+#include <vector>
 
 using LazyTreeNodePtr = std::shared_ptr<class ILazyTreeNode>;
 using LazyTreeNodeList = std::vector<LazyTreeNodePtr>;
-using LazyTreeNodeStatePtr = std::shared_ptr<class LazyTreeNodeState>;
 
 class ILazyNodesDataProvider;
+class QStandardItem;
 
+/// Дерево с ленивой загрузкой узлов.
+///
+/// Требования к данным:
+///  - children() == std::nullopt — лист;
+///  - children() == пустой список — узел имеет детей, они загружаются
+///    у поставщика при раскрытии;
+///  - children() — непустой список — дети переданы заранее, при раскрытии
+///    дополнительный запрос не выполняется;
+///  - expanded() задаёт начальное состояние узла.
+///
+/// Добавление узла создаёт временный элемент без имени. Имя проверяется и
+/// сохраняется при завершении редактирования; пустое имя удаляет элемент.
 class LazyTreeView : public QTreeView {
 	Q_OBJECT
 public:
 	explicit LazyTreeView(ILazyNodesDataProvider* provider, QWidget* parent = nullptr);
-
 	~LazyTreeView() override;
 
-	// Установка данных (полная перезагрузка)
+	ILazyNodesDataProvider* provider() const;
+
+	/// Полная перезагрузка дерева.
 	void setNodes(const LazyTreeNodeList& nodes);
 
-	// Добавление детей в существующий узел
+	/// Добавить детей в существующий узел (пустой parentId — корень).
 	void appendChildren(const QVariant& parentId, const LazyTreeNodeList& newNodes);
 
-	// Перезаписыавет детей в существующий узел
+	/// Заменить детей существующего узла (пустой список очищает узел).
 	void setChildren(const QVariant& parentId, const LazyTreeNodeList& newNodes);
 
-	// Поиск узла по ID (возвращает nullptr, если не найден)
+	/// Поиск элемента по идентификатору узла (nullptr, если не найден).
 	QStandardItem* findNode(const QVariant& id) const;
 
-	// Вернуть запись дерева по индексу
 	QStandardItem* itemFromIndex(const QModelIndex& index) const;
 
-	// Развернуть узел и всех его родителей, прокрутить к нему
+	bool isDummyItem(QStandardItem* item) const;
+	bool isTemporaryItem(QStandardItem* item) const;
+
+	/// Развернуть узел и всех его родителей, прокрутить к нему.
 	void expandAndSelectNode(const QVariant& id);
 
-	// Добавление нового узла и запуск редактирования
+	/// Добавить узел и запустить редактирование имени.
 	bool addNodeAndStartEdit(QStandardItem* parentItem, LazyTreeNodePtr newNode);
 
-	// Начать редактирование узла
 	void startEdit(const QModelIndex& index);
-
-	// Начать редактирование выбранного узла
 	void startEditSelectedNode();
 
-	// Удаление выбранного узла
+	/// Удалить выбранный узел (сначала из поставщика данных).
 	void removeSelectedNode();
 
-	// Вернуть описатель выбранного узла
-	LazyTreeNodePtr selectedNode() const;
+	/// Переместить узел к новому родителю. row < 0 — в конец списка детей.
+	bool moveNode(const QVariant& nodeId, const QVariant& newParentId, int row = -1);
 
-	// Вернуть идентификатор выбранного узла
+	LazyTreeNodePtr selectedNode() const;
 	QVariant selectedNodeId() const;
 
-	// Завершить редактирование узла
+	/// Завершить редактирование элемента: сохранить/откатить изменения.
 	void finalizeEditItem(QStandardItem* item);
 
 signals:
 	void nodeActivated(const LazyTreeNodePtr& node);
-	void selectionChanged(const LazyTreeNodePtr& node);
+	void currentNodeChanged(const LazyTreeNodePtr& node);
 	void emptyAreaClicked();
 	void nodeAdded(const LazyTreeNodePtr& node);
 	void nodeRemoved(const LazyTreeNodePtr& node);
 	void nodeRenamed(const LazyTreeNodePtr& node, const QString& newName);
 	void nodeMoved(const LazyTreeNodePtr& node, const LazyTreeNodePtr& newParent);
+	void errorOccurred(const QString& message);
 
 protected:
 	void mousePressEvent(QMouseEvent* event) override;
+	void startDrag(Qt::DropActions supportedActions) override;
 	void dropEvent(QDropEvent* event) override;
+	void closeEditor(QWidget* editor, QAbstractItemDelegate::EndEditHint hint) override;
 
 private slots:
 	void onExpanded(const QModelIndex& index);
 	void onNodeActivated(const QModelIndex& index);
 	void onSelectionChanged(const QModelIndex& current, const QModelIndex& previous);
-	void onItemChanged(QStandardItem* item);
 
 private:
 	class Private;

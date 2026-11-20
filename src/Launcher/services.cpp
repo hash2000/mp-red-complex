@@ -4,8 +4,18 @@
 #include "Libs/Resources/resources.h"
 
 // FetchApiModule
+#include "Content/FetchApiModule/data_providers/fetch_queries_data_provider_db.h"
+#include "Content/FetchApiModule/services/fetch_queries_service.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
-#include "Content/FetchApiModule/services/fetch_store_db_service.h"
+
+// SystemRouter
+#include "Content/DatabaseModule/data_providers/data_blobs_provider_db.h"
+#include "Content/SystemRouter/data_providers/system_router_commands_provider_db.h"
+#include "Content/SystemRouter/data_providers/system_router_data_provider_db.h"
+#include "Content/SystemRouter/data_providers/system_router_db.h"
+#include "Content/SystemRouter/services/system_router_blob_service.h"
+#include "Content/SystemRouter/services/system_router_command_service.h"
+#include "Content/SystemRouter/services/system_router_service.h"
 
 //// ShadersModule
 //#include "Content/ShadersModule/data_providers/shaders_data_provider_impl.h"
@@ -61,6 +71,14 @@ public:
 		//, imagesDataProvider([this] {	return std::make_unique<ImagesDataProviderJsonImpl>(resources);	})
 		//, tileGroupsDataProvider([this] {	return std::make_unique<TileGroupsDataProviderJsonImpl>(resources);	})
 		, usersRegistryDataProvider([this] {	return std::make_unique<UsersRegistryDataProviderDb>(databasesService.get()); })
+		, fetchQueriesDataProvider([this] {	return std::make_unique<FetchQueriesDataProviderDb>(databasesService.get()); })
+		, systemRouterDataProvider([this] {	return std::make_unique<SystemRouterDataProviderDb>(databasesService.get()); })
+		, systemRouterCommandsProvider([this] {	return std::make_unique<SystemRouterCommandsProviderDb>(databasesService.get()); })
+		, systemRouterBlobsProvider([this] {
+			return std::make_unique<DataBlobsProviderDb>(databasesService.get(),
+				QString::fromLatin1(SystemRouterDb::kDatabase),
+				QString::fromLatin1(SystemRouterDb::kDataBlobsTable));
+		})
 		//, characterDataProvider([this] {	return std::make_unique<CharacterDataProviderDb>(databasesService.get());	})
 		//, shadersDataProvider([this] { return std::make_unique<ShadersDataProviderLocalImpl>(resources); })
 		//, materialsDataProvider([this] { return std::make_unique<MaterialsDataProviderJsonImpl>(resources); })
@@ -82,6 +100,10 @@ private:
 	//LazyPtr<IItemsDataProvider> itemsDataProvider;
 	//LazyPtr<IEntitiesDataProvider> entitiesDataProvider;
 	LazyPtr<IUsersRegistryDataProvider> usersRegistryDataProvider;
+	LazyPtr<FetchQueriesDataProviderDb> fetchQueriesDataProvider;
+	LazyPtr<SystemRouterDataProviderDb> systemRouterDataProvider;
+	LazyPtr<SystemRouterCommandsProviderDb> systemRouterCommandsProvider;
+	LazyPtr<DataBlobsProviderDb> systemRouterBlobsProvider;
 	//LazyPtr<ICharacterDataProvider> characterDataProvider;
 	//LazyPtr<IImagesDataProvider> imagesDataProvider;
 	//LazyPtr<ITileGroupsDataProvider> tileGroupsDataProvider;
@@ -152,9 +174,24 @@ public:
 			return std::make_unique<FetchApiService>();
 		});
 
-		registerFactory<FetchStoreDbService>([this]() {
-			return std::make_unique<FetchStoreDbService>(
-				databasesService.get());
+		registerFactory<FetchQueriesService>([this]() {
+			return std::make_unique<FetchQueriesService>(
+				fetchQueriesDataProvider.get());
+		});
+
+		registerFactory<SystemRouterService>([this]() {
+			return std::make_unique<SystemRouterService>(
+				systemRouterDataProvider.get());
+		});
+
+		registerFactory<SystemRouterCommandService>([this]() {
+			return std::make_unique<SystemRouterCommandService>(
+				systemRouterCommandsProvider.get());
+		});
+
+		registerFactory<SystemRouterBlobService>([this]() {
+			return std::make_unique<SystemRouterBlobService>(
+				systemRouterBlobsProvider.get());
 		});
 
 		registerFactory<HighlightingPluginManager>([this] {

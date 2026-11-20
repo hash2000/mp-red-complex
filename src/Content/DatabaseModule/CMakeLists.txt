@@ -23,6 +23,7 @@ target_link_libraries(RedComplexDatabaseModule
 
 		RedComplexEngine
 		RedComplexBase
+		RedComplexBaseWidgets
 		RedComplexResources
 )
 
@@ -31,3 +32,11 @@ qt_add_executable(TestDatabasesService tests/test_databases_service.cpp)
 target_link_libraries(TestDatabasesService PRIVATE
   Qt6::Core Qt6::Test RedComplexDatabaseModule RedComplexEngine RedComplexResources RedComplexBase
 )
+set_target_properties(TestDatabasesService PROPERTIES CMAKE_AUTOMOC ON)
+
+qt_add_executable(TestLazyNodesDataProviderDb tests/test_lazy_nodes_data_provider_db.cpp)
+target_link_libraries(TestLazyNodesDataProviderDb PRIVATE
+  Qt6::Core Qt6::Gui Qt6::Test RedComplexDatabaseModule RedComplexEngine RedComplexResources RedComplexBase
+  RedComplexBaseWidgets
+)
+set_target_properties(TestLazyNodesDataProviderDb PROPERTIES CMAKE_AUTOMOC ON)

@@ -53,6 +53,10 @@ public:
 	/// Удалить все свойства
 	void clearProperties();
 
+	/// Идентификаторы свойств в порядке отображения.
+	QStringList propertyIds() const;
+	int propertyCount() const;
+
 	/// Базовый путь, с которого будут начинаться пути к файлам и директориям при выборе
 	void setBasePath(const QString& path);
 

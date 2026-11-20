@@ -435,6 +435,32 @@ void PropertiesListWidget::clearProperties() {
 	d->clearUI();
 }
 
+QStringList PropertiesListWidget::propertyIds() const {
+	QStringList result;
+	if (!d->formLayout) {
+		return result;
+	}
+
+	for (int row = 0; row < d->formLayout->rowCount(); row++) {
+		auto* item = d->formLayout->itemAt(row, QFormLayout::FieldRole);
+		auto* editor = item ? item->widget() : nullptr;
+		if (!editor) {
+			continue;
+		}
+
+		const auto id = editor->property("propertyId").toString();
+		if (!id.isEmpty()) {
+			result.append(id);
+		}
+	}
+
+	return result;
+}
+
+int PropertiesListWidget::propertyCount() const {
+	return propertyIds().size();
+}
+
 void PropertiesListWidget::setBasePath(const QString& path) {
 	d->basePath = path;
 }

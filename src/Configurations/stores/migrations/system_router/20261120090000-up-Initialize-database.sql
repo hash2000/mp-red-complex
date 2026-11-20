@@ -1,0 +1,16 @@
+CREATE TABLE IF NOT EXISTS "nodes" (
+	"id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+	"parent_id" INTEGER,
+	"name" TEXT NOT NULL,
+	"data" TEXT NOT NULL DEFAULT '{}',
+	CONSTRAINT "FK_nodes_parent_id" FOREIGN KEY (parent_id) REFERENCES "nodes"(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS IX_nodes_parent_id ON nodes(parent_id);
+
+CREATE TABLE IF NOT EXISTS "commands" (
+	"id" TEXT NOT NULL PRIMARY KEY,
+	"version" INTEGER NOT NULL DEFAULT 1,
+	"description" TEXT NOT NULL DEFAULT '',
+	"script" TEXT NOT NULL DEFAULT ''
+);

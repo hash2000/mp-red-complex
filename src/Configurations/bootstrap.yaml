@@ -24,6 +24,19 @@ stores:
       wal:
         checkInterval: 60000
         maxSizeMb: 40
+    system_router:
+      wal:
+        checkInterval: 60000
+        maxSizeMb: 20
+      migrations:
+        - version: 20261120090000
+          description: Initialize system router
+          up: stores/migrations/system_router/20261120090000-up-Initialize-database.sql
+          down: stores/migrations/system_router/20261120090000-down.sql
+        - version: 20261120130000
+          description: Rename commands to data_blobs
+          up: stores/migrations/system_router/20261120130000-up-Rename-commands-to-data-blobs.sql
+          down: stores/migrations/system_router/20261120130000-down.sql
     accounts:
       wal:
         checkInterval: 120000
