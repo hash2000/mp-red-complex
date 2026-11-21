@@ -249,7 +249,7 @@ void TestCodeEditorSearch::documentPathFromCreationVariables() {
 
 	auto* registry = controller.widgets();
 	registry->registerFactory({ QStringLiteral("Test.CodeEditor"), QStringLiteral("code-editor"),
-		/*singletone*/ false, QStringLiteral("📝"), QStringLiteral("Редактор") },
+		/*singletone*/ false, QStringLiteral("Редактор") },
 		[&highlighting, &formatters](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 			return new CodeEditorDocument(&highlighting, &formatters, handler.parent);
 		});
@@ -390,7 +390,7 @@ void TestCodeEditorSearch::newDocumentDialogShowsCodeEditorPath() {
 	auto* registry = controller.widgets();
 	registry->registerFactory({ QStringLiteral("Content.CodeEditor.CodeEditorDocument"),
 		QStringLiteral("code-editor"), /*singletone*/ false,
-		QStringLiteral("📝"), QStringLiteral("Редактор кода") },
+		QStringLiteral("Редактор кода") },
 		[](const QString&, const WidgetBuildHandler&) -> QWidget* {
 			return nullptr;
 		});

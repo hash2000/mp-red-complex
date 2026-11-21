@@ -159,7 +159,7 @@ void TestClassManager::singlePageOpensDocumentWithoutZones() {
 
 	TestCommandController controller;
 	controller.widgets()->registerFactory({ "System.Viewport.MainForm", "mainform",
-		/*singletone*/ true, QStringLiteral("🖥"), QStringLiteral("Оболочка") },
+		/*singletone*/ true, QStringLiteral("Оболочка") },
 		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 			return new MainWindow(handler.context, handler.parent, /*buildDefaultPanels*/ false,
 				MainWindow::Options::fromBuildOptions(handler.options));
@@ -241,7 +241,7 @@ void TestClassManager::panelsAreBuiltWhenNotDeleted() {
 
 	TestCommandController controller;
 	controller.widgets()->registerFactory({ "System.Viewport.MainForm", "mainform",
-		/*singletone*/ true, QStringLiteral("🖥"), QStringLiteral("Оболочка") },
+		/*singletone*/ true, QStringLiteral("Оболочка") },
 		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 			return new MainWindow(handler.context, handler.parent, /*buildDefaultPanels*/ false,
 				MainWindow::Options::fromBuildOptions(handler.options));
@@ -292,7 +292,7 @@ void TestClassManager::shippedSinglePageDescriptionLoads() {
 
 	TestCommandController controller;
 	controller.widgets()->registerFactory({ "System.Viewport.MainForm", "mainform",
-		/*singletone*/ true, QStringLiteral("🖥"), QStringLiteral("Оболочка") },
+		/*singletone*/ true, QStringLiteral("Оболочка") },
 		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 			return new MainWindow(handler.context, handler.parent, /*buildDefaultPanels*/ false,
 				MainWindow::Options::fromBuildOptions(handler.options));

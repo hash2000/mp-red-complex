@@ -410,7 +410,6 @@ void ClassManager::Private::applyDocuments(MainWindow* window, const YAML::Node&
 		handler.xtype = type;
 		handler.name = name;
 		handler.title = title;
-		handler.glyph = glyph;
 		handler.parent = window;
 		handler.context = commandController ? commandController->globalContext()
 			: std::shared_ptr<CommandContext>();
@@ -511,12 +510,15 @@ void ClassManager::Private::applyPanels(MainWindow* window, const YAML::Node& bl
 			title = name;
 		}
 
+		// Глиф панели задаётся в описании явно; стандартный глиф типа
+		// для вкладок документов берётся из темы.
+		const auto glyph = nodeString(item, "glyph");
+
 		WidgetBuildHandler handler;
 		handler.className = nativeType;
 		handler.xtype = type;
 		handler.name = name;
 		handler.title = title;
-		handler.glyph = nodeString(item, "glyph");
 		handler.parent = window;
 		handler.context = commandController ? commandController->globalContext()
 			: std::shared_ptr<CommandContext>();
@@ -525,7 +527,7 @@ void ClassManager::Private::applyPanels(MainWindow* window, const YAML::Node& bl
 		// `.documents.{name}`, поэтому панель может порождать документы
 		// и подписываться на изменения соседей.
 		auto* panel = commandController
-			? window->createWidget(name, kind, title, handler.glyph,
+			? window->createWidget(name, kind, title, glyph,
 				[registry = commandController->widgets(), nativeType, handler]() {
 					return registry->build(nativeType, handler);
 				},

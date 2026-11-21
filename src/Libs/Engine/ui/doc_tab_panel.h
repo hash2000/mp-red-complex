@@ -1,4 +1,6 @@
 #pragma once
+#include "Libs/Engine/themes/document_tab_theme.h"
+
 #include <QStringList>
 #include <QWidget>
 #include <memory>
@@ -13,12 +15,17 @@ class DocumentWidget;
 /// группировка по цвету, по типу документа. Активное правило берётся из
 /// системного параметра `documents.tabs.order` (переменная глобального
 /// контекста), поэтому его можно менять в настройках приложения.
+///
+/// Цвет вкладки задаёт документ (переменная `color`) либо тема — привязка
+/// к классу документа или его xtype в `assets/themes/{theme}/documents.yaml`.
+/// Явный цвет документа важнее цвета темы.
 class DocumentTabsPanel : public QWidget {
 	Q_OBJECT
 public:
 	explicit DocumentTabsPanel(QWidget* parent = nullptr);
 	/// @param settingsContext контекст системных настроек (обычно глобальный):
-	/// из него читается правило сортировки/группировки вкладок.
+	/// из него читается правило сортировки/группировки вкладок, а через
+	/// контроллер — каталог темы для цветов вкладок.
 	explicit DocumentTabsPanel(std::shared_ptr<CommandContext> settingsContext,
 		QWidget* parent = nullptr);
 	~DocumentTabsPanel() override;
@@ -38,6 +45,10 @@ public:
 	QString orderStrategy() const;
 	/// Включает правило по идентификатору; false — правило не найдено.
 	bool setOrderStrategy(const QString& id);
+
+	/// Цвета вкладок из темы (привязка к классу документа или xtype).
+	void setDocumentTabTheme(const DocumentTabTheme& theme);
+	const DocumentTabTheme& documentTabTheme() const;
 
 	/// Заголовки групп, построенных последней перестройкой (для тестов
 	/// и диагностики); пустой список — панель без групп.

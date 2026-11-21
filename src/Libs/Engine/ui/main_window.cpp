@@ -358,19 +358,20 @@ QWidget* MainWindow::Private::createDocumentOfType(const QString& type, const QS
 	}
 
 	// Роль документа определяет контекст и правила (см. DocumentRule).
+	// Оформление по умолчанию (глиф, цвет вкладки) задаёт тема, поэтому
+	// в регистрации типа остаются только идентичность и подпись.
 	WidgetBuildHandler handler;
 	handler.className = info->className;
 	handler.xtype = info->xtype;
 	handler.name = requestedId.isEmpty() ? info->xtype : requestedId;
 	handler.title = title.isEmpty() ? info->title : title;
-	handler.glyph = glyph.isEmpty() ? info->glyph : glyph;
 	handler.singletone = info->singletone;
 	handler.rule = info->rule;
 	handler.parent = q;
 	handler.context = context;
 
 	const auto id = registry->documentId(info->xtype, handler.name);
-	auto* document = q->createWidget(id, WidgetKind::Document, handler.title, handler.glyph,
+	auto* document = q->createWidget(id, WidgetKind::Document, handler.title, glyph,
 		[registry, type = info->xtype, handler]() { return registry->build(type, handler); },
 		QString(), info->xtype, context, variables);
 	if (!document) {
@@ -530,17 +531,18 @@ QWidget* MainWindow::createWidget(const QString& id, WidgetKind kind, const QStr
 	QString documentId = id;
 	DocumentRule rule = DocumentRule::Document;
 	QString widgetXtype = type;
+	QString widgetClass = type;
 	if (d->controller && d->controller->widgets()) {
 		auto* registry = d->controller->widgets();
 		documentId = registry->documentId(type, id);
 
 		// Роль документа (DocumentRule) описывает, в каком контексте он живёт
-		// и какие правила применяет его interceptor.
+		// и какие правила применяет его interceptor. Тип и класс нужны панели
+		// вкладок: по ним тема задаёт цвет вкладки.
 		if (const auto info = registry->typeInfo(type)) {
 			rule = info->rule;
-			if (widgetXtype.isEmpty()) {
-				widgetXtype = info->xtype;
-			}
+			widgetXtype = info->xtype;
+			widgetClass = info->className;
 		}
 	}
 
@@ -609,6 +611,11 @@ QWidget* MainWindow::createWidget(const QString& id, WidgetKind kind, const QStr
 	// для группировки и подсказками.
 	if (!widgetXtype.isEmpty()) {
 		document->setXtype(widgetXtype);
+	}
+
+	// Класс документа — привязка цвета вкладки из темы.
+	if (!widgetClass.isEmpty()) {
+		document->setClassName(widgetClass);
 	}
 
 	if (!title.isEmpty()) {

@@ -53,7 +53,7 @@ struct WidgetFixture {
 
 	explicit WidgetFixture(CommandController& controller) {
 		controller.widgets()->registerFactory({ "Test.Widget", "test-widget", /*singletone*/ false,
-			QStringLiteral("🧪"), QStringLiteral("Тестовый виджет") },
+			QStringLiteral("Тестовый виджет") },
 			[this](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 				built++;
 				auto* label = new QLabel(QStringLiteral("test"), handler.parent);
@@ -468,7 +468,7 @@ void TestUiZones::registryDescribesTypes() {
 	TestCommandController controller;
 	WidgetFixture fixture(controller);
 	controller.widgets()->registerFactory({ "Test.Singleton", "test-singleton", /*singletone*/ true,
-		QStringLiteral("★"), QStringLiteral("Одиночный") },
+		QStringLiteral("Одиночный") },
 		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 			return new QLabel(handler.title, handler.parent);
 		});
@@ -478,12 +478,10 @@ void TestUiZones::registryDescribesTypes() {
 	QCOMPARE(types.at(0).xtype, QStringLiteral("test-singleton"));
 	QCOMPARE(types.at(0).className, QStringLiteral("Test.Singleton"));
 	QVERIFY(types.at(0).singletone);
-	QCOMPARE(types.at(0).glyph, QStringLiteral("★"));
 	QCOMPARE(types.at(0).title, QStringLiteral("Одиночный"));
 
 	QCOMPARE(types.at(1).xtype, QStringLiteral("test-widget"));
 	QVERIFY(!types.at(1).singletone);
-	QCOMPARE(types.at(1).glyph, QStringLiteral("🧪"));
 	QCOMPARE(types.at(1).title, QStringLiteral("Тестовый виджет"));
 
 	// Поиск описания по xtype и по полному имени класса.
@@ -515,7 +513,7 @@ void TestUiZones::singletoneDocumentKeepsXtypeName() {
 	TestCommandController controller;
 	int built = 0;
 	controller.widgets()->registerFactory({ "Test.Singleton", "test-singleton", /*singletone*/ true,
-		QStringLiteral("★"), QStringLiteral("Одиночный") },
+		QStringLiteral("Одиночный") },
 		[&built](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 			built++;
 			return new QLabel(handler.title, handler.parent);
@@ -531,7 +529,9 @@ void TestUiZones::singletoneDocumentKeepsXtypeName() {
 	QVERIFY(!window.widget(QStringLiteral("test")));
 	QCOMPARE(built, 1);
 	QCOMPARE(window.widgetTitle(QStringLiteral("test-singleton")), QStringLiteral("Одиночный"));
-	QCOMPARE(window.document(QStringLiteral("test-singleton"))->glyph(), QStringLiteral("★"));
+	// Глиф по умолчанию задаёт тема, а не регистрация типа.
+	QCOMPARE(window.document(QStringLiteral("test-singleton"))->glyph(),
+		DocumentWidget::defaultGlyph());
 
 	// Повторное создание с другим id активирует уже открытый документ.
 	QVERIFY(documents.execute(commandContext(controller, {
@@ -546,7 +546,7 @@ void TestUiZones::singletoneCreateWidgetNormalizesId() {
 	TestCommandController controller;
 	int built = 0;
 	controller.widgets()->registerFactory({ "Test.Singleton", "test-singleton", /*singletone*/ true,
-		QStringLiteral("★"), QStringLiteral("Одиночный") },
+		QStringLiteral("Одиночный") },
 		[&built](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 			built++;
 			return new QLabel(handler.title, handler.parent);
@@ -577,7 +577,8 @@ void TestUiZones::commandUsesRegistryDefaults() {
 	MainWindow window(controller.globalContext(), nullptr, false);
 	WidgetZoneCommand documents(QStringLiteral("documents"), MainWindow::WidgetKind::Document);
 
-	// Без title/glyph в команде берутся значения по умолчанию из регистрации.
+	// Без title в команде берётся подпись из регистрации; глиф по умолчанию
+	// задаёт тема (в тесте темы нет — действует глиф документа по умолчанию).
 	QVERIFY(documents.execute(commandContext(controller, {
 		{ "action", "create" }, { "target", "test-widget" }, { "id", "defaults" }
 	})));
@@ -585,7 +586,7 @@ void TestUiZones::commandUsesRegistryDefaults() {
 	auto* document = window.document(QStringLiteral("defaults"));
 	QVERIFY(document);
 	QCOMPARE(document->title(), QStringLiteral("Тестовый виджет"));
-	QCOMPARE(document->glyph(), QStringLiteral("🧪"));
+	QCOMPARE(document->glyph(), DocumentWidget::defaultGlyph());
 	QCOMPARE(window.widgetType(QStringLiteral("defaults")), QStringLiteral("test-widget"));
 }
 
@@ -863,7 +864,7 @@ void TestUiZones::newDocumentDialogFiltersTypes() {
 	TestCommandController controller;
 	WidgetFixture fixture(controller);
 	controller.widgets()->registerFactory({ "Test.Singleton", "test-singleton", /*singletone*/ true,
-		QStringLiteral("★"), QStringLiteral("Одиночный") },
+		QStringLiteral("Одиночный") },
 		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 			return new QLabel(handler.title, handler.parent);
 		});
@@ -897,7 +898,8 @@ void TestUiZones::newDocumentDialogFiltersTypes() {
 	QCOMPARE(dialog.documentName(), QStringLiteral("test-singleton"));
 	QVERIFY(!name->isEnabled());
 	QCOMPARE(name->text(), QStringLiteral("test-singleton"));
-	QCOMPARE(glyph->text(), QStringLiteral("★"));
+	// Стандартный глиф типа задаёт тема, а не регистрация; в тесте темы нет.
+	QCOMPARE(glyph->text(), QString());
 	QCOMPARE(title->text(), QStringLiteral("Одиночный"));
 
 	// Обычный документ: имя можно изменить и сгенерировать заново.
@@ -908,7 +910,7 @@ void TestUiZones::newDocumentDialogFiltersTypes() {
 	const auto generated = name->text();
 	random->click();
 	QVERIFY(name->text() != generated);
-	QCOMPARE(glyph->text(), QStringLiteral("🧪"));
+	QCOMPARE(glyph->text(), QString());
 	QCOMPARE(title->text(), QStringLiteral("Тестовый виджет"));
 
 	// Без метаданных обязательных переменных нет — список пуст.

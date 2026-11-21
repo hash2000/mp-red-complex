@@ -89,10 +89,11 @@ auto* document = window->createWidget(
 | Переменная | Назначение |
 |---|---|
 | `title` | заголовок вкладки |
-| `glyph` | UTF-8-иконка вкладки |
 | `modified` | признак несохранённых изменений |
-| `color` | цвет вкладки (`QColor`, невалидный — цвет не задан) |
+| `glyph` | явный UTF-8-значок вкладки; пустой — берётся из темы |
+| `color` | явный цвет вкладки (`QColor`); невалидный — берётся из темы |
 | `xtype` | тип документа, которым он создан (используется группировкой) |
+| `className` | полное имя класса документа (по нему тема задаёт оформление вкладки) |
 | переменные документа | например, `path`, `nodeId`, `selectedNodeId` |
 
 Методы:
@@ -101,8 +102,11 @@ auto* document = window->createWidget(
 QString title() const;
 void setTitle(const QString& title);
 
-QString glyph() const;
-void setGlyph(const QString& glyph);
+QString glyph() const;              // действующий значок: явный → тема → «📄»
+void setGlyph(const QString& glyph); // пустой сбрасывает к значку темы
+QString themeGlyph() const;          // значок из темы для класса/xtype
+void setThemeGlyph(const QString& glyph);
+static const QString& defaultGlyph();
 
 bool isModified() const;
 void setModified(bool modified);
@@ -112,6 +116,9 @@ void setColor(const QColor& color); // невалидный цвет сбрас�
 
 QString xtype() const;
 void setXtype(const QString& xtype);
+
+QString className() const;
+void setClassName(const QString& className);
 
 std::shared_ptr<CommandContext> context() const;
 void setContext(const std::shared_ptr<CommandContext>& context);
@@ -207,7 +214,6 @@ registry->registerFactory(
     WidgetTypeHandler("Content.My.Module.MyDocument",
                       "my-document",
                       false,
-                      "📝",
                       "Мой документ"),
     [](const QString&, const WidgetBuildHandler& handler) {
         return new MyDocument(handler.parent);
@@ -219,8 +225,13 @@ registry->registerFactory(
 - `className` — полное имя класса;
 - `xtype` — псевдоним для команд и описаний;
 - `singletone` — один документ на приложение;
-- `glyph` и `title` — значения по умолчанию;
+- `title` — подпись по умолчанию;
 - `rule` — роль документа (`DocumentRule`), см. раздел 11.
+
+Оформление вкладки по умолчанию (стандартный глиф и цвет) в регистрации
+**не задаётся** — его описывает тема в `assets/themes/{theme}/documents.yaml`
+по классу документа или `xtype` (см. раздел 10). Явные глиф и цвет документа
+задаются при создании (`glyph=` в команде, `glyph:` в yaml, панель свойств).
 
 `WidgetBuildHandler` дополнительно содержит `name`, `parent`, `options`,
 `context`.
@@ -313,9 +324,44 @@ context()->fireEvent(CommandContext::documentSaveCompleteEvent());
 (переменная глобального контекста) и меняется в документе системных настроек
 (кнопка ⚙ на панели кнопок справа). Одновременно действует одно правило.
 
-Цвет вкладки — свойство документа: он хранится в переменной `color` и
-редактируется в панели свойств («Цвет вкладки»). Пустой цвет означает «цвет
-темы». Панель вкладок рисует цветную полосу слева от значка.
+Оформление вкладки (цвет и стандартный глиф) задаётся двумя способами, они
+складываются по приоритету:
+
+1. **свои значения документа** — переменные `color` и `glyph`; цвет и глиф
+   редактируются в панели свойств («Цвет вкладки», «Значок»). Пустое значение
+   означает «взять из темы»;
+2. **значения из темы** — привязка к классу документа или его `xtype` в файле
+   `assets/themes/{theme}/documents.yaml`.
+
+```yaml
+# assets/themes/{theme}/documents.yaml
+tabs:
+  default: "#3c3c3c"            # необязательный цвет для всех вкладок
+  defaultGlyph: "📄"             # необязательный глиф для всех вкладок
+  colors:
+    Content.CodeEditor.CodeEditorDocument: "#61afef"  # полное имя класса
+    code-editor: "#61afef"                            # xtype
+  glyphs:
+    Content.CodeEditor.CodeEditorDocument: "📝"
+    code-editor: "📝"
+```
+
+Ключ — полное имя класса (`WidgetTypeHandler::className`) или `xtype`; класс
+важнее `xtype`, `default`/`defaultGlyph` используются, если привязки нет.
+Стандартные глифы раньше задавались при регистрации типа в `WidgetsBuilder`
+(`WidgetRegistry::registerFactory`) — теперь они живут в теме.
+
+Панель вкладок читает файл из каталога темы (`path.theme` в ресурсах) при
+создании: цвета применяются к уже открытым документам и участвуют
+в группировке по цвету, а глиф передаётся документу как запасной
+(`DocumentWidget::setThemeGlyph`). Если глифа нет ни у документа, ни в теме,
+действует `DocumentWidget::defaultGlyph()` (`📄`). Панель рисует цветную
+полосу слева от значка.
+
+```cpp
+// Оформление можно задать и программно (например, в тестах):
+panel->setDocumentTabTheme(DocumentTabTheme::loadFromThemeDirectory(themeDir));
+```
 
 Перетаскивание вкладок мышью работает при правиле `manual`: нажатие на
 вкладку и движение вверх/вниз показывает линию вставки, отпускание меняет

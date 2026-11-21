@@ -32,15 +32,16 @@ public:
 		return true;
 	}
 
-	QList<DocumentTabGroup> arrange(const QList<DocumentWidget*>& documents) const override {
+	QList<DocumentTabGroup> arrange(const QList<DocumentTabView>& tabs) const override {
 		DocumentTabGroup group;
-		group.documents = documents;
+		group.tabs = tabs;
 		return { group };
 	}
 };
 
 /// Группировка по цвету вкладки: цветные группы сортируются по имени цвета,
-/// вкладки без цвета попадают в группу «Без цвета» в конце.
+/// вкладки без цвета попадают в группу «Без цвета» в конце. Цвет берётся
+/// действующий: явный цвет документа или привязка из темы.
 class ColorTabsOrderStrategy final : public IDocumentTabsOrderStrategy {
 public:
 	QString id() const override {
@@ -55,21 +56,21 @@ public:
 		return false;
 	}
 
-	QList<DocumentTabGroup> arrange(const QList<DocumentWidget*>& documents) const override {
-		QMap<QString, QList<DocumentWidget*>> groups;
-		QList<DocumentWidget*> uncolored;
-		for (auto* document : documents) {
-			if (!document) {
+	QList<DocumentTabGroup> arrange(const QList<DocumentTabView>& tabs) const override {
+		QMap<QString, QList<DocumentTabView>> groups;
+		QList<DocumentTabView> uncolored;
+		for (const auto& tab : tabs) {
+			if (!tab.document) {
 				continue;
 			}
 
-			const auto color = document->color();
+			const auto color = documentTabColor(tab);
 			if (!color.isValid()) {
-				uncolored << document;
+				uncolored << tab;
 				continue;
 			}
 
-			groups[color.name()] << document;
+			groups[color.name()] << tab;
 		}
 
 		QList<DocumentTabGroup> result;
@@ -77,14 +78,14 @@ public:
 			DocumentTabGroup group;
 			group.title = it.key();
 			group.color = QColor(it.key());
-			group.documents = it.value();
+			group.tabs = it.value();
 			result << group;
 		}
 
 		if (!uncolored.isEmpty()) {
 			DocumentTabGroup group;
 			group.title = QStringLiteral("Без цвета");
-			group.documents = uncolored;
+			group.tabs = uncolored;
 			result << group;
 		}
 
@@ -108,35 +109,35 @@ public:
 		return false;
 	}
 
-	QList<DocumentTabGroup> arrange(const QList<DocumentWidget*>& documents) const override {
-		QMap<QString, QList<DocumentWidget*>> groups;
-		QList<DocumentWidget*> untyped;
-		for (auto* document : documents) {
-			if (!document) {
+	QList<DocumentTabGroup> arrange(const QList<DocumentTabView>& tabs) const override {
+		QMap<QString, QList<DocumentTabView>> groups;
+		QList<DocumentTabView> untyped;
+		for (const auto& tab : tabs) {
+			if (!tab.document) {
 				continue;
 			}
 
-			const auto xtype = document->xtype();
+			const auto xtype = tab.document->xtype();
 			if (xtype.isEmpty()) {
-				untyped << document;
+				untyped << tab;
 				continue;
 			}
 
-			groups[xtype] << document;
+			groups[xtype] << tab;
 		}
 
 		QList<DocumentTabGroup> result;
 		for (auto it = groups.cbegin(); it != groups.cend(); it++) {
 			DocumentTabGroup group;
 			group.title = it.key();
-			group.documents = it.value();
+			group.tabs = it.value();
 			result << group;
 		}
 
 		if (!untyped.isEmpty()) {
 			DocumentTabGroup group;
 			group.title = QStringLiteral("Без типа");
-			group.documents = untyped;
+			group.tabs = untyped;
 			result << group;
 		}
 
@@ -145,6 +146,15 @@ public:
 };
 
 } // namespace
+
+QColor documentTabColor(const DocumentTabView& view) {
+	if (!view.document) {
+		return QColor();
+	}
+
+	const auto explicitColor = view.document->color();
+	return explicitColor.isValid() ? explicitColor : view.themeColor;
+}
 
 class DocumentTabsOrderRegistry::Private {
 public:

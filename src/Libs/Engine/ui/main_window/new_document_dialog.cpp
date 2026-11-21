@@ -1,8 +1,11 @@
 #include "Libs/Engine/ui/main_window/new_document_dialog.h"
 #include "Libs/BaseWidgets/properties/properties_list_widget.h"
 #include "Libs/Engine/scripting/command_context.h"
+#include "Libs/Engine/scripting/command_controller.h"
 #include "Libs/Engine/scripting/widgets/i_document_metadata.h"
 #include "Libs/Engine/scripting/widgets/widget_registry.h"
+#include "Libs/Engine/themes/document_tab_theme.h"
+#include "Libs/Resources/resources.h"
 
 #include <QAbstractItemView>
 #include <QColor>
@@ -53,6 +56,22 @@ QVariant normalizeValue(const QVariant& value, const QString& mimeType) {
 void applyNumberLimits(PropertyData& property, const QString& mimeType) {
 	PropertyMime::applyNumberLimits(property, mimeType);
 }
+
+/// Тема приложения: из неё берутся стандартные глифы вкладок по типу.
+DocumentTabTheme loadTheme(const std::shared_ptr<CommandContext>& context) {
+	auto* controller = context ? context->commandController() : nullptr;
+	auto* resources = controller ? controller->resources() : nullptr;
+	if (!resources) {
+		return DocumentTabTheme();
+	}
+
+	const auto themeDir = resources->Directories.get(QStringLiteral("path.theme"));
+	if (!themeDir) {
+		return DocumentTabTheme();
+	}
+
+	return DocumentTabTheme::loadFromThemeDirectory(themeDir->absolutePath());
+}
 } // namespace
 
 class NewDocumentDialog::Private {
@@ -66,6 +85,8 @@ public:
 	NewDocumentDialog* q = nullptr;
 	WidgetRegistry* registry = nullptr;
 	std::shared_ptr<CommandContext> context;
+	/// Оформление вкладок из темы: стандартный глиф выбранного типа.
+	DocumentTabTheme theme;
 
 	QLineEdit* searchEdit = nullptr;
 	QListWidget* typeList = nullptr;
@@ -591,7 +612,7 @@ void NewDocumentDialog::Private::updateDetails() {
 		nameHint->setText(NewDocumentDialog::tr("Уникальное имя документа (id)"));
 	}
 
-	glyphEdit->setText(type->glyph);
+	glyphEdit->setText(theme.glyphFor(type->className, type->xtype));
 	titleEdit->setText(type->title.isEmpty() ? type->xtype : type->title);
 	fillDocumentVariables();
 	updateAcceptState();
@@ -663,6 +684,7 @@ NewDocumentDialog::NewDocumentDialog(WidgetRegistry* registry,
 	d->q = this;
 	d->registry = registry;
 	d->context = context;
+	d->theme = loadTheme(context);
 	d->setupUi(this);
 	d->searchEdit->setFocus(Qt::OtherFocusReason);
 }

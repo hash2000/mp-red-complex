@@ -12,7 +12,7 @@ class CommandContext;
 /// (`.documents.{id}`), поэтому изменение свойств и вызовы видны соседям.
 ///
 /// Состояние документа хранится в переменных его контекста: `title`, `glyph`,
-/// `modified`, `color`, `xtype` и переменные конкретного документа
+/// `modified`, `color`, `xtype`, `className` и переменные конкретного документа
 /// (например, `path`).
 class DocumentWidget : public QWidget {
 	Q_OBJECT
@@ -23,8 +23,18 @@ public:
 	QString title() const;
 	void setTitle(const QString& title);
 
-	QString glyph() const;               // UTF-8 значок вкладки
+	QString glyph() const;               // UTF-8 значок вкладки (действующий)
+	/// Явный глиф документа; пустая строка — глиф не задан, берётся из темы
+	/// или глиф по умолчанию.
 	void setGlyph(const QString& glyph);
+
+	/// Стандартный глиф из темы (привязка к классу документа или xtype).
+	/// Не хранится в контексте: явный глиф документа важнее.
+	QString themeGlyph() const;
+	void setThemeGlyph(const QString& glyph);
+
+	/// Глиф по умолчанию, если ни документ, ни тема его не задали.
+	static const QString& defaultGlyph();
 
 	bool isModified() const;
 	void setModified(bool modified);
@@ -37,6 +47,11 @@ public:
 	/// вкладок и подсказками. Пустая строка — тип не задан.
 	QString xtype() const;
 	void setXtype(const QString& xtype);
+
+	/// Полное имя класса документа (`WidgetTypeHandler::className`): по нему
+	/// тема задаёт цвет вкладки. Пустая строка — класс не задан.
+	QString className() const;
+	void setClassName(const QString& className);
 
 	/// Контекст документа. Может быть nullptr у документов, созданных
 	/// напрямую (например, в тестах или legacy-окнах).

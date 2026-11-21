@@ -3,7 +3,9 @@
 #include "Libs/Engine/ui/glyph_tool_button.h"
 #include "Libs/Engine/ui/doc_widget.h"
 #include "Libs/Engine/scripting/command_context.h"
+#include "Libs/Engine/scripting/command_controller.h"
 #include "Libs/Engine/scripting/system_options/system_option.h"
+#include "Libs/Resources/resources.h"
 
 #include <QApplication>
 #include <QEnterEvent>
@@ -73,6 +75,7 @@ public:
 
 		_color = new TabColorBar(this);
 		_glyph = new QLabel(this);
+		_glyph->setObjectName(QStringLiteral("DocumentTabGlyph"));
 		_title = new QLabel(this);
 		_title->setObjectName(QStringLiteral("DocTabTitle"));
 		_title->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
@@ -134,9 +137,20 @@ public:
 		update();
 	}
 
+	/// Действующий цвет вкладки: явный цвет документа важнее цвета темы.
+	void setThemeColor(const QColor& color) {
+		if (_themeColor == color) {
+			return;
+		}
+
+		_themeColor = color;
+		updateFromDocument();
+	}
+
 	void updateFromDocument() {
 		_glyph->setText(_doc->glyph());
-		_color->setColor(_doc->color());
+		const auto explicitColor = _doc->color();
+		_color->setColor(explicitColor.isValid() ? explicitColor : _themeColor);
 		_fullTitle = _doc->title() + (_doc->isModified() ? QStringLiteral(" ●") : QString());
 		setToolTip(_doc->toolTip().isEmpty() ? _doc->title() : _doc->toolTip());
 		_title->setProperty("modified", _doc->isModified());
@@ -218,6 +232,8 @@ private:
 	QToolButton* _props;
 	QToolButton* _close;
 	QString _fullTitle;
+	/// Цвет вкладки из темы (привязка к классу документа/xtype).
+	QColor _themeColor;
 	bool _active = false;
 	bool _hover = false;
 	bool _pressed = false;
@@ -237,6 +253,8 @@ struct DocumentTabsPanel::Private {
 	DocumentTabsOrderRegistry orders;
 	/// Активное правило.
 	QString orderId;
+	/// Цвета вкладок из темы.
+	DocumentTabTheme theme;
 
 	QScrollArea* scroll = nullptr;
 	QWidget* list = nullptr;
@@ -258,7 +276,10 @@ struct DocumentTabsPanel::Private {
 	void buildUi();
 	void connectSettings();
 	void applySettings();
+	void loadTheme();
 
+	/// Вкладки в порядке ручной сортировки с действующим цветом темы.
+	QList<DocumentTabView> views() const;
 	QList<DocumentTabGroup> arrangement();
 	void rebuild();
 	void updateCount();
@@ -348,14 +369,50 @@ void DocumentTabsPanel::Private::applySettings() {
 	}
 }
 
-QList<DocumentTabGroup> DocumentTabsPanel::Private::arrangement() {
-	QList<DocumentWidget*> documents;
-	documents.reserve(manualOrder.size());
-	for (auto* doc : manualOrder) {
-		if (items.contains(doc)) {
-			documents << doc;
-		}
+void DocumentTabsPanel::Private::loadTheme() {
+	// Тема применяется в BootstrapManager до создания оболочки, поэтому
+	// каталог темы уже известен через ресурсы.
+	const auto context = settings;
+	auto* controller = context ? context->commandController() : nullptr;
+	auto* resources = controller ? controller->resources() : nullptr;
+	if (!resources) {
+		return;
 	}
+
+	const auto themeDir = resources->Directories.get(QStringLiteral("path.theme"));
+	if (!themeDir) {
+		return;
+	}
+
+	theme = DocumentTabTheme::loadFromThemeDirectory(themeDir->absolutePath());
+	if (!theme.isEmpty()) {
+		qDebug() << "DocumentTabsPanel: tab theme loaded from"
+			<< themeDir->absolutePath()
+			<< "colors:" << theme.colors().size()
+			<< "glyphs:" << theme.glyphs().size();
+	}
+}
+
+QList<DocumentTabView> DocumentTabsPanel::Private::views() const {
+	QList<DocumentTabView> result;
+	result.reserve(manualOrder.size());
+	for (auto* doc : manualOrder) {
+		if (!items.contains(doc)) {
+			continue;
+		}
+
+		DocumentTabView view;
+		view.document = doc;
+		// Привязка темы к классу документа или xtype: цвет документа важнее.
+		view.themeColor = theme.colorFor(doc->className(), doc->xtype());
+		result << view;
+	}
+
+	return result;
+}
+
+QList<DocumentTabGroup> DocumentTabsPanel::Private::arrangement() {
+	const auto tabs = views();
 
 	auto* strategy = orders.strategy(orderId);
 	if (!strategy) {
@@ -364,11 +421,11 @@ QList<DocumentTabGroup> DocumentTabsPanel::Private::arrangement() {
 
 	if (!strategy) {
 		DocumentTabGroup group;
-		group.documents = documents;
+		group.tabs = tabs;
 		return { group };
 	}
 
-	return strategy->arrange(documents);
+	return strategy->arrange(tabs);
 }
 
 void DocumentTabsPanel::Private::updateCount() {
@@ -376,6 +433,16 @@ void DocumentTabsPanel::Private::updateCount() {
 }
 
 void DocumentTabsPanel::Private::rebuild() {
+	// Тема задаёт стандартный глиф вкладки. Документ хранит его как запасной:
+	// явный глиф документа важнее (см. DocumentWidget::glyph()).
+	for (auto* doc : manualOrder) {
+		if (!items.contains(doc)) {
+			continue;
+		}
+
+		doc->setThemeGlyph(theme.glyphFor(doc->className(), doc->xtype()));
+	}
+
 	// Элементы вкладок переиспользуются, заголовки групп создаются заново.
 	while (auto* layoutItem = listLayout->takeAt(0)) {
 		delete layoutItem;
@@ -401,11 +468,16 @@ void DocumentTabsPanel::Private::rebuild() {
 			groupTitles << group.title;
 		}
 
-		for (auto* doc : group.documents) {
-			if (auto* item = items.value(doc)) {
-				listLayout->insertWidget(index++, item);
-				item->show();
+		for (const auto& tab : group.tabs) {
+			auto* item = items.value(tab.document);
+			if (!item) {
+				continue;
 			}
+
+			// Цвет из темы хранится в элементе: явный цвет документа важнее.
+			item->setThemeColor(tab.themeColor);
+			listLayout->insertWidget(index++, item);
+			item->show();
 		}
 	}
 
@@ -554,6 +626,7 @@ DocumentTabsPanel::DocumentTabsPanel(std::shared_ptr<CommandContext> settingsCon
 	d->orderId = d->orders.defaultId();
 	d->buildUi();
 	d->connectSettings();
+	d->loadTheme();
 	d->applySettings();
 }
 
@@ -651,6 +724,15 @@ bool DocumentTabsPanel::setOrderStrategy(const QString& id) {
 	d->cancelDrag();
 	d->rebuild();
 	return true;
+}
+
+void DocumentTabsPanel::setDocumentTabTheme(const DocumentTabTheme& theme) {
+	d->theme = theme;
+	d->rebuild();
+}
+
+const DocumentTabTheme& DocumentTabsPanel::documentTabTheme() const {
+	return d->theme;
 }
 
 QStringList DocumentTabsPanel::groupTitles() const {
