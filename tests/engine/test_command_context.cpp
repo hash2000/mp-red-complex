@@ -1,8 +1,13 @@
 #include "test_command.h"
 #include "Libs/Engine/scripting/bootstrap/bootstrap_config.h"
 #include "Libs/Engine/scripting/bootstrap/bootstrap_context_builder.h"
+#include "Libs/Engine/scripting/command_context/context_interceptor.h"
+#include "Libs/Engine/scripting/command_context/document_rule.h"
+#include "Libs/Engine/scripting/command_context/i_context_interceptor.h"
 #include "Libs/Engine/scripting/command_controller.h"
 #include "Libs/Engine/scripting/command_context.h"
+#include "Libs/Engine/scripting/system_options/system_option.h"
+#include "Libs/Engine/scripting/system_options/system_options_registry.h"
 #include "Libs/Resources/resources.h"
 
 #include <QDir>
@@ -29,6 +34,24 @@ public:
 
 private:
 	void initContext() override {
+	}
+};
+
+/// Правила, запрещающие запись и события: проверяем приоритет над VariablesMode.
+class ForbidWriteInterceptor final : public StandardContextInterceptor {
+public:
+	bool canSetVariable(const CommandContext& context, const QString& name,
+		const QVariant& value) const override {
+		Q_UNUSED(context);
+		Q_UNUSED(name);
+		Q_UNUSED(value);
+		return false;
+	}
+
+	bool canFireEvent(const CommandContext& context, const QString& eventName) const override {
+		Q_UNUSED(context);
+		Q_UNUSED(eventName);
+		return false;
 	}
 };
 }
@@ -540,4 +563,163 @@ void TestEngine::testContext_BootstrapMigrationErrors() {
 	QVERIFY_EXCEPTION_THROWN(BootstrapConfig::loadBootstrap(path), std::runtime_error);
 	QVERIFY(writeTestFile(path, prefix + "        - {version: 20251113181900, down: 20251113181900-down.sql}\n"));
 	QVERIFY_EXCEPTION_THROWN(BootstrapConfig::loadBootstrap(path), std::runtime_error);
+}
+
+void TestEngine::testContext_RemoveVariable() {
+	// Given: собственные переменные контекста
+	auto ctl = std::make_unique<TestCommandController>();
+	auto context = ctl->globalContext()->createScopedContext("vars");
+	QVERIFY(context->setVariable("alpha", 1));
+	QVERIFY(context->setVariable("beta", 2));
+	QSignalSpy changed(context.get(), &CommandContext::variableChanged);
+
+	// When: удаляется собственная переменная
+	QVERIFY(context->removeVariable("alpha"));
+
+	// Then: значение пропало, подписчики получили сигнал об изменении
+	QVERIFY(!context->hasVariable("alpha"));
+	QCOMPARE(context->variable("alpha", "none").toString(), QString("none"));
+	QCOMPARE(changed.count(), 1);
+	QCOMPARE(changed.at(0).at(1).toString(), QString("alpha"));
+	QCOMPARE(changed.at(0).at(2).toInt(), 1);
+	QVERIFY(!changed.at(0).at(3).isValid());
+	QCOMPARE(context->variable("beta").toInt(), 2);
+
+	// Повторное удаление ничего не делает.
+	QVERIFY(!context->removeVariable("alpha"));
+	QCOMPARE(changed.count(), 1);
+
+	// Унаследованную переменную удалить нельзя: она принадлежит базе.
+	QVERIFY(context->parentContext()->setVariable("shared", "base"));
+	QVERIFY(!context->removeVariable("shared"));
+	QCOMPARE(context->variable("shared").toString(), QString("base"));
+}
+
+void TestEngine::testContext_DocumentRuleDocument() {
+	// Given
+	auto ctl = std::make_unique<TestCommandController>();
+	auto global = ctl->globalContext();
+	auto documents = global->documentsContext();
+
+	// When: обычный документ создаётся по роли DocumentRule::Document
+	auto document = global->createDocumentContext("notes");
+
+	// Then: текущее поведение — контекст `.documents.notes`, режим Lazy
+	QVERIFY(document);
+	QCOMPARE(document->nameSpace(), QString(".documents.notes"));
+	QCOMPARE(document->variablesMode(), CommandContext::VariablesMode::Lazy);
+	QCOMPARE(document->documentId(), QString("notes"));
+	QVERIFY(document->isDocumentContext());
+
+	// Правила роли: документы, переменные и события разрешены.
+	QVERIFY(document->interceptor());
+	QCOMPARE(document->interceptor()->scopeName(), QString("documents"));
+	QVERIFY(!document->interceptor()->documentLivesInScope());
+	QVERIFY(!document->interceptor()->variablesMode().has_value());
+
+	// Запись создаёт собственную переменную и не меняет контекст документов.
+	QVERIFY(document->setVariable("title", "Заметки"));
+	QCOMPARE(document->variable("title").toString(), QString("Заметки"));
+	QVERIFY(!documents->ownVariables().contains("title"));
+}
+
+void TestEngine::testContext_DocumentsContextIsReadOnly() {
+	// Given
+	auto ctl = std::make_unique<TestCommandController>();
+	ctl->initSystemContexts();
+
+	// When
+	auto documents = ctl->documentsContext();
+
+	// Then: документы не могут менять системные параметры через свой корень
+	QVERIFY(documents);
+	QCOMPARE(documents->variablesMode(), CommandContext::VariablesMode::ReadOnly);
+	QCOMPARE(documents->setVariable(SystemOptions::kDocumentsTabsOrder, "color"), false);
+	QCOMPARE(ctl->globalContext()->variable(SystemOptions::kDocumentsTabsOrder).toString(),
+		QString("manual"));
+}
+
+void TestEngine::testContext_SystemOptionsDocument() {
+	// Given: системные параметры записаны в глобальный контекст
+	auto ctl = std::make_unique<TestCommandController>();
+	ctl->initSystemContexts();
+	auto global = ctl->globalContext();
+	QCOMPARE(global->variable(SystemOptions::kDocumentsTabsOrder).toString(), QString("manual"));
+
+	// When: создаётся документ системных настроек
+	auto document = global->createDocumentContext("system-options", DocumentRule::SystemOptions);
+
+	// Then: он живёт прямо в контексте `.options` и работает в режиме Mutable
+	QVERIFY(document);
+	QCOMPARE(document->nameSpace(), QString(".options"));
+	QCOMPARE(document->variablesMode(), CommandContext::VariablesMode::Mutable);
+	QVERIFY(document->interceptor());
+	QCOMPARE(document->interceptor()->scopeName(), QString("options"));
+	QVERIFY(document->interceptor()->documentLivesInScope());
+
+	// Запись в режиме Mutable попадает в глобальный контекст.
+	QVERIFY(document->setVariable(SystemOptions::kDocumentsTabsOrder, "color"));
+	QCOMPARE(global->variable(SystemOptions::kDocumentsTabsOrder).toString(), QString("color"));
+
+	// Повторный вызов возвращает тот же контекст (`.options` — один на приложение).
+	QCOMPARE(global->createDocumentContext("system-options", DocumentRule::SystemOptions).get(),
+		document.get());
+
+	// Обычный документ менять настройку не может: запись остаётся локальной.
+	auto plain = global->documentsContext()->createDocumentContext("plain");
+	QVERIFY(plain);
+	QVERIFY(plain->setVariable(SystemOptions::kDocumentsTabsOrder, "xtype"));
+	QCOMPARE(global->variable(SystemOptions::kDocumentsTabsOrder).toString(), QString("color"));
+}
+
+void TestEngine::testContext_InterceptorPriorityOverVariablesMode() {
+	// Given: правила контекста запрещают запись и события
+	auto ctl = std::make_unique<TestCommandController>();
+	auto context = ctl->globalContext()->createScopedContext("guarded");
+	context->setInterceptor(std::make_unique<ForbidWriteInterceptor>());
+
+	// When: режим переменных разрешает запись
+	context->setVariablesMode(CommandContext::VariablesMode::Mutable);
+	QSignalSpy fired(context.get(), &CommandContext::eventFired);
+
+	// Then: правила приоритетнее режима — запись и событие отклонены
+	QCOMPARE(context->setVariable("token", "value"), false);
+	QVERIFY(!context->hasVariable("token"));
+	context->fireEvent("documents.changed");
+	QCOMPARE(fired.count(), 0);
+
+	// Сброс правил возвращает стандартное поведение.
+	context->setInterceptor(nullptr);
+	QVERIFY(context->setVariable("token", "value"));
+	context->fireEvent("documents.changed");
+	QCOMPARE(fired.count(), 1);
+}
+
+void TestEngine::testContext_SystemOptionsDescription() {
+	// Given: встроенный системный параметр сортировки вкладок
+	auto ctl = std::make_unique<TestCommandController>();
+	auto* registry = ctl->systemOptions();
+	QVERIFY(registry);
+
+	// Then: параметр описан, значения совпадают с реестром правил
+	const auto option = registry->option(SystemOptions::kDocumentsTabsOrder);
+	QVERIFY(option);
+	QCOMPARE(option->type, SystemOptionType::Enum);
+	QCOMPARE(option->defaultValue.toString(), QString("manual"));
+	QCOMPARE(option->values, QStringList({ "manual", "color", "xtype" }));
+	QCOMPARE(option->valueTitles.size(), option->values.size());
+	QVERIFY(!option->title.isEmpty());
+	QVERIFY(registry->optionNames().contains(SystemOptions::kDocumentsTabsOrder));
+	QVERIFY(!registry->option("missing.option").has_value());
+
+	// When: значения по умолчанию записываются в глобальный контекст
+	ctl->initSystemContexts();
+
+	// Then: параметр появился, а повторное применение не перезаписывает значение
+	QCOMPARE(ctl->globalContext()->variable(SystemOptions::kDocumentsTabsOrder).toString(),
+		QString("manual"));
+	QVERIFY(ctl->globalContext()->setVariable(SystemOptions::kDocumentsTabsOrder, "xtype"));
+	QCOMPARE(ctl->systemOptions()->applyDefaults(*ctl->globalContext()), 0);
+	QCOMPARE(ctl->globalContext()->variable(SystemOptions::kDocumentsTabsOrder).toString(),
+		QString("xtype"));
 }

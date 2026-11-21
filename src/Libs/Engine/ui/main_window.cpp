@@ -7,6 +7,7 @@
 #include "Libs/Engine/ui/side_host_panel.h"
 #include "Libs/Engine/ui/properties_panel.h"
 #include "Libs/Engine/ui/main_window/new_document_dialog.h"
+#include "Libs/Engine/ui/main_window/system_options_document.h"
 #include "Libs/Engine/ui/text_document.h"
 #include "Libs/Engine/ui/doc_widget_stub.h"
 #include "Libs/Engine/ui/command_console.h"
@@ -107,6 +108,13 @@ struct MainWindow::Private {
 	void wireSignals();
 
 	void newDocument();
+	/// Создаёт документ зарегистрированного типа (повторный id активирует
+	/// существующий). Возвращает документ либо nullptr.
+	QWidget* createDocumentOfType(const QString& type, const QString& requestedId,
+		const QString& title, const QString& glyph,
+		const QVariantMap& variables = QVariantMap());
+	/// Открывает документ системных настроек (роль DocumentRule::SystemOptions).
+	void openSystemOptions();
 	void openFile(const QString& path);
 	void toggleBottom();
 	void updateWindowTitle(DocumentWidget* doc);
@@ -122,8 +130,9 @@ void MainWindow::Private::buildUi() {
 	mainSplitter->setHandleWidth(1);
 	mainSplitter->setChildrenCollapsible(false);
 
-	// левая панель открытых документов
-	tabs = new DocumentTabsPanel;
+	// левая панель открытых документов; из контекста системных настроек
+	// она читает правило сортировки/группировки вкладок
+	tabs = new DocumentTabsPanel(context);
 
 	centerSplitter = new QSplitter(Qt::Vertical);
 	centerSplitter->setHandleWidth(1);
@@ -263,7 +272,10 @@ void MainWindow::Private::wireSignals() {
 	if (activity) {
 		QObject::connect(activity, &ActivityBar::buttonClicked, q, [this](const QString& id) {
 			if (id == QLatin1String("settings")) {
-				q->log(MainWindow::tr("Настройки: ещё не реализовано"));
+				// Кнопка «Настройки» открывает документ системных настроек:
+				// он работает в контексте `.options` и может менять глобальные
+				// системные параметры.
+				openSystemOptions();
 				return;
 			}
 			q->toggleSidePanel(id);
@@ -325,32 +337,57 @@ void MainWindow::Private::newDocument() {
 		return;
 	}
 
-	const auto info = registry->typeInfo(dialog.documentType());
-	if (!info) {
-		q->log(MainWindow::tr("Тип документа не зарегистрирован: %1").arg(dialog.documentType()));
-		return;
+	// Для singletone имя документа совпадает с xtype: повторный выбор
+	// того же типа активирует уже открытый документ.
+	createDocumentOfType(dialog.documentType(), dialog.documentName(),
+		dialog.documentTitle(), dialog.documentGlyph(), dialog.variables());
+}
+
+QWidget* MainWindow::Private::createDocumentOfType(const QString& type, const QString& requestedId,
+	const QString& title, const QString& glyph, const QVariantMap& variables) {
+	auto* registry = controller ? controller->widgets() : nullptr;
+	if (!registry) {
+		q->log(MainWindow::tr("Реестр виджетов недоступен"));
+		return nullptr;
 	}
 
+	const auto info = registry->typeInfo(type);
+	if (!info) {
+		q->log(MainWindow::tr("Тип документа не зарегистрирован: %1").arg(type));
+		return nullptr;
+	}
+
+	// Роль документа определяет контекст и правила (см. DocumentRule).
+	// Оформление по умолчанию (глиф, цвет вкладки) задаёт тема, поэтому
+	// в регистрации типа остаются только идентичность и подпись.
 	WidgetBuildHandler handler;
 	handler.className = info->className;
 	handler.xtype = info->xtype;
-	handler.name = dialog.documentName();
-	handler.title = dialog.documentTitle();
-	handler.glyph = dialog.documentGlyph();
+	handler.name = requestedId.isEmpty() ? info->xtype : requestedId;
+	handler.title = title.isEmpty() ? info->title : title;
 	handler.singletone = info->singletone;
+	handler.rule = info->rule;
 	handler.parent = q;
 	handler.context = context;
 
-	// Для singletone имя документа совпадает с xtype: повторный выбор
-	// того же типа активирует уже открытый документ.
-	const auto id = registry->documentId(info->xtype, dialog.documentName());
-	const auto title = dialog.documentTitle();
-	const auto glyph = dialog.documentGlyph();
-	auto* document = q->createWidget(id, WidgetKind::Document, title, glyph,
+	const auto id = registry->documentId(info->xtype, handler.name);
+	auto* document = q->createWidget(id, WidgetKind::Document, handler.title, glyph,
 		[registry, type = info->xtype, handler]() { return registry->build(type, handler); },
-		QString(), info->xtype, context, dialog.variables());
+		QString(), info->xtype, context, variables);
 	if (!document) {
 		q->log(MainWindow::tr("Не удалось создать документ: %1").arg(info->xtype));
+	}
+
+	return document;
+}
+
+void MainWindow::Private::openSystemOptions() {
+	// Документ системных настроек создаётся как обычный документ, но с ролью
+	// DocumentRule::SystemOptions: его контекст — `.options` в режиме Mutable.
+	auto* document = createDocumentOfType(SystemOptionsDocument::xtype(),
+		SystemOptionsDocument::xtype(), QString(), QString());
+	if (!document) {
+		q->log(MainWindow::tr("Системные настройки недоступны: документ не зарегистрирован"));
 	}
 }
 
@@ -492,8 +529,21 @@ QWidget* MainWindow::createWidget(const QString& id, WidgetKind kind, const QStr
 	// Имя singletone-документа всегда равно его xtype: повторное создание
 	// с другим id активирует уже открытый документ.
 	QString documentId = id;
+	DocumentRule rule = DocumentRule::Document;
+	QString widgetXtype = type;
+	QString widgetClass = type;
 	if (d->controller && d->controller->widgets()) {
-		documentId = d->controller->widgets()->documentId(type, id);
+		auto* registry = d->controller->widgets();
+		documentId = registry->documentId(type, id);
+
+		// Роль документа (DocumentRule) описывает, в каком контексте он живёт
+		// и какие правила применяет его interceptor. Тип и класс нужны панели
+		// вкладок: по ним тема задаёт цвет вкладки.
+		if (const auto info = registry->typeInfo(type)) {
+			rule = info->rule;
+			widgetXtype = info->xtype;
+			widgetClass = info->className;
+		}
 	}
 
 	if (auto* existing = widget(documentId)) {
@@ -544,7 +594,7 @@ QWidget* MainWindow::createWidget(const QString& id, WidgetKind kind, const QStr
 	const auto creator = creatorContext ? creatorContext : d->context;
 	std::shared_ptr<CommandContext> documentContext = document->context();
 	if (!documentContext && creator) {
-		documentContext = creator->createDocumentContext(documentId);
+		documentContext = creator->createDocumentContext(documentId, rule);
 	}
 	if (documentContext) {
 		// Начальные переменные пишутся до setContext: документ читает
@@ -555,6 +605,17 @@ QWidget* MainWindow::createWidget(const QString& id, WidgetKind kind, const QStr
 		if (document->context() != documentContext) {
 			document->setContext(documentContext);
 		}
+	}
+
+	// Тип документа хранится в контексте: он используется панелью вкладок
+	// для группировки и подсказками.
+	if (!widgetXtype.isEmpty()) {
+		document->setXtype(widgetXtype);
+	}
+
+	// Класс документа — привязка цвета вкладки из темы.
+	if (!widgetClass.isEmpty()) {
+		document->setClassName(widgetClass);
 	}
 
 	if (!title.isEmpty()) {

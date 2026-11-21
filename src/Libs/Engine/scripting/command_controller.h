@@ -7,6 +7,7 @@
 class CommandProcessor;
 class CommandContext;
 class ServicesRegistry;
+class SystemOptionsRegistry;
 class WidgetRegistry;
 class MainWindow;
 class Resources;
@@ -25,9 +26,17 @@ public:
 
 	void init();
 
+	/// Готовит служебные контексты системных настроек: `.documents` открывается
+	/// только для чтения, создаётся `.options` (Mutable), а значения системных
+	/// параметров по умолчанию записываются в глобальный контекст.
+	/// init() вызывает метод автоматически; он же используется тестами.
+	void initSystemContexts();
+
 	virtual CommandProcessor* commandProcessor() const = 0;
 	virtual ServicesRegistry* services() const = 0;
 	WidgetRegistry* widgets() const;
+	/// Реестр описаний системных параметров (переменных глобального контекста).
+	SystemOptionsRegistry* systemOptions() const;
 	Resources* resources() const;
 
 	/// Активная оболочка; указатель не владеет окном и может быть nullptr.

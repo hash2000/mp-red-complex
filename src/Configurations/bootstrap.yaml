@@ -20,6 +20,10 @@ stores:
           description: Initialize database
           up: stores/migrations/fetch_api/20251113181900-up-Initialize-database.sql
           down: stores/migrations/fetch_api/20251113181900-down.sql
+        - version: 20261121120000
+          description: Add expanded to queries
+          up: stores/migrations/fetch_api/20261121120000-up-Add-expanded-to-queries.sql
+          down: stores/migrations/fetch_api/20261121120000-down.sql
     messages:
       wal:
         checkInterval: 60000
@@ -37,6 +41,10 @@ stores:
           description: Rename commands to data_blobs
           up: stores/migrations/system_router/20261120130000-up-Rename-commands-to-data-blobs.sql
           down: stores/migrations/system_router/20261120130000-down.sql
+        - version: 20261121120000
+          description: Add expanded to nodes
+          up: stores/migrations/system_router/20261121120000-up-Add-expanded-to-nodes.sql
+          down: stores/migrations/system_router/20261121120000-down.sql
     accounts:
       wal:
         checkInterval: 120000

@@ -6,12 +6,12 @@
 #include <map>
 
 WidgetTypeHandler::WidgetTypeHandler(const QString& className, const QString& xtype, bool singletone,
-	const QString& glyph, const QString& title)
+	const QString& title, DocumentRule rule)
 	: className(className)
 	, xtype(xtype)
 	, singletone(singletone)
-	, glyph(glyph)
-	, title(title) {
+	, title(title)
+	, rule(rule) {
 }
 
 class WidgetRegistry::Private {
@@ -141,7 +141,8 @@ QWidget* WidgetRegistry::buildWidget(const QString& type, const WidgetBuildHandl
 	}
 
 	// Фабрика получает описание типа: недостающие значения по умолчанию
-	// (glyph, title) и имя singletone-документа берутся из регистрации.
+	// (title) и имя singletone-документа берутся из регистрации; цвет и глиф
+	// вкладки задаёт тема.
 	WidgetBuildHandler effective = handler;
 	const auto info = d->typeInfo(type);
 	if (info) {
@@ -150,9 +151,6 @@ QWidget* WidgetRegistry::buildWidget(const QString& type, const WidgetBuildHandl
 		}
 		if (effective.xtype.isEmpty()) {
 			effective.xtype = info->xtype;
-		}
-		if (effective.glyph.isEmpty()) {
-			effective.glyph = info->glyph;
 		}
 		if (effective.title.isEmpty()) {
 			effective.title = info->title;

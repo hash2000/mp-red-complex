@@ -1,9 +1,11 @@
 #include "Libs/Engine/ui/doc_widget.h"
+#include "Libs/BaseWidgets/properties/tab_color_editor.h"
 #include "Libs/Engine/scripting/command_context.h"
 
 #include <QCheckBox>
 #include <QCloseEvent>
 #include <QFormLayout>
+#include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
 
@@ -12,12 +14,24 @@ namespace {
 const QString kTitleVariable = QStringLiteral("title");
 const QString kGlyphVariable = QStringLiteral("glyph");
 const QString kModifiedVariable = QStringLiteral("modified");
-}
+const QString kColorVariable = QStringLiteral("color");
+const QString kXtypeVariable = QStringLiteral("xtype");
+const QString kClassNameVariable = QStringLiteral("className");
+
+/// Глиф вкладки, если ни документ, ни тема его не задали.
+const QString kDefaultGlyph = QStringLiteral("📄");
+} // namespace
 
 struct DocumentWidget::Private {
 	QString title;
-	QString glyph = QStringLiteral("📄");
+	/// Явный глиф документа; пустой — глиф берётся из темы.
+	QString glyph;
+	/// Стандартный глиф из темы (привязка к классу/xtype).
+	QString themeGlyph;
 	bool modified = false;
+	QColor color;
+	QString xtype;
+	QString className;
 	std::shared_ptr<CommandContext> context;
 	QMetaObject::Connection variableConnection;
 };
@@ -43,8 +57,16 @@ void DocumentWidget::setTitle(const QString& title) {
 	emit titleChanged(title);
 }
 
+const QString& DocumentWidget::defaultGlyph() {
+	return kDefaultGlyph;
+}
+
 QString DocumentWidget::glyph() const {
-	return d->glyph;
+	if (!d->glyph.isEmpty()) {
+		return d->glyph;
+	}
+
+	return d->themeGlyph.isEmpty() ? kDefaultGlyph : d->themeGlyph;
 }
 
 void DocumentWidget::setGlyph(const QString& glyph) {
@@ -52,9 +74,31 @@ void DocumentWidget::setGlyph(const QString& glyph) {
 		return;
 	d->glyph = glyph;
 	if (d->context) {
-		d->context->setVariable(kGlyphVariable, glyph);
+		// Пустой глиф означает «не задан»: переменная удаляется, и вкладка
+		// возвращается к глифу из темы.
+		if (glyph.isEmpty()) {
+			d->context->removeVariable(kGlyphVariable);
+		}
+		else {
+			d->context->setVariable(kGlyphVariable, glyph);
+		}
 	}
-	emit glyphChanged(glyph);
+	emit glyphChanged(this->glyph());
+}
+
+QString DocumentWidget::themeGlyph() const {
+	return d->themeGlyph;
+}
+
+void DocumentWidget::setThemeGlyph(const QString& glyph) {
+	if (d->themeGlyph == glyph) {
+		return;
+	}
+
+	d->themeGlyph = glyph;
+	// Действующий глиф мог не измениться (явный глиф документа важнее),
+	// но подписчикам важно знать о смене оформления.
+	emit glyphChanged(this->glyph());
 }
 
 bool DocumentWidget::isModified() const {
@@ -69,6 +113,62 @@ void DocumentWidget::setModified(bool modified) {
 		d->context->setVariable(kModifiedVariable, modified);
 	}
 	emit modifiedChanged(modified);
+}
+
+QColor DocumentWidget::color() const {
+	return d->color;
+}
+
+void DocumentWidget::setColor(const QColor& color) {
+	if (d->color == color) {
+		return;
+	}
+
+	d->color = color;
+	if (d->context) {
+		// Невалидный цвет означает «цвет не задан»: переменная удаляется,
+		// чтобы вкладка вернулась к цвету темы.
+		if (color.isValid()) {
+			d->context->setVariable(kColorVariable, color);
+		}
+		else {
+			d->context->removeVariable(kColorVariable);
+		}
+	}
+
+	emit colorChanged(color);
+}
+
+QString DocumentWidget::xtype() const {
+	return d->xtype;
+}
+
+void DocumentWidget::setXtype(const QString& xtype) {
+	if (d->xtype == xtype) {
+		return;
+	}
+
+	d->xtype = xtype;
+	if (d->context) {
+		d->context->setVariable(kXtypeVariable, xtype);
+	}
+
+	emit xtypeChanged(xtype);
+}
+
+QString DocumentWidget::className() const {
+	return d->className;
+}
+
+void DocumentWidget::setClassName(const QString& className) {
+	if (d->className == className) {
+		return;
+	}
+
+	d->className = className;
+	if (d->context) {
+		d->context->setVariable(kClassNameVariable, className);
+	}
 }
 
 std::shared_ptr<CommandContext> DocumentWidget::context() const {
@@ -105,10 +205,10 @@ void DocumentWidget::setContext(const std::shared_ptr<CommandContext>& context) 
 			const auto value = own.value(kGlyphVariable).toString();
 			if (d->glyph != value) {
 				d->glyph = value;
-				emit glyphChanged(value);
+				emit glyphChanged(glyph());
 			}
 		}
-		else {
+		else if (!d->glyph.isEmpty()) {
 			context->setVariable(kGlyphVariable, d->glyph);
 		}
 
@@ -121,6 +221,35 @@ void DocumentWidget::setContext(const std::shared_ptr<CommandContext>& context) 
 		}
 		else {
 			context->setVariable(kModifiedVariable, d->modified);
+		}
+
+		if (own.contains(kColorVariable)) {
+			const auto value = own.value(kColorVariable).value<QColor>();
+			if (d->color != value) {
+				d->color = value;
+				emit colorChanged(value);
+			}
+		}
+		else if (d->color.isValid()) {
+			context->setVariable(kColorVariable, d->color);
+		}
+
+		if (own.contains(kXtypeVariable)) {
+			const auto value = own.value(kXtypeVariable).toString();
+			if (d->xtype != value) {
+				d->xtype = value;
+				emit xtypeChanged(value);
+			}
+		}
+		else if (!d->xtype.isEmpty()) {
+			context->setVariable(kXtypeVariable, d->xtype);
+		}
+
+		if (own.contains(kClassNameVariable)) {
+			d->className = own.value(kClassNameVariable).toString();
+		}
+		else if (!d->className.isEmpty()) {
+			context->setVariable(kClassNameVariable, d->className);
 		}
 
 		// Изменения переменных контекста извне подхватываются документом.
@@ -144,7 +273,7 @@ void DocumentWidget::setContext(const std::shared_ptr<CommandContext>& context) 
 					const auto value = newValue.toString();
 					if (d->glyph != value) {
 						d->glyph = value;
-						emit glyphChanged(value);
+						emit glyphChanged(glyph());
 					}
 				}
 				else if (name == kModifiedVariable) {
@@ -153,6 +282,23 @@ void DocumentWidget::setContext(const std::shared_ptr<CommandContext>& context) 
 						d->modified = value;
 						emit modifiedChanged(value);
 					}
+				}
+				else if (name == kColorVariable) {
+					const auto value = newValue.value<QColor>();
+					if (d->color != value) {
+						d->color = value;
+						emit colorChanged(value);
+					}
+				}
+				else if (name == kXtypeVariable) {
+					const auto value = newValue.toString();
+					if (d->xtype != value) {
+						d->xtype = value;
+						emit xtypeChanged(value);
+					}
+				}
+				else if (name == kClassNameVariable) {
+					d->className = newValue.toString();
 				}
 
 				onContextVariableChanged(name, newValue);
@@ -201,13 +347,29 @@ QWidget* DocumentWidget::createPropertiesEditor(QWidget* parent) {
 	glyphEdit->setMaxLength(4);
 	connect(glyphEdit, &QLineEdit::textEdited, this, &DocumentWidget::setGlyph);
 
+	// Цвет вкладки: образец цвета, выбор и сброс к цвету темы.
+	auto* colorEditor = new TabColorEditor(w);
+	colorEditor->setObjectName(QStringLiteral("DocumentColorEditor"));
+	colorEditor->setColor(color());
+	colorEditor->setDialogTitle(tr("Цвет вкладки"));
+	connect(colorEditor, &TabColorEditor::colorChanged, this, &DocumentWidget::setColor);
+	connect(this, &DocumentWidget::colorChanged, colorEditor, &TabColorEditor::setColor);
+
 	auto* modified = new QCheckBox(w);
 	modified->setChecked(isModified());
 	modified->setEnabled(false);
 	connect(this, &DocumentWidget::modifiedChanged, modified, &QCheckBox::setChecked);
 
+	auto* xtypeLabel = new QLabel(xtype().isEmpty() ? QStringLiteral("—") : xtype(), w);
+	xtypeLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+	connect(this, &DocumentWidget::xtypeChanged, xtypeLabel, [xtypeLabel](const QString& value) {
+		xtypeLabel->setText(value.isEmpty() ? QStringLiteral("—") : value);
+	});
+
 	form->addRow(tr("Заголовок:"), titleEdit);
 	form->addRow(tr("Значок:"), glyphEdit);
+	form->addRow(tr("Цвет вкладки:"), colorEditor);
+	form->addRow(tr("Тип:"), xtypeLabel);
 	form->addRow(tr("Изменён:"), modified);
 	return w;
 }

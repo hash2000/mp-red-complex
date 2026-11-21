@@ -26,6 +26,7 @@ CREATE TABLE "menu_items" (
 	"parent_id" INTEGER,
 	"name" TEXT NOT NULL,
 	"data" TEXT NOT NULL DEFAULT '{}',
+	"expanded" INTEGER NOT NULL DEFAULT 0,
 	CONSTRAINT "FK_menu_items_parent_id" FOREIGN KEY (parent_id) REFERENCES "menu_items"(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 CREATE INDEX "IX_menu_items_parent_id" ON "menu_items"("parent_id");
@@ -66,6 +67,8 @@ private slots:
 	void cleanup();
 
 	void addsRootAndChild();
+	void loadsExpandedBranch();
+	void setExpandedPersistsFlag();
 	void updateKeepsRow();
 	void updateMovesNode();
 	void searchBuildsHierarchy();
@@ -158,6 +161,87 @@ void TestLazyNodesDataProviderDb::addsRootAndChild() {
 	QCOMPARE(children.size(), size_t(1));
 	QCOMPARE(children.front()->name(), QStringLiteral("Потомок"));
 	QCOMPARE(children.front()->parentId().toLongLong(), root->id().toLongLong());
+}
+
+void TestLazyNodesDataProviderDb::loadsExpandedBranch() {
+	auto root = addNode(QStringLiteral("Ветка"));
+	QVERIFY(root);
+	auto child = addNode(QStringLiteral("Ребёнок"), root->id());
+	QVERIFY(child);
+	auto grandchild = addNode(QStringLiteral("Внук"), child->id());
+	QVERIFY(grandchild);
+	QVERIFY(addNode(QStringLiteral("Сосед"), root->id()));
+
+	// Пока признак не задан, дерево остаётся ленивым.
+	auto roots = _provider->get(QVariant());
+	QCOMPARE(roots.size(), size_t(1));
+	QVERIFY(roots.front()->children().has_value());
+	QVERIFY(roots.front()->children()->empty());
+	QVERIFY(!roots.front()->expanded());
+
+	// «Узел всегда открыт» у корня: сразу приходят все его дети.
+	QVERIFY(_provider->setExpanded(root->id(), true));
+	roots = _provider->get(QVariant());
+	QCOMPARE(roots.size(), size_t(1));
+	QVERIFY(roots.front()->expanded());
+	QVERIFY(roots.front()->children().has_value());
+	QCOMPARE(roots.front()->children()->size(), size_t(2));
+
+	// Вложенный узел не раскрыт: его дети грузятся при раскрытии.
+	const auto nested = roots.front()->children()->front();
+	QCOMPARE(nested->name(), QStringLiteral("Ребёнок"));
+	QVERIFY(nested->children().has_value());
+	QVERIFY(nested->children()->empty());
+	QVERIFY(!nested->expanded());
+
+	// Раскрытая вложенная ветка приходит целиком, до листа.
+	QVERIFY(_provider->setExpanded(child->id(), true));
+	roots = _provider->get(QVariant());
+	QVERIFY(roots.front()->children().has_value());
+	QCOMPARE(roots.front()->children()->size(), size_t(2));
+	const auto branch = roots.front()->children()->front();
+	QVERIFY(branch->expanded());
+	QVERIFY(branch->children().has_value());
+	QCOMPARE(branch->children()->size(), size_t(1));
+	QCOMPARE(branch->children()->front()->name(), QStringLiteral("Внук"));
+	QVERIFY(!branch->children()->front()->children().has_value());
+	QVERIFY(!branch->children()->front()->expanded());
+
+	// Признак читается и при точечной загрузке узла.
+	QVERIFY(_provider->getNode(root->id())->expanded());
+	QVERIFY(_provider->getNode(child->id())->expanded());
+	QVERIFY(!_provider->getNode(grandchild->id())->expanded());
+}
+
+void TestLazyNodesDataProviderDb::setExpandedPersistsFlag() {
+	auto node = addNode(QStringLiteral("Узел"));
+	QVERIFY(node);
+	QVERIFY(!_provider->getNode(node->id())->expanded());
+
+	QVERIFY(_provider->setExpanded(node->id(), true));
+	QVERIFY(_provider->getNode(node->id())->expanded());
+
+	// update() не трогает признак: служебное раскрытие из результатов поиска
+	// не должно попадать в базу.
+	auto loaded = _provider->getNode(node->id());
+	QVERIFY(loaded);
+	loaded->setExpanded(false);
+	loaded->setName(QStringLiteral("Переименованный"));
+	QVERIFY(_provider->update(loaded));
+	loaded = _provider->getNode(node->id());
+	QVERIFY(loaded);
+	QCOMPARE(loaded->name(), QStringLiteral("Переименованный"));
+	QVERIFY(loaded->expanded());
+
+	QVERIFY(_provider->setExpanded(node->id(), false));
+	QVERIFY(!_provider->getNode(node->id())->expanded());
+
+	// Новый узел сохраняется вместе с признаком.
+	auto expanded = _provider->createTreeNode();
+	expanded->setName(QStringLiteral("Раскрытая"));
+	expanded->setExpanded(true);
+	QVERIFY(_provider->add(expanded));
+	QVERIFY(_provider->getNode(expanded->id())->expanded());
 }
 
 void TestLazyNodesDataProviderDb::updateKeepsRow() {

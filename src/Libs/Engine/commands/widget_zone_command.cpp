@@ -126,14 +126,11 @@ bool WidgetZoneCommand::executeCreate(const std::shared_ptr<CommandContext>& con
 
 	const auto name = context->variable("name", id).toString();
 	auto title = context->variable("title").toString();
-	auto glyph = context->variable("glyph").toString();
-	if (typeInfo) {
-		if (title.isEmpty()) {
-			title = typeInfo->title;
-		}
-		if (glyph.isEmpty()) {
-			glyph = typeInfo->glyph;
-		}
+	// Глиф задаётся явно (параметр команды или yaml); стандартный глиф
+	// типа берётся из темы при создании вкладки.
+	const auto glyph = context->variable("glyph").toString();
+	if (typeInfo && title.isEmpty()) {
+		title = typeInfo->title;
 	}
 	if (title.isEmpty()) {
 		title = target;
@@ -156,7 +153,6 @@ bool WidgetZoneCommand::executeCreate(const std::shared_ptr<CommandContext>& con
 	handler.xtype = typeInfo ? typeInfo->xtype : target;
 	handler.name = name;
 	handler.title = title;
-	handler.glyph = glyph;
 	handler.singletone = typeInfo ? typeInfo->singletone : false;
 	handler.parent = window;
 	// Параметры запуска (action/target/...) виджет получает из контекста команды.

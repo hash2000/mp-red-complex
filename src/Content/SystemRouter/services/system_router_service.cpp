@@ -274,6 +274,28 @@ bool SystemRouterService::removeItem(const QVariant& id) {
 	return true;
 }
 
+bool SystemRouterService::setAlwaysExpanded(const QVariant& id, bool alwaysExpanded) {
+	d->clearError();
+
+	if (!d->provider) {
+		return d->fail(tr("Поставщик данных системного маршрутизатора не задан"));
+	}
+
+	if (!id.isValid() || id.isNull()) {
+		return d->fail(tr("Узел не найден"));
+	}
+
+	if (!d->provider->setExpanded(id, alwaysExpanded)) {
+		const auto providerError = d->provider->lastError();
+		return d->fail(providerError.isEmpty()
+			? tr("Не удалось сохранить признак «узел всегда открыт»")
+			: providerError);
+	}
+
+	emit itemChanged(id);
+	return true;
+}
+
 QString SystemRouterService::lastError() const {
 	return d->lastError;
 }

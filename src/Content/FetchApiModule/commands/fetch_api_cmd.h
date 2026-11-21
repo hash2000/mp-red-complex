@@ -9,10 +9,10 @@ public:
 	bool execute(std::shared_ptr<CommandContext> context) override;
 
 	QString name() const override {
-		return "fetch-api";
+		return QStringLiteral("fetch-api");
 	}
 	QString description() const override {
-		return "Rest api queries sender";
+		return QStringLiteral("Выполняет REST-запрос и пишет ответ в контекст");
 	}
 
 	QString help() const override;

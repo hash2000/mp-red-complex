@@ -7,8 +7,10 @@
 #include <memory>
 
 class PropertiesListWidget;
+class QCheckBox;
 class QComboBox;
 class QLabel;
+class QLineEdit;
 class QToolButton;
 class SystemRouterBlobService;
 class SystemRouterService;
@@ -18,6 +20,10 @@ class SystemRouterService;
 /// Показывает `ILazyTreeNode::properties()` в PropertiesListWidget и позволяет
 /// добавлять, удалять и изменять свойства вместе с их mime-типами.
 /// Изменения сразу сохраняются через SystemRouterService.
+///
+/// Отдельно показываются параметры, которыми управляет представление:
+/// «Узел всегда открыт» (поле expanded таблицы узлов) и «Глиф» (свойство
+/// `glyph` — символ перед именем узла в дереве).
 class SystemRouterNodePropertiesDocument final : public DocumentWidget {
 	Q_OBJECT
 public:
@@ -30,6 +36,14 @@ public:
 
 	QVariant nodeId() const;
 	LazyTreeNodePtr node() const;
+
+	/// Признак «узел всегда открыт».
+	bool alwaysExpanded() const;
+	bool setAlwaysExpanded(bool value);
+
+	/// Глиф узла; пустая строка — глиф по умолчанию.
+	QString glyph() const;
+	bool setGlyph(const QString& glyph);
 
 	bool addProperty(const QString& name, const QStringList& mimeTypes,
 		const QVariant& value = {});

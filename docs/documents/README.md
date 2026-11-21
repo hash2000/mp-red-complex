@@ -82,6 +82,20 @@ auto* document = window->createWidget(
 в `DocumentWidget`, если это ещё не документ-обёртка. Владельцем созданного
 виджета становится `MainWindow`.
 
+Диалог создания документа (`NewDocumentDialog`, Ctrl+N) задаёт параметры
+нового документа: имя (`id`), значок (по умолчанию — из темы), заголовок
+и **цвет вкладки**. Цвет передаётся в `variables()` переменной `color`
+(`QVariant<QColor>`); пустое значение переменную не создаёт, и документ
+получает цвет из темы.
+
+```cpp
+NewDocumentDialog dialog(registry, context);
+if (dialog.exec() == QDialog::Accepted) {
+    const auto variables = dialog.variables();   // включает color, если выбран
+    const auto color = dialog.documentColor();   // QColor(), если не выбран
+}
+```
+
 ## 3. `DocumentWidget`
 
 Базовый класс хранит состояние в переменных контекста:
@@ -89,8 +103,11 @@ auto* document = window->createWidget(
 | Переменная | Назначение |
 |---|---|
 | `title` | заголовок вкладки |
-| `glyph` | UTF-8-иконка вкладки |
 | `modified` | признак несохранённых изменений |
+| `glyph` | явный UTF-8-значок вкладки; пустой — берётся из темы |
+| `color` | явный цвет вкладки (`QColor`); невалидный — берётся из темы |
+| `xtype` | тип документа, которым он создан (используется группировкой) |
+| `className` | полное имя класса документа (по нему тема задаёт оформление вкладки) |
 | переменные документа | например, `path`, `nodeId`, `selectedNodeId` |
 
 Методы:
@@ -99,11 +116,23 @@ auto* document = window->createWidget(
 QString title() const;
 void setTitle(const QString& title);
 
-QString glyph() const;
-void setGlyph(const QString& glyph);
+QString glyph() const;              // действующий значок: явный → тема → «📄»
+void setGlyph(const QString& glyph); // пустой сбрасывает к значку темы
+QString themeGlyph() const;          // значок из темы для класса/xtype
+void setThemeGlyph(const QString& glyph);
+static const QString& defaultGlyph();
 
 bool isModified() const;
 void setModified(bool modified);
+
+QColor color() const;               // цвет вкладки
+void setColor(const QColor& color); // невалидный цвет сбрасывает в цвет темы
+
+QString xtype() const;
+void setXtype(const QString& xtype);
+
+QString className() const;
+void setClassName(const QString& className);
 
 std::shared_ptr<CommandContext> context() const;
 void setContext(const std::shared_ptr<CommandContext>& context);
@@ -199,7 +228,6 @@ registry->registerFactory(
     WidgetTypeHandler("Content.My.Module.MyDocument",
                       "my-document",
                       false,
-                      "📝",
                       "Мой документ"),
     [](const QString&, const WidgetBuildHandler& handler) {
         return new MyDocument(handler.parent);
@@ -211,7 +239,13 @@ registry->registerFactory(
 - `className` — полное имя класса;
 - `xtype` — псевдоним для команд и описаний;
 - `singletone` — один документ на приложение;
-- `glyph` и `title` — значения по умолчанию.
+- `title` — подпись по умолчанию;
+- `rule` — роль документа (`DocumentRule`), см. раздел 11.
+
+Оформление вкладки по умолчанию (стандартный глиф и цвет) в регистрации
+**не задаётся** — его описывает тема в `assets/themes/{theme}/documents.yaml`
+по классу документа или `xtype` (см. раздел 10). Явные глиф и цвет документа
+задаются при создании (`glyph=` в команде, `glyph:` в yaml, панель свойств).
 
 `WidgetBuildHandler` дополнительно содержит `name`, `parent`, `options`,
 `context`.
@@ -261,9 +295,24 @@ context()->fireEvent(CommandContext::documentSaveCompleteEvent());
 
 ## 8. Панель свойств
 
-`DocumentWidget::createPropertiesEditor()` по умолчанию создаёт `QFormLayout`.
+`DocumentWidget::createPropertiesEditor()` по умолчанию создаёт `QFormLayout`:
+заголовок, значок, цвет вкладки (`TabColorEditor`), тип и признак изменений.
 Наследник может добавить свои строки. `MainWindow` показывает редактор
 активного документа в панели свойств.
+
+Ниже редактора `PropertiesPanel` добавляет сведения о контексте, в котором
+выполняется документ:
+
+- **полное имя контекста** (namespace, например `.documents.notes`) —
+  в поле только для чтения и с кнопкой копирования (`⧉`, копирует имя
+  в буфер обмена);
+- **переменные контекста** — все видимые переменные (собственные и
+  унаследованные) в `PropertiesListWidget` только для чтения. Показаны имя,
+  значение и подсказка: собственное или унаследованное, mime-тип значения.
+
+Список обновляется по сигналу `CommandContext::variableChanged`, поэтому
+изменения переменных из других документов и команд видны сразу. У документа
+без контекста секция не создаётся.
 
 Если документ меняет набор свойств, вызовите `emit propertiesChanged()`.
 
@@ -287,7 +336,148 @@ context()->fireEvent(CommandContext::documentSaveCompleteEvent());
 Используйте этот режим для значений SystemRouter: свойства с блоком
 открываются в code-editor, а сохранение возвращает текст в `data_blobs`.
 
-## 10. Правила
+## 10. Вкладки: цвет, порядок и группировка
+
+Панель открытых документов (`DocumentTabsPanel`,
+`src/Libs/Engine/ui/doc_tab_panel.*`) показывает вкладки так, как решило
+**правило сортировки/группировки**. Правила лежат в
+`src/Libs/Engine/ui/doc_tab_panel/document_tabs_order.*`:
+
+| Правило (`id`) | Что делает | Ручная сортировка |
+|---|---|---|
+| `manual` | порядок задаёт пользователь | да |
+| `color` | группы по цвету вкладки (`color`), «Без цвета» — последняя | нет |
+| `xtype` | группы по типу документа (`xtype`), «Без типа» — последняя | нет |
+
+Активное правило хранится в системном параметре `documents.tabs.order`
+(переменная глобального контекста) и меняется в документе системных настроек
+(кнопка ⚙ на панели кнопок справа). Одновременно действует одно правило.
+
+Оформление вкладки (цвет и стандартный глиф) задаётся двумя способами, они
+складываются по приоритету:
+
+1. **свои значения документа** — переменные `color` и `glyph`; цвет и глиф
+   редактируются в панели свойств («Цвет вкладки», «Значок»). Пустое значение
+   означает «взять из темы»;
+2. **значения из темы** — привязка к классу документа или его `xtype` в файле
+   `assets/themes/{theme}/documents.yaml`.
+
+```yaml
+# assets/themes/{theme}/documents.yaml
+tabs:
+  default: "#3c3c3c"            # необязательный цвет для всех вкладок
+  defaultGlyph: "📄"             # необязательный глиф для всех вкладок
+  colors:
+    Content.CodeEditor.CodeEditorDocument: "#61afef"  # полное имя класса
+    code-editor: "#61afef"                            # xtype
+  glyphs:
+    Content.CodeEditor.CodeEditorDocument: "📝"
+    code-editor: "📝"
+```
+
+Ключ — полное имя класса (`WidgetTypeHandler::className`) или `xtype`; класс
+важнее `xtype`, `default`/`defaultGlyph` используются, если привязки нет.
+Стандартные глифы раньше задавались при регистрации типа в `WidgetsBuilder`
+(`WidgetRegistry::registerFactory`) — теперь они живут в теме.
+
+Панель вкладок читает файл из каталога темы (`path.theme` в ресурсах) при
+создании: цвета применяются к уже открытым документам и участвуют
+в группировке по цвету, а глиф передаётся документу как запасной
+(`DocumentWidget::setThemeGlyph`). Если глифа нет ни у документа, ни в теме,
+действует `DocumentWidget::defaultGlyph()` (`📄`). Панель рисует цветную
+полосу слева от значка.
+
+```cpp
+// Оформление можно задать и программно (например, в тестах):
+panel->setDocumentTabTheme(DocumentTabTheme::loadFromThemeDirectory(themeDir));
+```
+
+Перетаскивание вкладок мышью работает при правиле `manual`: нажатие на
+вкладку и движение вверх/вниз показывает линию вставки, отпускание меняет
+порядок. При группировке перетаскивание отключено — порядок задаёт правило.
+
+Чтобы добавить новый вариант, реализуйте `IDocumentTabsOrderStrategy` и
+зарегистрируйте его в конструкторе `DocumentTabsOrderRegistry`; системный
+параметр и интерфейс настроек соберут список значений сами
+(`registerDocumentTabsOrderOption`).
+
+```cpp
+// Программная сортировка (например, из команды или теста)
+panel->moveDocument(document, 0);      // на первую позицию
+panel->setOrderStrategy("xtype");      // включить группировку по типу
+```
+
+## 11. Роль документа: `DocumentRule`
+
+`WidgetTypeHandler::rule` описывает роль документа. Это не отдельный вид
+виджета: документ сохраняет все обычные функции, но получает дополнительные
+привилегии и ограничения. Правила роли применяет **interceptor контекста**
+(`IContextInterceptor`, `src/Libs/Engine/scripting/command_context/*`): он
+решает, в каком контексте создаётся документ, какой у контекста
+`VariablesMode`, разрешены ли события и изменение переменных. Проверки правил
+приоритетнее режима переменных.
+
+| Роль | Контекст | `VariablesMode` | Назначение |
+|---|---|---|---|
+| `DocumentRule::Document` | `.documents.{id}` | `Lazy` | обычный документ (текущее поведение) |
+| `DocumentRule::SystemOptions` | `.options` | `Mutable` | документ системных настроек |
+
+```cpp
+registry->registerFactory({ SystemOptionsDocument::className(),
+                            SystemOptionsDocument::xtype(),
+                            /*singletone*/ true,
+                            QStringLiteral("⚙"),
+                            QStringLiteral("Системные настройки"),
+                            DocumentRule::SystemOptions },
+    [](const QString&, const WidgetBuildHandler& handler) {
+        return new SystemOptionsDocument(handler.parent);
+    });
+```
+
+`MainWindow::createWidget()` берёт роль из `WidgetRegistry::typeInfo(type)` и
+передаёт её в `CommandContext::createDocumentContext(id, rule)`. Правила
+создаются фабрикой `createContextInterceptor(rule)`, поэтому новая роль — это
+новый interceptor и одна ветка фабрики.
+
+## 12. Системные настройки
+
+Системные параметры приложения — переменные **глобального контекста**. Их
+описания (подпись, тип, допустимые значения, значение по умолчанию) хранит
+`SystemOptionsRegistry` (`src/Libs/Engine/scripting/system_options/`).
+
+Правила доступа:
+
+- `.documents` создаётся как `ReadOnly`, поэтому документы не могут менять
+  системные параметры: их записи остаются в собственных переменных;
+- документ с ролью `DocumentRule::SystemOptions` работает в контексте
+  `.options` в режиме `Mutable`: его записи попадают в глобальный контекст;
+- значения по умолчанию записывает `CommandController::initSystemContexts()`
+  при запуске, поэтому настройки существуют независимо от открытого документа.
+
+Документ настроек — `SystemOptionsDocument`
+(`src/Libs/Engine/ui/main_window/system_options_document.*`), xtype
+`system-options`. Он открывается кнопкой ⚙ на панели кнопок справа или
+командой:
+
+```text
+documents action=create, target=system-options
+```
+
+Новый системный параметр добавляется регистрацией описания и (при
+необходимости) значения по умолчанию:
+
+```cpp
+SystemOption option;
+option.name = "documents.tabs.order";
+option.title = "Сортировка вкладок документов";
+option.type = SystemOptionType::Enum;
+option.values = { "manual", "color", "xtype" };
+option.valueTitles = { "Ручная сортировка", "Группировка по цвету", "Группировка по типу" };
+option.defaultValue = "manual";
+controller->systemOptions()->registerOption(option);
+```
+
+## 13. Правила
 
 - Не создавайте документы в обход `MainWindow::createWidget()`.
 - Не назначайте `DocumentWidget::setContext()` вручную, если документ создан

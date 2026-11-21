@@ -1,0 +1,96 @@
+# ------------------------------------------------------------------
+# Оформление вкладок документов в привязке к классу документа.
+#
+# Ключ — полное имя класса документа (WidgetTypeHandler::className)
+# или его xtype из WidgetRegistry. Класс имеет приоритет над xtype.
+# Один класс регистрируется один раз, поэтому xtype дублируется только
+# для удобства: по нему проще найти запись по имени команды.
+#
+# Приоритет значений вкладки:
+#   1. явные значения документа (панель свойств → «Цвет вкладки», «Значок»);
+#   2. привязка по классу документа;
+#   3. привязка по xtype;
+#   4. default / defaultGlyph (здесь не заданы — вкладка остаётся в цвете
+#      темы со стандартным глифом документа).
+# ------------------------------------------------------------------
+tabs:
+  colors:
+    # Системные настройки
+    System.Documents.SystemOptions: "#8a7ae8"
+    system-options: "#8a7ae8"
+
+    # Редактор кода
+    Content.CodeEditor.CodeEditorDocument: "#61afef"
+    code-editor: "#61afef"
+
+    # SystemRouter
+    Content.SystemRouter.SystemRouterTreeDocument: "#e06c75"
+    system-router: "#e06c75"
+    Content.SystemRouter.SystemRouterNodePropertiesDocument: "#c678dd"
+    system-router-node-properties: "#c678dd"
+
+    # FetchApi
+    Content.FetchApi.FetchApiDocument: "#98c379"
+    fetch-api: "#98c379"
+    Content.FetchApi.FetchQueriesTreeDocument: "#56b6c2"
+    fetch-api-queries-tree: "#56b6c2"
+
+    # Пользователи
+    Content.Users.LoginDocument: "#d19a66"
+    user-login: "#d19a66"
+    Content.Users.RegisterDocument: "#d19a66"
+    user-register: "#d19a66"
+    Content.Users.UserDocument: "#e5c07b"
+    user-profile: "#e5c07b"
+
+    # Панели оболочки
+    System.Panels.ConsolePanel: "#7f9f7f"
+    console: "#7f9f7f"
+    System.Panels.Properties: "#abb2bf"
+    properties: "#abb2bf"
+    System.Panels.Explorer: "#e5c07b"
+    explorer: "#e5c07b"
+    System.Panels.Panel: "#5c6370"
+    panel: "#5c6370"
+
+  # Стандартные глифы вкладок. Раньше эти значения задавались при
+  # регистрации типа в WidgetsBuilder; теперь оформление по умолчанию
+  # живёт в теме.
+  glyphs:
+    # Системные настройки
+    System.Documents.SystemOptions: "⚙"
+    system-options: "⚙"
+
+    # Редактор кода
+    Content.CodeEditor.CodeEditorDocument: "📝"
+    code-editor: "📝"
+
+    # SystemRouter
+    Content.SystemRouter.SystemRouterTreeDocument: "🗂"
+    system-router: "🗂"
+    Content.SystemRouter.SystemRouterNodePropertiesDocument: "🛠"
+    system-router-node-properties: "🛠"
+
+    # FetchApi
+    Content.FetchApi.FetchApiDocument: "🌐"
+    fetch-api: "🌐"
+    Content.FetchApi.FetchQueriesTreeDocument: "🌳"
+    fetch-api-queries-tree: "🌳"
+
+    # Пользователи
+    Content.Users.LoginDocument: "🔑"
+    user-login: "🔑"
+    Content.Users.RegisterDocument: "📝"
+    user-register: "📝"
+    Content.Users.UserDocument: "👤"
+    user-profile: "👤"
+
+    # Панели оболочки
+    System.Panels.ConsolePanel: "🖥"
+    console: "🖥"
+    System.Panels.Properties: "🛠"
+    properties: "🛠"
+    System.Panels.Explorer: "📁"
+    explorer: "📁"
+    System.Panels.Panel: "🗔"
+    panel: "🗔"

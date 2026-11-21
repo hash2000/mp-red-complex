@@ -1,82 +1,86 @@
 #pragma once
-#include "Libs/Base/from.h"
-#include "Libs/Base/format.h"
+#include "Content/FetchApiModule/models/fetch_api_types.h"
 
 #include <QByteArray>
+#include <QList>
+#include <QSslCertificate>
 #include <QString>
+
 #include <memory>
-#include <map>
 
 class QNetworkRequest;
 
-enum class FetchApiMethod {
-	Undefined,
-	Get,
-	Post,
-	Put,
-	Delete,
-	Patch,
-	Head,
-};
-
-template <> struct Format<FetchApiMethod> {
-	static QString format(const FetchApiMethod& value) {
-		switch (value) {
-		case FetchApiMethod::Get: return QStringLiteral("get");
-		case FetchApiMethod::Post:	return QStringLiteral("post");
-		case FetchApiMethod::Put: return ("put");
-		case FetchApiMethod::Delete: return QStringLiteral("delete");
-		case FetchApiMethod::Patch: return QStringLiteral("patch");
-		case FetchApiMethod::Head: return QStringLiteral("head");
-		}
-		return QStringLiteral("undefined");
-	}
-};
-
-template <> struct From<FetchApiMethod> {
-	static std::optional<FetchApiMethod> from(const QString& value) {
-		if (value == "get") return FetchApiMethod::Get;
-		else if (value == "post") return FetchApiMethod::Post;
-		else if (value == "put") return FetchApiMethod::Put;
-		else if (value == "delete") return FetchApiMethod::Delete;
-		else if (value == "patch") return FetchApiMethod::Patch;
-		else if (value == "head") return FetchApiMethod::Head;
-		return std::nullopt;
-	}
-};
-
-
-enum class FetchApiSslPolicy {
-	Strict,  // All errors processiong
-	TrustCustomCa, // Trust only the specified certificates
-	IgnoreErrors,
-};
-
+/// Параметры одного REST-запроса.
+///
+/// Модель хранит всё, что описывает запрос: адрес, метод, тело, query-параметры,
+/// заголовки, политику TLS и тип обработчика. `request()` собирает из этих
+/// данных `QNetworkRequest`; повторный вызов возвращает новое представление,
+/// поэтому изменение параметров не требует пересоздания модели.
 class FetchApiOpt {
 public:
-	FetchApiOpt(
-		const QString& location,
-		const std::map<QString, QString>& parameters = std::map<QString, QString>(),
-		const std::map<QString, QString>& headers = std::map<QString, QString>());
+	FetchApiOpt();
+	explicit FetchApiOpt(const QString& location);
+	FetchApiOpt(const QString& location, const FetchApiKeyValues& parameters,
+		const FetchApiKeyValues& headers = FetchApiKeyValues());
 
-	FetchApiOpt(
-		const QString& location,
-		const std::map<QString, QString>& parameters = std::map<QString, QString>(),
-		const QString& headersFormatted = QString());
+	FetchApiOpt(const FetchApiOpt& other);
+	FetchApiOpt& operator=(const FetchApiOpt& other);
+	FetchApiOpt(FetchApiOpt&& other) noexcept;
+	FetchApiOpt& operator=(FetchApiOpt&& other) noexcept;
+	~FetchApiOpt();
 
-	virtual ~FetchApiOpt();
+	/// Есть ли минимально необходимое для запроса: непустой адрес и корректный URL.
+	bool isValid() const;
+	/// Короткое описание запроса для вывода: «GET https://host/path».
+	QString describe() const;
 
-	std::shared_ptr<QNetworkRequest> request() const;
+	QString location() const;
+	void setLocation(const QString& value);
 
-	bool setMethod(FetchApiMethod value);
-	bool setMethod(const QString& value);
 	FetchApiMethod method() const;
+	void setMethod(FetchApiMethod value);
+	/// Разбор метода из строки без учёта регистра; false — метод неизвестен.
+	bool setMethod(const QString& value);
+	/// Имя метода для HTTP: `GET`, `POST`, ...
+	QByteArray httpMethodName() const;
 
+	const QByteArray& body() const;
 	void setBody(const QByteArray& value);
-	const QByteArray body() const;
+	void setBodyText(const QString& value);
 
-	void setSslPolicy(FetchApiSslPolicy value);
+	const FetchApiKeyValues& parameters() const;
+	void setParameters(const FetchApiKeyValues& value);
+	void setParametersFormatted(const QString& value);
+	void addParameter(const QString& name, const QString& value);
+
+	const FetchApiKeyValues& headers() const;
+	void setHeaders(const FetchApiKeyValues& value);
+	void setHeadersFormatted(const QString& value);
+	void addHeader(const QString& name, const QString& value);
+	/// true — заголовок задан (имя сравнивается без учёта регистра).
+	bool hasHeader(const QString& name) const;
+
 	FetchApiSslPolicy sslPolicy() const;
+	void setSslPolicy(FetchApiSslPolicy value);
+	bool setSslPolicy(const QString& value);
+
+	const QList<QSslCertificate>& customCaCertificates() const;
+	void setCustomCaCertificates(const QList<QSslCertificate>& value);
+	/// Загрузить сертификаты из PEM/DER-данных; false — сертификаты не найдены.
+	bool loadCustomCa(const QByteArray& data, QString* error = nullptr);
+	/// Загрузить сертификаты из файла (PEM или DER).
+	bool loadCustomCaFromFile(const QString& path, QString* error = nullptr);
+
+	FetchApiHandlerType handler() const;
+	void setHandler(FetchApiHandlerType value);
+	bool setHandler(const QString& value);
+
+	/// Тайм-аут запроса в миллисекундах; 0 — значение по умолчанию сервиса.
+	int timeoutMs() const;
+	void setTimeoutMs(int value);
+
+	/// Собрать запрос Qt из параметров модели.
+	QNetworkRequest request() const;
 
 private:
 	class Private;

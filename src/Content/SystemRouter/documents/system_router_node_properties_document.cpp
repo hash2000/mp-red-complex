@@ -4,11 +4,13 @@
 #include "Content/SystemRouter/services/system_router_service.h"
 #include "Libs/BaseWidgets/properties/properties_list_widget.h"
 #include "Libs/BaseWidgets/properties/property_mime.h"
+#include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_node_glyph.h"
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/scripting/command_controller.h"
 #include "Libs/Engine/scripting/command_processor.h"
 #include "Libs/Engine/ui/main_window.h"
 
+#include <QCheckBox>
 #include <QComboBox>
 #include <QCoreApplication>
 #include <QDialog>
@@ -61,6 +63,12 @@ QStringList valueMimeTypes(const QStringList& mimeTypes) {
 
 QString primaryValueMimeType(const QStringList& mimeTypes) {
 	return PropertyMime::primaryMimeType(valueMimeTypes(mimeTypes));
+}
+
+/// Глиф узла редактируется отдельным полем, в общем списке свойств он не нужен.
+bool isGlyphProperty(const QString& name) {
+	return name.compare(LazyTreeNodeGlyph::propertyName(), Qt::CaseInsensitive) == 0
+		|| name.compare(LazyTreeNodeGlyph::legacyPropertyName(), Qt::CaseInsensitive) == 0;
 }
 
 /// Диалог имени и набора mime-типов свойства.
@@ -224,6 +232,8 @@ public:
 	QSet<CommandContext*> connectedEditors;
 
 	QLabel* header = nullptr;
+	QCheckBox* expandedCheck = nullptr;
+	QLineEdit* glyphEdit = nullptr;
 	QComboBox* selector = nullptr;
 	QToolButton* addButton = nullptr;
 	QToolButton* removeButton = nullptr;
@@ -236,6 +246,8 @@ public:
 	void rebuild(const QString& preferredProperty = {});
 	void refreshSelector(const QString& preferredProperty = {});
 	void updateActions();
+	void updateExpandedCheck();
+	void updateGlyphEdit();
 	void setStatus(const QString& message, bool error);
 	void reportError(const QString& message);
 	void reportWarning(const QString& message);
@@ -259,6 +271,29 @@ void SystemRouterNodePropertiesDocument::Private::setupUi() {
 	header->setTextInteractionFlags(Qt::TextSelectableByMouse);
 	header->setWordWrap(true);
 	layout->addWidget(header);
+
+	expandedCheck = new QCheckBox(SystemRouterNodePropertiesDocument::tr("Узел всегда открыт"), q);
+	expandedCheck->setObjectName(QStringLiteral("SystemRouterAlwaysExpanded"));
+	expandedCheck->setToolTip(SystemRouterNodePropertiesDocument::tr(
+		"При загрузке дерева узел раскрывается сразу вместе с вложенными узлами"));
+	layout->addWidget(expandedCheck);
+
+	auto* glyphRow = new QHBoxLayout;
+	glyphRow->setContentsMargins(0, 0, 0, 0);
+	glyphRow->setSpacing(4);
+
+	auto* glyphLabel = new QLabel(SystemRouterNodePropertiesDocument::tr("Глиф:"), q);
+	glyphEdit = new QLineEdit(q);
+	glyphEdit->setObjectName(QStringLiteral("SystemRouterGlyphEdit"));
+	glyphEdit->setMaxLength(8);
+	glyphEdit->setPlaceholderText(SystemRouterNodePropertiesDocument::tr("по умолчанию: %1")
+		.arg(LazyTreeNodeGlyph::defaultGlyph()));
+	glyphEdit->setToolTip(SystemRouterNodePropertiesDocument::tr(
+		"Символ перед именем узла в дереве; пусто — глиф по умолчанию"));
+
+	glyphRow->addWidget(glyphLabel);
+	glyphRow->addWidget(glyphEdit, 1);
+	layout->addLayout(glyphRow);
 
 	auto* tools = new QHBoxLayout;
 	tools->setContentsMargins(0, 0, 0, 0);
@@ -356,6 +391,24 @@ void SystemRouterNodePropertiesDocument::Private::setupUi() {
 		[this](const QString& name) {
 			onPropertyButtonClick(name);
 		});
+
+	QObject::connect(expandedCheck, &QCheckBox::toggled, q,
+		[this](bool checked) {
+			// Флажок отражает значение из базы: при ошибке сохранения
+			// возвращаем его в прежнее состояние.
+			if (!q->setAlwaysExpanded(checked)) {
+				updateExpandedCheck();
+			}
+		});
+
+	QObject::connect(glyphEdit, &QLineEdit::editingFinished, q,
+		[this]() {
+			// Поле отражает назначенный глиф: при ошибке сохранения
+			// возвращаем прежнее значение.
+			if (!q->setGlyph(glyphEdit->text())) {
+				updateGlyphEdit();
+			}
+		});
 }
 
 void SystemRouterNodePropertiesDocument::Private::loadNode() {
@@ -388,6 +441,10 @@ void SystemRouterNodePropertiesDocument::Private::rebuild(const QString& preferr
 		if (node) {
 			const auto values = node->properties();
 			for (auto it = values.constBegin(); it != values.constEnd(); it++) {
+				if (isGlyphProperty(it.key())) {
+					continue;
+				}
+
 				properties.append(propertyData(it.key(), it.value()));
 			}
 		}
@@ -397,6 +454,26 @@ void SystemRouterNodePropertiesDocument::Private::rebuild(const QString& preferr
 
 	refreshSelector(preferredProperty);
 	updateActions();
+}
+
+void SystemRouterNodePropertiesDocument::Private::updateExpandedCheck() {
+	if (!expandedCheck) {
+		return;
+	}
+
+	const QSignalBlocker blocker(expandedCheck);
+	expandedCheck->setChecked(node && node->expanded());
+	expandedCheck->setEnabled(node != nullptr);
+}
+
+void SystemRouterNodePropertiesDocument::Private::updateGlyphEdit() {
+	if (!glyphEdit) {
+		return;
+	}
+
+	const QSignalBlocker blocker(glyphEdit);
+	glyphEdit->setText(LazyTreeNodeGlyph::assigned(node));
+	glyphEdit->setEnabled(node != nullptr);
 }
 
 PropertyData SystemRouterNodePropertiesDocument::Private::propertyData(const QString& name,
@@ -653,6 +730,10 @@ void SystemRouterNodePropertiesDocument::Private::refreshSelector(const QString&
 	if (node) {
 		const auto names = node->properties().keys();
 		for (const auto& name : names) {
+			if (isGlyphProperty(name)) {
+				continue;
+			}
+
 			selector->addItem(name, name);
 		}
 	}
@@ -671,6 +752,8 @@ void SystemRouterNodePropertiesDocument::Private::updateActions() {
 	addButton->setEnabled(hasNode);
 	removeButton->setEnabled(hasProperty);
 	mimeButton->setEnabled(hasProperty);
+	updateExpandedCheck();
+	updateGlyphEdit();
 }
 
 QString SystemRouterNodePropertiesDocument::Private::selectedProperty() const {
@@ -729,6 +812,54 @@ QVariant SystemRouterNodePropertiesDocument::nodeId() const {
 
 LazyTreeNodePtr SystemRouterNodePropertiesDocument::node() const {
 	return d->node;
+}
+
+bool SystemRouterNodePropertiesDocument::alwaysExpanded() const {
+	return d->node && d->node->expanded();
+}
+
+bool SystemRouterNodePropertiesDocument::setAlwaysExpanded(bool value) {
+	if (!d->node || !d->service) {
+		return false;
+	}
+
+	if (!d->service->setAlwaysExpanded(d->node->id(), value)) {
+		const auto message = d->service->lastError().isEmpty()
+			? tr("Не удалось сохранить признак «узел всегда открыт»")
+			: d->service->lastError();
+		d->reportError(message);
+		return false;
+	}
+
+	d->node->setExpanded(value);
+	d->updateExpandedCheck();
+	d->setStatus(tr("Сохранено"), false);
+	return true;
+}
+
+QString SystemRouterNodePropertiesDocument::glyph() const {
+	return LazyTreeNodeGlyph::assigned(d->node);
+}
+
+bool SystemRouterNodePropertiesDocument::setGlyph(const QString& glyph) {
+	if (!d->node || !d->service) {
+		return false;
+	}
+
+	const auto previous = LazyTreeNodeGlyph::assigned(d->node);
+	if (!LazyTreeNodeGlyph::assign(d->node, glyph)) {
+		return false;
+	}
+
+	if (!d->persist()) {
+		LazyTreeNodeGlyph::assign(d->node, previous);
+		d->updateGlyphEdit();
+		return false;
+	}
+
+	// Глиф хранится свойством узла: обновляем поле и список свойств.
+	d->rebuild();
+	return true;
 }
 
 bool SystemRouterNodePropertiesDocument::addProperty(const QString& name,

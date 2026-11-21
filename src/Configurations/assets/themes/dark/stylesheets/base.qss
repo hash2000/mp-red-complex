@@ -112,6 +112,14 @@ QToolButton#DocTabButton { border:none; border-radius:3px; background:transparen
                            padding:0px; min-width:18px; min-height:18px; color:#cccccc; }
 QToolButton#DocTabButton:hover { background:#4a4a50; color:white; }
 
+/* Перетаскивание вкладок: место вставки и переносимая вкладка. */
+#DocumentTabItem[drop="before"] { border-top:2px solid #7160e8; }
+#DocumentTabItem[drop="after"]  { border-bottom:2px solid #7160e8; }
+#DocumentTabItem[dragging="true"] { background:#2a2d2e; color:#9d9d9d; }
+
+/* Заголовок группы вкладок (группировка по цвету или типу). */
+#DocumentTabsGroup { color:#808080; font-weight:600; padding:6px 6px 2px 6px; }
+
 /* ---------- Центральная область ---------- */
 #DocumentArea, #EmptyPage { background:#1f1f1f; }
 #EmptyHint { color:#6e6e6e; font-size:13pt; }

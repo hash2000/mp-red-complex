@@ -33,6 +33,17 @@ public:
 	virtual bool remove(const QVariant& id) = 0;
 	virtual bool update(const LazyTreeNodePtr& node) = 0;
 
+	/// Сохранить признак «узел всегда открыт».
+	///
+	/// Поставщик, который умеет это хранить, при загрузке уровня сразу
+	/// передаёт детей такого узла, поэтому дерево открывается в удобном для
+	/// пользователя виде. По умолчанию признак не поддерживается.
+	virtual bool setExpanded(const QVariant& id, bool expanded) {
+		Q_UNUSED(id);
+		Q_UNUSED(expanded);
+		return false;
+	}
+
 	/// Описание последней ошибки. Пустая строка — ошибки не было.
 	/// Нужна, чтобы отличить «детей нет» от «запрос не выполнен».
 	virtual QString lastError() const {

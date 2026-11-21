@@ -2,6 +2,7 @@
 #include "Libs/BaseWidgets/tree_view/lazy_load/i_lazy_tree_data_provider.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_data_node.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_model.h"
+#include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_node_glyph.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_node_role.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_node_state.h"
 
@@ -9,10 +10,15 @@
 #include <QDebug>
 #include <QDrag>
 #include <QDropEvent>
+#include <QEvent>
+#include <QHash>
+#include <QIcon>
 #include <QIODevice>
 #include <QItemSelectionModel>
 #include <QMimeData>
 #include <QMouseEvent>
+#include <QPainter>
+#include <QPixmap>
 #include <QStandardItemModel>
 
 namespace {
@@ -33,6 +39,37 @@ private:
 	bool& _flag;
 };
 
+/// Иконка из текстового глифа: символ вписывается в квадрат size с учётом
+/// плотности пикселей, поэтому на HiDPI-экране глиф не размывается.
+QIcon makeGlyphIcon(const QString& glyph, const QSize& size, qreal devicePixelRatio,
+	const QFont& font, const QColor& color) {
+	QSize target = size;
+	if (!target.isValid() || target.isEmpty()) {
+		target = QSize(16, 16);
+	}
+
+	const qreal ratio = devicePixelRatio > 0.0 ? devicePixelRatio : 1.0;
+	QPixmap pixmap(QSize(qRound(target.width() * ratio), qRound(target.height() * ratio)));
+	if (pixmap.isNull()) {
+		return {};
+	}
+
+	pixmap.setDevicePixelRatio(ratio);
+	pixmap.fill(Qt::transparent);
+
+	QPainter painter(&pixmap);
+	painter.setRenderHint(QPainter::TextAntialiasing, true);
+	painter.setRenderHint(QPainter::Antialiasing, true);
+
+	QFont glyphFont(font);
+	glyphFont.setPixelSize(qMax(1, qRound(target.height() * 0.85)));
+	painter.setFont(glyphFont);
+	painter.setPen(color);
+	painter.drawText(QRect(QPoint(0, 0), target), Qt::AlignCenter, glyph);
+
+	return QIcon(pixmap);
+}
+
 } // namespace
 
 class LazyTreeView::Private {
@@ -47,6 +84,7 @@ public:
 	LazyTreeNodePtr rootNode;
 	QPersistentModelIndex editedIndex;
 	bool finalizing = false;
+	QHash<QString, QIcon> glyphIcons;
 
 	void buildSubTree(QStandardItem* parentItem, const LazyTreeNodeList& nodes);
 	void addDummyNode(QStandardItem* parentItem);
@@ -63,6 +101,8 @@ public:
 	void resetItemFlags(QStandardItem* item);
 	void requestChildren(QStandardItem* item);
 	void removeAllChildren(QStandardItem* parentItem);
+	QIcon glyphIcon(const QString& glyph);
+	void applyGlyph(QStandardItem* item, const LazyTreeNodePtr& node);
 };
 
 LazyTreeView::LazyTreeView(ILazyNodesDataProvider* provider, QWidget* parent)
@@ -102,6 +142,59 @@ LazyTreeView::~LazyTreeView() {
 
 ILazyNodesDataProvider* LazyTreeView::provider() const {
 	return d->provider;
+}
+
+QString LazyTreeView::defaultGlyph() {
+	return LazyTreeNodeGlyph::defaultGlyph();
+}
+
+QString LazyTreeView::nodeGlyph(const QVariant& id) const {
+	return LazyTreeNodeGlyph::assigned(LazyTreeNodeRole::nodeByItem(findNode(id)));
+}
+
+bool LazyTreeView::setNodeGlyph(const QVariant& id, const QString& glyph) {
+	QStandardItem* item = findNode(id);
+	if (!item || d->isDummyNode(item) || d->isTemporaryNode(item)) {
+		return false;
+	}
+
+	const auto node = LazyTreeNodeRole::nodeByItem(item);
+	if (!node || !LazyTreeNodeGlyph::assign(node, glyph)) {
+		return false;
+	}
+
+	d->applyGlyph(item, node);
+	return true;
+}
+
+void LazyTreeView::updateItemGlyph(QStandardItem* item) {
+	if (!item) {
+		return;
+	}
+
+	const auto node = LazyTreeNodeRole::nodeByItem(item);
+	if (!node) {
+		return;
+	}
+
+	d->applyGlyph(item, node);
+}
+
+void LazyTreeView::changeEvent(QEvent* event) {
+	if (event) {
+		switch (event->type()) {
+		case QEvent::FontChange:
+		case QEvent::PaletteChange:
+		case QEvent::StyleChange:
+			// Значок глифа рисуется шрифтом и цветом текста: кэш устарел.
+			d->glyphIcons.clear();
+			break;
+		default:
+			break;
+		}
+	}
+
+	QTreeView::changeEvent(event);
 }
 
 void LazyTreeView::mousePressEvent(QMouseEvent* event) {
@@ -417,6 +510,8 @@ bool LazyTreeView::addNodeAndStartEdit(QStandardItem* parentItem, LazyTreeNodePt
 	nodeState->setTemporary(true);
 	LazyTreeNodeRole::updateNodeState(item, nodeState);
 	LazyTreeNodeRole::updateNodeRaw(item, newNode);
+	// У нового узла глиф ещё не назначен: рисуем глиф по умолчанию.
+	item->setIcon(d->glyphIcon(LazyTreeNodeGlyph::defaultGlyph()));
 	item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsEditable);
 
 	parentItem->appendRow(item);
@@ -612,6 +707,7 @@ void LazyTreeView::Private::buildSubTree(QStandardItem* parentItem, const LazyTr
 		auto nodeState = std::make_shared<LazyTreeNodeState>();
 		LazyTreeNodeRole::updateNodeState(item, nodeState);
 		LazyTreeNodeRole::updateNodeRaw(item, nodeData);
+		applyGlyph(item, nodeData);
 		item->setFlags(
 			Qt::ItemIsEnabled | Qt::ItemIsSelectable |
 			Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled);
@@ -635,6 +731,34 @@ void LazyTreeView::Private::buildSubTree(QStandardItem* parentItem, const LazyTr
 			q->setExpanded(model->indexFromItem(item), true);
 		}
 	}
+}
+
+QIcon LazyTreeView::Private::glyphIcon(const QString& glyph) {
+	const auto text = glyph.trimmed().isEmpty() ? LazyTreeNodeGlyph::defaultGlyph()
+		: glyph.trimmed();
+
+	const auto cached = glyphIcons.constFind(text);
+	if (cached != glyphIcons.constEnd()) {
+		return cached.value();
+	}
+
+	QSize size = q->iconSize();
+	if (!size.isValid() || size.isEmpty()) {
+		size = QSize(16, 16);
+	}
+
+	const auto icon = makeGlyphIcon(text, size, q->devicePixelRatioF(), q->font(),
+		q->palette().color(QPalette::Text));
+	glyphIcons.insert(text, icon);
+	return icon;
+}
+
+void LazyTreeView::Private::applyGlyph(QStandardItem* item, const LazyTreeNodePtr& node) {
+	if (!item || !node) {
+		return;
+	}
+
+	item->setIcon(glyphIcon(LazyTreeNodeGlyph::resolved(node)));
 }
 
 void LazyTreeView::Private::addDummyNode(QStandardItem* parentItem) {

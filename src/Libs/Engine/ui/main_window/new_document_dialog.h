@@ -1,4 +1,5 @@
 #pragma once
+#include <QColor>
 #include <QDialog>
 #include <QVariant>
 
@@ -33,10 +34,13 @@ public:
 	QString documentName() const;    ///< имя (id) документа
 	QString documentTitle() const;   ///< подпись документа
 	QString documentGlyph() const;   ///< иконка UTF-8
+	/// Цвет вкладки из параметров диалога; невалидный — цвет из темы.
+	QColor documentColor() const;
 	bool isSingletone() const;       ///< выбран тип-синглтон
 
 	/// Обязательные переменные выбранного документа: при создании они
-	/// записываются в его контекст до инициализации.
+	/// записываются в его контекст до инициализации. Выбранный цвет вкладки
+	/// передаётся переменной `color`.
 	QVariantMap variables() const;
 
 private:

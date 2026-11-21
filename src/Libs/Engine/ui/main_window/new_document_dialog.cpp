@@ -1,8 +1,12 @@
 #include "Libs/Engine/ui/main_window/new_document_dialog.h"
 #include "Libs/BaseWidgets/properties/properties_list_widget.h"
+#include "Libs/BaseWidgets/properties/tab_color_editor.h"
 #include "Libs/Engine/scripting/command_context.h"
+#include "Libs/Engine/scripting/command_controller.h"
 #include "Libs/Engine/scripting/widgets/i_document_metadata.h"
 #include "Libs/Engine/scripting/widgets/widget_registry.h"
+#include "Libs/Engine/themes/document_tab_theme.h"
+#include "Libs/Resources/resources.h"
 
 #include <QAbstractItemView>
 #include <QColor>
@@ -53,6 +57,22 @@ QVariant normalizeValue(const QVariant& value, const QString& mimeType) {
 void applyNumberLimits(PropertyData& property, const QString& mimeType) {
 	PropertyMime::applyNumberLimits(property, mimeType);
 }
+
+/// Тема приложения: из неё берутся стандартные глифы вкладок по типу.
+DocumentTabTheme loadTheme(const std::shared_ptr<CommandContext>& context) {
+	auto* controller = context ? context->commandController() : nullptr;
+	auto* resources = controller ? controller->resources() : nullptr;
+	if (!resources) {
+		return DocumentTabTheme();
+	}
+
+	const auto themeDir = resources->Directories.get(QStringLiteral("path.theme"));
+	if (!themeDir) {
+		return DocumentTabTheme();
+	}
+
+	return DocumentTabTheme::loadFromThemeDirectory(themeDir->absolutePath());
+}
 } // namespace
 
 class NewDocumentDialog::Private {
@@ -66,6 +86,8 @@ public:
 	NewDocumentDialog* q = nullptr;
 	WidgetRegistry* registry = nullptr;
 	std::shared_ptr<CommandContext> context;
+	/// Оформление вкладок из темы: стандартный глиф выбранного типа.
+	DocumentTabTheme theme;
 
 	QLineEdit* searchEdit = nullptr;
 	QListWidget* typeList = nullptr;
@@ -79,6 +101,8 @@ public:
 	QLabel* nameHint = nullptr;
 	QLineEdit* glyphEdit = nullptr;
 	QLineEdit* titleEdit = nullptr;
+	/// Цвет вкладки нового документа (необязателен: иначе цвет из темы).
+	TabColorEditor* colorEditor = nullptr;
 
 	QToolButton* addVariableButton = nullptr;
 	QToolButton* removeVariableButton = nullptr;
@@ -194,11 +218,17 @@ void NewDocumentDialog::Private::setupUi(NewDocumentDialog* q) {
 	glyphEdit->setMaxLength(4);
 	titleEdit = new QLineEdit(paramsGroup);
 	titleEdit->setObjectName(QStringLiteral("NewDocumentDialogTitle"));
+	colorEditor = new TabColorEditor(paramsGroup);
+	colorEditor->setObjectName(QStringLiteral("NewDocumentDialogColor"));
+	colorEditor->setDialogTitle(NewDocumentDialog::tr("Цвет вкладки"));
+	colorEditor->setToolTip(NewDocumentDialog::tr(
+		"Цвет вкладки нового документа; пусто — цвет из темы"));
 
 	paramsForm->addRow(NewDocumentDialog::tr("Имя:"), nameRow);
 	paramsForm->addRow(QString(), nameHint);
 	paramsForm->addRow(NewDocumentDialog::tr("Значок:"), glyphEdit);
 	paramsForm->addRow(NewDocumentDialog::tr("Заголовок:"), titleEdit);
+	paramsForm->addRow(NewDocumentDialog::tr("Цвет вкладки:"), colorEditor);
 
 	// Параметры документа: обязательные переменные типа и добавленные вручную.
 	// Редактор значения выбирается по mime-типу переменной.
@@ -571,11 +601,13 @@ void NewDocumentDialog::Private::updateDetails() {
 	nameRandomButton->setEnabled(has && !type->singletone);
 	glyphEdit->setEnabled(has);
 	titleEdit->setEnabled(has);
+	colorEditor->setEnabled(has);
 
 	if (!has) {
 		nameEdit->clear();
 		glyphEdit->clear();
 		titleEdit->clear();
+		colorEditor->setColor(QColor());
 		nameHint->clear();
 		fillDocumentVariables();
 		updateAcceptState();
@@ -591,7 +623,7 @@ void NewDocumentDialog::Private::updateDetails() {
 		nameHint->setText(NewDocumentDialog::tr("Уникальное имя документа (id)"));
 	}
 
-	glyphEdit->setText(type->glyph);
+	glyphEdit->setText(theme.glyphFor(type->className, type->xtype));
 	titleEdit->setText(type->title.isEmpty() ? type->xtype : type->title);
 	fillDocumentVariables();
 	updateAcceptState();
@@ -644,7 +676,16 @@ void NewDocumentDialog::Private::acceptDialog(NewDocumentDialog* q) {
 }
 
 QVariantMap NewDocumentDialog::Private::variables() const {
-	return documentVariables;
+	QVariantMap result = documentVariables;
+
+	// Цвет вкладки — переменная контекста нового документа (`color`):
+	// документ читает её при привязке контекста, пустое значение означает
+	// «взять цвет из темы».
+	if (colorEditor && colorEditor->color().isValid()) {
+		result.insert(QStringLiteral("color"), colorEditor->color());
+	}
+
+	return result;
 }
 
 std::optional<WidgetTypeHandler> NewDocumentDialog::Private::currentType() const {
@@ -663,6 +704,7 @@ NewDocumentDialog::NewDocumentDialog(WidgetRegistry* registry,
 	d->q = this;
 	d->registry = registry;
 	d->context = context;
+	d->theme = loadTheme(context);
 	d->setupUi(this);
 	d->searchEdit->setFocus(Qt::OtherFocusReason);
 }
@@ -695,6 +737,10 @@ QString NewDocumentDialog::documentTitle() const {
 
 QString NewDocumentDialog::documentGlyph() const {
 	return d->glyphEdit->text().trimmed();
+}
+
+QColor NewDocumentDialog::documentColor() const {
+	return d->colorEditor ? d->colorEditor->color() : QColor();
 }
 
 bool NewDocumentDialog::isSingletone() const {

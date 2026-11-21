@@ -4,8 +4,7 @@
 #include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
 #include "Content/FetchApiModule/documents/fetch_api_document.h"
-#include "Content/FetchApiModule/documents/fetch_queries_tree_document.h"
-#include "Content/FetchApiModule/services/fetch_queries_service.h"
+#include "Content/FetchApiModule/documents/fetch_api_document_metadata.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
 #include "Content/SystemRouter/documents/system_router_node_properties_document.h"
 #include "Content/SystemRouter/documents/system_router_tree_document.h"
@@ -23,6 +22,7 @@
 #include "Libs/Engine/ui/command_console.h"
 #include "Libs/Engine/ui/doc_area.h"
 #include "Libs/Engine/ui/main_window.h"
+#include "Libs/Engine/ui/main_window/system_options_document.h"
 #include "Libs/Engine/ui/properties_panel.h"
 #include "Libs/Engine/scripting/widgets/widget_registry.h"
 
@@ -105,11 +105,15 @@ void WidgetsBuilder::Private::registerAll() {
 
 	auto* registry = commandController->widgets();
 
+	// Регистрация описывает тип: класс, xtype, признак синглтона и подпись.
+	// Оформление вкладок по умолчанию (стандартный глиф и цвет) задаёт тема —
+	// assets/themes/{theme}/documents.yaml.
+
 	// Главное окно приложения. Панели создаются декларативно из yaml-описания,
 	// поэтому встроенные панели по умолчанию не собираются.
 	// Зоны, удалённые описанием (bottombar/sidebar delete: true), не создаются.
 	registry->registerFactory({ kMainViewportClass, kMainViewportXtype, /*singletone*/ true,
-		QStringLiteral("🖥"), QStringLiteral("Оболочка") },
+		QStringLiteral("Оболочка") },
 		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 			return new MainWindow(handler.context, handler.parent,
 				/*buildDefaultPanels*/ false,
@@ -118,7 +122,7 @@ void WidgetsBuilder::Private::registerAll() {
 
 	// Консоль команд: для неё нужен CommandController.
 	registry->registerFactory({ "System.Panels.ConsolePanel", "console", /*singletone*/ false,
-		QStringLiteral("🖥"), QStringLiteral("Консоль") },
+		QStringLiteral("Консоль") },
 		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 			if (!handler.context) {
 				return nullptr;
@@ -135,7 +139,7 @@ void WidgetsBuilder::Private::registerAll() {
 	// Каждый вызов создаёт отдельную панель, следящую за активным документом окна.
 	// Документ-синглтон: в приложении только одна панель свойств.
 	registry->registerFactory({ "System.Panels.Properties", "properties", /*singletone*/ true,
-		QStringLiteral("🛠"), QStringLiteral("Свойства") },
+		QStringLiteral("Свойства") },
 		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* properties = new PropertiesPanel(handler.parent);
 			if (auto* window = findMainWindow(handler.parent)) {
@@ -156,7 +160,7 @@ void WidgetsBuilder::Private::registerAll() {
 	// Проводник по файловой системе; двойной клик открывает документ в окне.
 	// Документ-синглтон: второй проводник не создаётся, а активируется первый.
 	registry->registerFactory({ "System.Panels.Explorer", "explorer", /*singletone*/ true,
-		QStringLiteral("📁"), QStringLiteral("Проводник") },
+		QStringLiteral("Проводник") },
 		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* tree = new QTreeView(handler.parent);
 			auto* model = new QFileSystemModel(tree);
@@ -184,47 +188,47 @@ void WidgetsBuilder::Private::registerAll() {
 		});
 
 	registry->registerFactory({ "Content.Users.LoginDocument", "user-login", /*singletone*/ true,
-		QStringLiteral("🔑"), QStringLiteral("Вход") },
+		QStringLiteral("Вход") },
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* service = requiredService<UsersService>(servicesFor(type, handler), type, "UsersService");
 			return service ? new LoginDocument(service, handler.parent) : nullptr;
 		});
 
 	registry->registerFactory({ "Content.Users.RegisterDocument", "user-register", /*singletone*/ true,
-		QStringLiteral("📝"), QStringLiteral("Регистрация") },
+		QStringLiteral("Регистрация") },
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* service = requiredService<UsersRegistryService>(servicesFor(type, handler), type, "UsersRegistryService");
 			return service ? new RegisterDocument(service, handler.parent) : nullptr;
 		});
 
 	registry->registerFactory({ "Content.Users.UserDocument", "user-profile", /*singletone*/ true,
-		QStringLiteral("👤"), QStringLiteral("Профиль") },
+		QStringLiteral("Профиль") },
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* service = requiredService<UsersService>(servicesFor(type, handler), type, "UsersService");
 			return service ? new UserDocument(service, handler.parent) : nullptr;
 		});
 
-	registry->registerFactory({ "Content.FetchApi.FetchApiDocument", "fetch-api", /*singletone*/ true,
-		QStringLiteral("🌐"), QStringLiteral("Fetch API") },
+	registry->registerFactory({ "Content.FetchApi.FetchApiDocument", "fetch-api", /*singletone*/ false,
+		QStringLiteral("Fetch API") },
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* services = servicesFor(type, handler);
-			if (!services || !requiredService<FetchApiService>(services, type, "FetchApiService") ||
-				!requiredService<HighlightingPluginManager>(services, type, "HighlightingPluginManager") ||
-				!requiredService<FormatterPluginManager>(services, type, "FormatterPluginManager")) {
+			auto* fetchService = requiredService<FetchApiService>(services, type, "FetchApiService");
+			auto* highlighting = requiredService<HighlightingPluginManager>(services, type,
+				"HighlightingPluginManager");
+			auto* formatters = requiredService<FormatterPluginManager>(services, type,
+				"FormatterPluginManager");
+			if (!fetchService || !highlighting || !formatters) {
 				return nullptr;
 			}
-			return new FetchApiDocument(handler.context, handler.parent);
+			return new FetchApiDocument(fetchService, highlighting, formatters, handler.parent);
 		});
 
-	registry->registerFactory({ "Content.FetchApi.FetchQueriesTreeDocument", "fetch-api-queries-tree",
-		/*singletone*/ true, QStringLiteral("🌳"), QStringLiteral("Запросы Fetch API") },
-		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
-			auto* service = requiredService<FetchQueriesService>(servicesFor(type, handler), type, "FetchQueriesService");
-			return service ? new FetchQueriesTreeDocument(service->dataProvider(), handler.parent) : nullptr;
-		});
+	// Переменные, из которых документ восстанавливает запрос после открытия.
+	registry->registerDocumentMetadata(QStringLiteral("Content.FetchApi.FetchApiDocument"),
+		std::make_unique<FetchApiDocumentMetadata>());
 
 	registry->registerFactory({ "Content.SystemRouter.SystemRouterTreeDocument", "system-router",
-		/*singletone*/ true, QStringLiteral("🗂"), QStringLiteral("Системный маршрутизатор") },
+		/*singletone*/ true, QStringLiteral("Системный маршрутизатор") },
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* services = servicesFor(type, handler);
 			auto* service = requiredService<SystemRouterService>(services, type, "SystemRouterService");
@@ -238,7 +242,7 @@ void WidgetsBuilder::Private::registerAll() {
 
 	// Параметры узла: обычный документ, один на узел (id задаёт вызывающая сторона).
 	registry->registerFactory({ "Content.SystemRouter.SystemRouterNodePropertiesDocument",
-		"system-router-node-properties", /*singletone*/ false, QStringLiteral("🛠"),
+		"system-router-node-properties", /*singletone*/ false,
 		QStringLiteral("Параметры узла") },
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* services = servicesFor(type, handler);
@@ -251,7 +255,7 @@ void WidgetsBuilder::Private::registerAll() {
 
 	// Редактор кода — обычный документ: экземпляров может быть несколько.
 	registry->registerFactory({ "Content.CodeEditor.CodeEditorDocument", "code-editor",
-		/*singletone*/ false, QStringLiteral("📝"), QStringLiteral("Редактор кода") },
+		/*singletone*/ false, QStringLiteral("Редактор кода") },
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* services = servicesFor(type, handler);
 			auto* highlighter = requiredService<HighlightingPluginManager>(services, type, "HighlightingPluginManager");
@@ -268,9 +272,19 @@ void WidgetsBuilder::Private::registerAll() {
 	//		return new WarmupWidget(handler.parent);
 	//	});
 
+	// Документ системных настроек. Роль DocumentRule::SystemOptions даёт ему
+	// контекст `.options` в режиме Mutable: только он может менять системные
+	// параметры глобального контекста.
+	registry->registerFactory({ SystemOptionsDocument::className(), SystemOptionsDocument::xtype(),
+		/*singletone*/ true, QStringLiteral("Системные настройки"),
+		DocumentRule::SystemOptions },
+		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
+			return new SystemOptionsDocument(handler.parent);
+		});
+
 	// Универсальная панель-заглушка (вывод, ошибки, поиск, git и т.п.).
 	registry->registerFactory({ "System.Panels.Panel", "panel", /*singletone*/ false,
-		QStringLiteral("🗔"), QStringLiteral("Панель") },
+		QStringLiteral("Панель") },
 		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 			return makePlaceholderPanel(handler);
 		});

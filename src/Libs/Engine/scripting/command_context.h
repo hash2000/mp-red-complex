@@ -1,4 +1,6 @@
 #pragma once
+#include "Libs/Engine/scripting/command_context/document_rule.h"
+
 #include <QObject>
 #include <QList>
 #include <QString>
@@ -7,18 +9,27 @@
 #include <memory>
 
 class CommandController;
+class IContextInterceptor;
 class ServicesRegistry;
 
 class CommandContext : public QObject, public std::enable_shared_from_this<CommandContext> {
 	Q_OBJECT
 public:
 	/// Как переменные текущего контекста соотносятся с переменными базового контекста.
+	/// Режим — базовая политика хранения; правила роли документа
+	/// (см. IContextInterceptor) имеют приоритет над ним.
 	enum class VariablesMode {
 		Lazy,      ///< читает из базового, при записи создаёт свою копию
 		Mutable,   ///< читает и пишет общую переменную базового контекста
 		ReadOnly,  ///< только чтение, запись запрещена
 		Atomic,    ///< при переключении получает свою копию и дальше живёт отдельно
 	};
+
+	/// Правила контекста: приоритетнее VariablesMode (см. IContextInterceptor).
+	/// Контекст без явных правил использует стандартный interceptor —
+	/// текущее поведение системы.
+	void setInterceptor(std::unique_ptr<IContextInterceptor> interceptor);
+	const IContextInterceptor* interceptor() const;
 
 	explicit CommandContext(CommandController* commandController, std::shared_ptr<CommandContext> parentContext, const QString& name, QObject* parent = nullptr);
 	~CommandContext() override;
@@ -46,8 +57,12 @@ public:
 	void setVariablesMode(VariablesMode mode);
 	VariablesMode variablesMode() const;
 
-	/// Запись переменной. false — контекст открыт только для чтения.
+	/// Запись переменной. false — контекст открыт только для чтения либо
+	/// операцию запрещают правила контекста.
 	bool setVariable(const QString& name, const QVariant& value);
+	/// Удаление собственной переменной контекста. false — переменной нет,
+	/// контекст открыт только для чтения либо удаление запрещено правилами.
+	bool removeVariable(const QString& name);
 	bool hasVariable(const QString& name) const;
 	QVariant variable(const QString& name, const QVariant& defaultValue = QVariant()) const;
 	/// Видимые переменные: базовые (с учётом режима) и собственные.
@@ -81,16 +96,24 @@ public:
 
 	// ---------------------------------------------------------------- документы
 	/// Контекст документов, созданных этим контекстом (`{nameSpace}.documents`).
-	/// Создаётся лениво и переиспользуется.
+	/// Создаётся лениво и переиспользуется. Контекст открыт только для чтения:
+	/// документы не могут менять системные параметры.
 	std::shared_ptr<CommandContext> documentsContext();
+
+	/// Корневой контекст системных настроек `.options`. Создаётся лениво
+	/// один на приложение и всегда в глобальном контексте; режим — Mutable.
+	std::shared_ptr<CommandContext> optionsContext();
 
 	/// Контекст документа по его идентификатору среди документов этого контекста.
 	std::shared_ptr<CommandContext> documentContext(const QString& documentId) const;
 
-	/// Создаёт контекст документа `{documents}.{documentId}`.
+	/// Создаёт контекст документа по правилам роли DocumentRule.
+	/// Обычный документ получает `{documents}.{documentId}`; документ
+	/// системных настроек — корневой контекст `.options`.
 	/// Повторный вызов для того же id возвращает существующий контекст.
 	/// При создании в контексте документов испускается documentAttached().
-	std::shared_ptr<CommandContext> createDocumentContext(const QString& documentId);
+	std::shared_ptr<CommandContext> createDocumentContext(const QString& documentId,
+		DocumentRule rule = DocumentRule::Document);
 
 	/// true, если этот контекст является контекстом документа
 	/// (его родитель — контекст `documents`).
@@ -137,6 +160,8 @@ private:
 	void registerContext(const QString& ns, std::weak_ptr<CommandContext> context);
 	/// Чистит реестр этого контекста и рекурсивно — реестры живых детей.
 	int pruneDeadSubtree();
+	/// Корневой контекст по имени scope (`documents`, `options`, прочие).
+	std::shared_ptr<CommandContext> namedScope(const QString& scopeName);
 
 private:
 	class Private;

@@ -1,4 +1,6 @@
 #pragma once
+#include "Libs/Engine/scripting/command_context/document_rule.h"
+
 #include <QList>
 #include <QString>
 #include <QWidget>
@@ -18,16 +20,21 @@ struct WidgetTypeHandler {
 	/// @param xtype псевдоним типа, которым оперируют описания и команды
 	/// @param singletone обязательный признак: такой документ создаётся
 	///        один на приложение, а его имя (id) всегда равно xtype
-	/// @param glyph иконка UTF-8 по умолчанию
 	/// @param title подпись по умолчанию
+	/// @param rule роль документа: набор правил контекста и привилегий
+	///        (по умолчанию — обычный документ, текущее поведение)
+	///
+	/// Стандартные глиф и цвет вкладки задаёт тема
+	/// (`assets/themes/{theme}/documents.yaml`), а не регистрация: реестр
+	/// описывает тип, а оформление по умолчанию — часть темы.
 	WidgetTypeHandler(const QString& className, const QString& xtype, bool singletone,
-		const QString& glyph = QString(), const QString& title = QString());
+		const QString& title = QString(), DocumentRule rule = DocumentRule::Document);
 
 	QString className;
 	QString xtype;
 	bool singletone = false;
-	QString glyph;
 	QString title;
+	DocumentRule rule = DocumentRule::Document;
 };
 
 /// Параметры конкретного создания: описание типа плюс экземплярные данные.
@@ -47,7 +54,7 @@ public:
 
 	using WidgetFactory = std::function<QWidget*(const QString& type, const WidgetBuildHandler& handler)>;
 
-	/// Регистрирует фабрику типа. singletone, glyph и title берутся из описания.
+	/// Регистрирует фабрику типа. singletone и title берутся из описания.
 	/// Пустой className/xtype и повторная регистрация отклоняются с qWarning().
 	void registerFactory(const WidgetTypeHandler& type, WidgetFactory factory);
 

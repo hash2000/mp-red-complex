@@ -45,6 +45,12 @@ private slots:
 	void testContext_CleanupRunsInBackground();
 	void testContext_BootstrapMigrations();
 	void testContext_BootstrapMigrationErrors();
+	void testContext_RemoveVariable();
+	void testContext_DocumentRuleDocument();
+	void testContext_DocumentsContextIsReadOnly();
+	void testContext_SystemOptionsDocument();
+	void testContext_InterceptorPriorityOverVariablesMode();
+	void testContext_SystemOptionsDescription();
 
 	// test_command_parser_command
 	void testParser_ParseCommand_ShouldReturnNameAndParameters();
