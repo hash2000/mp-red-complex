@@ -26,6 +26,31 @@ target_link_libraries(TestUiZones PRIVATE
 
 add_test(NAME TestUiZones COMMAND TestUiZones)
 
+# Вкладки документов: правила сортировки/группировки, перетаскивание,
+# цвет вкладки и документ системных настроек.
+add_executable(TestDocumentTabs
+    test_document_tabs.cpp
+)
+
+target_include_directories(TestDocumentTabs PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/tests
+)
+
+target_link_libraries(TestDocumentTabs PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+    Qt6::Test
+
+    RedComplexEngine
+    RedComplexBase
+    RedComplexBaseWidgets
+    RedComplexResources
+)
+
+add_test(NAME TestDocumentTabs COMMAND TestDocumentTabs)
+
 add_executable(TestClassManager
     test_class_manager.cpp
 )

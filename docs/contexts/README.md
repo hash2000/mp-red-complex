@@ -48,6 +48,41 @@ auto found = controller->globalContext()->context(".store.system_router");
 записываются в контекст команды **до** переключения в `Mutable`, поэтому они
 остаются собственными переменными команды.
 
+### Правила контекста (interceptor)
+
+У каждого контекста есть правила — `IContextInterceptor`
+(`src/Libs/Engine/scripting/command_context/i_context_interceptor.h`).
+Стандартные правила реализует `StandardContextInterceptor` — это текущее
+поведение системы: документ создаётся в `.documents.{id}`, режим не меняется,
+переменные и события разрешены.
+
+Правила роли создаёт фабрика `createContextInterceptor(DocumentRule rule)`.
+Роль описывает (`DocumentRule`, `src/Libs/Engine/scripting/command_context/`):
+
+- в каком контексте создаётся документ (`scopeName()`);
+- живёт ли документ прямо в этом контексте (`documentLivesInScope()`);
+- режим переменных контекста (`variablesMode()`);
+- разрешены ли запись/удаление переменных и отправка событий
+  (`canSetVariable()`, `canRemoveVariable()`, `canFireEvent()`).
+
+Проверки правил **приоритетнее** `VariablesMode`: если interceptor запрещает
+операцию, режим переменных её не разрешит. Роли:
+
+| Роль | Контекст | Режим |
+|---|---|---|
+| `DocumentRule::Document` | `.documents.{id}` | `Lazy` (стандартные правила) |
+| `DocumentRule::SystemOptions` | `.options` | `Mutable` |
+
+```cpp
+auto context = creator->createDocumentContext("system-options",
+    DocumentRule::SystemOptions);
+// context->nameSpace() == ".options"
+// context->variablesMode() == VariablesMode::Mutable
+
+// Свои правила можно назначить и вручную (например, в тестах):
+context->setInterceptor(std::make_unique<MyInterceptor>());
+```
+
 ## 3. Переменные
 
 ```cpp
@@ -60,6 +95,9 @@ const bool hasPath = context->hasVariable("path");
 const QVariantMap visible = context->variables();   // базовые + собственные
 const QVariantMap own = context->ownVariables();    // только собственные
 const QStringList names = context->variableNames();
+
+// Удаляются только собственные переменные контекста.
+const bool removed = context->removeVariable("count");
 ```
 
 Правила:

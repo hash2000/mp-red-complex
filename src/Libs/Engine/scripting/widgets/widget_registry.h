@@ -1,4 +1,6 @@
 #pragma once
+#include "Libs/Engine/scripting/command_context/document_rule.h"
+
 #include <QList>
 #include <QString>
 #include <QWidget>
@@ -20,14 +22,18 @@ struct WidgetTypeHandler {
 	///        один на приложение, а его имя (id) всегда равно xtype
 	/// @param glyph иконка UTF-8 по умолчанию
 	/// @param title подпись по умолчанию
+	/// @param rule роль документа: набор правил контекста и привилегий
+	///        (по умолчанию — обычный документ, текущее поведение)
 	WidgetTypeHandler(const QString& className, const QString& xtype, bool singletone,
-		const QString& glyph = QString(), const QString& title = QString());
+		const QString& glyph = QString(), const QString& title = QString(),
+		DocumentRule rule = DocumentRule::Document);
 
 	QString className;
 	QString xtype;
 	bool singletone = false;
 	QString glyph;
 	QString title;
+	DocumentRule rule = DocumentRule::Document;
 };
 
 /// Параметры конкретного создания: описание типа плюс экземплярные данные.

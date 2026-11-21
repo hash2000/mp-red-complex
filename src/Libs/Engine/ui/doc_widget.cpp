@@ -3,21 +3,58 @@
 
 #include <QCheckBox>
 #include <QCloseEvent>
+#include <QColorDialog>
 #include <QFormLayout>
+#include <QHBoxLayout>
+#include <QIcon>
+#include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QPixmap>
+#include <QToolButton>
 
 namespace {
 /// Общие переменные контекста, в которых документ хранит своё состояние.
 const QString kTitleVariable = QStringLiteral("title");
 const QString kGlyphVariable = QStringLiteral("glyph");
 const QString kModifiedVariable = QStringLiteral("modified");
-}
+const QString kColorVariable = QStringLiteral("color");
+const QString kXtypeVariable = QStringLiteral("xtype");
+
+/// Кнопка выбора цвета вкладки: показывает текущий цвет и открывает
+/// стандартный диалог выбора цвета.
+class TabColorButton final : public QToolButton {
+public:
+	explicit TabColorButton(const QColor& color, QWidget* parent)
+		: QToolButton(parent) {
+		setObjectName(QStringLiteral("DocumentColorButton"));
+		setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+		setColor(color);
+	}
+
+	void setColor(const QColor& color) {
+		_color = color;
+		setText(color.isValid() ? color.name() : tr("не задан"));
+		QPixmap swatch(14, 14);
+		swatch.fill(color.isValid() ? color : Qt::transparent);
+		setIcon(QIcon(swatch));
+	}
+
+	QColor color() const {
+		return _color;
+	}
+
+private:
+	QColor _color;
+};
+} // namespace
 
 struct DocumentWidget::Private {
 	QString title;
 	QString glyph = QStringLiteral("📄");
 	bool modified = false;
+	QColor color;
+	QString xtype;
 	std::shared_ptr<CommandContext> context;
 	QMetaObject::Connection variableConnection;
 };
@@ -69,6 +106,47 @@ void DocumentWidget::setModified(bool modified) {
 		d->context->setVariable(kModifiedVariable, modified);
 	}
 	emit modifiedChanged(modified);
+}
+
+QColor DocumentWidget::color() const {
+	return d->color;
+}
+
+void DocumentWidget::setColor(const QColor& color) {
+	if (d->color == color) {
+		return;
+	}
+
+	d->color = color;
+	if (d->context) {
+		// Невалидный цвет означает «цвет не задан»: переменная удаляется,
+		// чтобы вкладка вернулась к цвету темы.
+		if (color.isValid()) {
+			d->context->setVariable(kColorVariable, color);
+		}
+		else {
+			d->context->removeVariable(kColorVariable);
+		}
+	}
+
+	emit colorChanged(color);
+}
+
+QString DocumentWidget::xtype() const {
+	return d->xtype;
+}
+
+void DocumentWidget::setXtype(const QString& xtype) {
+	if (d->xtype == xtype) {
+		return;
+	}
+
+	d->xtype = xtype;
+	if (d->context) {
+		d->context->setVariable(kXtypeVariable, xtype);
+	}
+
+	emit xtypeChanged(xtype);
 }
 
 std::shared_ptr<CommandContext> DocumentWidget::context() const {
@@ -123,6 +201,28 @@ void DocumentWidget::setContext(const std::shared_ptr<CommandContext>& context) 
 			context->setVariable(kModifiedVariable, d->modified);
 		}
 
+		if (own.contains(kColorVariable)) {
+			const auto value = own.value(kColorVariable).value<QColor>();
+			if (d->color != value) {
+				d->color = value;
+				emit colorChanged(value);
+			}
+		}
+		else if (d->color.isValid()) {
+			context->setVariable(kColorVariable, d->color);
+		}
+
+		if (own.contains(kXtypeVariable)) {
+			const auto value = own.value(kXtypeVariable).toString();
+			if (d->xtype != value) {
+				d->xtype = value;
+				emit xtypeChanged(value);
+			}
+		}
+		else if (!d->xtype.isEmpty()) {
+			context->setVariable(kXtypeVariable, d->xtype);
+		}
+
 		// Изменения переменных контекста извне подхватываются документом.
 		d->variableConnection = QObject::connect(context.get(), &CommandContext::variableChanged,
 			this,
@@ -152,6 +252,20 @@ void DocumentWidget::setContext(const std::shared_ptr<CommandContext>& context) 
 					if (d->modified != value) {
 						d->modified = value;
 						emit modifiedChanged(value);
+					}
+				}
+				else if (name == kColorVariable) {
+					const auto value = newValue.value<QColor>();
+					if (d->color != value) {
+						d->color = value;
+						emit colorChanged(value);
+					}
+				}
+				else if (name == kXtypeVariable) {
+					const auto value = newValue.toString();
+					if (d->xtype != value) {
+						d->xtype = value;
+						emit xtypeChanged(value);
 					}
 				}
 
@@ -201,13 +315,53 @@ QWidget* DocumentWidget::createPropertiesEditor(QWidget* parent) {
 	glyphEdit->setMaxLength(4);
 	connect(glyphEdit, &QLineEdit::textEdited, this, &DocumentWidget::setGlyph);
 
+	// Цвет вкладки: кнопка с текущим цветом и сброс к цвету темы.
+	auto* colorRow = new QWidget(w);
+	auto* colorLayout = new QHBoxLayout(colorRow);
+	colorLayout->setContentsMargins(0, 0, 0, 0);
+	colorLayout->setSpacing(4);
+
+	auto* colorButton = new TabColorButton(color(), colorRow);
+	auto* colorReset = new QToolButton(colorRow);
+	colorReset->setObjectName(QStringLiteral("DocumentColorResetButton"));
+	colorReset->setText(QStringLiteral("✕"));
+	colorReset->setToolTip(tr("Сбросить цвет вкладки"));
+	colorReset->setEnabled(color().isValid());
+
+	connect(colorButton, &QToolButton::clicked, this, [this, colorButton] {
+		const auto initial = colorButton->color().isValid()
+			? colorButton->color() : palette().color(QPalette::Highlight);
+		const auto picked = QColorDialog::getColor(initial, this, tr("Цвет вкладки"));
+		if (picked.isValid()) {
+			setColor(picked);
+		}
+	});
+	connect(colorReset, &QToolButton::clicked, this, [this] {
+		setColor(QColor());
+	});
+	connect(this, &DocumentWidget::colorChanged, colorButton, &TabColorButton::setColor);
+	connect(this, &DocumentWidget::colorChanged, colorReset, [colorReset](const QColor& value) {
+		colorReset->setEnabled(value.isValid());
+	});
+
+	colorLayout->addWidget(colorButton, 1);
+	colorLayout->addWidget(colorReset);
+
 	auto* modified = new QCheckBox(w);
 	modified->setChecked(isModified());
 	modified->setEnabled(false);
 	connect(this, &DocumentWidget::modifiedChanged, modified, &QCheckBox::setChecked);
 
+	auto* xtypeLabel = new QLabel(xtype().isEmpty() ? QStringLiteral("—") : xtype(), w);
+	xtypeLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+	connect(this, &DocumentWidget::xtypeChanged, xtypeLabel, [xtypeLabel](const QString& value) {
+		xtypeLabel->setText(value.isEmpty() ? QStringLiteral("—") : value);
+	});
+
 	form->addRow(tr("Заголовок:"), titleEdit);
 	form->addRow(tr("Значок:"), glyphEdit);
+	form->addRow(tr("Цвет вкладки:"), colorRow);
+	form->addRow(tr("Тип:"), xtypeLabel);
 	form->addRow(tr("Изменён:"), modified);
 	return w;
 }

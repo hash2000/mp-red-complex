@@ -23,6 +23,7 @@
 #include "Libs/Engine/ui/command_console.h"
 #include "Libs/Engine/ui/doc_area.h"
 #include "Libs/Engine/ui/main_window.h"
+#include "Libs/Engine/ui/main_window/system_options_document.h"
 #include "Libs/Engine/ui/properties_panel.h"
 #include "Libs/Engine/scripting/widgets/widget_registry.h"
 
@@ -267,6 +268,16 @@ void WidgetsBuilder::Private::registerAll() {
 	//	[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
 	//		return new WarmupWidget(handler.parent);
 	//	});
+
+	// Документ системных настроек. Роль DocumentRule::SystemOptions даёт ему
+	// контекст `.options` в режиме Mutable: только он может менять системные
+	// параметры глобального контекста.
+	registry->registerFactory({ SystemOptionsDocument::className(), SystemOptionsDocument::xtype(),
+		/*singletone*/ true, QStringLiteral("⚙"), QStringLiteral("Системные настройки"),
+		DocumentRule::SystemOptions },
+		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
+			return new SystemOptionsDocument(handler.parent);
+		});
 
 	// Универсальная панель-заглушка (вывод, ошибки, поиск, git и т.п.).
 	registry->registerFactory({ "System.Panels.Panel", "panel", /*singletone*/ false,

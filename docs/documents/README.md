@@ -91,6 +91,8 @@ auto* document = window->createWidget(
 | `title` | заголовок вкладки |
 | `glyph` | UTF-8-иконка вкладки |
 | `modified` | признак несохранённых изменений |
+| `color` | цвет вкладки (`QColor`, невалидный — цвет не задан) |
+| `xtype` | тип документа, которым он создан (используется группировкой) |
 | переменные документа | например, `path`, `nodeId`, `selectedNodeId` |
 
 Методы:
@@ -104,6 +106,12 @@ void setGlyph(const QString& glyph);
 
 bool isModified() const;
 void setModified(bool modified);
+
+QColor color() const;               // цвет вкладки
+void setColor(const QColor& color); // невалидный цвет сбрасывает в цвет темы
+
+QString xtype() const;
+void setXtype(const QString& xtype);
 
 std::shared_ptr<CommandContext> context() const;
 void setContext(const std::shared_ptr<CommandContext>& context);
@@ -211,7 +219,8 @@ registry->registerFactory(
 - `className` — полное имя класса;
 - `xtype` — псевдоним для команд и описаний;
 - `singletone` — один документ на приложение;
-- `glyph` и `title` — значения по умолчанию.
+- `glyph` и `title` — значения по умолчанию;
+- `rule` — роль документа (`DocumentRule`), см. раздел 11.
 
 `WidgetBuildHandler` дополнительно содержит `name`, `parent`, `options`,
 `context`.
@@ -287,7 +296,113 @@ context()->fireEvent(CommandContext::documentSaveCompleteEvent());
 Используйте этот режим для значений SystemRouter: свойства с блоком
 открываются в code-editor, а сохранение возвращает текст в `data_blobs`.
 
-## 10. Правила
+## 10. Вкладки: цвет, порядок и группировка
+
+Панель открытых документов (`DocumentTabsPanel`,
+`src/Libs/Engine/ui/doc_tab_panel.*`) показывает вкладки так, как решило
+**правило сортировки/группировки**. Правила лежат в
+`src/Libs/Engine/ui/doc_tab_panel/document_tabs_order.*`:
+
+| Правило (`id`) | Что делает | Ручная сортировка |
+|---|---|---|
+| `manual` | порядок задаёт пользователь | да |
+| `color` | группы по цвету вкладки (`color`), «Без цвета» — последняя | нет |
+| `xtype` | группы по типу документа (`xtype`), «Без типа» — последняя | нет |
+
+Активное правило хранится в системном параметре `documents.tabs.order`
+(переменная глобального контекста) и меняется в документе системных настроек
+(кнопка ⚙ на панели кнопок справа). Одновременно действует одно правило.
+
+Цвет вкладки — свойство документа: он хранится в переменной `color` и
+редактируется в панели свойств («Цвет вкладки»). Пустой цвет означает «цвет
+темы». Панель вкладок рисует цветную полосу слева от значка.
+
+Перетаскивание вкладок мышью работает при правиле `manual`: нажатие на
+вкладку и движение вверх/вниз показывает линию вставки, отпускание меняет
+порядок. При группировке перетаскивание отключено — порядок задаёт правило.
+
+Чтобы добавить новый вариант, реализуйте `IDocumentTabsOrderStrategy` и
+зарегистрируйте его в конструкторе `DocumentTabsOrderRegistry`; системный
+параметр и интерфейс настроек соберут список значений сами
+(`registerDocumentTabsOrderOption`).
+
+```cpp
+// Программная сортировка (например, из команды или теста)
+panel->moveDocument(document, 0);      // на первую позицию
+panel->setOrderStrategy("xtype");      // включить группировку по типу
+```
+
+## 11. Роль документа: `DocumentRule`
+
+`WidgetTypeHandler::rule` описывает роль документа. Это не отдельный вид
+виджета: документ сохраняет все обычные функции, но получает дополнительные
+привилегии и ограничения. Правила роли применяет **interceptor контекста**
+(`IContextInterceptor`, `src/Libs/Engine/scripting/command_context/*`): он
+решает, в каком контексте создаётся документ, какой у контекста
+`VariablesMode`, разрешены ли события и изменение переменных. Проверки правил
+приоритетнее режима переменных.
+
+| Роль | Контекст | `VariablesMode` | Назначение |
+|---|---|---|---|
+| `DocumentRule::Document` | `.documents.{id}` | `Lazy` | обычный документ (текущее поведение) |
+| `DocumentRule::SystemOptions` | `.options` | `Mutable` | документ системных настроек |
+
+```cpp
+registry->registerFactory({ SystemOptionsDocument::className(),
+                            SystemOptionsDocument::xtype(),
+                            /*singletone*/ true,
+                            QStringLiteral("⚙"),
+                            QStringLiteral("Системные настройки"),
+                            DocumentRule::SystemOptions },
+    [](const QString&, const WidgetBuildHandler& handler) {
+        return new SystemOptionsDocument(handler.parent);
+    });
+```
+
+`MainWindow::createWidget()` берёт роль из `WidgetRegistry::typeInfo(type)` и
+передаёт её в `CommandContext::createDocumentContext(id, rule)`. Правила
+создаются фабрикой `createContextInterceptor(rule)`, поэтому новая роль — это
+новый interceptor и одна ветка фабрики.
+
+## 12. Системные настройки
+
+Системные параметры приложения — переменные **глобального контекста**. Их
+описания (подпись, тип, допустимые значения, значение по умолчанию) хранит
+`SystemOptionsRegistry` (`src/Libs/Engine/scripting/system_options/`).
+
+Правила доступа:
+
+- `.documents` создаётся как `ReadOnly`, поэтому документы не могут менять
+  системные параметры: их записи остаются в собственных переменных;
+- документ с ролью `DocumentRule::SystemOptions` работает в контексте
+  `.options` в режиме `Mutable`: его записи попадают в глобальный контекст;
+- значения по умолчанию записывает `CommandController::initSystemContexts()`
+  при запуске, поэтому настройки существуют независимо от открытого документа.
+
+Документ настроек — `SystemOptionsDocument`
+(`src/Libs/Engine/ui/main_window/system_options_document.*`), xtype
+`system-options`. Он открывается кнопкой ⚙ на панели кнопок справа или
+командой:
+
+```text
+documents action=create, target=system-options
+```
+
+Новый системный параметр добавляется регистрацией описания и (при
+необходимости) значения по умолчанию:
+
+```cpp
+SystemOption option;
+option.name = "documents.tabs.order";
+option.title = "Сортировка вкладок документов";
+option.type = SystemOptionType::Enum;
+option.values = { "manual", "color", "xtype" };
+option.valueTitles = { "Ручная сортировка", "Группировка по цвету", "Группировка по типу" };
+option.defaultValue = "manual";
+controller->systemOptions()->registerOption(option);
+```
+
+## 13. Правила
 
 - Не создавайте документы в обход `MainWindow::createWidget()`.
 - Не назначайте `DocumentWidget::setContext()` вручную, если документ создан

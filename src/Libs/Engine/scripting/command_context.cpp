@@ -1,4 +1,6 @@
 #include "Libs/Engine/scripting/command_context.h"
+#include "Libs/Engine/scripting/command_context/context_interceptor.h"
+#include "Libs/Engine/scripting/command_context/context_interceptor_factory.h"
 #include "Libs/Engine/scripting/command_controller.h"
 #include "Libs/Engine/services/services_registry.h"
 
@@ -9,8 +11,12 @@
 namespace {
 /// Имя контекста, в котором живут документы, созданные другим контекстом.
 constexpr const char* kDocumentsScope = "documents";
+/// Имя корневого контекста системных настроек.
+constexpr const char* kOptionsScope = "options";
 /// Событие, которым завершается пакетное изменение переменных.
 constexpr const char* kVariablesBatchComplete = "variables.batch.complete";
+/// Имя глобального контекста
+constexpr const char* kGlobalContextScope = ".";
 }
 
 class CommandContext::Private {
@@ -27,10 +33,16 @@ public:
 	/// Кэш контекста `documents`; слабая ссылка, чтобы не создавать цикл
 	/// «родитель → ребёнок → родитель».
 	std::weak_ptr<CommandContext> documentsContext;
+	/// Кэш корневого контекста системных настроек `.options`.
+	std::weak_ptr<CommandContext> optionsContext;
 
 	QMap<QString, QVariant> variables;
 	QMap<QString, QString> variableMimeTypes;
 	CommandContext::VariablesMode variablesMode = CommandContext::VariablesMode::Lazy;
+
+	/// Правила контекста; по умолчанию — стандартное поведение системы.
+	/// Проверки interceptor приоритетнее variablesMode.
+	std::unique_ptr<IContextInterceptor> interceptor;
 
 	/// Пакетная обработка переменных: пока она объявлена, изменение
 	/// отдельных переменных не рассылается, а копится в списке.
@@ -80,6 +92,7 @@ CommandContext::CommandContext(CommandController* commandController, std::shared
 	d->commandController = commandController;
 	d->parentContext = parentContext;
 	d->name = name;
+	d->interceptor = createContextInterceptor(DocumentRule::Document);
 
 	if (parentContext) {
 		auto parentName = QString();
@@ -129,8 +142,27 @@ bool CommandContext::isGlobalContext() const {
 	return !d->parentContext;
 }
 
+void CommandContext::setInterceptor(std::unique_ptr<IContextInterceptor> interceptor) {
+	if (!interceptor) {
+		d->interceptor = createContextInterceptor(DocumentRule::Document);
+		return;
+	}
+
+	d->interceptor = std::move(interceptor);
+
+	// Режим переменных — часть правил контекста: interceptor задаёт его,
+	// если роль требует конкретного режима (например, Mutable для `.options`).
+	if (const auto mode = d->interceptor->variablesMode()) {
+		setVariablesMode(*mode);
+	}
+}
+
+const IContextInterceptor* CommandContext::interceptor() const {
+	return d->interceptor.get();
+}
+
 std::shared_ptr<CommandContext> CommandContext::context(const QString& ns) const {
-	if (ns == ".") {
+	if (ns == kGlobalContextScope) {
 		return globalContext();
 	}
 
@@ -201,6 +233,13 @@ CommandContext::VariablesMode CommandContext::variablesMode() const {
 }
 
 bool CommandContext::setVariable(const QString& name, const QVariant& value) {
+	// Правила роли документа приоритетнее режима переменных.
+	if (d->interceptor && !d->interceptor->canSetVariable(*this, name, value)) {
+		qWarning() << "CommandContext::setVariable: variable" << name
+			<< "is forbidden by document rules in" << d->nameSpace;
+		return false;
+	}
+
 	if (d->variablesMode == VariablesMode::ReadOnly) {
 		qWarning() << "CommandContext::setVariable: variable" << name
 			<< "is read-only in" << d->nameSpace;
@@ -233,7 +272,48 @@ bool CommandContext::setVariable(const QString& name, const QVariant& value) {
 	return true;
 }
 
+bool CommandContext::removeVariable(const QString& name) {
+	if (d->interceptor && !d->interceptor->canRemoveVariable(*this, name)) {
+		qWarning() << "CommandContext::removeVariable: variable" << name
+			<< "is forbidden by document rules in" << d->nameSpace;
+		return false;
+	}
+
+	if (d->variablesMode == VariablesMode::ReadOnly) {
+		qWarning() << "CommandContext::removeVariable: context" << d->nameSpace
+			<< "is read-only, variable" << name << "is not removed";
+		return false;
+	}
+
+	// Удаляются только собственные переменные: унаследованные принадлежат
+	// базовому контексту и не могут быть удалены отсюда.
+	const auto it = d->variables.find(name);
+	if (it == d->variables.end()) {
+		return false;
+	}
+
+	const auto oldValue = it.value();
+	d->variables.erase(it);
+	d->variableMimeTypes.remove(name);
+
+	if (d->variablesBatchActive) {
+		d->rememberChangedVariable(name);
+	}
+	else {
+		emit variableChanged(d->nameSpace, name, oldValue, QVariant());
+	}
+
+	return true;
+}
+
 void CommandContext::fireEvent(const QString& eventName) {
+	// Правила роли документа приоритетнее режима переменных.
+	if (d->interceptor && !d->interceptor->canFireEvent(*this, eventName)) {
+		qWarning() << "CommandContext::fireEvent: event" << eventName
+			<< "is forbidden by document rules in" << d->nameSpace;
+		return;
+	}
+
 	// Отправка события сама по себе событием не является.
 	if (eventName == variablesBatchCompleteEvent()) {
 		qWarning() << "CommandContext::fireEvent: reserved event name" << eventName;
@@ -380,13 +460,60 @@ std::shared_ptr<CommandContext> CommandContext::documentsContext() {
 	}
 
 	if (auto existing = d->childByName(QString::fromLatin1(kDocumentsScope))) {
+		// Документы не могут менять системные параметры: их контекст
+		// открыт только для чтения.
+		existing->setVariablesMode(VariablesMode::ReadOnly);
 		d->documentsContext = existing;
 		return existing;
 	}
 
 	auto created = createScopedContext(QString::fromLatin1(kDocumentsScope));
+	created->setVariablesMode(VariablesMode::ReadOnly);
 	d->documentsContext = created;
 	return created;
+}
+
+std::shared_ptr<CommandContext> CommandContext::optionsContext() {
+	// `.options` — единственный корневой контекст настроек: из вложенного
+	// контекста обращаемся к глобальному.
+	if (!isGlobalContext()) {
+		return globalContext()->optionsContext();
+	}
+
+	if (auto cached = d->optionsContext.lock()) {
+		return cached;
+	}
+
+	auto context = d->childByName(QString::fromLatin1(kOptionsScope));
+	if (!context) {
+		context = createScopedContext(QString::fromLatin1(kOptionsScope));
+	}
+
+	// Привилегированный контекст системных настроек: документ с ролью
+	// SystemOptions работает в нём в режиме Mutable и видит глобальные
+	// значения системных параметров.
+	context->setInterceptor(createContextInterceptor(DocumentRule::SystemOptions));
+	d->optionsContext = context;
+	return context;
+}
+
+std::shared_ptr<CommandContext> CommandContext::namedScope(const QString& scopeName) {
+	if (scopeName.isEmpty() || scopeName == QLatin1String(kDocumentsScope)) {
+		return documentsContext();
+	}
+
+	if (scopeName == QLatin1String(kOptionsScope)) {
+		return globalContext()->optionsContext();
+	}
+
+	// Прочие корневые scope: создаются при первом обращении, правила
+	// назначает interceptor, который их запросил.
+	auto global = globalContext();
+	if (auto existing = global->context(QStringLiteral(".%1").arg(scopeName))) {
+		return existing;
+	}
+
+	return global->createScopedContext(scopeName);
 }
 
 std::shared_ptr<CommandContext> CommandContext::documentContext(const QString& documentId) const {
@@ -408,18 +535,38 @@ std::shared_ptr<CommandContext> CommandContext::documentContext(const QString& d
 	return context;
 }
 
-std::shared_ptr<CommandContext> CommandContext::createDocumentContext(const QString& documentId) {
+std::shared_ptr<CommandContext> CommandContext::createDocumentContext(const QString& documentId,
+	DocumentRule rule) {
+	auto interceptor = createContextInterceptor(rule);
+	if (!interceptor) {
+		qWarning() << "CommandContext::createDocumentContext: unknown document rule" << documentRuleName(rule);
+		return nullptr;
+	}
+
+	// Правила роли решают, в каком контексте создаётся документ.
+	auto scope = namedScope(interceptor->scopeName());
+	if (!scope) {
+		return nullptr;
+	}
+
+	// Документ, который сам является контекстом scope (`.options`):
+	// отдельный узел не создаётся, контекст получает правила роли.
+	if (interceptor->documentLivesInScope()) {
+		scope->setInterceptor(std::move(interceptor));
+		return scope;
+	}
+
 	if (documentId.isEmpty()) {
 		return nullptr;
 	}
 
-	auto documents = documentsContext();
-	if (auto existing = documents->d->childByName(documentId)) {
+	if (auto existing = scope->d->childByName(documentId)) {
 		return existing;
 	}
 
-	auto created = documents->createScopedContext(documentId);
-	emit documents->documentAttached(documentId);
+	auto created = scope->createScopedContext(documentId);
+	created->setInterceptor(std::move(interceptor));
+	emit scope->documentAttached(documentId);
 	return created;
 }
 

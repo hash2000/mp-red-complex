@@ -1,4 +1,5 @@
 #pragma once
+#include <QColor>
 #include <QWidget>
 #include <QVariant>
 #include <memory>
@@ -11,7 +12,8 @@ class CommandContext;
 /// (`.documents.{id}`), поэтому изменение свойств и вызовы видны соседям.
 ///
 /// Состояние документа хранится в переменных его контекста: `title`, `glyph`,
-/// `modified` и переменные конкретного документа (например, `path`).
+/// `modified`, `color`, `xtype` и переменные конкретного документа
+/// (например, `path`).
 class DocumentWidget : public QWidget {
 	Q_OBJECT
 public:
@@ -26,6 +28,15 @@ public:
 
 	bool isModified() const;
 	void setModified(bool modified);
+
+	/// Цвет вкладки. Невалидный цвет — цвет не задан (вкладка в цвете темы).
+	QColor color() const;
+	void setColor(const QColor& color);
+
+	/// Тип документа (xtype), которым он создан: используется группировкой
+	/// вкладок и подсказками. Пустая строка — тип не задан.
+	QString xtype() const;
+	void setXtype(const QString& xtype);
 
 	/// Контекст документа. Может быть nullptr у документов, созданных
 	/// напрямую (например, в тестах или legacy-окнах).
@@ -63,6 +74,8 @@ signals:
 	void titleChanged(const QString& title);
 	void glyphChanged(const QString& glyph);
 	void modifiedChanged(bool modified);
+	void colorChanged(const QColor& color);
+	void xtypeChanged(const QString& xtype);
 	void propertiesChanged();   // попросить панель свойств перестроить редактор
 
 protected:

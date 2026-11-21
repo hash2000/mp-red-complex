@@ -6,12 +6,13 @@
 #include <map>
 
 WidgetTypeHandler::WidgetTypeHandler(const QString& className, const QString& xtype, bool singletone,
-	const QString& glyph, const QString& title)
+	const QString& glyph, const QString& title, DocumentRule rule)
 	: className(className)
 	, xtype(xtype)
 	, singletone(singletone)
 	, glyph(glyph)
-	, title(title) {
+	, title(title)
+	, rule(rule) {
 }
 
 class WidgetRegistry::Private {

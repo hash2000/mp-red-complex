@@ -2,9 +2,11 @@
 #include "Libs/Engine/scripting/i_command.h"
 #include "Libs/Engine/scripting/command_processor.h"
 #include "Libs/Engine/scripting/command_context.h"
+#include "Libs/Engine/scripting/system_options/system_options_registry.h"
 #include "Libs/Engine/console/console_table.h"
 #include "Libs/Engine/console/console_json.h"
 #include "Libs/Engine/scripting/widgets/widget_registry.h"
+#include "Libs/Engine/ui/doc_tab_panel/document_tabs_order.h"
 #include "Libs/Engine/ui/main_window.h"
 #include "Libs/Resources/resources.h"
 
@@ -25,6 +27,9 @@ public:
 	/// Корневой контекст документов `.documents`; владеется контроллером,
 	/// иначе он уничтожался бы вместе с локальной ссылкой.
 	std::shared_ptr<CommandContext> documentsContext;
+	/// Корневой контекст системных настроек `.options`.
+	std::shared_ptr<CommandContext> optionsContext;
+	std::unique_ptr<SystemOptionsRegistry> systemOptions;
 	std::unique_ptr<WidgetRegistry> widgetRegistry;
 	QPointer<MainWindow> mainWindow;
 	Resources* resources;
@@ -34,6 +39,9 @@ public:
 
 	std::shared_ptr<CommandContext> createLocalContext();
 	int cleanupIntervalMs() const;
+
+	/// Встроенные системные параметры приложения.
+	void registerSystemOptions();
 };
 
 CommandController::CommandController(Resources* resources, QObject* parent)
@@ -43,10 +51,14 @@ CommandController::CommandController(Resources* resources, QObject* parent)
 	d->resources = resources;
 	d->globalContext = std::make_shared<CommandContext>(this, std::shared_ptr<CommandContext>() /*is global context*/, "");
 	d->widgetRegistry = std::make_unique<WidgetRegistry>();
+	d->systemOptions = std::make_unique<SystemOptionsRegistry>();
+	d->registerSystemOptions();
 }
 
 CommandController::~CommandController() {
 	stopContextCleanup();
+	d->documentsContext.reset();
+	d->optionsContext.reset();
 	d->globalContext.reset();
 }
 
@@ -107,10 +119,19 @@ int CommandController::pruneDeadContexts() {
 	return d->globalContext->pruneDeadContexts();
 }
 
+void CommandController::Private::registerSystemOptions() {
+	if (!systemOptions) {
+		return;
+	}
+
+	// Правило сортировки/группировки вкладок документов: допустимые значения
+	// берутся из реестра правил, поэтому новое правило достаточно добавить
+	// в DocumentTabsOrderRegistry — настройка и UI настроек обновятся сами.
+	registerDocumentTabsOrderOption(*systemOptions);
+}
+
 void CommandController::init() {
-	// Корневой контекст документов: в нём живут документы-синглтоны,
-	// дочерние документы создаются в `.documents.{documentId}`.
-	d->documentsContext = d->globalContext->documentsContext();
+	initSystemContexts();
 
 	initContext();
 
@@ -123,8 +144,38 @@ void CommandController::init() {
 		.arg(commandProcessor()->availableCommands().size()));
 }
 
+void CommandController::initSystemContexts() {
+	if (!d->globalContext) {
+		return;
+	}
+
+	// Системные параметры — переменные глобального контекста. Документы
+	// не должны менять их сами по себе, поэтому контекст `.documents`
+	// открывается только для чтения, а документы работают в режиме Lazy:
+	// запись создаёт их собственные переменные.
+	d->documentsContext = d->globalContext->documentsContext();
+	d->documentsContext->setVariablesMode(CommandContext::VariablesMode::ReadOnly);
+
+	// Привилегированный контекст системных настроек: документ с ролью
+	// DocumentRule::SystemOptions работает в нём в режиме Mutable.
+	d->optionsContext = d->globalContext->optionsContext();
+
+	// Значения по умолчанию записываются в глобальный контекст, поэтому
+	// настройки существуют независимо от того, открыт ли их документ.
+	if (d->systemOptions) {
+		const int applied = d->systemOptions->applyDefaults(*d->globalContext);
+		if (applied > 0) {
+			qDebug() << "CommandController: applied" << applied << "system option defaults";
+		}
+	}
+}
+
 WidgetRegistry* CommandController::widgets() const {
 	return d->widgetRegistry.get();
+}
+
+SystemOptionsRegistry* CommandController::systemOptions() const {
+	return d->systemOptions.get();
 }
 
 MainWindow* CommandController::mainWindow() const {
