@@ -10,6 +10,7 @@ class PropertiesListWidget;
 class QCheckBox;
 class QComboBox;
 class QLabel;
+class QLineEdit;
 class QToolButton;
 class SystemRouterBlobService;
 class SystemRouterService;
@@ -20,8 +21,9 @@ class SystemRouterService;
 /// добавлять, удалять и изменять свойства вместе с их mime-типами.
 /// Изменения сразу сохраняются через SystemRouterService.
 ///
-/// Отдельно показывается параметр «Узел всегда открыт»: он хранится в поле
-/// expanded таблицы узлов и заставляет дерево раскрывать ветку при загрузке.
+/// Отдельно показываются параметры, которыми управляет представление:
+/// «Узел всегда открыт» (поле expanded таблицы узлов) и «Глиф» (свойство
+/// `glyph` — символ перед именем узла в дереве).
 class SystemRouterNodePropertiesDocument final : public DocumentWidget {
 	Q_OBJECT
 public:
@@ -38,6 +40,10 @@ public:
 	/// Признак «узел всегда открыт».
 	bool alwaysExpanded() const;
 	bool setAlwaysExpanded(bool value);
+
+	/// Глиф узла; пустая строка — глиф по умолчанию.
+	QString glyph() const;
+	bool setGlyph(const QString& glyph);
 
 	bool addProperty(const QString& name, const QStringList& mimeTypes,
 		const QVariant& value = {});

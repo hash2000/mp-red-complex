@@ -6,11 +6,13 @@
 #include "Content/SystemRouter/widgets/system_router_script_dialog.h"
 #include "Content/SystemRouter/widgets/system_router_tree_widget.h"
 #include "Libs/BaseWidgets/properties/properties_list_widget.h"
+#include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_node_glyph.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_view.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_widget.h"
 #include "basewidgets/mock_lazy_tree_provider.h"
 
 #include <QCheckBox>
+#include <QLineEdit>
 #include <QListWidget>
 #include <QPlainTextEdit>
 #include <QStandardItemModel>
@@ -77,6 +79,7 @@ private slots:
 	void documentHostsLazyTreeWidget();
 	void nodePropertiesDocument();
 	void nodePropertiesAlwaysExpanded();
+	void nodePropertiesGlyph();
 	void codeEditorPropertyUsesButton();
 	void doubleClickEmitsNodeActivated();
 	void doubleClickWithoutCommandTogglesNode();
@@ -243,6 +246,39 @@ void TestSystemRouter::nodePropertiesAlwaysExpanded() {
 	QVERIFY(!document.setAlwaysExpanded(false));
 	QVERIFY(check->isChecked());
 	QVERIFY(document.alwaysExpanded());
+}
+
+void TestSystemRouter::nodePropertiesGlyph() {
+	auto item = _service->createItem(QVariant(), QStringLiteral("Узел"));
+	QVERIFY(item);
+
+	SystemRouterNodePropertiesDocument document(_service.get(), nullptr, item->id());
+	auto* glyphEdit = document.findChild<QLineEdit*>(QStringLiteral("SystemRouterGlyphEdit"));
+	QVERIFY(glyphEdit);
+	QVERIFY(glyphEdit->isEnabled());
+	QCOMPARE(glyphEdit->text(), QString());
+	QCOMPARE(document.glyph(), QString());
+
+	// Значение из поля сохраняется в свойство узла.
+	glyphEdit->setText(QStringLiteral("⚙"));
+	QVERIFY(QMetaObject::invokeMethod(glyphEdit, "editingFinished"));
+	QCOMPARE(document.glyph(), QStringLiteral("⚙"));
+	QCOMPARE(LazyTreeNodeGlyph::assigned(item), QStringLiteral("⚙"));
+
+	// Глиф редактируется полем, а не как обычное свойство узла.
+	auto* list = document.findChild<PropertiesListWidget*>(
+		QStringLiteral("SystemRouterNodePropertiesList"));
+	QVERIFY(list);
+	QCOMPARE(list->propertyCount(), 0);
+
+	document.refresh();
+	QCOMPARE(glyphEdit->text(), QStringLiteral("⚙"));
+
+	// Пустое значение возвращает глиф по умолчанию.
+	QVERIFY(document.setGlyph(QString()));
+	QCOMPARE(document.glyph(), QString());
+	QCOMPARE(glyphEdit->text(), QString());
+	QVERIFY(!item->properties().contains(LazyTreeNodeGlyph::propertyName()));
 }
 
 void TestSystemRouter::codeEditorPropertyUsesButton() {

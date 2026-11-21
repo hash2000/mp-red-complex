@@ -10,6 +10,7 @@ using LazyTreeNodePtr = std::shared_ptr<class ILazyTreeNode>;
 using LazyTreeNodeList = std::vector<LazyTreeNodePtr>;
 
 class ILazyNodesDataProvider;
+class QEvent;
 class QStandardItem;
 
 /// Дерево с ленивой загрузкой узлов.
@@ -20,7 +21,9 @@ class QStandardItem;
 ///    у поставщика при раскрытии;
 ///  - children() — непустой список — дети переданы заранее, при раскрытии
 ///    дополнительный запрос не выполняется;
-///  - expanded() задаёт начальное состояние узла.
+///  - expanded() задаёт начальное состояние узла;
+///  - глиф узла (свойства `glyph`, устаревшее `icon`) рисуется перед именем,
+///    а если глиф не назначен — используется defaultGlyph().
 ///
 /// Добавление узла создаёт временный элемент без имени. Имя проверяется и
 /// сохраняется при завершении редактирования; пустое имя удаляет элемент.
@@ -31,6 +34,19 @@ public:
 	~LazyTreeView() override;
 
 	ILazyNodesDataProvider* provider() const;
+
+	/// Глиф по умолчанию для узлов без назначенного глифа.
+	static QString defaultGlyph();
+
+	/// Назначенный узлу глиф (пустая строка — глиф по умолчанию).
+	QString nodeGlyph(const QVariant& id) const;
+
+	/// Назначить глиф узлу. Пустая строка возвращает глиф по умолчанию.
+	/// false — узел не найден или не может быть изменён.
+	bool setNodeGlyph(const QVariant& id, const QString& glyph);
+
+	/// Перерисовать значок элемента по данным прикреплённого узла.
+	void updateItemGlyph(QStandardItem* item);
 
 	/// Полная перезагрузка дерева.
 	void setNodes(const LazyTreeNodeList& nodes);
@@ -85,6 +101,7 @@ protected:
 	void startDrag(Qt::DropActions supportedActions) override;
 	void dropEvent(QDropEvent* event) override;
 	void closeEditor(QWidget* editor, QAbstractItemDelegate::EndEditHint hint) override;
+	void changeEvent(QEvent* event) override;
 
 private slots:
 	void onExpanded(const QModelIndex& index);

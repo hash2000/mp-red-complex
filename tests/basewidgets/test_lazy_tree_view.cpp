@@ -1,10 +1,13 @@
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_builder.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_data_node.h"
+#include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_node_glyph.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_view.h"
 #include "basewidgets/mock_lazy_tree_provider.h"
 
 #include <QApplication>
 #include <QFocusEvent>
+#include <QIcon>
+#include <QImage>
 #include <QLineEdit>
 #include <QSignalSpy>
 #include <QStandardItemModel>
@@ -23,6 +26,8 @@ private slots:
 	void lazyNodeLoadsChildrenOnExpandOnce();
 	void preloadedChildrenDoNotRequestProvider();
 	void expandedFlagOpensNodes();
+	void nodesShowGlyphWithDefault();
+	void setNodeGlyphUpdatesNodeAndItem();
 	void nestedTreeKeepsHierarchy();
 	void setChildrenReplacesAndClears();
 
@@ -68,6 +73,28 @@ LazyTreeNodePtr makeRootWithChildren(const QVariant& id, const LazyTreeNodeList&
 	node->setChildren(children);
 	node->setExpanded(expanded);
 	return node;
+}
+
+/// Есть ли в значке хоть один непрозрачный пиксель: так проверяется, что
+/// глиф действительно нарисован, а не остался пустой иконкой.
+bool hasVisiblePixels(const QImage& image) {
+	if (image.isNull()) {
+		return false;
+	}
+
+	for (int y = 0; y < image.height(); y++) {
+		for (int x = 0; x < image.width(); x++) {
+			if (image.pixelColor(x, y).alpha() > 0) {
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+QImage iconImage(const QIcon& icon) {
+	return icon.pixmap(16, 16).toImage();
 }
 
 } // namespace
@@ -187,6 +214,69 @@ void TestLazyTreeView::expandedFlagOpensNodes() {
 	_view->setNodes({ root });
 
 	QVERIFY(_view->isExpanded(rootItem(0)->index()));
+}
+
+void TestLazyTreeView::nodesShowGlyphWithDefault() {
+	auto withGlyph = makeLazyTestNode(1, QVariant(), QStringLiteral("With glyph"));
+	withGlyph->setProperty(LazyTreeNodeGlyph::propertyName(), QStringLiteral("⚙"));
+	markLeafTestNode(withGlyph);
+
+	// Прежнее имя свойства тоже даёт глиф.
+	auto legacy = makeLazyTestNode(2, QVariant(), QStringLiteral("Legacy"));
+	legacy->setProperty(LazyTreeNodeGlyph::legacyPropertyName(), QStringLiteral("⚙"));
+	markLeafTestNode(legacy);
+
+	auto withoutGlyph = makeLazyTestNode(3, QVariant(), QStringLiteral("Without glyph"));
+	markLeafTestNode(withoutGlyph);
+
+	_view->setNodes({ withGlyph, legacy, withoutGlyph });
+
+	QCOMPARE(LazyTreeView::defaultGlyph(), LazyTreeNodeGlyph::defaultGlyph());
+
+	const auto glyphIcon = rootItem(0)->icon();
+	const auto defaultIcon = rootItem(2)->icon();
+	QVERIFY(!glyphIcon.isNull());
+	QVERIFY(!defaultIcon.isNull());
+
+	// Глиф нарисован, и он отличается от глифа по умолчанию.
+	const auto glyphImage = iconImage(glyphIcon);
+	const auto defaultImage = iconImage(defaultIcon);
+	QVERIFY(hasVisiblePixels(glyphImage));
+	QVERIFY(hasVisiblePixels(defaultImage));
+	QVERIFY(glyphImage != defaultImage);
+
+	// Прежнее имя свойства даёт тот же значок, что и новое.
+	QVERIFY(iconImage(rootItem(1)->icon()) == glyphImage);
+}
+
+void TestLazyTreeView::setNodeGlyphUpdatesNodeAndItem() {
+	auto first = makeLazyTestNode(1, QVariant(), QStringLiteral("First"));
+	markLeafTestNode(first);
+	auto second = makeLazyTestNode(2, QVariant(), QStringLiteral("Second"));
+	markLeafTestNode(second);
+
+	_view->setNodes({ first, second });
+	QCOMPARE(_view->nodeGlyph(first->id()), QString());
+
+	const auto defaultImage = iconImage(rootItem(1)->icon());
+	QVERIFY(hasVisiblePixels(defaultImage));
+
+	QVERIFY(_view->setNodeGlyph(first->id(), QStringLiteral("⚙")));
+	QCOMPARE(_view->nodeGlyph(first->id()), QStringLiteral("⚙"));
+	QCOMPARE(first->properties().value(LazyTreeNodeGlyph::propertyName()).toString(),
+		QStringLiteral("⚙"));
+
+	const auto glyphImage = iconImage(rootItem(0)->icon());
+	QVERIFY(hasVisiblePixels(glyphImage));
+	QVERIFY(glyphImage != defaultImage);
+
+	// Пустая строка возвращает глиф по умолчанию и убирает свойство.
+	QVERIFY(_view->setNodeGlyph(first->id(), QString()));
+	QCOMPARE(_view->nodeGlyph(first->id()), QString());
+	QVERIFY(!first->properties().contains(LazyTreeNodeGlyph::propertyName()));
+	QVERIFY(iconImage(rootItem(0)->icon()) == defaultImage);
+
+	QVERIFY(!_view->setNodeGlyph(QVariant::fromValue(9999), QStringLiteral("⚙")));
 }
 
 void TestLazyTreeView::nestedTreeKeepsHierarchy() {

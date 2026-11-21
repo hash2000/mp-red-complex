@@ -440,6 +440,8 @@ bool LazyTreeWidget::updateNode(const QVariant& nodeId, const LazyTreeNodePtr& n
 	if (item) {
 		item->setText(nodeData->name());
 		LazyTreeNodeRole::updateNodeRaw(item, nodeData);
+		// Вместе с именем обновляем глиф: узел мог получить новый значок.
+		d->normalTreeView->updateItemGlyph(item);
 	}
 
 	return true;
