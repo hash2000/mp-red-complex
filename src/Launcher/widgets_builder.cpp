@@ -4,8 +4,6 @@
 #include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
 #include "Content/FetchApiModule/documents/fetch_api_document.h"
-#include "Content/FetchApiModule/documents/fetch_queries_tree_document.h"
-#include "Content/FetchApiModule/services/fetch_queries_service.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
 #include "Content/SystemRouter/documents/system_router_node_properties_document.h"
 #include "Content/SystemRouter/documents/system_router_tree_document.h"
@@ -219,13 +217,6 @@ void WidgetsBuilder::Private::registerAll() {
 				return nullptr;
 			}
 			return new FetchApiDocument(handler.context, handler.parent);
-		});
-
-	registry->registerFactory({ "Content.FetchApi.FetchQueriesTreeDocument", "fetch-api-queries-tree",
-		/*singletone*/ true, QStringLiteral("Запросы Fetch API") },
-		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
-			auto* service = requiredService<FetchQueriesService>(servicesFor(type, handler), type, "FetchQueriesService");
-			return service ? new FetchQueriesTreeDocument(service->dataProvider(), handler.parent) : nullptr;
 		});
 
 	registry->registerFactory({ "Content.SystemRouter.SystemRouterTreeDocument", "system-router",

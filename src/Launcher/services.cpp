@@ -4,8 +4,6 @@
 #include "Libs/Resources/resources.h"
 
 // FetchApiModule
-#include "Content/FetchApiModule/data_providers/fetch_queries_data_provider_db.h"
-#include "Content/FetchApiModule/services/fetch_queries_service.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
 
 // SystemRouter
@@ -17,34 +15,8 @@
 #include "Content/SystemRouter/services/system_router_command_service.h"
 #include "Content/SystemRouter/services/system_router_service.h"
 
-//// ShadersModule
-//#include "Content/ShadersModule/data_providers/shaders_data_provider_impl.h"
-//#include "Content/ShadersModule/services/shaders_service.h"
-//
-//// MaterialsModule
-//#include "Content/MaterialsModule/data_providers/material_data_provider_json_impl.h"
-//#include "Content/MaterialsModule/services/materials_service.h"
-//
-//// TexturesModeule
-//#include "Content/TexturesModule/data_providers/images_data_provider_json_impl.h"
-//#include "Content/TexturesModule/data_providers/i_images_data_provider.h"
-//#include "Content/TexturesModule/data_providers/tile_groups_data_provider_json_impl.h"
-//#include "Content/TexturesModule/data_providers/i_tile_groups_data_provider.h"
-//#include "Content/TexturesModule/services/images_service.h"
-//#include "Content/TexturesModule/services/textures_service.h"
-//#include "Content/TexturesModule/services/tiles_selector_service.h"
-//
-//// Items service
-//#include "Content/InventoriesModule/data_providers/items_data_provider_db.h"
-//#include "Content/InventoriesModule/data_providers/entities_data_provider_db.h"
-//#include "Content/InventoriesModule/services/items_service.h"
-//
 // DatabasesService
 #include "Content/DatabaseModule/services/databases_service.h"
-
-//// CharactersModule
-//#include "Content/CharactersModule/data_providers/character_data_provider_db.h"
-//#include "Content/CharactersModule/services/characters_service.h"
 
 // UsersModule
 #include "Content/UsersModule/services/users_service.h"
@@ -66,12 +38,7 @@ public:
 		// Data Providers
 		: resources(res)
 		, globalContext(std::move(context))
-		//, itemsDataProvider([this] { return std::make_unique<ItemsDataProviderDb>(databasesService.get()); })
-		//, entitiesDataProvider([this] { return std::make_unique<EntitiesDataProviderDb>(databasesService.get()); })
-		//, imagesDataProvider([this] {	return std::make_unique<ImagesDataProviderJsonImpl>(resources);	})
-		//, tileGroupsDataProvider([this] {	return std::make_unique<TileGroupsDataProviderJsonImpl>(resources);	})
 		, usersRegistryDataProvider([this] {	return std::make_unique<UsersRegistryDataProviderDb>(databasesService.get()); })
-		, fetchQueriesDataProvider([this] {	return std::make_unique<FetchQueriesDataProviderDb>(databasesService.get()); })
 		, systemRouterDataProvider([this] {	return std::make_unique<SystemRouterDataProviderDb>(databasesService.get()); })
 		, systemRouterCommandsProvider([this] {	return std::make_unique<SystemRouterCommandsProviderDb>(databasesService.get()); })
 		, systemRouterBlobsProvider([this] {
@@ -79,9 +46,6 @@ public:
 				QString::fromLatin1(SystemRouterDb::kDatabase),
 				QString::fromLatin1(SystemRouterDb::kDataBlobsTable));
 		})
-		//, characterDataProvider([this] {	return std::make_unique<CharacterDataProviderDb>(databasesService.get());	})
-		//, shadersDataProvider([this] { return std::make_unique<ShadersDataProviderLocalImpl>(resources); })
-		//, materialsDataProvider([this] { return std::make_unique<MaterialsDataProviderJsonImpl>(resources); })
 
 		// Services
 		, databasesService([this] {
@@ -97,31 +61,16 @@ private:
 
 private:
 	// Data Providers (остаются для обратной совместимости и writer'ов)
-	//LazyPtr<IItemsDataProvider> itemsDataProvider;
-	//LazyPtr<IEntitiesDataProvider> entitiesDataProvider;
 	LazyPtr<IUsersRegistryDataProvider> usersRegistryDataProvider;
-	LazyPtr<FetchQueriesDataProviderDb> fetchQueriesDataProvider;
 	LazyPtr<SystemRouterDataProviderDb> systemRouterDataProvider;
 	LazyPtr<SystemRouterCommandsProviderDb> systemRouterCommandsProvider;
 	LazyPtr<DataBlobsProviderDb> systemRouterBlobsProvider;
-	//LazyPtr<ICharacterDataProvider> characterDataProvider;
-	//LazyPtr<IImagesDataProvider> imagesDataProvider;
-	//LazyPtr<ITileGroupsDataProvider> tileGroupsDataProvider;
-	//LazyPtr<IShadersDataProvider> shadersDataProvider;
-	//LazyPtr<IMaterialsDataProvider> materialsDataProvider;
 
 	// Services
 	LazyPtr<DatabasesService> databasesService;
 
 public:
 	void registerServices() {
-
-		//registerFactory<ItemsService>([this] {
-		//	return std::make_unique<ItemsService>(
-		//		this->get<ImagesService>(),
-		//		entitiesDataProvider.get(),
-		//		itemsDataProvider.get());
-		//});
 
 		registerFactory<UsersService>([this] {
 			return std::make_unique<UsersService>(
@@ -136,47 +85,8 @@ public:
 				usersRegistryDataProvider.get());
 		});
 
-		//registerFactory<ImagesService>([this] {
-		//	return std::make_unique<ImagesService>(
-		//		imagesDataProvider.get());
-		//});
-
-		//registerFactory<TilesSelectorService>([this] {
-		//	return std::make_unique<TilesSelectorService>(
-		//		tileGroupsDataProvider.get());
-		//});
-
-		//registerFactory<TexturesService>([this] {
-		//	return std::make_unique<TexturesService>(
-		//		this->get<ImagesService>());
-		//});
-
-		//registerFactory<MaterialsService>([this] {
-		//	return std::make_unique<MaterialsService>(
-		//		materialsDataProvider.get());
-		//});
-
-		//registerFactory<CharactersService>([this] {
-		//	return std::make_unique<CharactersService>(
-		//		characterDataProvider.get(),
-		//		this->get<UsersService>(),
-		//		this->get<ImagesService>());
-		//});
-
-		//registerFactory<CharactersService>([this] {
-		//	return std::make_unique<CharactersService>(
-		//		characterDataProvider.get(),
-		//		this->get<UsersService>(),
-		//		this->get<ImagesService>());
-		//});
-
 		registerFactory<FetchApiService>([this]() {
 			return std::make_unique<FetchApiService>();
-		});
-
-		registerFactory<FetchQueriesService>([this]() {
-			return std::make_unique<FetchQueriesService>(
-				fetchQueriesDataProvider.get());
 		});
 
 		registerFactory<SystemRouterService>([this]() {
