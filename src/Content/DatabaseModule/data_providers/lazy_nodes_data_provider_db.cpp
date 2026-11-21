@@ -20,23 +20,64 @@
 
 namespace {
 
+/// Выборка уровня дерева: непосредственные дети запрошенного узла и, сразу,
+/// вложенные узлы веток с признаком «узел всегда открыт».
+///
+/// Рекурсивная часть спускается от загруженного узла p к его детям c, пока у p
+/// выставлено expanded: если проверять expanded у самого ребёнка (c.expanded),
+/// то у раскрытого узла пропали бы нераскрытые дети, поэтому условие стоит на
+/// родителе. UNION (без ALL) отсекает повторы — повреждённые данные с циклом в
+/// parent_id не приводят к бесконечной рекурсии. Ветка без признака остаётся
+/// ленивой: узел приходит с пустым списком детей и грузит их при раскрытии.
 const QString kSqlSelectTemplate = R"(
+	with recursive
+	loaded as (
+		select
+			t.id,
+			t.parent_id,
+			t.name,
+			t.data,
+			t.expanded,
+			case
+				when exists (
+					select 1
+					from {{table}} as child
+					where child.parent_id = t.id
+				)
+				then 1
+				else 0
+			end as has_children
+		from {{table}} as t
+		where {{scope}}
+		union
+		-- Вложенные узлы раскрытой ветки.
+		select
+			c.id,
+			c.parent_id,
+			c.name,
+			c.data,
+			c.expanded,
+			case
+				when exists (
+					select 1
+					from {{table}} as child
+					where child.parent_id = c.id
+				)
+				then 1
+				else 0
+			end as has_children
+		from {{table}} as c
+		join loaded as p on c.parent_id = p.id and p.expanded = 1
+	)
 	select
-		t.id,
-		t.parent_id,
-		t.name,
-		t.data,
-		case
-			when exists (
-				select 1
-				from {{table}} as child
-				where child.parent_id = t.id
-			)
-			then 1
-			else 0
-		end as has_children,
-		0 as expanded
-	from {{table}} as t
+		loaded.id,
+		loaded.parent_id,
+		loaded.name,
+		loaded.data,
+		loaded.has_children,
+		loaded.expanded
+	from loaded
+	order by loaded.name collate nocase, loaded.id
 )";
 
 const QString kSqlSelectByIdTemplate = R"(
@@ -45,6 +86,7 @@ const QString kSqlSelectByIdTemplate = R"(
 		t.parent_id,
 		t.name,
 		t.data,
+		t.expanded,
 		case
 			when exists (
 				select 1
@@ -53,8 +95,7 @@ const QString kSqlSelectByIdTemplate = R"(
 			)
 			then 1
 			else 0
-		end as has_children,
-		0 as expanded
+		end as has_children
 	from {{table}} as t
 	where t.id = :id
 )";
@@ -63,6 +104,9 @@ const QString kSqlDeleteTemplate = R"(
 	delete from {{table}} where id = :id
 )";
 
+/// Обновление узла. Признак expanded здесь не меняется: update() вызывается и
+/// для узлов из результатов поиска, где раскрытие вычислено запросом и не
+/// должно попадать в базу. Признак сохраняет kSqlUpdateExpandedTemplate.
 const QString kSqlUpdateTemplate = R"(
 	update {{table}} set
 		parent_id = :parent_id,
@@ -71,8 +115,13 @@ const QString kSqlUpdateTemplate = R"(
 	where id = :id
 )";
 
+const QString kSqlUpdateExpandedTemplate = R"(
+	update {{table}} set expanded = :expanded where id = :id
+)";
+
 const QString kSqlInsertTemplate = R"(
-	insert into {{table}} (parent_id, name, data) values (:parent_id, :name, :data)
+	insert into {{table}} (parent_id, name, data, expanded)
+	values (:parent_id, :name, :data, :expanded)
 )";
 
 const QString kSqlSearchTemplate = R"(
@@ -323,16 +372,21 @@ public:
 		blobs = std::make_unique<DataBlobsProviderDb>(databasesService, databaseName);
 		const QString quotedTable = quoteIdentifier(tableName);
 
-		const auto build = [&quotedTable](const QString& sql) {
+		const auto build = [&quotedTable](const QString& sql, const QString& scope = {}) {
 			QString result = sql;
-			return result.replace("{{table}}", quotedTable);
+			result.replace("{{table}}", quotedTable);
+			result.replace("{{scope}}", scope);
+			return result;
 		};
 
-		sqlSelect = build(kSqlSelectTemplate);
+		sqlSelectRoots = build(kSqlSelectTemplate, QStringLiteral("t.parent_id is null"));
+		sqlSelectChildren = build(kSqlSelectTemplate,
+			QStringLiteral("t.parent_id = :parent_id"));
 		sqlSelectById = build(kSqlSelectByIdTemplate);
 		sqlInsert = build(kSqlInsertTemplate);
 		sqlDelete = build(kSqlDeleteTemplate);
 		sqlUpdate = build(kSqlUpdateTemplate);
+		sqlUpdateExpanded = build(kSqlUpdateExpandedTemplate);
 		sqlSearch = build(kSqlSearchTemplate);
 	}
 
@@ -342,11 +396,13 @@ public:
 	QString tableName;
 	std::unique_ptr<DataBlobsProviderDb> blobs;
 
-	QString sqlSelect;
+	QString sqlSelectRoots;
+	QString sqlSelectChildren;
 	QString sqlSelectById;
 	QString sqlInsert;
 	QString sqlDelete;
 	QString sqlUpdate;
+	QString sqlUpdateExpanded;
 	QString sqlSearch;
 
 	mutable QString lastError;
@@ -400,7 +456,9 @@ LazyTreeNodeList LazyNodesDataProviderDb::Private::readNodes(
 		readProperties(reader, node);
 
 		if (reader->value("has_children").toLongLong() > 0) {
-			// Дети есть, но их нужно загрузить отдельным запросом.
+			// Дети есть, но по умолчанию их нужно загружать отдельным
+			// запросом. Узлы, пришедшие в составе раскрытой ветки, получат
+			// готовый список детей при сборке дерева в get().
 			node->setChildren(LazyTreeNodeList());
 		}
 
@@ -568,18 +626,12 @@ LazyTreeNodeList LazyNodesDataProviderDb::get(const QVariant& parentId) const {
 
 	const bool roots = !parentId.isValid() || parentId.isNull();
 
-	QString query = d->sqlSelect;
-	query += roots
-		? QStringLiteral("\nwhere t.parent_id is null")
-		: QStringLiteral("\nwhere t.parent_id = :parent_id");
-	query += QStringLiteral("\norder by t.name collate nocase, t.id");
-
 	std::unique_ptr<SQLiteReader> reader;
 	if (roots) {
-		reader = connection->executeQuery(query);
+		reader = connection->executeQuery(d->sqlSelectRoots);
 	}
 	else {
-		reader = connection->prepare(query);
+		reader = connection->prepare(d->sqlSelectChildren);
 		if (reader) {
 			reader->bindValue(":parent_id", parentId);
 		}
@@ -590,7 +642,10 @@ LazyTreeNodeList LazyNodesDataProviderDb::get(const QVariant& parentId) const {
 		return {};
 	}
 
-	return d->readNodes(reader);
+	// Запрос возвращает не только детей запрошенного узла, но и вложенные
+	// узлы раскрытых веток: собираем из плоского списка дерево. Узлы, чьи
+	// дети не пришли, остаются ленивыми (пустой список в readNodes).
+	return LazyTreeBuilder::buildFromFlat(d->readNodes(reader));
 }
 
 LazyTreeNodePtr LazyNodesDataProviderDb::getNode(const QVariant& id) const {
@@ -705,6 +760,7 @@ bool LazyNodesDataProviderDb::add(const LazyTreeNodePtr& node) {
 
 	statement->bindValue(":parent_id", node->parentId());
 	statement->bindValue(":name", node->name());
+	statement->bindValue(":expanded", node->expanded() ? 1 : 0);
 	if (!d->bindProperties(*statement, node)) {
 		return false;
 	}
@@ -718,6 +774,35 @@ bool LazyNodesDataProviderDb::add(const LazyTreeNodePtr& node) {
 	const qint64 lastInsertId = statement->lastInsert();
 	node->setId(QVariant::fromValue(lastInsertId));
 	onNodeInserted(node, lastInsertId);
+
+	return true;
+}
+
+bool LazyNodesDataProviderDb::setExpanded(const QVariant& id, bool expanded) {
+	if (!id.isValid() || id.isNull()) {
+		return false;
+	}
+
+	auto* connection = d->connection();
+	if (!connection) {
+		return false;
+	}
+
+	auto statement = connection->prepare(d->sqlUpdateExpanded);
+	if (!statement) {
+		d->lastError = connection->lastError();
+		return false;
+	}
+
+	statement->bindValue(":expanded", expanded ? 1 : 0);
+	statement->bindValue(":id", id);
+
+	if (!statement->exec()) {
+		d->lastError = connection->lastError();
+		qWarning() << "LazyNodesDataProviderDb: expanded update failed for id" << id
+			<< d->lastError;
+		return false;
+	}
 
 	return true;
 }

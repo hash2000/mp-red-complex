@@ -7,6 +7,7 @@
 #include <memory>
 
 class PropertiesListWidget;
+class QCheckBox;
 class QComboBox;
 class QLabel;
 class QToolButton;
@@ -18,6 +19,9 @@ class SystemRouterService;
 /// Показывает `ILazyTreeNode::properties()` в PropertiesListWidget и позволяет
 /// добавлять, удалять и изменять свойства вместе с их mime-типами.
 /// Изменения сразу сохраняются через SystemRouterService.
+///
+/// Отдельно показывается параметр «Узел всегда открыт»: он хранится в поле
+/// expanded таблицы узлов и заставляет дерево раскрывать ветку при загрузке.
 class SystemRouterNodePropertiesDocument final : public DocumentWidget {
 	Q_OBJECT
 public:
@@ -30,6 +34,10 @@ public:
 
 	QVariant nodeId() const;
 	LazyTreeNodePtr node() const;
+
+	/// Признак «узел всегда открыт».
+	bool alwaysExpanded() const;
+	bool setAlwaysExpanded(bool value);
 
 	bool addProperty(const QString& name, const QStringList& mimeTypes,
 		const QVariant& value = {});

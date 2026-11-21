@@ -32,6 +32,10 @@ public:
 	bool moveItem(const QVariant& id, const QVariant& parentId);
 	bool removeItem(const QVariant& id);
 
+	/// Признак «узел всегда открыт»: при загрузке дерева такой узел
+	/// раскрывается сразу вместе с вложенными узлами.
+	bool setAlwaysExpanded(const QVariant& id, bool alwaysExpanded);
+
 	QString lastError() const;
 
 signals:

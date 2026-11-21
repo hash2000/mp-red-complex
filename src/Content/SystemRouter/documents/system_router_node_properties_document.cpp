@@ -9,6 +9,7 @@
 #include "Libs/Engine/scripting/command_processor.h"
 #include "Libs/Engine/ui/main_window.h"
 
+#include <QCheckBox>
 #include <QComboBox>
 #include <QCoreApplication>
 #include <QDialog>
@@ -224,6 +225,7 @@ public:
 	QSet<CommandContext*> connectedEditors;
 
 	QLabel* header = nullptr;
+	QCheckBox* expandedCheck = nullptr;
 	QComboBox* selector = nullptr;
 	QToolButton* addButton = nullptr;
 	QToolButton* removeButton = nullptr;
@@ -236,6 +238,7 @@ public:
 	void rebuild(const QString& preferredProperty = {});
 	void refreshSelector(const QString& preferredProperty = {});
 	void updateActions();
+	void updateExpandedCheck();
 	void setStatus(const QString& message, bool error);
 	void reportError(const QString& message);
 	void reportWarning(const QString& message);
@@ -259,6 +262,12 @@ void SystemRouterNodePropertiesDocument::Private::setupUi() {
 	header->setTextInteractionFlags(Qt::TextSelectableByMouse);
 	header->setWordWrap(true);
 	layout->addWidget(header);
+
+	expandedCheck = new QCheckBox(SystemRouterNodePropertiesDocument::tr("Узел всегда открыт"), q);
+	expandedCheck->setObjectName(QStringLiteral("SystemRouterAlwaysExpanded"));
+	expandedCheck->setToolTip(SystemRouterNodePropertiesDocument::tr(
+		"При загрузке дерева узел раскрывается сразу вместе с вложенными узлами"));
+	layout->addWidget(expandedCheck);
 
 	auto* tools = new QHBoxLayout;
 	tools->setContentsMargins(0, 0, 0, 0);
@@ -356,6 +365,15 @@ void SystemRouterNodePropertiesDocument::Private::setupUi() {
 		[this](const QString& name) {
 			onPropertyButtonClick(name);
 		});
+
+	QObject::connect(expandedCheck, &QCheckBox::toggled, q,
+		[this](bool checked) {
+			// Флажок отражает значение из базы: при ошибке сохранения
+			// возвращаем его в прежнее состояние.
+			if (!q->setAlwaysExpanded(checked)) {
+				updateExpandedCheck();
+			}
+		});
 }
 
 void SystemRouterNodePropertiesDocument::Private::loadNode() {
@@ -397,6 +415,16 @@ void SystemRouterNodePropertiesDocument::Private::rebuild(const QString& preferr
 
 	refreshSelector(preferredProperty);
 	updateActions();
+}
+
+void SystemRouterNodePropertiesDocument::Private::updateExpandedCheck() {
+	if (!expandedCheck) {
+		return;
+	}
+
+	const QSignalBlocker blocker(expandedCheck);
+	expandedCheck->setChecked(node && node->expanded());
+	expandedCheck->setEnabled(node != nullptr);
 }
 
 PropertyData SystemRouterNodePropertiesDocument::Private::propertyData(const QString& name,
@@ -671,6 +699,7 @@ void SystemRouterNodePropertiesDocument::Private::updateActions() {
 	addButton->setEnabled(hasNode);
 	removeButton->setEnabled(hasProperty);
 	mimeButton->setEnabled(hasProperty);
+	updateExpandedCheck();
 }
 
 QString SystemRouterNodePropertiesDocument::Private::selectedProperty() const {
@@ -729,6 +758,29 @@ QVariant SystemRouterNodePropertiesDocument::nodeId() const {
 
 LazyTreeNodePtr SystemRouterNodePropertiesDocument::node() const {
 	return d->node;
+}
+
+bool SystemRouterNodePropertiesDocument::alwaysExpanded() const {
+	return d->node && d->node->expanded();
+}
+
+bool SystemRouterNodePropertiesDocument::setAlwaysExpanded(bool value) {
+	if (!d->node || !d->service) {
+		return false;
+	}
+
+	if (!d->service->setAlwaysExpanded(d->node->id(), value)) {
+		const auto message = d->service->lastError().isEmpty()
+			? tr("Не удалось сохранить признак «узел всегда открыт»")
+			: d->service->lastError();
+		d->reportError(message);
+		return false;
+	}
+
+	d->node->setExpanded(value);
+	d->updateExpandedCheck();
+	d->setStatus(tr("Сохранено"), false);
+	return true;
 }
 
 bool SystemRouterNodePropertiesDocument::addProperty(const QString& name,

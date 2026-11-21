@@ -4,6 +4,7 @@
 
 #include <QHash>
 #include <QList>
+#include <QPair>
 #include <QStringList>
 #include <QVariantMap>
 
@@ -39,10 +40,12 @@ public:
 	QList<LazyTreeNodePtr> addedNodes;
 	QList<LazyTreeNodePtr> updatedNodes;
 	QList<QVariant> removedIds;
+	QList<QPair<QVariant, bool>> expandedCalls;
 
 	bool addResult = true;
 	bool updateResult = true;
 	bool removeResult = true;
+	bool expandedResult = true;
 	bool failGet = false;
 	bool failSearch = false;
 
@@ -107,6 +110,21 @@ public:
 		}
 
 		_nodes.insert(key(node->id()), node);
+		return true;
+	}
+
+	bool setExpanded(const QVariant& id, bool expanded) override {
+		expandedCalls.append({ id, expanded });
+		lastErrorValue.clear();
+		if (!expandedResult) {
+			lastErrorValue = QStringLiteral("Не удалось сохранить признак раскрытия");
+			return false;
+		}
+
+		if (const auto node = _nodes.value(key(id))) {
+			node->setExpanded(expanded);
+		}
+
 		return true;
 	}
 

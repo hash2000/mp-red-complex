@@ -10,6 +10,7 @@
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_widget.h"
 #include "basewidgets/mock_lazy_tree_provider.h"
 
+#include <QCheckBox>
 #include <QListWidget>
 #include <QPlainTextEdit>
 #include <QStandardItemModel>
@@ -75,6 +76,7 @@ private slots:
 	void rejectsEmptyNameAndProviderErrors();
 	void documentHostsLazyTreeWidget();
 	void nodePropertiesDocument();
+	void nodePropertiesAlwaysExpanded();
 	void codeEditorPropertyUsesButton();
 	void doubleClickEmitsNodeActivated();
 	void doubleClickWithoutCommandTogglesNode();
@@ -214,6 +216,33 @@ void TestSystemRouter::nodePropertiesDocument() {
 	QVERIFY(document.removeProperty(QStringLiteral("flag")));
 	QCOMPARE(list->propertyCount(), 3);
 	QVERIFY(!document.removeProperty(QStringLiteral("missing")));
+}
+
+void TestSystemRouter::nodePropertiesAlwaysExpanded() {
+	auto item = _service->createItem(QVariant(), QStringLiteral("Узел"));
+	QVERIFY(item);
+
+	SystemRouterNodePropertiesDocument document(_service.get(), nullptr, item->id());
+	auto* check = document.findChild<QCheckBox*>(QStringLiteral("SystemRouterAlwaysExpanded"));
+	QVERIFY(check);
+	QVERIFY(check->isEnabled());
+	QVERIFY(!check->isChecked());
+	QVERIFY(!document.alwaysExpanded());
+
+	// Пользователь включает параметр: значение сохраняет поставщик.
+	check->setChecked(true);
+	QCOMPARE(_provider->expandedCalls.size(), 1);
+	QCOMPARE(_provider->expandedCalls.front().first, item->id());
+	QCOMPARE(_provider->expandedCalls.front().second, true);
+	QVERIFY(check->isChecked());
+	QVERIFY(document.alwaysExpanded());
+	QVERIFY(item->expanded());
+
+	// Ошибка сохранения возвращает флажок в прежнее состояние.
+	_provider->expandedResult = false;
+	QVERIFY(!document.setAlwaysExpanded(false));
+	QVERIFY(check->isChecked());
+	QVERIFY(document.alwaysExpanded());
 }
 
 void TestSystemRouter::codeEditorPropertyUsesButton() {
