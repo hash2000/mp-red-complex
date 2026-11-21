@@ -1,4 +1,5 @@
 #include "Libs/BaseWidgets/properties/properties_list_widget.h"
+#include "Libs/BaseWidgets/properties/tab_color_editor.h"
 #include "Libs/Engine/scripting/command_controller.h"
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/scripting/command_processor.h"
@@ -14,6 +15,7 @@
 
 #include <QApplication>
 #include <QCheckBox>
+#include <QColor>
 #include <QComboBox>
 #include <QCoreApplication>
 #include <QDialog>
@@ -879,6 +881,7 @@ void TestUiZones::newDocumentDialogFiltersTypes() {
 	auto* random = dialog.findChild<QToolButton*>(QStringLiteral("NewDocumentDialogRandomName"));
 	auto* properties = dialog.findChild<PropertiesListWidget*>(
 		QStringLiteral("NewDocumentDialogVariables"));
+	auto* color = dialog.findChild<TabColorEditor*>(QStringLiteral("NewDocumentDialogColor"));
 	QVERIFY(list);
 	QVERIFY(search);
 	QVERIFY(name);
@@ -886,6 +889,7 @@ void TestUiZones::newDocumentDialogFiltersTypes() {
 	QVERIFY(title);
 	QVERIFY(random);
 	QVERIFY(properties);
+	QVERIFY(color);
 
 	QCOMPARE(list->count(), 2);
 	QCOMPARE(list->item(0)->text(), QStringLiteral("(test-singleton) Test.Singleton"));
@@ -901,6 +905,8 @@ void TestUiZones::newDocumentDialogFiltersTypes() {
 	// Стандартный глиф типа задаёт тема, а не регистрация; в тесте темы нет.
 	QCOMPARE(glyph->text(), QString());
 	QCOMPARE(title->text(), QStringLiteral("Одиночный"));
+	QVERIFY(color->isEnabled());
+	QVERIFY(!dialog.documentColor().isValid());
 
 	// Обычный документ: имя можно изменить и сгенерировать заново.
 	list->setCurrentRow(1);
@@ -913,7 +919,16 @@ void TestUiZones::newDocumentDialogFiltersTypes() {
 	QCOMPARE(glyph->text(), QString());
 	QCOMPARE(title->text(), QStringLiteral("Тестовый виджет"));
 
-	// Без метаданных обязательных переменных нет — список пуст.
+	// Выбранный цвет вкладки попадает в переменные нового документа.
+	QVERIFY(dialog.variables().isEmpty());
+	color->setColor(QColor("#ff8800"));
+	QCOMPARE(dialog.documentColor(), QColor("#ff8800"));
+	QCOMPARE(dialog.variables().value(QStringLiteral("color")).value<QColor>(),
+		QColor("#ff8800"));
+
+	// Сброс цвета убирает переменную: документ вернётся к цвету темы.
+	color->setColor(QColor());
+	QVERIFY(!dialog.documentColor().isValid());
 	QVERIFY(dialog.variables().isEmpty());
 
 	// Поиск по вхождению в xtype/класс: остаётся только совпавший тип.

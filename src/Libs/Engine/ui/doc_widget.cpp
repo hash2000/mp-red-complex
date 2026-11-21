@@ -1,17 +1,13 @@
 #include "Libs/Engine/ui/doc_widget.h"
+#include "Libs/BaseWidgets/properties/tab_color_editor.h"
 #include "Libs/Engine/scripting/command_context.h"
 
 #include <QCheckBox>
 #include <QCloseEvent>
-#include <QColorDialog>
 #include <QFormLayout>
-#include <QHBoxLayout>
-#include <QIcon>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
-#include <QPixmap>
-#include <QToolButton>
 
 namespace {
 /// Общие переменные контекста, в которых документ хранит своё состояние.
@@ -24,33 +20,6 @@ const QString kClassNameVariable = QStringLiteral("className");
 
 /// Глиф вкладки, если ни документ, ни тема его не задали.
 const QString kDefaultGlyph = QStringLiteral("📄");
-
-/// Кнопка выбора цвета вкладки: показывает текущий цвет и открывает
-/// стандартный диалог выбора цвета.
-class TabColorButton final : public QToolButton {
-public:
-	explicit TabColorButton(const QColor& color, QWidget* parent)
-		: QToolButton(parent) {
-		setObjectName(QStringLiteral("DocumentColorButton"));
-		setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-		setColor(color);
-	}
-
-	void setColor(const QColor& color) {
-		_color = color;
-		setText(color.isValid() ? color.name() : tr("не задан"));
-		QPixmap swatch(14, 14);
-		swatch.fill(color.isValid() ? color : Qt::transparent);
-		setIcon(QIcon(swatch));
-	}
-
-	QColor color() const {
-		return _color;
-	}
-
-private:
-	QColor _color;
-};
 } // namespace
 
 struct DocumentWidget::Private {
@@ -378,37 +347,13 @@ QWidget* DocumentWidget::createPropertiesEditor(QWidget* parent) {
 	glyphEdit->setMaxLength(4);
 	connect(glyphEdit, &QLineEdit::textEdited, this, &DocumentWidget::setGlyph);
 
-	// Цвет вкладки: кнопка с текущим цветом и сброс к цвету темы.
-	auto* colorRow = new QWidget(w);
-	auto* colorLayout = new QHBoxLayout(colorRow);
-	colorLayout->setContentsMargins(0, 0, 0, 0);
-	colorLayout->setSpacing(4);
-
-	auto* colorButton = new TabColorButton(color(), colorRow);
-	auto* colorReset = new QToolButton(colorRow);
-	colorReset->setObjectName(QStringLiteral("DocumentColorResetButton"));
-	colorReset->setText(QStringLiteral("✕"));
-	colorReset->setToolTip(tr("Сбросить цвет вкладки"));
-	colorReset->setEnabled(color().isValid());
-
-	connect(colorButton, &QToolButton::clicked, this, [this, colorButton] {
-		const auto initial = colorButton->color().isValid()
-			? colorButton->color() : palette().color(QPalette::Highlight);
-		const auto picked = QColorDialog::getColor(initial, this, tr("Цвет вкладки"));
-		if (picked.isValid()) {
-			setColor(picked);
-		}
-	});
-	connect(colorReset, &QToolButton::clicked, this, [this] {
-		setColor(QColor());
-	});
-	connect(this, &DocumentWidget::colorChanged, colorButton, &TabColorButton::setColor);
-	connect(this, &DocumentWidget::colorChanged, colorReset, [colorReset](const QColor& value) {
-		colorReset->setEnabled(value.isValid());
-	});
-
-	colorLayout->addWidget(colorButton, 1);
-	colorLayout->addWidget(colorReset);
+	// Цвет вкладки: образец цвета, выбор и сброс к цвету темы.
+	auto* colorEditor = new TabColorEditor(w);
+	colorEditor->setObjectName(QStringLiteral("DocumentColorEditor"));
+	colorEditor->setColor(color());
+	colorEditor->setDialogTitle(tr("Цвет вкладки"));
+	connect(colorEditor, &TabColorEditor::colorChanged, this, &DocumentWidget::setColor);
+	connect(this, &DocumentWidget::colorChanged, colorEditor, &TabColorEditor::setColor);
 
 	auto* modified = new QCheckBox(w);
 	modified->setChecked(isModified());
@@ -423,7 +368,7 @@ QWidget* DocumentWidget::createPropertiesEditor(QWidget* parent) {
 
 	form->addRow(tr("Заголовок:"), titleEdit);
 	form->addRow(tr("Значок:"), glyphEdit);
-	form->addRow(tr("Цвет вкладки:"), colorRow);
+	form->addRow(tr("Цвет вкладки:"), colorEditor);
 	form->addRow(tr("Тип:"), xtypeLabel);
 	form->addRow(tr("Изменён:"), modified);
 	return w;

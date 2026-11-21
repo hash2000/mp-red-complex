@@ -51,11 +51,35 @@ target_link_libraries(TestDocumentTabs PRIVATE
 
 add_test(NAME TestDocumentTabs COMMAND TestDocumentTabs)
 
-# Тест проверяет эталонную тему: цвета вкладок заданы в
+# Тест проверяет эталонную тему: цвета и глифы вкладок заданы в
 # assets/themes/{theme}/documents.yaml.
 target_compile_definitions(TestDocumentTabs PRIVATE
     REDCOMPLEX_CONFIGURATIONS_DIR="${CMAKE_SOURCE_DIR}/src/Configurations"
 )
+
+# Панель свойств: сведения о контексте документа (имя и переменные).
+add_executable(TestPropertiesPanel
+    test_properties_panel.cpp
+)
+
+target_include_directories(TestPropertiesPanel PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/tests
+)
+
+target_link_libraries(TestPropertiesPanel PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+    Qt6::Test
+
+    RedComplexEngine
+    RedComplexBase
+    RedComplexBaseWidgets
+    RedComplexResources
+)
+
+add_test(NAME TestPropertiesPanel COMMAND TestPropertiesPanel)
 
 add_executable(TestClassManager
     test_class_manager.cpp

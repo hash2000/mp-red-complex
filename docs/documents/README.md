@@ -82,6 +82,20 @@ auto* document = window->createWidget(
 в `DocumentWidget`, если это ещё не документ-обёртка. Владельцем созданного
 виджета становится `MainWindow`.
 
+Диалог создания документа (`NewDocumentDialog`, Ctrl+N) задаёт параметры
+нового документа: имя (`id`), значок (по умолчанию — из темы), заголовок
+и **цвет вкладки**. Цвет передаётся в `variables()` переменной `color`
+(`QVariant<QColor>`); пустое значение переменную не создаёт, и документ
+получает цвет из темы.
+
+```cpp
+NewDocumentDialog dialog(registry, context);
+if (dialog.exec() == QDialog::Accepted) {
+    const auto variables = dialog.variables();   // включает color, если выбран
+    const auto color = dialog.documentColor();   // QColor(), если не выбран
+}
+```
+
 ## 3. `DocumentWidget`
 
 Базовый класс хранит состояние в переменных контекста:
@@ -281,9 +295,24 @@ context()->fireEvent(CommandContext::documentSaveCompleteEvent());
 
 ## 8. Панель свойств
 
-`DocumentWidget::createPropertiesEditor()` по умолчанию создаёт `QFormLayout`.
+`DocumentWidget::createPropertiesEditor()` по умолчанию создаёт `QFormLayout`:
+заголовок, значок, цвет вкладки (`TabColorEditor`), тип и признак изменений.
 Наследник может добавить свои строки. `MainWindow` показывает редактор
 активного документа в панели свойств.
+
+Ниже редактора `PropertiesPanel` добавляет сведения о контексте, в котором
+выполняется документ:
+
+- **полное имя контекста** (namespace, например `.documents.notes`) —
+  в поле только для чтения и с кнопкой копирования (`⧉`, копирует имя
+  в буфер обмена);
+- **переменные контекста** — все видимые переменные (собственные и
+  унаследованные) в `PropertiesListWidget` только для чтения. Показаны имя,
+  значение и подсказка: собственное или унаследованное, mime-тип значения.
+
+Список обновляется по сигналу `CommandContext::variableChanged`, поэтому
+изменения переменных из других документов и команд видны сразу. У документа
+без контекста секция не создаётся.
 
 Если документ меняет набор свойств, вызовите `emit propertiesChanged()`.
 

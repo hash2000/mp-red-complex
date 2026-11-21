@@ -27,6 +27,6 @@ add_test(NAME TestSystemRouterCommandsDb COMMAND TestSystemRouterCommandsDb)
 # Цель для запуска всех тестов
 add_custom_target(run_tests
     COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
-    DEPENDS TestItemsService TestInventoriesService TestEngine TestDatabasesService TestUiZones TestDocumentTabs TestClassManager TestHighlighters TestCodeEditorSearch TestLazyTreeView TestLazyTreeWidget TestLazyNodesDataProviderDb TestSystemRouter TestSystemRouterCommandsDb
+    DEPENDS TestItemsService TestInventoriesService TestEngine TestDatabasesService TestUiZones TestDocumentTabs TestPropertiesPanel TestClassManager TestHighlighters TestCodeEditorSearch TestLazyTreeView TestLazyTreeWidget TestLazyNodesDataProviderDb TestSystemRouter TestSystemRouterCommandsDb
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )

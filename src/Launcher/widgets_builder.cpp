@@ -209,7 +209,7 @@ void WidgetsBuilder::Private::registerAll() {
 			return service ? new UserDocument(service, handler.parent) : nullptr;
 		});
 
-	registry->registerFactory({ "Content.FetchApi.FetchApiDocument", "fetch-api", /*singletone*/ true,
+	registry->registerFactory({ "Content.FetchApi.FetchApiDocument", "fetch-api", /*singletone*/ false,
 		QStringLiteral("Fetch API") },
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* services = servicesFor(type, handler);
