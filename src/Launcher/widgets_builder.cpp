@@ -4,6 +4,7 @@
 #include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
 #include "Content/FetchApiModule/documents/fetch_api_document.h"
+#include "Content/FetchApiModule/documents/fetch_api_document_metadata.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
 #include "Content/SystemRouter/documents/system_router_node_properties_document.h"
 #include "Content/SystemRouter/documents/system_router_tree_document.h"
@@ -211,13 +212,20 @@ void WidgetsBuilder::Private::registerAll() {
 		QStringLiteral("Fetch API") },
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* services = servicesFor(type, handler);
-			if (!services || !requiredService<FetchApiService>(services, type, "FetchApiService") ||
-				!requiredService<HighlightingPluginManager>(services, type, "HighlightingPluginManager") ||
-				!requiredService<FormatterPluginManager>(services, type, "FormatterPluginManager")) {
+			auto* fetchService = requiredService<FetchApiService>(services, type, "FetchApiService");
+			auto* highlighting = requiredService<HighlightingPluginManager>(services, type,
+				"HighlightingPluginManager");
+			auto* formatters = requiredService<FormatterPluginManager>(services, type,
+				"FormatterPluginManager");
+			if (!fetchService || !highlighting || !formatters) {
 				return nullptr;
 			}
-			return new FetchApiDocument(handler.context, handler.parent);
+			return new FetchApiDocument(fetchService, highlighting, formatters, handler.parent);
 		});
+
+	// Переменные, из которых документ восстанавливает запрос после открытия.
+	registry->registerDocumentMetadata(QStringLiteral("Content.FetchApi.FetchApiDocument"),
+		std::make_unique<FetchApiDocumentMetadata>());
 
 	registry->registerFactory({ "Content.SystemRouter.SystemRouterTreeDocument", "system-router",
 		/*singletone*/ true, QStringLiteral("Системный маршрутизатор") },

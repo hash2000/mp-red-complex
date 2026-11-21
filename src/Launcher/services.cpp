@@ -86,7 +86,7 @@ public:
 		});
 
 		registerFactory<FetchApiService>([this]() {
-			return std::make_unique<FetchApiService>();
+			return std::make_unique<FetchApiService>(resources);
 		});
 
 		registerFactory<SystemRouterService>([this]() {

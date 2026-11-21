@@ -4,15 +4,47 @@
    state ("success" / "error").
    ------------------------------------------------------------------ */
 
-QComboBox#FetchMethodCombo {
+QComboBox#FetchMethodCombo,
+QComboBox#FetchHandlerCombo {
   padding: 5px;
   font-weight: bold;
+}
+
+QComboBox#FetchSslPolicyCombo,
+QComboBox#FetchAuthTypeCombo,
+QComboBox#FetchAuthAddToCombo {
+  padding: 5px;
 }
 
 QLineEdit#FetchUrlEdit {
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
+}
+
+QLineEdit#FetchSslCaFileEdit,
+QLineEdit#FetchAuthNameEdit,
+QLineEdit#FetchAuthValueEdit {
+  padding: 4px 6px;
+  border: 1px solid #4a5568;
+  border-radius: 3px;
+}
+
+QToolButton#FetchSslCaBrowseButton {
+  padding: 2px 8px;
+  border: 1px solid #4a5568;
+  border-radius: 3px;
+  background-color: #2d3748;
+  color: #e2e8f0;
+}
+QToolButton#FetchSslCaBrowseButton:hover {
+  background-color: #4a5568;
+}
+
+QLabel#FetchSslTitle,
+QLabel#FetchTime,
+QLabel#FetchSize {
+  color: #a0aec0;
 }
 
 QPushButton#FetchSendButton {

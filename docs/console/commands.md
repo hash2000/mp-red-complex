@@ -83,24 +83,42 @@ users action=restore, seed="слово1 слово2 ...", password="новый �
 
 ## `fetch-api`
 
+Модуль FetchApi, аналог Postman: запрос собирается из переменных контекста,
+ответ записывается в переменные контекста. Подробности —
+[docs/fetch-api](../fetch-api/README.md).
+
 ```text
 fetch-api action=show-ssl
+fetch-api action=send, location="https://example.com/api"
 fetch-api action=get, location="https://example.com/api"
-fetch-api action=post, location="https://example.com/api", headers="Content-Type: application/json", body=<<json>>{"x":1}<</json>>, show-editor=true
+fetch-api action=post, location="https://example.com/api",
+          headers="Content-Type: application/json",
+          body=<<json>>{"x":1}<</json>>, show-editor=true
+fetch-api action=send, location="https://self-signed.local",
+          ssl-policy=trust-custom-ca, ssl-ca-file="C:/certs/ca.pem"
 ```
 
 Параметры:
 
 | Параметр | Назначение |
 |---|---|
-| `action` | `show-ssl` либо HTTP-метод (`get`, `post`, `put`, `delete`, ...) |
-| `location` | URL |
-| `headers` | строки заголовков |
+| `action` | `send` (отправить), HTTP-метод как сокращение (`get`, `post`, ...) либо `show-ssl` |
+| `location` (алиас `url`) | адрес запроса |
+| `method` | `get`, `post`, `put`, `delete`, `patch`, `head`; по умолчанию `get` |
+| `params` (алиас `query`) | query-параметры: `a=1; b=2` |
+| `headers` | заголовки запроса: `Name: value; Name2: value2` |
 | `body` | тело запроса; для JSON используйте `<<json>>...<</json>>` |
-| `show-editor` | `true` — открыть ответ в code-editor |
+| `ssl-policy` | `strict`, `trust-custom-ca`, `ignore-errors` |
+| `ssl-ca-file` | файл CA-сертификата (PEM/DER) для `trust-custom-ca` |
+| `handler` | тип обработчика; сейчас только `rest` |
+| `content-type` | `Content-Type` запроса, если его нет в `headers` |
+| `show-editor` | `true` — открыть тело ответа в code-editor |
 
-`show-editor` считается включённым для любого значения, кроме строки
-`false`.
+Результат запроса пишется в контекст: `data`, `content-type`, `headers`,
+`status-code`, `status-text`, `error`, `error-code`, `elapsed-ms`, `size`,
+`url`, `method`. После завершения отправляется событие
+`fetch-api.complete`. Из консоли результат попадает в глобальный контекст,
+из документа — в контекст документа.
 
 ## `system-router-save-blob`
 
