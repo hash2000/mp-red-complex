@@ -1,6 +1,23 @@
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin.h"
+
+#include <algorithm>
 #include <list>
 
+namespace {
+/// Кандидат подсветки до выбора перекрывающихся фрагментов.
+///
+/// Формат хранится указателем: правила после install() не меняются,
+/// а копирование QTextCharFormat на каждый фрагмент заметно на больших текстах.
+struct Candidate {
+	qsizetype start = 0;
+	qsizetype length = 0;
+	const QTextCharFormat* format = nullptr;
+	int priority = 0;
+	HighlightingPlugin::HighlightingMatch::Type type =
+		HighlightingPlugin::HighlightingMatch::Type::Start;
+	QString language;
+};
+}
 
 class HighlightingPlugin::Private {
 public:
@@ -10,8 +27,11 @@ public:
 	std::list<Rule> rules;
 	std::list<EmbeddedBlockRule> embededBlocksRules;
 
-	void sortFormats(std::vector<HighlightingMatch>& matches);
-	std::vector<HighlightingMatch> buildFormats(const QString& text, const std::vector<HighlightingMatch>& matches);
+	void collectRules(const QString& text, std::vector<Candidate>& out) const;
+	void collectEmbedded(const QString& text, std::vector<Candidate>& out) const;
+	static void buildFormats(std::vector<Candidate>& candidates);
+	static void collectMatches(const std::vector<Candidate>& candidates,
+		std::vector<HighlightingPlugin::HighlightingMatch>& out);
 	QString extractLanguage(const QRegularExpressionMatch& match, const QString& languageId) const;
 };
 
@@ -29,13 +49,22 @@ void HighlightingPlugin::addEmbeddedBlockRule(const EmbeddedBlockRule& rule) {
 	d->embededBlocksRules.push_back(rule);
 }
 
-QString HighlightingPlugin::Private::extractLanguage(const QRegularExpressionMatch& match, const QString& languageId) const {
+bool HighlightingPlugin::hasEmbeddedRules() const {
+	return !d->embededBlocksRules.empty();
+}
+
+bool HighlightingPlugin::hasRules() const {
+	return !d->rules.empty();
+}
+
+QString HighlightingPlugin::Private::extractLanguage(const QRegularExpressionMatch& match,
+	const QString& languageId) const {
 	if (languageId.isEmpty()) {
 		return QString(); // Нет вложенного языка
 	}
 
 	// Проверяем, является ли embeddedLanguage ссылкой на группу ($1, $2, etc.)
-	QRegularExpression groupRef(R"(^\$(\d+)$)");
+	static const QRegularExpression groupRef(R"(^\$(\d+)$)");
 	auto refMatch = groupRef.match(languageId);
 
 	if (refMatch.hasMatch()) {
@@ -49,104 +78,172 @@ QString HighlightingPlugin::Private::extractLanguage(const QRegularExpressionMat
 	return languageId;
 }
 
-std::vector<HighlightingPlugin::HighlightingMatch> HighlightingPlugin::matches(const QString& text) const {
-	std::vector<HighlightingPlugin::HighlightingMatch> result;
-	for (const auto& rule : d->rules) {
+void HighlightingPlugin::Private::collectRules(const QString& text,
+	std::vector<Candidate>& out) const {
+	for (const auto& rule : rules) {
+		if (!rule.pattern.isValid()) {
+			continue;
+		}
+
 		QRegularExpressionMatchIterator it = rule.pattern.globalMatch(text);
 		while (it.hasNext()) {
-			QRegularExpressionMatch match = it.next();
-			result.push_back({
+			const QRegularExpressionMatch match = it.next();
+			out.push_back({
 				match.capturedStart(),
 				match.capturedLength(),
-				rule.format,
+				&rule.format,
 				rule.priority,
 				HighlightingMatch::Type::Start,
 				QString(),
 				});
 		}
 	}
-
-	d->sortFormats(result);
-	result = d->buildFormats(text, result);
-	return std::move(result);
 }
 
-std::vector<HighlightingPlugin::HighlightingMatch> HighlightingPlugin::matchesEmbeddedBlock(const QString& text) const {
-	std::vector<HighlightingPlugin::HighlightingMatch> result;
-	for (const auto& rule : d->embededBlocksRules) {
+void HighlightingPlugin::Private::collectEmbedded(const QString& text,
+	std::vector<Candidate>& out) const {
+	for (const auto& rule : embededBlocksRules) {
+		if (!rule.startPattern.isValid() || !rule.endPattern.isValid()) {
+			continue;
+		}
+
 		QRegularExpressionMatchIterator startIt = rule.startPattern.globalMatch(text);
 		while (startIt.hasNext()) {
-			QRegularExpressionMatch match = startIt.next();
-			result.push_back({
+			const QRegularExpressionMatch match = startIt.next();
+			out.push_back({
 				match.capturedStart(),
 				match.capturedLength(),
-				rule.format,
+				&rule.format,
 				rule.priority,
 				HighlightingMatch::Type::Start,
-				d->extractLanguage(match, rule.languageId),
+				extractLanguage(match, rule.languageId),
 				});
 		}
 
-		QRegularExpressionMatchIterator endMatch = rule.endPattern.globalMatch(text);
-		while (endMatch.hasNext()) {
-			QRegularExpressionMatch match = endMatch.next();
-			result.push_back({
+		QRegularExpressionMatchIterator endIt = rule.endPattern.globalMatch(text);
+		while (endIt.hasNext()) {
+			const QRegularExpressionMatch match = endIt.next();
+			out.push_back({
 				match.capturedStart(),
 				match.capturedLength(),
-				rule.format,
+				&rule.format,
 				rule.priority,
 				HighlightingMatch::Type::End,
-				d->extractLanguage(match, rule.languageId),
+				extractLanguage(match, rule.languageId),
 				});
 		}
 	}
-
-	d->sortFormats(result);
-	result = d->buildFormats(text, result);
-	return std::move(result);
 }
 
-void HighlightingPlugin::Private::sortFormats(std::vector<HighlightingPlugin::HighlightingMatch>& matches) {
-	if (matches.empty()) {
+void HighlightingPlugin::Private::buildFormats(std::vector<Candidate>& candidates) {
+	if (candidates.empty()) {
 		return;
 	}
 
 	// Сортируем по начальной позиции
-	std::sort(matches.begin(), matches.end(),
-		[](const HighlightingMatch& a, const HighlightingMatch& b) {
-		return a.start < b.start;
-	});
-}
+	std::sort(candidates.begin(), candidates.end(),
+		[](const Candidate& a, const Candidate& b) {
+			return a.start < b.start;
+		});
 
-std::vector<HighlightingPlugin::HighlightingMatch> HighlightingPlugin::Private::buildFormats(const QString& text, const std::vector<HighlightingPlugin::HighlightingMatch>& matches) {
-	if (matches.empty()) {
-		return std::vector<HighlightingPlugin::HighlightingMatch>();
-	}
-
-	std::vector<HighlightingMatch> result;
+	// Для одинакового start выбирается более длинный фрагмент, при равной
+	// длине — с более высоким приоритетом (меньшим числом). Перекрывающиеся
+	// фрагменты отбрасываются, кроме случая Start поверх End: так начало
+	// вложенного блока важнее его конца.
+	std::vector<Candidate> kept;
+	kept.reserve(candidates.size());
 
 	size_t i = 0;
-	while (i < matches.size()) {
-		// Находим все совпадения с одинаковым start
+	while (i < candidates.size()) {
 		size_t j = i;
-		int bestIdx = i;
-		while (j < matches.size() && matches[j].start == matches[i].start) {
-			// Выбираем лучшее: длиннее или с более высоким приоритетом
-			if (matches[j].length > matches[bestIdx].length ||
-				(matches[j].length == matches[bestIdx].length && matches[j].priority < matches[bestIdx].priority)) {
+		size_t bestIdx = i;
+		while (j < candidates.size() && candidates[j].start == candidates[i].start) {
+			if (candidates[j].length > candidates[bestIdx].length ||
+				(candidates[j].length == candidates[bestIdx].length &&
+					candidates[j].priority < candidates[bestIdx].priority)) {
 				bestIdx = j;
 			}
 			j++;
 		}
 
-		// Добавляем только если не перекрывается с предыдущим
-		if (result.empty() ||
-			matches[bestIdx].start >= result.back().start + result.back().length ||
-			matches[bestIdx].type <= result.back().type /* Start лучше чем End */) {
-			result.push_back(matches[bestIdx]);
+		const Candidate& best = candidates[bestIdx];
+		if (best.format &&
+			(kept.empty() ||
+				best.start >= kept.back().start + kept.back().length ||
+				best.type <= kept.back().type)) {
+			kept.push_back(best);
 		}
 		i = j;
 	}
 
-	return std::move(result);
+	candidates.swap(kept);
+}
+
+void HighlightingPlugin::Private::collectMatches(const std::vector<Candidate>& candidates,
+	std::vector<HighlightingPlugin::HighlightingMatch>& out) {
+	out.reserve(candidates.size());
+	for (const auto& candidate : candidates) {
+		if (!candidate.format) {
+			continue;
+		}
+
+		out.push_back({
+			candidate.start,
+			candidate.length,
+			*candidate.format,
+			candidate.priority,
+			candidate.type,
+			candidate.language,
+			});
+	}
+}
+
+void HighlightingPlugin::visitMatches(const QString& text, const MatchVisitor& visitor) const {
+	if (d->rules.empty()) {
+		return;
+	}
+
+	std::vector<Candidate> candidates;
+	d->collectRules(text, candidates);
+	Private::buildFormats(candidates);
+	for (const auto& candidate : candidates) {
+		visitor(candidate.start, candidate.length, *candidate.format, candidate.priority);
+	}
+}
+
+void HighlightingPlugin::visitEmbeddedMatches(const QString& text,
+	const EmbeddedMatchVisitor& visitor) const {
+	if (d->embededBlocksRules.empty()) {
+		return;
+	}
+
+	std::vector<Candidate> candidates;
+	d->collectEmbedded(text, candidates);
+	Private::buildFormats(candidates);
+	for (const auto& candidate : candidates) {
+		visitor(candidate.start, candidate.length, *candidate.format, candidate.priority,
+			candidate.type, candidate.language);
+	}
+}
+
+std::vector<HighlightingPlugin::HighlightingMatch> HighlightingPlugin::matches(
+	const QString& text) const {
+	std::vector<Candidate> candidates;
+	d->collectRules(text, candidates);
+	Private::buildFormats(candidates);
+
+	std::vector<HighlightingMatch> result;
+	d->collectMatches(candidates, result);
+	return result;
+}
+
+std::vector<HighlightingPlugin::HighlightingMatch> HighlightingPlugin::matchesEmbeddedBlock(
+	const QString& text) const {
+	std::vector<Candidate> candidates;
+	d->collectEmbedded(text, candidates);
+	Private::buildFormats(candidates);
+
+	std::vector<HighlightingMatch> result;
+	d->collectMatches(candidates, result);
+	return result;
 }

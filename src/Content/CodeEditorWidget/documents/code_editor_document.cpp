@@ -11,6 +11,7 @@
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/scripting/command_controller.h"
 
+#include <QCheckBox>
 #include <QComboBox>
 #include <QDebug>
 #include <QDir>
@@ -50,6 +51,7 @@ public:
 
 	DocumentRibbon* ribbon = nullptr;
 	RibbonButton* searchButton = nullptr;
+	RibbonButton* formatButton = nullptr;
 
 	CodeEditorSearchPanel* searchPanel = nullptr;
 
@@ -91,7 +93,7 @@ public:
 
 void CodeEditorDocument::Private::setupUi() {
 	editor = new CodeEditorWidget(highlighting, formatters, q);
-	editor->setLineWrapMode(QTextEdit::NoWrap);
+	editor->setLineWrapMode(QPlainTextEdit::NoWrap);
 	editor->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
 
 	auto* layout = new QVBoxLayout(q);
@@ -164,12 +166,25 @@ QWidget* CodeEditorDocument::Private::createRibbon() {
 		});
 
 	auto* editGroup = ribbon->addGroup(q->tr("Правка"));
-	connect(ribbon->addButton(editGroup, QStringLiteral("✨"), q->tr("Форматировать документ")),
-		&RibbonButton::clicked, q, [this] {
-			if (!editor->formatDocument()) {
-				printWarning(q->tr("Для текущего языка форматирование недоступно."));
-			}
-		});
+	formatButton = ribbon->addButton(editGroup, QStringLiteral("✨"), q->tr("Форматировать документ"));
+	connect(formatButton, &RibbonButton::clicked, q, [this] {
+		if (!editor->formatDocument()) {
+			printWarning(q->tr("Для текущего языка форматирование недоступно."));
+		}
+	});
+
+	// Пока внешний форматтер работает, повторный запуск не нужен:
+	// кнопка блокируется до завершения (успешного или с ошибкой).
+	connect(editor, &CodeEditorWidget::formattingStarted, q, [this] {
+		if (formatButton) {
+			formatButton->setEnabled(false);
+		}
+	});
+	connect(editor, &CodeEditorWidget::formattingCompleted, q, [this] {
+		if (formatButton) {
+			formatButton->setEnabled(true);
+		}
+	});
 
 	auto* searchGroup = ribbon->addGroup(q->tr("Поиск"));
 	searchButton = ribbon->addButton(searchGroup, QStringLiteral("🔍"),
@@ -740,9 +755,18 @@ QWidget* CodeEditorDocument::createPropertiesEditor(QWidget* parent) {
 			linesLabel->setNum(count);
 		});
 
+	auto* autoWrap = new QCheckBox(tr("Автоперенос длинных строк"), widget);
+	autoWrap->setObjectName(QStringLiteral("CodeEditorAutoWrapCheck"));
+	autoWrap->setToolTip(tr("Длинные строки (от %1 символов) переносятся по ширине окна: "
+		"без переноса редактор заметно тормозит на них при изменении размера и прокрутке")
+		.arg(CodeEditorWidget::autoWrapLineLimit()));
+	autoWrap->setChecked(d->editor->isAutoWrapEnabled());
+	connect(autoWrap, &QCheckBox::toggled, d->editor, &CodeEditorWidget::setAutoWrapEnabled);
+
 	form->insertRow(0, tr("Файл:"), pathLabel);
 	form->addRow(tr("Язык:"), languageCombo);
 	form->addRow(tr("Размер шрифта:"), fontSizeCombo);
+	form->addRow(tr("Перенос строк:"), autoWrap);
 	form->addRow(tr("Строк:"), linesLabel);
 	return widget;
 }

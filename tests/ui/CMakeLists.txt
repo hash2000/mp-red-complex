@@ -159,3 +159,33 @@ target_link_libraries(TestCodeEditorSearch PRIVATE
 )
 
 add_test(NAME TestCodeEditorSearch COMMAND TestCodeEditorSearch)
+
+# Тест подсветки и форматирования читает правила из эталонной темы.
+target_compile_definitions(TestCodeEditorSearch PRIVATE
+    REDCOMPLEX_CONFIGURATIONS_DIR="${CMAKE_SOURCE_DIR}/src/Configurations"
+)
+
+# Стенд измерений редактора кода (не тест, в CTest не включён).
+add_executable(BenchCodeEditor
+    bench_code_editor.cpp
+)
+
+target_include_directories(BenchCodeEditor PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/tests
+)
+
+target_link_libraries(BenchCodeEditor PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+
+    RedComplexCodeEditorWidget
+    RedComplexEngine
+    RedComplexBase
+    RedComplexResources
+)
+
+target_compile_definitions(BenchCodeEditor PRIVATE
+    REDCOMPLEX_CONFIGURATIONS_DIR="${CMAKE_SOURCE_DIR}/src/Configurations"
+)

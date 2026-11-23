@@ -1,5 +1,6 @@
 #include "Content/CodeEditorWidget/documents/code_editor_document.h"
 #include "Content/CodeEditorWidget/documents/code_editor_document_metadata.h"
+#include "Content/CodeEditorWidget/formatters/formatter_plugin.h"
 #include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
 #include "Content/CodeEditorWidget/widgets/code_editor_search_panel.h"
@@ -23,10 +24,12 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
+#include <QPlainTextEdit>
 #include <QScrollBar>
 #include <QSignalSpy>
 #include <QTemporaryDir>
-#include <QTextEdit>
+#include <QTextBlock>
+#include <QTextLayout>
 #include <QToolButton>
 #include <QtTest/QtTest>
 
@@ -78,7 +81,55 @@ bool propertyValue(QWidget* root, const QString& id) {
 
 	return false;
 }
+
+/// Каталог эталонной темы: из него загружаются правила подсветки.
+QString themeDirectory() {
+	return QStringLiteral(REDCOMPLEX_CONFIGURATIONS_DIR) + QStringLiteral("/assets/themes/dark");
+}
+
+/// Сколько строк документа получили форматы подсветки.
+int formattedBlocks(QTextDocument* document) {
+	int count = 0;
+	for (QTextBlock block = document->begin(); block.isValid(); block = block.next()) {
+		if (block.layout() && !block.layout()->formats().isEmpty()) {
+			count++;
+		}
+	}
+	return count;
+}
 } // namespace
+
+/// Форматтер для тестов: отвечает синхронно, без внешнего процесса.
+class TestFormatter : public FormatterPlugin {
+	Q_OBJECT
+public:
+	enum class Mode {
+		Success,
+		Failure,
+	};
+
+	explicit TestFormatter(Mode mode) : _mode(mode) {}
+
+	QString mimeType() const override {
+		return QStringLiteral("text/markdown");
+	}
+
+	void formatAsync(const QString& text) override {
+		if (_mode == Mode::Failure) {
+			emit formattingFailed(QStringLiteral("test formatter failure"));
+			return;
+		}
+
+		QString formatted = text;
+		formatted.replace(QStringLiteral("bad"), QStringLiteral("good"));
+		emit formattingFinished(formatted);
+	}
+
+	void stop() override {}
+
+private:
+	Mode _mode;
+};
 
 class TestCodeEditorSearch : public QObject {
 	Q_OBJECT
@@ -109,14 +160,20 @@ private slots:
 	void ribbonSearchButtonControlsPanel();
 	void ribbonSearchButtonOpensProperties();
 	void propertiesVisibleOnFirstShow();
+	void smallDocumentHighlightsAllBlocks();
+	void largeDocumentHighlightsOnlyVisibleBlocks();
+	void veryLongLinesAreNotHighlighted();
+	void longLinesEnableAutoWrap();
+	void formatAppliesResultAndKeepsCursor();
+	void formatFailureIsReported();
 
 private:
-	QTextEdit* _editor = nullptr;
+	QPlainTextEdit* _editor = nullptr;
 	CodeEditorSearchPanel* _panel = nullptr;
 };
 
 void TestCodeEditorSearch::init() {
-	_editor = new QTextEdit;
+	_editor = new QPlainTextEdit;
 	_editor->setPlainText(QStringLiteral("foo bar foo Foo\nsecond foo line"));
 	_panel = new CodeEditorSearchPanel(_editor);
 }
@@ -211,7 +268,7 @@ void TestCodeEditorSearch::clearRemovesHighlights() {
 void TestCodeEditorSearch::longLineScrollsToMatchStart() {
 	// Длинная строка без переносов: совпадение далеко от начала.
 	const QString filler(4000, QLatin1Char('x'));
-	_editor->setLineWrapMode(QTextEdit::NoWrap);
+	_editor->setLineWrapMode(QPlainTextEdit::NoWrap);
 	_editor->setPlainText(filler + QStringLiteral("needle") + filler);
 	_editor->resize(320, 200);
 	_editor->show();
@@ -648,6 +705,177 @@ void TestCodeEditorSearch::propertiesVisibleOnFirstShow() {
 	QVERIFY(search);
 	QVERIFY2(search->isVisible(), "параметры поиска не видны после раскрытия");
 	QVERIFY2(search->height() > 0, "у параметров поиска нулевая высота");
+}
+
+void TestCodeEditorSearch::smallDocumentHighlightsAllBlocks() {
+	Resources resources;
+	resources.Directories.set(QStringLiteral("path.theme"), QDir(themeDirectory()));
+	HighlightingPluginManager highlighting(&resources);
+	FormatterPluginManager formatters(&resources);
+
+	CodeEditorDocument document(&highlighting, &formatters);
+	document.resize(700, 500);
+	document.show();
+	QCoreApplication::processEvents();
+
+	auto* editor = document.editor();
+	editor->setLanguage(QStringLiteral("md"));
+
+	QStringList lines;
+	for (int i = 0; i < 50; i++) {
+		lines << QStringLiteral("**жирная** строка %1").arg(i);
+	}
+	editor->setText(lines.join(QLatin1Char('\n')));
+
+	QVERIFY(!editor->isHighlightingLazy());
+	QCOMPARE(formattedBlocks(editor->document()), editor->document()->blockCount());
+}
+
+void TestCodeEditorSearch::largeDocumentHighlightsOnlyVisibleBlocks() {
+	Resources resources;
+	resources.Directories.set(QStringLiteral("path.theme"), QDir(themeDirectory()));
+	HighlightingPluginManager highlighting(&resources);
+	FormatterPluginManager formatters(&resources);
+
+	CodeEditorDocument document(&highlighting, &formatters);
+	document.resize(800, 600);
+	document.show();
+	QCoreApplication::processEvents();
+
+	auto* editor = document.editor();
+	editor->setLanguage(QStringLiteral("md"));
+
+	QStringList lines;
+	for (int i = 0; i < 6000; i++) {
+		lines << QStringLiteral("**жирная** строка %1 с *курсивом*").arg(i);
+	}
+	editor->setText(lines.join(QLatin1Char('\n')));
+	QVERIFY(editor->isHighlightingLazy());
+
+	QTest::qWait(150);
+	const int visibleFormatted = formattedBlocks(editor->document());
+	QVERIFY2(visibleFormatted > 0, "видимые строки не подсвечены");
+	QVERIFY2(visibleFormatted < 600,
+		qPrintable(QStringLiteral("подсвечено строк: %1").arg(visibleFormatted)));
+
+	// После прокрутки в конец подсветка должна появиться и там.
+	editor->verticalScrollBar()->setValue(editor->verticalScrollBar()->maximum());
+	QTest::qWait(200);
+
+	const QTextBlock last = editor->document()->lastBlock();
+	QVERIFY(last.layout());
+	QVERIFY2(!last.layout()->formats().isEmpty(),
+		"последняя строка не подсвечена после прокрутки");
+}
+
+void TestCodeEditorSearch::veryLongLinesAreNotHighlighted() {
+	Resources resources;
+	resources.Directories.set(QStringLiteral("path.theme"), QDir(themeDirectory()));
+	HighlightingPluginManager highlighting(&resources);
+	FormatterPluginManager formatters(&resources);
+
+	CodeEditorDocument document(&highlighting, &formatters);
+	document.resize(800, 600);
+	document.show();
+	QCoreApplication::processEvents();
+
+	auto* editor = document.editor();
+	editor->setLanguage(QStringLiteral("md"));
+
+	// Минифицированная разметка: одна строка в несколько тысяч символов.
+	const QString longLine = QStringLiteral("**жирно** ").repeated(600);
+	editor->setText(longLine + QStringLiteral("\n**короткая** строка"));
+	QTest::qWait(120);
+
+	const QTextBlock first = editor->document()->firstBlock();
+	const QTextBlock second = first.next();
+	QVERIFY(first.layout());
+	QVERIFY2(first.layout()->formats().isEmpty(),
+		"длинная строка не должна подсвечиваться");
+	QVERIFY(second.layout());
+	QVERIFY2(!second.layout()->formats().isEmpty(),
+		"короткая строка должна подсвечиваться");
+}
+
+void TestCodeEditorSearch::longLinesEnableAutoWrap() {
+	Resources resources;
+	HighlightingPluginManager highlighting(&resources);
+	FormatterPluginManager formatters(&resources);
+
+	CodeEditorDocument document(&highlighting, &formatters);
+	auto* editor = document.editor();
+	QCOMPARE(editor->lineWrapMode(), QPlainTextEdit::NoWrap);
+
+	// Строка длиннее предела включает перенос: без него QPlainTextEdit
+	// пересчитывает всю строку на каждый кадр.
+	const QString longLine(CodeEditorWidget::autoWrapLineLimit() + 100, QLatin1Char('x'));
+	editor->setText(longLine);
+	QCOMPARE(editor->lineWrapMode(), QPlainTextEdit::WidgetWidth);
+
+	// Короткий текст возвращает обычный режим.
+	editor->setText(QStringLiteral("short line"));
+	QCOMPARE(editor->lineWrapMode(), QPlainTextEdit::NoWrap);
+
+	// Автоперенос можно отключить.
+	editor->setText(longLine);
+	QCOMPARE(editor->lineWrapMode(), QPlainTextEdit::WidgetWidth);
+	editor->setAutoWrapEnabled(false);
+	QCOMPARE(editor->lineWrapMode(), QPlainTextEdit::NoWrap);
+	QVERIFY(!editor->isAutoWrapEnabled());
+}
+
+void TestCodeEditorSearch::formatAppliesResultAndKeepsCursor() {
+	Resources resources;
+	resources.Directories.set(QStringLiteral("path.theme"), QDir(themeDirectory()));
+	HighlightingPluginManager highlighting(&resources);
+	FormatterPluginManager formatters(&resources);
+	formatters.registerPlugin(std::make_unique<TestFormatter>(TestFormatter::Mode::Success));
+
+	CodeEditorDocument document(&highlighting, &formatters);
+	document.resize(700, 500);
+	document.show();
+	QCoreApplication::processEvents();
+
+	auto* editor = document.editor();
+	editor->setLanguage(QStringLiteral("md"));
+	editor->setText(QStringLiteral("line bad\nsecond bad\nthird bad"));
+
+	QTextCursor cursor = editor->textCursor();
+	cursor.movePosition(QTextCursor::End);
+	editor->setTextCursor(cursor);
+	const int position = cursor.position();
+
+	QSignalSpy started(editor, &CodeEditorWidget::formattingStarted);
+	QSignalSpy completed(editor, &CodeEditorWidget::formattingCompleted);
+
+	QVERIFY(editor->formatDocument());
+	QCOMPARE(started.count(), 1);
+	QCOMPARE(completed.count(), 1);
+	QCOMPARE(editor->toPlainText(), QStringLiteral("line good\nsecond good\nthird good"));
+	QCOMPARE(editor->textCursor().position(), position);
+	QVERIFY(editor->document()->isModified());
+}
+
+void TestCodeEditorSearch::formatFailureIsReported() {
+	Resources resources;
+	resources.Directories.set(QStringLiteral("path.theme"), QDir(themeDirectory()));
+	HighlightingPluginManager highlighting(&resources);
+	FormatterPluginManager formatters(&resources);
+	formatters.registerPlugin(std::make_unique<TestFormatter>(TestFormatter::Mode::Failure));
+
+	CodeEditorDocument document(&highlighting, &formatters);
+	auto* editor = document.editor();
+	editor->setLanguage(QStringLiteral("md"));
+	editor->setText(QStringLiteral("line bad"));
+
+	QSignalSpy failed(editor, &CodeEditorWidget::formattedFailed);
+	QSignalSpy completed(editor, &CodeEditorWidget::formattingCompleted);
+
+	QVERIFY(editor->formatDocument());
+	QCOMPARE(failed.count(), 1);
+	QCOMPARE(completed.count(), 1);
+	QVERIFY(!editor->isFormatting());
+	QCOMPARE(editor->toPlainText(), QStringLiteral("line bad"));
 }
 
 QTEST_MAIN(TestCodeEditorSearch)

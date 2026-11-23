@@ -63,14 +63,16 @@ FormatterPluginManager::FormatterPluginManager(Resources* resources)
 			{ "--parser", "json" },
 			{ "--stdin-filepath", formattersPath.filePath("formatters/json/unsaved.json") },
 		}, leadingArguments));
+	// Имена парсеров соответствуют prettier 3: `js` и `md` там отсутствуют,
+	// из-за чего форматирование JavaScript и Markdown молча не запускалось.
 	registerPlugin(std::make_unique<ExternalCliFormatterPlugin>("application/javascript", executablePath, QMap<QString, QString>
 		{
-			{ "--parser", "js" },
+			{ "--parser", "babel" },
 			{ "--stdin-filepath", formattersPath.filePath("formatters/js/unsaved.js") },
 		}, leadingArguments));
 	registerPlugin(std::make_unique<ExternalCliFormatterPlugin>("text/markdown", executablePath, QMap<QString, QString>
 		{
-			{ "--parser", "md" },
+			{ "--parser", "markdown" },
 			{ "--stdin-filepath", formattersPath.filePath("formatters/markdown/unsaved.md") },
 		}, leadingArguments));
 }
