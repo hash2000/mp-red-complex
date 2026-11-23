@@ -1,10 +1,24 @@
 #pragma once
 #include <QColor>
+#include <QList>
+#include <QString>
 #include <QWidget>
 #include <QVariant>
 #include <memory>
 
 class CommandContext;
+
+/// Группа свойств документа для панели «Свойства».
+///
+/// Документ отдаёт такие группы из `createPropertyGroups()`; панель показывает
+/// их вложенными в раздел «Свойства документа». Например, у редактора кода это
+/// «Параметры поиска», которые раскрывает значок свойств у кнопки ленты.
+struct DocumentPropertyGroup {
+	QString id;                 ///< стабильный идентификатор ("search")
+	QString title;              ///< подпись группы
+	QWidget* editor = nullptr;  ///< содержимое; nullptr — пустая группа
+	bool expanded = false;      ///< раскрыта ли группа по умолчанию
+};
 
 /// Базовый класс для всех виджетов-документов.
 /// Каждому DocumentWidget автоматически соответствует вкладка слева.
@@ -69,10 +83,22 @@ public:
 	/// true, если переменная видна в контексте (собственная или унаследованная).
 	bool hasVariable(const QString& name) const;
 
-	/// Редактор свойств (показывается в панели «Свойства»).
-	/// Базовая реализация возвращает QWidget с QFormLayout — наследники
-	/// могут дополнять его строками.
+	/// Редактор свойств (показывается в группе «Свойства документа»).
+	/// Базовая реализация возвращает QWidget с пустым QFormLayout — наследники
+	/// дополняют его строками.
 	virtual QWidget* createPropertiesEditor(QWidget* parent);
+
+	/// Дополнительные группы свойств документа (например, «Параметры поиска»).
+	/// Показываются вложенными в группу «Свойства документа».
+	virtual QList<DocumentPropertyGroup> createPropertyGroups(QWidget* parent);
+
+	/// Редактор свойств вкладки (заголовок, значок, цвет, тип, изменённость).
+	/// Показывается в отдельной группе «Свойства вкладки».
+	virtual QWidget* createTabPropertiesEditor(QWidget* parent);
+
+	/// Открыть панель «Свойства» на этом документе и раскрыть группу
+	/// (пустая строка — только показать панель). false — оболочка недоступна.
+	bool showProperties(const QString& groupId = QString());
 
 	/// «Обновить» (кнопка ⟳ в панели свойств)
 	virtual void refresh() {}

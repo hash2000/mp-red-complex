@@ -5,6 +5,9 @@
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin.h"
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
 #include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
+#include "Libs/BaseWidgets/properties/properties_list_widget.h"
+#include "Libs/BaseWidgets/ribbon/document_ribbon.h"
+#include "Libs/BaseWidgets/ribbon/ribbon_button.h"
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/scripting/command_controller.h"
 
@@ -15,33 +18,29 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFormLayout>
-#include <QFrame>
-#include <QHBoxLayout>
 #include <QLabel>
 #include <QPair>
+#include <QPointer>
 #include <QSignalBlocker>
 #include <QStringConverter>
 #include <QTextDocument>
 #include <QTextStream>
-#include <QToolButton>
 #include <QVBoxLayout>
 
 #include <algorithm>
 
 namespace {
-constexpr int kRibbonButtonSize = 30;
 constexpr int kFontSizeComboWidth = 76;
-constexpr int kLanguageComboWidth = 150;
+
+/// Идентификаторы свойств поиска в группе «Параметры поиска».
+const QString kSearchRegularExpression = QStringLiteral("search.regex");
+const QString kSearchSimplifiedExpression = QStringLiteral("search.simplified");
+const QString kSearchCaseSensitive = QStringLiteral("search.case-sensitive");
+const QString kSearchWholeWord = QStringLiteral("search.whole-word");
 }
 
 class CodeEditorDocument::Private {
 public:
-	struct RibbonGroup {
-		QWidget* widget = nullptr;
-		QHBoxLayout* content = nullptr;
-		QLabel* caption = nullptr;
-	};
-
 	Private(CodeEditorDocument* parent) : q(parent) {}
 	CodeEditorDocument* q;
 
@@ -49,18 +48,16 @@ public:
 	HighlightingPluginManager* highlighting = nullptr;
 	FormatterPluginManager* formatters = nullptr;
 
-	QWidget* ribbon = nullptr;
-	QWidget* ribbonGroups = nullptr;
-	QToolButton* ribbonToggle = nullptr;
-	QComboBox* fontSizeCombo = nullptr;
-	QComboBox* languageCombo = nullptr;
+	DocumentRibbon* ribbon = nullptr;
+	RibbonButton* searchButton = nullptr;
 
 	CodeEditorSearchPanel* searchPanel = nullptr;
-	QToolButton* searchButton = nullptr;
-	QToolButton* regexButton = nullptr;
-	QToolButton* simplifiedButton = nullptr;
-	QToolButton* caseButton = nullptr;
-	QToolButton* wholeWordButton = nullptr;
+
+	/// Редакторы параметров живут в панели «Свойства» и пересоздаются
+	/// при каждой её перестройке, поэтому храним только слабые ссылки.
+	QPointer<QComboBox> fontSizeCombo;
+	QPointer<QComboBox> languageCombo;
+	QPointer<PropertiesListWidget> searchProperties;
 
 	QString path;
 	bool dataMode = false;
@@ -69,16 +66,19 @@ public:
 
 	void setupUi();
 	QWidget* createRibbon();
-	RibbonGroup addGroup(QHBoxLayout* ribbonLayout, const QString& title);
-	QToolButton* addButton(RibbonGroup& group, const QString& glyph, const QString& tooltip);
+	QWidget* createSearchPanel();
+	void setSearchVisible(bool visible);
+
+	QWidget* createSearchPropertiesEditor(QWidget* parent);
+	QList<PropertyData> searchPropertyData() const;
+	void applySearchProperty(const QString& id, bool enabled);
+	void setSearchOption(CodeEditorSearchPanel::Option option, bool enabled);
+
 	void setupFontSizes();
 	void setupLanguages();
 	void syncLanguageCombo();
-	void setRibbonVisible(bool visible);
-	void updateRibbonState();
-	QWidget* createSearchPanel();
-	void setSearchVisible(bool visible);
-	void setSearchOption(CodeEditorSearchPanel::Option option, bool enabled);
+	void syncFontSizeCombo(int size);
+
 	QString currentMimeType() const;
 	QString currentLanguageName() const;
 	void setPath(const QString& path);
@@ -110,12 +110,7 @@ QWidget* CodeEditorDocument::Private::createSearchPanel() {
 	searchPanel->hide();
 
 	connect(searchPanel, &CodeEditorSearchPanel::closed, q, [this] {
-		if (searchButton) {
-			searchButton->setChecked(false);
-		}
-		else {
-			setSearchVisible(false);
-		}
+		setSearchVisible(false);
 	});
 
 	return searchPanel;
@@ -128,210 +123,173 @@ void CodeEditorDocument::Private::setSearchVisible(bool visible) {
 
 	if (visible) {
 		searchPanel->focusSearch();
+		// Состояние кнопки ленты повторяет видимость панели.
+		if (searchButton) {
+			const QSignalBlocker blocker(searchButton);
+			searchButton->setChecked(true);
+		}
 		return;
 	}
 
 	searchPanel->clearSearch();
 	searchPanel->hide();
+	if (searchButton) {
+		const QSignalBlocker blocker(searchButton);
+		searchButton->setChecked(false);
+	}
 	editor->setFocus();
 }
 
-void CodeEditorDocument::Private::setSearchOption(CodeEditorSearchPanel::Option option, bool enabled) {
-	if (searchPanel) {
-		searchPanel->setOption(option, enabled);
-	}
-}
-
 QWidget* CodeEditorDocument::Private::createRibbon() {
-	ribbon = new QWidget;
-	ribbon->setObjectName(QStringLiteral("CodeEditorRibbon"));
-	ribbon->setAttribute(Qt::WA_StyledBackground);
+	ribbon = new DocumentRibbon(q);
 
-	auto* row = new QHBoxLayout(ribbon);
-	row->setContentsMargins(6, 4, 4, 4);
-	row->setSpacing(6);
-
-	ribbonGroups = new QWidget(ribbon);
-	auto* groupsLayout = new QHBoxLayout(ribbonGroups);
-	groupsLayout->setContentsMargins(0, 0, 0, 0);
-	groupsLayout->setSpacing(6);
-
-	auto fileGroup = addGroup(groupsLayout, q->tr("Файл"));
-	connect(addButton(fileGroup, QStringLiteral("🗋"), q->tr("Новый файл")),
-		&QToolButton::clicked, q, [this] {
+	// Лента содержит только функциональные кнопки: параметры действий
+	// редактируются в панели «Свойства».
+	auto* fileGroup = ribbon->addGroup(q->tr("Файл"));
+	connect(ribbon->addButton(fileGroup, QStringLiteral("🗋"), q->tr("Новый файл")),
+		&RibbonButton::clicked, q, [this] {
 			q->newFile();
 		});
-	connect(addButton(fileGroup, QStringLiteral("📂"), q->tr("Открыть файл")),
-		&QToolButton::clicked, q, [this] {
+	connect(ribbon->addButton(fileGroup, QStringLiteral("📂"), q->tr("Открыть файл")),
+		&RibbonButton::clicked, q, [this] {
 			const auto path = QFileDialog::getOpenFileName(q, q->tr("Открыть файл"),
 				QDir::currentPath(), q->tr("Все файлы (*.*)"));
 			if (!path.isEmpty()) {
 				q->openFile(path);
 			}
 		});
-	connect(addButton(fileGroup, QStringLiteral("💾"), q->tr("Сохранить файл")),
-		&QToolButton::clicked, q, [this] {
+	connect(ribbon->addButton(fileGroup, QStringLiteral("💾"), q->tr("Сохранить файл")),
+		&RibbonButton::clicked, q, [this] {
 			q->save();
 		});
 
-	auto textGroup = addGroup(groupsLayout, q->tr("Текст"));
-	fontSizeCombo = new QComboBox(textGroup.widget);
-	fontSizeCombo->setObjectName(QStringLiteral("CodeEditorRibbonCombo"));
-	fontSizeCombo->setFixedWidth(kFontSizeComboWidth);
-	setupFontSizes();
-	connect(fontSizeCombo, &QComboBox::currentIndexChanged, q, [this](int index) {
-		if (index >= 0) {
-			editor->setFontSize(fontSizeCombo->itemData(index).toInt());
-		}
-	});
-	textGroup.content->addWidget(fontSizeCombo);
-
-	auto languageGroup = addGroup(groupsLayout, q->tr("Язык"));
-	languageCombo = new QComboBox(languageGroup.widget);
-	languageCombo->setObjectName(QStringLiteral("CodeEditorRibbonCombo"));
-	languageCombo->setMinimumWidth(kLanguageComboWidth);
-	languageCombo->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
-	setupLanguages();
-	connect(languageCombo, &QComboBox::currentIndexChanged, q, [this](int index) {
-		if (index < 0) {
-			return;
-		}
-
-		const auto mimeType = languageCombo->itemData(index).toString();
-		if (!mimeType.isEmpty() && !editor->setContentType(mimeType)) {
-			qWarning() << "CodeEditorDocument: highlighting plugin is not found for" << mimeType;
-		}
-		updateRibbonState();
-		emit q->propertiesChanged();
-	});
-	languageGroup.content->addWidget(languageCombo);
-
-	auto formatGroup = addGroup(groupsLayout, q->tr("Формат"));
-	connect(addButton(formatGroup, QStringLiteral("✨"), q->tr("Форматировать документ")),
-		&QToolButton::clicked, q, [this] {
+	auto* editGroup = ribbon->addGroup(q->tr("Правка"));
+	connect(ribbon->addButton(editGroup, QStringLiteral("✨"), q->tr("Форматировать документ")),
+		&RibbonButton::clicked, q, [this] {
 			if (!editor->formatDocument()) {
 				printWarning(q->tr("Для текущего языка форматирование недоступно."));
 			}
 		});
 
-	auto searchGroup = addGroup(groupsLayout, q->tr("Поиск"));
-	searchButton = addButton(searchGroup, QStringLiteral("🔍"), q->tr("Поиск (показать/скрыть)"));
+	auto* searchGroup = ribbon->addGroup(q->tr("Поиск"));
+	searchButton = ribbon->addButton(searchGroup, QStringLiteral("🔍"),
+		q->tr("Поиск (показать/скрыть)"), QStringLiteral("search"));
 	searchButton->setCheckable(true);
-	connect(searchButton, &QToolButton::toggled, q, [this](bool checked) {
+	connect(searchButton, &RibbonButton::toggled, q, [this](bool checked) {
 		setSearchVisible(checked);
 	});
 
-	auto optionsGroup = addGroup(groupsLayout, q->tr("Опции поиска"));
+	// Значок свойств у кнопки поиска раскрывает «Параметры поиска» в панели
+	// «Свойства».
+	connect(ribbon, &DocumentRibbon::propertiesRequested, q,
+		[this](const QString& groupId) {
+			q->showProperties(groupId);
+		});
 
-	regexButton = addButton(optionsGroup, QStringLiteral(".*"),
-		q->tr("Регулярное выражение"));
-	regexButton->setCheckable(true);
-	connect(regexButton, &QToolButton::toggled, q, [this](bool checked) {
-		setSearchOption(CodeEditorSearchPanel::Option::RegularExpression, checked);
-		// Регулярное выражение и упрощённый режим взаимоисключающие.
-		if (checked && simplifiedButton && simplifiedButton->isChecked()) {
-			simplifiedButton->setChecked(false);
-		}
-	});
-
-	simplifiedButton = addButton(optionsGroup, QStringLiteral("\\n"),
-		q->tr("Упрощённое выражение: \\n, \\t, \\r"));
-	simplifiedButton->setCheckable(true);
-	connect(simplifiedButton, &QToolButton::toggled, q, [this](bool checked) {
-		setSearchOption(CodeEditorSearchPanel::Option::SimplifiedExpression, checked);
-		if (checked && regexButton && regexButton->isChecked()) {
-			regexButton->setChecked(false);
-		}
-	});
-
-	caseButton = addButton(optionsGroup, QStringLiteral("Aa"), q->tr("Учитывать регистр"));
-	caseButton->setCheckable(true);
-	connect(caseButton, &QToolButton::toggled, q, [this](bool checked) {
-		setSearchOption(CodeEditorSearchPanel::Option::CaseSensitive, checked);
-	});
-
-	wholeWordButton = addButton(optionsGroup, QStringLiteral("ab"), q->tr("Слово целиком"));
-	wholeWordButton->setCheckable(true);
-	connect(wholeWordButton, &QToolButton::toggled, q, [this](bool checked) {
-		setSearchOption(CodeEditorSearchPanel::Option::WholeWord, checked);
-	});
-
-	ribbonGroups->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
-	row->addWidget(ribbonGroups, 0, Qt::AlignLeft | Qt::AlignTop);
-	row->addStretch(1);
-
-	// Небольшая кнопка в правом углу ленты: свернуть или показать её.
-	ribbonToggle = new QToolButton(ribbon);
-	ribbonToggle->setObjectName(QStringLiteral("CodeEditorRibbonToggle"));
-	ribbonToggle->setFixedSize(20, 20);
-	ribbonToggle->setCursor(Qt::PointingHandCursor);
-	ribbonToggle->setFocusPolicy(Qt::NoFocus);
-	connect(ribbonToggle, &QToolButton::clicked, q, [this] {
-		setRibbonVisible(!ribbonGroups->isVisible());
-	});
-	row->addWidget(ribbonToggle, 0, Qt::AlignRight | Qt::AlignTop);
-
-	setRibbonVisible(true);
 	return ribbon;
 }
 
-void CodeEditorDocument::Private::setRibbonVisible(bool visible) {
-	if (!ribbonGroups || !ribbonToggle) {
+QWidget* CodeEditorDocument::Private::createSearchPropertiesEditor(QWidget* parent) {
+	auto* properties = new PropertiesListWidget(parent);
+	properties->setObjectName(QStringLiteral("CodeEditorSearchProperties"));
+	properties->setHeaderVisible(false);
+	properties->setProperties(searchPropertyData());
+	searchProperties = properties;
+
+	connect(properties, &PropertiesListWidget::propertyChanged, q,
+		[this](const QString& id, const QVariant& value) {
+			applySearchProperty(id, value.toBool());
+		});
+
+	return properties;
+}
+
+QList<PropertyData> CodeEditorDocument::Private::searchPropertyData() const {
+	QList<PropertyData> result;
+
+	auto add = [this, &result](const QString& id, const QString& label,
+		CodeEditorSearchPanel::Option option, const QString& tooltip) {
+		PropertyData data;
+		data.id = id;
+		data.label = label;
+		data.type = PropertyType::Boolean;
+		data.value = searchPanel && searchPanel->option(option);
+		data.tooltip = tooltip;
+		result << data;
+	};
+
+	add(kSearchRegularExpression, q->tr(".*  Регулярное выражение"),
+		CodeEditorSearchPanel::Option::RegularExpression,
+		q->tr("Искать по регулярному выражению"));
+	add(kSearchSimplifiedExpression, q->tr("\\n  Упрощённое выражение"),
+		CodeEditorSearchPanel::Option::SimplifiedExpression,
+		q->tr("Обычный текст, но \\n, \\t и \\r означают переводы"));
+	add(kSearchCaseSensitive, q->tr("Aa  Учитывать регистр"),
+		CodeEditorSearchPanel::Option::CaseSensitive,
+		q->tr("Учитывать регистр символов при поиске"));
+	add(kSearchWholeWord, q->tr("ab  Слово целиком"),
+		CodeEditorSearchPanel::Option::WholeWord,
+		q->tr("Искать только целые слова"));
+
+	return result;
+}
+
+void CodeEditorDocument::Private::setSearchOption(CodeEditorSearchPanel::Option option,
+	bool enabled) {
+	if (!searchPanel) {
 		return;
 	}
 
-	ribbonGroups->setVisible(visible);
-	ribbonToggle->setText(visible ? QStringLiteral("⌃") : QStringLiteral("⌄"));
-	ribbonToggle->setToolTip(visible ? q->tr("Скрыть панель") : q->tr("Показать панель"));
+	searchPanel->setOption(option, enabled);
+
+	// Регулярное выражение и упрощённый режим взаимоисключающие.
+	if (enabled) {
+		if (option == CodeEditorSearchPanel::Option::RegularExpression) {
+			searchPanel->setOption(CodeEditorSearchPanel::Option::SimplifiedExpression, false);
+		}
+		else if (option == CodeEditorSearchPanel::Option::SimplifiedExpression) {
+			searchPanel->setOption(CodeEditorSearchPanel::Option::RegularExpression, false);
+		}
+	}
 }
 
-CodeEditorDocument::Private::RibbonGroup CodeEditorDocument::Private::addGroup(
-	QHBoxLayout* ribbonLayout, const QString& title) {
-	RibbonGroup group;
+void CodeEditorDocument::Private::applySearchProperty(const QString& id, bool enabled) {
+	CodeEditorSearchPanel::Option option = CodeEditorSearchPanel::Option::CaseSensitive;
+	if (id == kSearchRegularExpression) {
+		option = CodeEditorSearchPanel::Option::RegularExpression;
+	}
+	else if (id == kSearchSimplifiedExpression) {
+		option = CodeEditorSearchPanel::Option::SimplifiedExpression;
+	}
+	else if (id == kSearchCaseSensitive) {
+		option = CodeEditorSearchPanel::Option::CaseSensitive;
+	}
+	else if (id == kSearchWholeWord) {
+		option = CodeEditorSearchPanel::Option::WholeWord;
+	}
+	else {
+		return;
+	}
 
-	group.widget = new QFrame;
-	group.widget->setObjectName(QStringLiteral("CodeEditorRibbonGroup"));
-	group.widget->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
+	setSearchOption(option, enabled);
 
-	auto* layout = new QVBoxLayout(group.widget);
-	layout->setContentsMargins(6, 4, 6, 2);
-	layout->setSpacing(2);
-
-	group.content = new QHBoxLayout;
-	group.content->setContentsMargins(0, 0, 0, 0);
-	group.content->setSpacing(4);
-
-	group.caption = new QLabel(title.toUpper(), group.widget);
-	group.caption->setObjectName(QStringLiteral("CodeEditorRibbonCaption"));
-	group.caption->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
-
-	layout->addLayout(group.content, 1);
-	layout->addWidget(group.caption, 0, Qt::AlignHCenter);
-	ribbonLayout->addWidget(group.widget);
-
-	return group;
-}
-
-QToolButton* CodeEditorDocument::Private::addButton(RibbonGroup& group, const QString& glyph,
-	const QString& tooltip) {
-	auto* button = new QToolButton(group.widget);
-	button->setObjectName(QStringLiteral("CodeEditorRibbonButton"));
-	button->setText(glyph);
-	button->setToolTip(tooltip);
-	button->setToolButtonStyle(Qt::ToolButtonTextOnly);
-	button->setFixedSize(kRibbonButtonSize, kRibbonButtonSize);
-	button->setCursor(Qt::PointingHandCursor);
-	button->setFocusPolicy(Qt::NoFocus);
-	group.content->addWidget(button);
-	return button;
+	// Взаимоисключающие режимы могли измениться: обновляем флажки группы.
+	if (searchProperties) {
+		searchProperties->setProperties(searchPropertyData());
+	}
 }
 
 void CodeEditorDocument::Private::setupFontSizes() {
+	if (!fontSizeCombo || !editor) {
+		return;
+	}
+
 	const QList<int> sizes = {
 		6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 48, 72
 	};
 
 	const QSignalBlocker blocker(fontSizeCombo);
+	fontSizeCombo->clear();
 	for (const int size : sizes) {
 		fontSizeCombo->addItem(QString::number(size), size);
 	}
@@ -341,6 +299,10 @@ void CodeEditorDocument::Private::setupFontSizes() {
 }
 
 void CodeEditorDocument::Private::setupLanguages() {
+	if (!languageCombo) {
+		return;
+	}
+
 	QList<QPair<QString, QString>> items;
 	if (highlighting) {
 		for (const auto* plugin : highlighting->allPlugins()) {
@@ -358,9 +320,12 @@ void CodeEditorDocument::Private::setupLanguages() {
 		return left.first.localeAwareCompare(right.first) < 0;
 	});
 
-	const QSignalBlocker blocker(languageCombo);
-	for (const auto& item : items) {
-		languageCombo->addItem(item.first, item.second);
+	{
+		const QSignalBlocker blocker(languageCombo);
+		languageCombo->clear();
+		for (const auto& item : items) {
+			languageCombo->addItem(item.first, item.second);
+		}
 	}
 
 	syncLanguageCombo();
@@ -380,14 +345,30 @@ void CodeEditorDocument::Private::syncLanguageCombo() {
 	languageCombo->setCurrentIndex(index);
 }
 
-void CodeEditorDocument::Private::updateRibbonState() {
-	if (fontSizeCombo) {
-		fontSizeCombo->setToolTip(q->tr("Размер шрифта: %1 pt").arg(editor->fontSize()));
+void CodeEditorDocument::Private::syncFontSizeCombo(int size) {
+	if (!fontSizeCombo) {
+		return;
 	}
 
-	if (languageCombo) {
-		languageCombo->setToolTip(q->tr("Язык подсветки: %1").arg(currentLanguageName()));
+	const QSignalBlocker blocker(fontSizeCombo);
+	int index = fontSizeCombo->findData(size);
+	if (index < 0) {
+		// Размер получен колесом мыши и может отсутствовать в списке:
+		// вставляем его, сохраняя числовой порядок.
+		int insertAt = 0;
+		for (int i = 0; i < fontSizeCombo->count(); i++) {
+			if (fontSizeCombo->itemData(i).toInt() < size) {
+				insertAt = i + 1;
+			}
+			else {
+				break;
+			}
+		}
+		fontSizeCombo->insertItem(insertAt, QString::number(size), size);
+		index = insertAt;
 	}
+
+	fontSizeCombo->setCurrentIndex(index);
 }
 
 QString CodeEditorDocument::Private::currentMimeType() const {
@@ -501,32 +482,13 @@ CodeEditorDocument::CodeEditorDocument(
 		d->editor->document()->setModified(false);
 		setModified(false);
 		d->syncLanguageCombo();
-		d->updateRibbonState();
 		emit propertiesChanged();
 	});
 	connect(d->editor, &CodeEditorWidget::formattedFailed, this, [this](const QString& message) {
 		d->printWarning(message);
 	});
 	connect(d->editor, &CodeEditorWidget::fontSizeChanged, this, [this](int size) {
-		const QSignalBlocker blocker(d->fontSizeCombo);
-		int index = d->fontSizeCombo->findData(size);
-		if (index < 0) {
-			// Размер получен колесом мыши и может отсутствовать в списке:
-			// вставляем его, сохраняя числовой порядок.
-			int insertAt = 0;
-			for (int i = 0; i < d->fontSizeCombo->count(); i++) {
-				if (d->fontSizeCombo->itemData(i).toInt() < size) {
-					insertAt = i + 1;
-				}
-				else {
-					break;
-				}
-			}
-			d->fontSizeCombo->insertItem(insertAt, QString::number(size), size);
-			index = insertAt;
-		}
-		d->fontSizeCombo->setCurrentIndex(index);
-		d->updateRibbonState();
+		d->syncFontSizeCombo(size);
 	});
 }
 
@@ -552,7 +514,6 @@ void CodeEditorDocument::newFile() {
 	setTitle(tr("Без имени"));
 	setToolTip(QString());
 	d->syncLanguageCombo();
-	d->updateRibbonState();
 	emit propertiesChanged();
 }
 
@@ -574,7 +535,6 @@ bool CodeEditorDocument::openFile(const QString& path) {
 	setToolTip(QDir::toNativeSeparators(path));
 	d->editor->openFile(path);
 	d->syncLanguageCombo();
-	d->updateRibbonState();
 	emit propertiesChanged();
 	return true;
 }
@@ -613,7 +573,6 @@ bool CodeEditorDocument::save() {
 	d->editor->document()->setModified(false);
 	setModified(false);
 	d->syncLanguageCombo();
-	d->updateRibbonState();
 
 	if (auto context = this->context()) {
 		context->fireEvent(CommandContext::documentSaveCompleteEvent());
@@ -639,7 +598,6 @@ void CodeEditorDocument::refresh() {
 
 	d->editor->openFile(d->path);
 	d->syncLanguageCombo();
-	d->updateRibbonState();
 }
 
 void CodeEditorDocument::onContextAttached() {
@@ -655,7 +613,6 @@ void CodeEditorDocument::onContextAttached() {
 			setTitle(tr("Данные"));
 			setToolTip(QString());
 			d->syncLanguageCombo();
-			d->updateRibbonState();
 			emit propertiesChanged();
 			return;
 		}
@@ -679,7 +636,6 @@ void CodeEditorDocument::onContextAttached() {
 		setTitle(info.fileName());
 		setToolTip(QDir::toNativeSeparators(path));
 		d->syncLanguageCombo();
-		d->updateRibbonState();
 		emit propertiesChanged();
 		return;
 	}
@@ -746,7 +702,38 @@ QWidget* CodeEditorDocument::createPropertiesEditor(QWidget* parent) {
 	pathLabel->setWordWrap(true);
 	pathLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
 
-	auto* languageLabel = new QLabel(d->currentLanguageName(), widget);
+	auto* languageCombo = new QComboBox(widget);
+	languageCombo->setObjectName(QStringLiteral("CodeEditorLanguageCombo"));
+	languageCombo->setToolTip(tr("Язык подсветки документа"));
+	d->languageCombo = languageCombo;
+	d->setupLanguages();
+	connect(languageCombo, &QComboBox::currentIndexChanged, this,
+		[this, languageCombo](int index) {
+			if (index < 0) {
+				return;
+			}
+
+			const auto mimeType = languageCombo->itemData(index).toString();
+			if (!mimeType.isEmpty() && !d->editor->setContentType(mimeType)) {
+				qWarning() << "CodeEditorDocument: highlighting plugin is not found for"
+					<< mimeType;
+			}
+			d->syncLanguageCombo();
+		});
+
+	auto* fontSizeCombo = new QComboBox(widget);
+	fontSizeCombo->setObjectName(QStringLiteral("CodeEditorFontSizeCombo"));
+	fontSizeCombo->setToolTip(tr("Размер шрифта редактора"));
+	fontSizeCombo->setFixedWidth(kFontSizeComboWidth);
+	d->fontSizeCombo = fontSizeCombo;
+	d->setupFontSizes();
+	connect(fontSizeCombo, &QComboBox::currentIndexChanged, this,
+		[this, fontSizeCombo](int index) {
+			if (index >= 0) {
+				d->editor->setFontSize(fontSizeCombo->itemData(index).toInt());
+			}
+		});
+
 	auto* linesLabel = new QLabel(QString::number(d->editor->document()->blockCount()), widget);
 	connect(d->editor->document(), &QTextDocument::blockCountChanged,
 		linesLabel, [linesLabel](int count) {
@@ -754,7 +741,16 @@ QWidget* CodeEditorDocument::createPropertiesEditor(QWidget* parent) {
 		});
 
 	form->insertRow(0, tr("Файл:"), pathLabel);
-	form->addRow(tr("Язык:"), languageLabel);
+	form->addRow(tr("Язык:"), languageCombo);
+	form->addRow(tr("Размер шрифта:"), fontSizeCombo);
 	form->addRow(tr("Строк:"), linesLabel);
 	return widget;
+}
+
+QList<DocumentPropertyGroup> CodeEditorDocument::createPropertyGroups(QWidget* parent) {
+	DocumentPropertyGroup search;
+	search.id = QStringLiteral("search");
+	search.title = tr("Параметры поиска");
+	search.editor = d->createSearchPropertiesEditor(parent);
+	return { search };
 }

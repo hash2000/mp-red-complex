@@ -50,6 +50,10 @@ public:
 	/// Изменяет заголовок панели
 	void setHeaderTitle(const QString& title);
 
+	/// Скрыть встроенный заголовок списка (когда он живёт внутри группы
+	/// свойств со своим заголовком).
+	void setHeaderVisible(bool visible);
+
 	/// Удалить все свойства
 	void clearProperties();
 

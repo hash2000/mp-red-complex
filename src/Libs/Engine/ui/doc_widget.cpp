@@ -1,4 +1,5 @@
 #include "Libs/Engine/ui/doc_widget.h"
+#include "Libs/Engine/ui/main_window.h"
 #include "Libs/BaseWidgets/properties/tab_color_editor.h"
 #include "Libs/Engine/scripting/command_context.h"
 
@@ -339,6 +340,18 @@ QWidget* DocumentWidget::createPropertiesEditor(QWidget* parent) {
 	auto* w = new QWidget(parent);
 	auto* form = new QFormLayout(w);
 	form->setLabelAlignment(Qt::AlignRight);
+	return w;
+}
+
+QList<DocumentPropertyGroup> DocumentWidget::createPropertyGroups(QWidget* parent) {
+	Q_UNUSED(parent);
+	return { };
+}
+
+QWidget* DocumentWidget::createTabPropertiesEditor(QWidget* parent) {
+	auto* w = new QWidget(parent);
+	auto* form = new QFormLayout(w);
+	form->setLabelAlignment(Qt::AlignRight);
 
 	auto* titleEdit = new QLineEdit(title(), w);
 	connect(titleEdit, &QLineEdit::textEdited, this, &DocumentWidget::setTitle);
@@ -372,6 +385,18 @@ QWidget* DocumentWidget::createPropertiesEditor(QWidget* parent) {
 	form->addRow(tr("Тип:"), xtypeLabel);
 	form->addRow(tr("Изменён:"), modified);
 	return w;
+}
+
+bool DocumentWidget::showProperties(const QString& groupId) {
+	// Документы создаются как дочерние виджеты окна, поэтому оболочка
+	// находится по цепочке родителей. Без окна показывать панель некому.
+	for (QWidget* parent = parentWidget(); parent; parent = parent->parentWidget()) {
+		if (auto* window = qobject_cast<MainWindow*>(parent)) {
+			return window->showDocumentProperties(this, groupId);
+		}
+	}
+
+	return false;
 }
 
 bool DocumentWidget::maybeClose() {

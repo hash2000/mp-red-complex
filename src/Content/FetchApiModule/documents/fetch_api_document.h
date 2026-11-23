@@ -11,6 +11,9 @@ class HighlightingPluginManager;
 
 /// Документ модуля FetchApi: редактор и выполнение REST-запросов.
 ///
+/// Сверху — лента с кнопкой «Отправить»; её параметры (тип запроса и
+/// обработка TLS) редактируются в панели «Свойства».
+///
 /// Документ владеет виджетом-редактором и связывает его с переменными
 /// собственного контекста:
 /// - при привязке контекста читает параметры запроса (`location`, `method`,
@@ -33,6 +36,7 @@ public:
 	void refresh() override;
 	bool save() override;
 	QWidget* createPropertiesEditor(QWidget* parent) override;
+	QList<DocumentPropertyGroup> createPropertyGroups(QWidget* parent) override;
 
 signals:
 	/// Запрос завершён; результат уже записан в переменные контекста.

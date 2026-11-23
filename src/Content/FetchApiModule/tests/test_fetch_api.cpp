@@ -1,7 +1,10 @@
+#include "Content/FetchApiModule/documents/fetch_api_document.h"
 #include "Content/FetchApiModule/models/fetch_api_result.h"
 #include "Content/FetchApiModule/models/fetch_opt.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
 #include "Content/FetchApiModule/widgets/fetch_api_widget.h"
+#include "Libs/BaseWidgets/properties/properties_list_widget.h"
+#include "Libs/BaseWidgets/ribbon/ribbon_button.h"
 #include "Libs/BaseWidgets/key_value/key_value_editor_widget.h"
 #include "Libs/Engine/scripting/command_context.h"
 
@@ -12,6 +15,7 @@
 #include <QSignalSpy>
 #include <QTcpServer>
 #include <QTcpSocket>
+#include <QToolButton>
 #include <QUrlQuery>
 #include <QtTest/QtTest>
 
@@ -27,6 +31,28 @@ QString valueOf(const FetchApiKeyValues& values, const QString& name) {
 
 std::shared_ptr<CommandContext> makeGlobalContext() {
 	return std::make_shared<CommandContext>(nullptr, nullptr, QString());
+}
+
+/// Редактор свойства по идентификатору в PropertiesListWidget.
+QWidget* findPropertyEditor(QWidget* root, const QString& id) {
+	for (auto* child : root->findChildren<QWidget*>()) {
+		if (child->property("propertyId").toString() == id) {
+			return child;
+		}
+	}
+
+	return nullptr;
+}
+
+/// Кнопка ленты с указанной подписью.
+RibbonButton* findRibbonButton(QWidget* root, const QString& label) {
+	for (auto* button : root->findChildren<RibbonButton*>()) {
+		if (button->label() == label) {
+			return button;
+		}
+	}
+
+	return nullptr;
 }
 
 } // namespace
@@ -54,6 +80,11 @@ private slots:
 	void widgetParameterRoundTrip();
 	void widgetAuthentication();
 	void widgetShowsResult();
+
+	void documentExposesSendProperties();
+	void documentRequestPropertiesChangeWidget();
+	void documentRequestPropertiesWriteContext();
+	void documentRibbonSendsRequest();
 };
 
 void TestFetchApi::keyValuesParsing() {
@@ -449,6 +480,102 @@ void TestFetchApi::widgetShowsResult() {
 	widget.clearResult();
 	QVERIFY(status->text().isEmpty());
 	QCOMPARE(static_cast<int>(cookies->parameters().size()), 0);
+}
+
+void TestFetchApi::documentExposesSendProperties() {
+	FetchApiDocument document(nullptr, nullptr, nullptr);
+	QWidget host;
+	const auto groups = document.createPropertyGroups(&host);
+
+	// «Параметры отправки» — группа свойств кнопки «Отправить».
+	QCOMPARE(groups.size(), 1);
+	QCOMPARE(groups.first().id, QStringLiteral("request"));
+	QCOMPARE(groups.first().title, QStringLiteral("Параметры отправки"));
+
+	auto* properties = qobject_cast<PropertiesListWidget*>(groups.first().editor);
+	QVERIFY(properties);
+	QCOMPARE(properties->propertyCount(), 3);
+
+	// Тип запроса: сейчас реализован только REST.
+	auto* handler = qobject_cast<QComboBox*>(
+		findPropertyEditor(properties, QStringLiteral("handler")));
+	QVERIFY(handler);
+	QCOMPARE(handler->count(), 1);
+	QCOMPARE(handler->currentText(), QStringLiteral("REST"));
+
+	// Параметры обработки TLS.
+	auto* policy = qobject_cast<QComboBox*>(
+		findPropertyEditor(properties, QStringLiteral("ssl-policy")));
+	QVERIFY(policy);
+	QCOMPARE(policy->count(), 3);
+	QCOMPARE(policy->currentText(), QStringLiteral("Strict"));
+
+	QVERIFY(findPropertyEditor(properties, QStringLiteral("ssl-ca-file")));
+}
+
+void TestFetchApi::documentRequestPropertiesChangeWidget() {
+	FetchApiDocument document(nullptr, nullptr, nullptr);
+	QWidget host;
+	const auto groups = document.createPropertyGroups(&host);
+	auto* properties = qobject_cast<PropertiesListWidget*>(groups.first().editor);
+	QVERIFY(properties);
+	QVERIFY(document.widget());
+
+	auto* policy = qobject_cast<QComboBox*>(
+		findPropertyEditor(properties, QStringLiteral("ssl-policy")));
+	QVERIFY(policy);
+
+	// Trust custom CA и Ignore errors меняют настройки виджета.
+	policy->setCurrentIndex(1);
+	QCOMPARE(document.widget()->sslPolicy(), FetchApiSslPolicy::TrustCustomCa);
+
+	policy->setCurrentIndex(2);
+	QCOMPARE(document.widget()->sslPolicy(), FetchApiSslPolicy::IgnoreErrors);
+}
+
+void TestFetchApi::documentRequestPropertiesWriteContext() {
+	auto global = makeGlobalContext();
+	auto context = std::make_shared<CommandContext>(nullptr, global, QStringLiteral("doc"));
+
+	FetchApiDocument document(nullptr, nullptr, nullptr);
+	document.setContext(context);
+
+	QWidget host;
+	const auto groups = document.createPropertyGroups(&host);
+	auto* properties = qobject_cast<PropertiesListWidget*>(groups.first().editor);
+	QVERIFY(properties);
+
+	auto* policy = qobject_cast<QComboBox*>(
+		findPropertyEditor(properties, QStringLiteral("ssl-policy")));
+	QVERIFY(policy);
+	policy->setCurrentIndex(1);
+
+	// Настройка сохраняется в контекст документа, как и параметры запроса.
+	QCOMPARE(context->ownVariables().value(QStringLiteral("ssl-policy")).toString(),
+		QStringLiteral("trust-custom-ca"));
+	QCOMPARE(document.variable(QStringLiteral("ssl-policy")).toString(),
+		QStringLiteral("trust-custom-ca"));
+}
+
+void TestFetchApi::documentRibbonSendsRequest() {
+	FetchApiDocument document(nullptr, nullptr, nullptr);
+	QVERIFY(document.widget());
+
+	auto* send = findRibbonButton(&document, QStringLiteral("Отправить"));
+	QVERIFY(send);
+	QCOMPARE(send->propertiesGroup(), QStringLiteral("request"));
+	QVERIFY(send->propertiesButton());
+
+	// Без HTTP-сервиса отправка сообщает об ошибке, но кнопка ленты — её
+	// единственная точка запуска.
+	QSignalSpy failed(document.widget(), &FetchApiWidget::requestFailed);
+	send->mainButton()->click();
+	QCOMPARE(failed.count(), 1);
+
+	QSignalSpy requested(send, &RibbonButton::propertiesRequested);
+	send->propertiesButton()->click();
+	QCOMPARE(requested.count(), 1);
+	QCOMPARE(requested.first().at(0).toString(), QStringLiteral("request"));
 }
 
 QTEST_MAIN(TestFetchApi)

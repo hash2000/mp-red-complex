@@ -431,6 +431,12 @@ void PropertiesListWidget::setHeaderTitle(const QString& title) {
 	}
 }
 
+void PropertiesListWidget::setHeaderVisible(bool visible) {
+	if (d->headerLabel) {
+		d->headerLabel->setVisible(visible);
+	}
+}
+
 void PropertiesListWidget::clearProperties() {
 	d->clearUI();
 }

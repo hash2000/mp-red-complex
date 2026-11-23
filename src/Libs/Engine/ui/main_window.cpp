@@ -59,7 +59,6 @@ struct MainWindow::Private {
 	SideHostPanel* side = nullptr;
 	ActivityBar* activity = nullptr;
 	BottomPanel* bottom = nullptr;
-	PropertiesPanel* properties = nullptr;
 	QSplitter* mainSplitter = nullptr;    // [tabs | center | side]
 	QSplitter* centerSplitter = nullptr;  // [area / bottom]
 	QPlainTextEdit* output = nullptr;
@@ -106,6 +105,12 @@ struct MainWindow::Private {
 	void buildUi();
 	void buildMenus();
 	void wireSignals();
+
+	/// Панель «Свойства» среди созданных виджетов (панель может быть
+	/// зарегистрирована декларативно, поэтому её нельзя хранить заранее).
+	PropertiesPanel* findPropertiesPanel() const;
+	/// Идентификатор виджета, в котором находится панель свойств.
+	QString propertiesPanelEntryId() const;
 
 	void newDocument();
 	/// Создаёт документ зарегистрированного типа (повторный id активирует
@@ -187,11 +192,6 @@ void MainWindow::Private::buildUi() {
 	statusDoc = new QLabel;
 	q->statusBar()->addPermanentWidget(statusDoc);
 
-	// Панель свойств создаётся всегда: к ней привязан активный документ,
-	// а регистрируется она либо по умолчанию, либо из yaml-описания.
-	properties = new PropertiesPanel;
-	QObject::connect(properties, &QObject::destroyed, q, [this] { properties = nullptr; });
-
 	updateWindowTitle(nullptr);
 }
 
@@ -234,10 +234,7 @@ void MainWindow::Private::wireSignals() {
 	QObject::connect(tabs, &DocumentTabsPanel::closeRequested, area, &DocumentArea::closeDocument);
 	QObject::connect(tabs, &DocumentTabsPanel::newDocumentRequested, q, [this] { newDocument(); });
 	QObject::connect(tabs, &DocumentTabsPanel::propertiesRequested, q, [this](DocumentWidget* doc) {
-		area->setCurrentDocument(doc);
-		if (properties)
-			properties->setDocument(doc);
-		q->showSidePanel(QStringLiteral("properties"));
+		q->showDocumentProperties(doc);
 	});
 
 	// Область документов -> левая панель, свойства, статус
@@ -252,7 +249,7 @@ void MainWindow::Private::wireSignals() {
 	QObject::connect(area, &DocumentArea::documentAboutToClose, q, [this](DocumentWidget* doc) {
 		forgetDocument(doc);
 		tabs->removeDocument(doc);
-		if (properties && properties->document() == doc)
+		if (auto* properties = q->propertiesPanel(); properties && properties->document() == doc)
 			properties->setDocument(nullptr);
 		q->log(MainWindow::tr("Закрыт документ: %1").arg(doc->title()));
 	});
@@ -262,7 +259,7 @@ void MainWindow::Private::wireSignals() {
 	});
 	QObject::connect(area, &DocumentArea::currentDocumentChanged, q, [this](DocumentWidget* doc) {
 		tabs->setActiveDocument(doc);
-		if (properties)
+		if (auto* properties = q->propertiesPanel())
 			properties->setDocument(doc);   // «Свойства» следуют за активным документом
 		updateWindowTitle(doc);
 		activateDocument(idOfDocument(doc));
@@ -505,11 +502,6 @@ MainWindow::~MainWindow() {
 		d->activity->disconnect(this);
 	if (d->bottom)
 		d->bottom->disconnect(this);
-	if (d->properties) {
-		d->properties->disconnect(this);
-		if (!d->properties->parent())
-			delete d->properties;
-	}
 }
 
 QWidget* MainWindow::createWidget(const QString& id, WidgetKind kind, const QString& title,
@@ -839,8 +831,79 @@ void MainWindow::addDocument(DocumentWidget* doc) {
 	d->area->addDocument(doc);
 }
 
+PropertiesPanel* MainWindow::Private::findPropertiesPanel() const {
+	for (auto it = entries.cbegin(); it != entries.cend(); it++) {
+		if (!it->widget) {
+			continue;
+		}
+
+		if (auto* panel = qobject_cast<PropertiesPanel*>(it->widget.data())) {
+			return panel;
+		}
+
+		if (auto* panel = it->widget->findChild<PropertiesPanel*>()) {
+			return panel;
+		}
+	}
+
+	return nullptr;
+}
+
+QString MainWindow::Private::propertiesPanelEntryId() const {
+	auto* panel = findPropertiesPanel();
+	if (!panel) {
+		return { };
+	}
+
+	for (auto it = entries.cbegin(); it != entries.cend(); it++) {
+		if (!it->widget) {
+			continue;
+		}
+
+		if (it->widget.data() == panel || it->widget->findChild<PropertiesPanel*>() == panel) {
+			return it.key();
+		}
+	}
+
+	return { };
+}
+
 PropertiesPanel* MainWindow::propertiesPanel() const {
-	return d->properties;
+	return d->findPropertiesPanel();
+}
+
+bool MainWindow::showDocumentProperties(DocumentWidget* doc, const QString& groupId) {
+	if (!doc || QThread::currentThread() != thread()) {
+		return false;
+	}
+
+	auto* panel = propertiesPanel();
+	if (!panel) {
+		return false;
+	}
+
+	// Документ из области документов становится активным: панель свойств,
+	// как и вкладки, следует за активным документом.
+	for (auto it = d->entries.cbegin(); it != d->entries.cend(); it++) {
+		if (it->kind == WidgetKind::Document && it->document == doc) {
+			d->area->setCurrentDocument(doc);
+			break;
+		}
+	}
+
+	panel->setDocument(doc);
+	if (!groupId.isEmpty()) {
+		panel->revealGroup(groupId);
+	}
+
+	// Панель свойств регистрируется описанием приложения (обычно как боковая
+	// панель): раскрываем её, чтобы группа была видна.
+	const auto panelId = d->propertiesPanelEntryId();
+	if (!panelId.isEmpty()) {
+		showWidget(panelId);
+	}
+
+	return true;
 }
 
 void MainWindow::openFile(const QString& path) {

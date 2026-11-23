@@ -5,22 +5,29 @@
 #include "Content/CodeEditorWidget/widgets/code_editor_search_panel.h"
 #include "Content/CodeEditorWidget/widgets/code_editor_widget.h"
 #include "Libs/BaseWidgets/properties/properties_list_widget.h"
+#include "Libs/BaseWidgets/ribbon/document_ribbon.h"
+#include "Libs/BaseWidgets/ribbon/ribbon_button.h"
 #include "Libs/Engine/scripting/command_controller.h"
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/scripting/widgets/widget_registry.h"
 #include "Libs/Engine/ui/main_window.h"
 #include "Libs/Engine/ui/main_window/new_document_dialog.h"
+#include "Libs/Engine/ui/properties_panel.h"
 #include "Libs/Resources/resources.h"
 
+#include <QCheckBox>
+#include <QComboBox>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QScrollBar>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTextEdit>
+#include <QToolButton>
 #include <QtTest/QtTest>
 
 #include <memory>
@@ -42,6 +49,35 @@ private:
 	void initContext() override {
 	}
 };
+
+/// Кнопка ленты, раскрывающая указанную группу свойств.
+RibbonButton* findRibbonButton(QWidget* root, const QString& propertiesGroup) {
+	for (auto* button : root->findChildren<RibbonButton*>()) {
+		if (button->propertiesGroup() == propertiesGroup) {
+			return button;
+		}
+	}
+
+	return nullptr;
+}
+
+/// Значение Boolean-свойства в PropertiesListWidget.
+bool propertyValue(QWidget* root, const QString& id) {
+	for (auto* child : root->findChildren<QWidget*>()) {
+		if (child->property("propertyId").toString() != id) {
+			continue;
+		}
+
+		auto* checkBox = qobject_cast<QCheckBox*>(child);
+		if (!checkBox) {
+			checkBox = child->findChild<QCheckBox*>();
+		}
+
+		return checkBox && checkBox->isChecked();
+	}
+
+	return false;
+}
 } // namespace
 
 class TestCodeEditorSearch : public QObject {
@@ -68,6 +104,11 @@ private slots:
 	void dataAndMissingFileSavesBoth();
 	void documentMetadataDeclaresPath();
 	void newDocumentDialogShowsCodeEditorPath();
+	void searchPropertiesGroupIsExposed();
+	void searchPropertiesToggleModes();
+	void ribbonSearchButtonControlsPanel();
+	void ribbonSearchButtonOpensProperties();
+	void propertiesVisibleOnFirstShow();
 
 private:
 	QTextEdit* _editor = nullptr;
@@ -426,6 +467,187 @@ void TestCodeEditorSearch::newDocumentDialogShowsCodeEditorPath() {
 	}
 	QVERIFY(pathEdit);
 	QVERIFY(pathEdit->isReadOnly());
+}
+
+void TestCodeEditorSearch::searchPropertiesGroupIsExposed() {
+	Resources resources;
+	HighlightingPluginManager highlighting(&resources);
+	FormatterPluginManager formatters(&resources);
+
+	CodeEditorDocument document(&highlighting, &formatters);
+	QWidget host;
+	const auto groups = document.createPropertyGroups(&host);
+
+	QCOMPARE(groups.size(), 1);
+	QCOMPARE(groups.first().id, QStringLiteral("search"));
+	QCOMPARE(groups.first().title, QStringLiteral("Параметры поиска"));
+
+	auto* properties = qobject_cast<PropertiesListWidget*>(groups.first().editor);
+	QVERIFY(properties);
+	QCOMPARE(properties->propertyCount(), 4);
+	QVERIFY(properties->propertyIds().contains(QStringLiteral("search.regex")));
+	QVERIFY(properties->propertyIds().contains(QStringLiteral("search.case-sensitive")));
+
+	// Подписи сохраняют значки из ленты: .*, \n, Aa, ab.
+	QStringList labels;
+	for (auto* label : properties->findChildren<QLabel*>()) {
+		labels << label->text();
+	}
+	QVERIFY(labels.contains(QStringLiteral(".*  Регулярное выражение")));
+	QVERIFY(labels.contains(QStringLiteral("\\n  Упрощённое выражение")));
+	QVERIFY(labels.contains(QStringLiteral("Aa  Учитывать регистр")));
+	QVERIFY(labels.contains(QStringLiteral("ab  Слово целиком")));
+}
+
+void TestCodeEditorSearch::searchPropertiesToggleModes() {
+	Resources resources;
+	HighlightingPluginManager highlighting(&resources);
+	FormatterPluginManager formatters(&resources);
+
+	CodeEditorDocument document(&highlighting, &formatters);
+	QWidget host;
+	auto groups = document.createPropertyGroups(&host);
+	auto* properties = qobject_cast<PropertiesListWidget*>(groups.first().editor);
+	QVERIFY(properties);
+
+	// Меняем флажок в панели свойств: документ передаёт его панели поиска
+	// и хранит состояние для следующей перестройки панели.
+	auto* regex = properties->findChild<QCheckBox*>();
+	QVERIFY(regex);
+	QVERIFY(!propertyValue(properties, QStringLiteral("search.regex")));
+	QVERIFY(!propertyValue(properties, QStringLiteral("search.simplified")));
+
+	// Включаем регулярное выражение.
+	for (auto* child : properties->findChildren<QWidget*>()) {
+		if (child->property("propertyId").toString() != QStringLiteral("search.regex")) {
+			continue;
+		}
+		auto* checkBox = qobject_cast<QCheckBox*>(child);
+		if (!checkBox) {
+			checkBox = child->findChild<QCheckBox*>();
+		}
+		QVERIFY(checkBox);
+		checkBox->setChecked(true);
+		break;
+	}
+
+	groups = document.createPropertyGroups(&host);
+	properties = qobject_cast<PropertiesListWidget*>(groups.first().editor);
+	QVERIFY(properties);
+	QVERIFY(propertyValue(properties, QStringLiteral("search.regex")));
+	QVERIFY(!propertyValue(properties, QStringLiteral("search.simplified")));
+
+	// Упрощённое выражение выключает регулярное: режимы взаимоисключающие.
+	for (auto* child : properties->findChildren<QWidget*>()) {
+		if (child->property("propertyId").toString() != QStringLiteral("search.simplified")) {
+			continue;
+		}
+		auto* checkBox = qobject_cast<QCheckBox*>(child);
+		if (!checkBox) {
+			checkBox = child->findChild<QCheckBox*>();
+		}
+		QVERIFY(checkBox);
+		checkBox->setChecked(true);
+		break;
+	}
+
+	groups = document.createPropertyGroups(&host);
+	properties = qobject_cast<PropertiesListWidget*>(groups.first().editor);
+	QVERIFY(properties);
+	QVERIFY(propertyValue(properties, QStringLiteral("search.simplified")));
+	QVERIFY(!propertyValue(properties, QStringLiteral("search.regex")));
+}
+
+void TestCodeEditorSearch::ribbonSearchButtonControlsPanel() {
+	Resources resources;
+	HighlightingPluginManager highlighting(&resources);
+	FormatterPluginManager formatters(&resources);
+
+	CodeEditorDocument document(&highlighting, &formatters);
+	auto* searchPanel = document.findChild<CodeEditorSearchPanel*>();
+	QVERIFY(searchPanel);
+	QVERIFY(searchPanel->isHidden());
+
+	auto* button = findRibbonButton(&document, QStringLiteral("search"));
+	QVERIFY(button);
+	QVERIFY(button->isCheckable());
+
+	button->mainButton()->click();
+	QVERIFY(!searchPanel->isHidden());
+	QVERIFY(button->isChecked());
+
+	button->mainButton()->click();
+	QVERIFY(searchPanel->isHidden());
+	QVERIFY(!button->isChecked());
+}
+
+void TestCodeEditorSearch::ribbonSearchButtonOpensProperties() {
+	Resources resources;
+	HighlightingPluginManager highlighting(&resources);
+	FormatterPluginManager formatters(&resources);
+
+	CodeEditorDocument document(&highlighting, &formatters);
+	auto* button = findRibbonButton(&document, QStringLiteral("search"));
+	QVERIFY(button);
+
+	// Значок свойств в правом нижнем углу сообщает группу «Параметры поиска».
+	QVERIFY(button->propertiesButton());
+	QSignalSpy spy(button, &RibbonButton::propertiesRequested);
+	button->propertiesButton()->click();
+	QCOMPARE(spy.count(), 1);
+	QCOMPARE(spy.first().at(0).toString(), QStringLiteral("search"));
+}
+
+void TestCodeEditorSearch::propertiesVisibleOnFirstShow() {
+	Resources resources;
+	HighlightingPluginManager highlighting(&resources);
+	FormatterPluginManager formatters(&resources);
+	TestCommandController controller;
+
+	auto* registry = controller.widgets();
+	registry->registerFactory({ QStringLiteral("Test.Panels.Properties"),
+		QStringLiteral("properties"), /*singletone*/ true, QStringLiteral("Свойства") },
+		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
+			return new PropertiesPanel(handler.parent);
+		});
+
+	MainWindow window(controller.globalContext(), nullptr, false);
+	QVERIFY(window.createWidget(QStringLiteral("properties"),
+		MainWindow::WidgetKind::SidePanel, QStringLiteral("Свойства"), QStringLiteral("🛠"),
+		[&registry] {
+			return registry->build(QStringLiteral("properties"), WidgetBuildHandler());
+		},
+		QString(), QStringLiteral("properties"), controller.globalContext()));
+
+	CodeEditorDocument document(&highlighting, &formatters);
+	document.setTitle(QStringLiteral("Редактор"));
+	document.setContext(controller.globalContext()->createDocumentContext(QStringLiteral("editor")));
+
+	auto* panel = window.propertiesPanel();
+	QVERIFY(panel);
+
+	// Свойства строятся, пока панель скрыта, — как при первом открытии
+	// документа в приложении.
+	panel->setDocument(&document);
+	QVERIFY(!panel->isVisible());
+	QVERIFY(window.showDocumentProperties(&document));
+	window.show();
+	QCoreApplication::processEvents();
+
+	// Группа «Свойства документа» раскрыта и содержит редакторы параметров.
+	auto* language = panel->findChild<QComboBox*>(QStringLiteral("CodeEditorLanguageCombo"));
+	QVERIFY(language);
+	QVERIFY2(language->isVisible(), "язык не виден при первом показе свойств");
+	QVERIFY2(language->height() > 0, "у языка нулевая высота при первом показе");
+
+	// «Параметры поиска» раскрываются и тоже не пустые.
+	panel->revealGroup(QStringLiteral("search"));
+	QCoreApplication::processEvents();
+	auto* search = panel->findChild<PropertiesListWidget*>(
+		QStringLiteral("CodeEditorSearchProperties"));
+	QVERIFY(search);
+	QVERIFY2(search->isVisible(), "параметры поиска не видны после раскрытия");
+	QVERIFY2(search->height() > 0, "у параметров поиска нулевая высота");
 }
 
 QTEST_MAIN(TestCodeEditorSearch)

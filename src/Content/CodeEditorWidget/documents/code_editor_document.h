@@ -30,6 +30,7 @@ public:
 	bool openFile(const QString& path);
 
 	QWidget* createPropertiesEditor(QWidget* parent) override;
+	QList<DocumentPropertyGroup> createPropertyGroups(QWidget* parent) override;
 	void refresh() override;
 	bool save() override;
 

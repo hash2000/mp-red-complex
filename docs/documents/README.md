@@ -142,6 +142,9 @@ bool setVariable(const QString& name, const QVariant& value);
 bool hasVariable(const QString& name) const;
 
 virtual QWidget* createPropertiesEditor(QWidget* parent);
+virtual QList<DocumentPropertyGroup> createPropertyGroups(QWidget* parent);
+virtual QWidget* createTabPropertiesEditor(QWidget* parent);
+bool showProperties(const QString& groupId = {});
 virtual void refresh();
 virtual bool save();
 virtual bool maybeClose();
@@ -293,28 +296,86 @@ context()->fireEvent(CommandContext::documentSaveCompleteEvent());
 `endVariablesBatch()` — подписчики получат одно событие
 `variables.batch.complete`.
 
-## 8. Панель свойств
+## 8. Панель свойств и лента документа
 
-`DocumentWidget::createPropertiesEditor()` по умолчанию создаёт `QFormLayout`:
-заголовок, значок, цвет вкладки (`TabColorEditor`), тип и признак изменений.
-Наследник может добавить свои строки. `MainWindow` показывает редактор
-активного документа в панели свойств.
+Принцип: **функции — в ленте документа, параметры — в панели «Свойства»**.
+Любой параметр (в том числе параметры функциональной кнопки) редактируется в
+панели свойств; в ленте остаются только действия.
 
-Ниже редактора `PropertiesPanel` добавляет сведения о контексте, в котором
-выполняется документ:
+Панель показывает параметры активного документа сгруппированными разделами
+(`PropertiesGroupWidget`,
+`src/Libs/BaseWidgets/properties/properties_group_widget.*`):
 
-- **полное имя контекста** (namespace, например `.documents.notes`) —
-  в поле только для чтения и с кнопкой копирования (`⧉`, копирует имя
-  в буфер обмена);
-- **переменные контекста** — все видимые переменные (собственные и
-  унаследованные) в `PropertiesListWidget` только для чтения. Показаны имя,
-  значение и подсказка: собственное или унаследованное, mime-тип значения.
+| Группа (`id`) | Содержимое |
+|---|---|
+| `document` — «Свойства документа» | `createPropertiesEditor()` и вложенные группы `createPropertyGroups()` (например, `search` — «Параметры поиска») |
+| `tab` — «Свойства вкладки» | `createTabPropertiesEditor()`: заголовок, значок, цвет (`TabColorEditor`), тип, признак изменений |
+| `context` — «Параметры контекста» | имя контекста (только для чтения, кнопка копирования) и вложенная группа `context.variables` |
+| `context.variables` — «Переменные контекста» | список видимых переменных; **строится лениво** — при первом раскрытии |
 
-Список обновляется по сигналу `CommandContext::variableChanged`, поэтому
-изменения переменных из других документов и команд видны сразу. У документа
-без контекста секция не создаётся.
+API панели: `setDocument`, `revealGroup(id)`, `isGroupExpanded(id)`,
+`groupIds()`, сигнал `groupExpanded(id)`. Состояние раскрытия групп
+сохраняется между перестройками панели.
+
+### Документ и группы свойств
+
+```cpp
+QWidget* createPropertiesEditor(QWidget* parent);                    // «Свойства документа»
+QList<DocumentPropertyGroup> createPropertyGroups(QWidget* parent);  // вложенные группы
+QWidget* createTabPropertiesEditor(QWidget* parent);                 // «Свойства вкладки»
+```
+
+`DocumentPropertyGroup` содержит `id`, `title`, `editor` и `expanded`:
+
+```cpp
+QList<DocumentPropertyGroup> MyDocument::createPropertyGroups(QWidget* parent) {
+    DocumentPropertyGroup group;
+    group.id = "filters";
+    group.title = tr("Фильтры");
+    group.editor = buildFiltersEditor(parent);
+    return { group };
+}
+```
+
+`createPropertiesEditor()` по умолчанию возвращает пустой `QFormLayout`;
+наследник добавляет строки. Если у документа нет своих параметров и
+дополнительных групп, группа «Свойства документа» не создаётся.
+
+### Значок свойств у кнопки ленты
+
+`DocumentRibbon` и `RibbonButton` (`src/Libs/BaseWidgets/ribbon/`) — общая
+лента документа. Кнопка с параметрами создаётся с идентификатором группы:
+
+```cpp
+auto* group = ribbon->addGroup(tr("Поиск"));
+auto* search = ribbon->addButton(group, "🔍", tr("Поиск"), "search");
+connect(search, &RibbonButton::clicked, this, ...);           // действие
+connect(ribbon, &DocumentRibbon::propertiesRequested, this,  // значок ⚙
+        [this](const QString& id) { showProperties(id); });
+```
+
+Большая часть кнопки выполняет действие, маленький круглый значок в правом
+нижнем углу раскрывает группу свойств действия: `DocumentWidget::showProperties(id)`
+находит окно-оболочку и вызывает `MainWindow::showDocumentProperties(doc, id)`,
+которая показывает панель «Свойства», раскрывает группу и её предков.
 
 Если документ меняет набор свойств, вызовите `emit propertiesChanged()`.
+
+### Редактор кода
+
+В ленте редактора остаются функции «Файл», «Правка» (форматирование) и
+«Поиск». Параметры поиска (`search`) — регулярное выражение, упрощённое
+выражение, регистр и слово целиком — редактируются в панели свойств; значок
+свойств у кнопки поиска раскрывает их. Язык подсветки и размер шрифта —
+параметры документа в группе «Свойства документа».
+
+### Переменные контекста
+
+В группе «Переменные контекста» показаны все видимые переменные контекста
+(собственные и унаследованные), их значения только для чтения и подсказка:
+собственная или унаследованная переменная и mime-тип значения. Список
+обновляется по сигналу `CommandContext::variableChanged`, но создаётся только
+после раскрытия группы. У документа без контекста группа не создаётся.
 
 ## 9. Code editor: `path` и `data`
 
