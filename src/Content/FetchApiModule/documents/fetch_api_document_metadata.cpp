@@ -10,3 +10,7 @@ QList<DocumentVariable> FetchApiDocumentMetadata::variables() const {
 		{ QStringLiteral("handler"), QString::fromLatin1(DocumentVariableMime::kText) },
 	};
 }
+
+QString FetchApiDocumentMetadata::tooltipVariable() const {
+	return QStringLiteral("url");
+}

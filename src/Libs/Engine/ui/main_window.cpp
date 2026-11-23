@@ -14,6 +14,7 @@
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/scripting/command_controller.h"
 #include "Libs/Engine/scripting/widgets/widget_registry.h"
+#include "Libs/Engine/scripting/widgets/i_document_metadata.h"
 
 #include <QAction>
 #include <QCloseEvent>
@@ -524,6 +525,7 @@ QWidget* MainWindow::createWidget(const QString& id, WidgetKind kind, const QStr
 	DocumentRule rule = DocumentRule::Document;
 	QString widgetXtype = type;
 	QString widgetClass = type;
+	QString tabToolTipVariable;
 	if (d->controller && d->controller->widgets()) {
 		auto* registry = d->controller->widgets();
 		documentId = registry->documentId(type, id);
@@ -535,6 +537,11 @@ QWidget* MainWindow::createWidget(const QString& id, WidgetKind kind, const QStr
 			rule = info->rule;
 			widgetXtype = info->xtype;
 			widgetClass = info->className;
+		}
+
+		// Подсказка вкладки — значение переменной из метаданных типа документа.
+		if (const auto* metadata = registry->documentMetadata(type)) {
+			tabToolTipVariable = metadata->tooltipVariable();
 		}
 	}
 
@@ -616,7 +623,10 @@ QWidget* MainWindow::createWidget(const QString& id, WidgetKind kind, const QStr
 	if (!glyph.isEmpty()) {
 		document->setGlyph(glyph);
 	}
-	document->setToolTip(tooltip);
+
+	// Подсказка документа — только у вкладки. На самом документе (рабочая
+	// область, лента) tooltip не выставляется.
+	document->setTabToolTipVariable(tabToolTipVariable);
 
 	if (kind == WidgetKind::Document) {
 		d->track(documentId, kind, document, title, type, document);

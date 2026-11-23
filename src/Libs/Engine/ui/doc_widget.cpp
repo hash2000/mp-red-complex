@@ -33,6 +33,8 @@ struct DocumentWidget::Private {
 	QColor color;
 	QString xtype;
 	QString className;
+	/// Имя переменной контекста для подсказки вкладки (из метаданных типа).
+	QString tabToolTipVariable;
 	std::shared_ptr<CommandContext> context;
 	QMetaObject::Connection variableConnection;
 };
@@ -176,6 +178,27 @@ std::shared_ptr<CommandContext> DocumentWidget::context() const {
 	return d->context;
 }
 
+QString DocumentWidget::tabToolTipVariable() const {
+	return d->tabToolTipVariable;
+}
+
+void DocumentWidget::setTabToolTipVariable(const QString& variable) {
+	if (d->tabToolTipVariable == variable) {
+		return;
+	}
+
+	d->tabToolTipVariable = variable;
+	emit tabToolTipChanged();
+}
+
+QString DocumentWidget::tabToolTip() const {
+	if (d->tabToolTipVariable.isEmpty() || !d->context) {
+		return QString();
+	}
+
+	return d->context->variable(d->tabToolTipVariable).toString();
+}
+
 void DocumentWidget::setContext(const std::shared_ptr<CommandContext>& context) {
 	if (d->context == context) {
 		return;
@@ -300,6 +323,10 @@ void DocumentWidget::setContext(const std::shared_ptr<CommandContext>& context) 
 				}
 				else if (name == kClassNameVariable) {
 					d->className = newValue.toString();
+				}
+
+				if (name == d->tabToolTipVariable) {
+					emit tabToolTipChanged();
 				}
 
 				onContextVariableChanged(name, newValue);

@@ -67,6 +67,15 @@ public:
 	QString className() const;
 	void setClassName(const QString& className);
 
+	/// Имя переменной контекста, значение которой показывается подсказкой
+	/// вкладки (из метаданных типа документа). Пустая строка — подсказки нет.
+	QString tabToolTipVariable() const;
+	void setTabToolTipVariable(const QString& variable);
+
+	/// Подсказка вкладки: значение переменной tabToolTipVariable().
+	/// Пустая строка — переменная не задана или её значение пусто.
+	QString tabToolTip() const;
+
 	/// Контекст документа. Может быть nullptr у документов, созданных
 	/// напрямую (например, в тестах или legacy-окнах).
 	std::shared_ptr<CommandContext> context() const;
@@ -117,6 +126,7 @@ signals:
 	void modifiedChanged(bool modified);
 	void colorChanged(const QColor& color);
 	void xtypeChanged(const QString& xtype);
+	void tabToolTipChanged();
 	void propertiesChanged();   // попросить панель свойств перестроить редактор
 
 protected:

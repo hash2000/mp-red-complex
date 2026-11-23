@@ -341,11 +341,8 @@ void FetchApiDocument::onRequestFinished(const FetchApiResult& result) {
 		result.applyToContext(*context);
 	}
 
-	if (d->widget) {
-		setToolTip(QStringLiteral("%1\n%2")
-			.arg(d->widget->location())
-			.arg(result.failed ? result.errorMessage() : result.contentType()));
-	}
+	// Подсказка вкладки — переменная `url` из метаданных типа документа;
+	// на самом документе tooltip не выставляется.
 
 	emit requestCompleted(result);
 	emit propertiesChanged();

@@ -608,7 +608,6 @@ CodeEditorDocument::CodeEditorDocument(
 			d->setPath(QString());
 			d->dataFromFile = false;
 			setTitle(tr("Без имени"));
-			setToolTip(QString());
 			emit propertiesChanged();
 			return;
 		}
@@ -689,7 +688,6 @@ void CodeEditorDocument::newFile() {
 		setVariable(QStringLiteral("data"), QString());
 	}
 	setTitle(tr("Без имени"));
-	setToolTip(QString());
 	d->syncLanguageCombo();
 	emit propertiesChanged();
 }
@@ -709,7 +707,6 @@ bool CodeEditorDocument::openFile(const QString& path) {
 	d->setPath(path);
 	d->dataFromFile = d->dataMode;
 	setTitle(info.fileName());
-	setToolTip(QDir::toNativeSeparators(path));
 	d->editor->openFile(path);
 	d->syncLanguageCombo();
 	emit propertiesChanged();
@@ -740,7 +737,6 @@ bool CodeEditorDocument::save() {
 		d->setPath(path);
 		d->editor->setHoghlighterByPath(path);
 		setTitle(QFileInfo(path).fileName());
-		setToolTip(QDir::toNativeSeparators(path));
 	}
 
 	if (d->dataMode && !d->dataFromFile) {
@@ -829,7 +825,6 @@ void CodeEditorDocument::onContextAttached() {
 			d->dataFromFile = false;
 			d->applyDataText(data);
 			setTitle(tr("Данные"));
-			setToolTip(QString());
 			d->syncLanguageCombo();
 			emit propertiesChanged();
 			return;
@@ -852,7 +847,6 @@ void CodeEditorDocument::onContextAttached() {
 		d->applyDataText(data);
 		d->setPath(path);
 		setTitle(info.fileName());
-		setToolTip(QDir::toNativeSeparators(path));
 		d->syncLanguageCombo();
 		emit propertiesChanged();
 		return;
