@@ -1,6 +1,5 @@
 #pragma once
 #include <QPlainTextEdit>
-#include <QStringConverter>
 #include <QWheelEvent>
 #include <memory>
 
@@ -89,15 +88,17 @@ public:
 
 	/// Кодировка файла для чтения и сохранения.
 	struct EncodingInfo {
+		/// Имя кодека для QTextCodec (например, "Windows-1251").
 		QString name;
-		QStringConverter::Encoding encoding = QStringConverter::Utf8;
+		/// Подпись для пользователя.
+		QString title;
 	};
 
-	/// Доступные кодировки (Qt6 поддерживает только встроенные).
+	/// Доступные кодировки (Qt5Compat: QTextCodec).
 	static QList<EncodingInfo> availableEncodings();
 
-	QStringConverter::Encoding encoding() const;
-	void setEncoding(QStringConverter::Encoding encoding);
+	QString encoding() const;
+	void setEncoding(const QString& encoding);
 
 	/// Плагин подсветки, выбранный для текущего содержимого.
 	const HighlightingPlugin* highlightingPlugin() const;
@@ -124,6 +125,8 @@ signals:
 	/// Подсветка включена (enabled=true) или выключена: вручную либо
 	/// автоматически из-за слишком длинной строки.
 	void highlightingEnabledChanged(bool enabled);
+	/// Кодировка документа изменена.
+	void encodingChanged(const QString& encoding);
 
 private slots:
 	void onBlockRead(const QStringList& lines);

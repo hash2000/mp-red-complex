@@ -20,6 +20,7 @@ target_link_libraries(RedComplexCodeEditorWidget
 		Qt6::Gui
 		Qt6::Widgets
 		Qt6::Concurrent
+		Qt6::Core5Compat
 
 		yaml-cpp::yaml-cpp
 

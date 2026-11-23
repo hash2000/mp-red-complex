@@ -71,8 +71,8 @@ public:
 	QTimer* formatTimeout = nullptr;
 	QTimer* lineLengthTimer = nullptr;
 
-	/// Кодировка чтения/записи файла.
-	QStringConverter::Encoding encoding = QStringConverter::Utf8;
+	/// Кодировка чтения/записи файла (имя кодека QTextCodec).
+	QString encoding = QStringLiteral("UTF-8");
 
 	/// Режим переноса, выбранный пользователем, и фактическое состояние.
 	LineWrapPolicy wrapPolicy = LineWrapPolicy::Auto;
@@ -572,20 +572,45 @@ const HighlightingPlugin* CodeEditorWidget::highlightingPlugin() const {
 }
 
 QList<CodeEditorWidget::EncodingInfo> CodeEditorWidget::availableEncodings() {
+	// Порядок: сначала Unicode, затем кириллица и остальные популярные.
 	return {
-		{ tr("UTF-8"), QStringConverter::Utf8 },
-		{ tr("UTF-16 (BOM)"), QStringConverter::Utf16 },
-		{ tr("Latin1 (ISO-8859-1)"), QStringConverter::Latin1 },
-		{ tr("Системная (ANSI)"), QStringConverter::System },
+		{ QStringLiteral("UTF-8"), tr("UTF-8") },
+		{ QStringLiteral("UTF-16"), tr("UTF-16 (BOM)") },
+		{ QStringLiteral("UTF-16LE"), tr("UTF-16 LE") },
+		{ QStringLiteral("UTF-16BE"), tr("UTF-16 BE") },
+		{ QStringLiteral("UTF-32"), tr("UTF-32 (BOM)") },
+		{ QStringLiteral("UTF-32LE"), tr("UTF-32 LE") },
+		{ QStringLiteral("UTF-32BE"), tr("UTF-32 BE") },
+		{ QStringLiteral("ISO-8859-1"), tr("Latin1 (ISO-8859-1)") },
+		{ QStringLiteral("Windows-1251"), tr("Windows-1251 (кириллица)") },
+		{ QStringLiteral("Windows-1252"), tr("Windows-1252 (Западная Европа)") },
+		{ QStringLiteral("Windows-1250"), tr("Windows-1250 (Центральная Европа)") },
+		{ QStringLiteral("KOI8-R"), tr("KOI8-R") },
+		{ QStringLiteral("KOI8-U"), tr("KOI8-U") },
+		{ QStringLiteral("IBM866"), tr("IBM866 (DOS, кириллица)") },
+		{ QStringLiteral("ISO-8859-5"), tr("ISO-8859-5 (кириллица)") },
+		{ QStringLiteral("ISO-8859-15"), tr("ISO-8859-15") },
+		{ QStringLiteral("Shift-JIS"), tr("Shift-JIS") },
+		{ QStringLiteral("EUC-JP"), tr("EUC-JP") },
+		{ QStringLiteral("GBK"), tr("GBK") },
+		{ QStringLiteral("GB18030"), tr("GB18030") },
+		{ QStringLiteral("Big5"), tr("Big5") },
+		{ QStringLiteral("EUC-KR"), tr("EUC-KR") },
+		{ QStringLiteral("System"), tr("Системная (ANSI)") },
 	};
 }
 
-QStringConverter::Encoding CodeEditorWidget::encoding() const {
+QString CodeEditorWidget::encoding() const {
 	return d->encoding;
 }
 
-void CodeEditorWidget::setEncoding(QStringConverter::Encoding encoding) {
+void CodeEditorWidget::setEncoding(const QString& encoding) {
+	if (d->encoding == encoding) {
+		return;
+	}
+
 	d->encoding = encoding;
+	emit encodingChanged(encoding);
 }
 
 void CodeEditorWidget::onTextChanged() {

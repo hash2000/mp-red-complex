@@ -17,8 +17,10 @@
 #include "Libs/Resources/resources.h"
 
 #include <QCheckBox>
+#include <QApplication>
 #include <QComboBox>
 #include <QCompleter>
+#include <QDialog>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -26,12 +28,14 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QPlainTextEdit>
+#include <QPushButton>
 #include <QScrollBar>
 #include <QSignalSpy>
-#include <QStringConverter>
 #include <QTemporaryDir>
 #include <QTextBlock>
+#include <QTextCodec>
 #include <QTextLayout>
+#include <QTimer>
 #include <QToolButton>
 #include <QtTest/QtTest>
 
@@ -163,13 +167,15 @@ private slots:
 	void documentPathFromCreationVariables();
 	void dataVariablePopulatesEditor();
 	void saveDataUpdatesContextVariable();
+	void dataDocumentReopensFromBytes();
+	void dataDocumentReinterpretsTextWithoutBytes();
 	void dataAndExistingFilePrefersFile();
 	void dataAndMissingFileSavesBoth();
 	void documentMetadataDeclaresPath();
 	void newDocumentDialogShowsCodeEditorPath();
 	void searchPropertiesGroupIsExposed();
 	void documentInfoGroupShowsCounts();
-	void encodingComboIsSearchableAndApplied();
+	void encodingDialogIsSearchableAndApplied();
 	void searchPropertiesToggleModes();
 	void ribbonSearchButtonControlsPanel();
 	void ribbonSearchButtonOpensProperties();
@@ -546,6 +552,65 @@ void TestCodeEditorSearch::newDocumentDialogShowsCodeEditorPath() {
 	QVERIFY(pathEdit->isReadOnly());
 }
 
+void TestCodeEditorSearch::dataDocumentReopensFromBytes() {
+	Resources resources;
+	HighlightingPluginManager highlighting(&resources);
+	FormatterPluginManager formatters(&resources);
+	TestCommandController controller;
+
+	QTextCodec* cp1251 = QTextCodec::codecForName("Windows-1251");
+	QVERIFY(cp1251);
+	const QByteArray raw = cp1251->fromUnicode(QStringLiteral("**привет**"));
+	const QString broken = QString::fromUtf8(raw);
+
+	CodeEditorDocument document(&highlighting, &formatters);
+	auto context = controller.globalContext()->createDocumentContext(QStringLiteral("editor"));
+	QVERIFY(context);
+	context->setVariable(QStringLiteral("data"), broken);
+	context->setVariable(QStringLiteral("data-bytes"), raw);
+	document.setContext(context);
+
+	QCOMPARE(document.editor()->toPlainText(), broken);
+
+	// Файла нет, но исходные байты есть в контексте: переоткрываем из них.
+	QVERIFY(document.reopenWithEncoding(QStringLiteral("Windows-1251")));
+	QCOMPARE(document.editor()->toPlainText(), QStringLiteral("**привет**"));
+	QCOMPARE(document.editor()->encoding(), QStringLiteral("Windows-1251"));
+
+	// Переоткрытие — просмотр: data не меняется.
+	QCOMPARE(context->variable(QStringLiteral("data")).toString(), broken);
+
+	// Пересохранение пишет результат в контекст, байты — в выбранной кодировке.
+	QVERIFY(document.saveWithEncoding(QStringLiteral("Windows-1251")));
+	QCOMPARE(context->variable(QStringLiteral("data")).toString(),
+		QStringLiteral("**привет**"));
+	QCOMPARE(context->variable(QStringLiteral("data-bytes")).toByteArray(), raw);
+}
+
+void TestCodeEditorSearch::dataDocumentReinterpretsTextWithoutBytes() {
+	Resources resources;
+	HighlightingPluginManager highlighting(&resources);
+	FormatterPluginManager formatters(&resources);
+	TestCommandController controller;
+
+	QTextCodec* cp1251 = QTextCodec::codecForName("Windows-1251");
+	QVERIFY(cp1251);
+	const QByteArray raw = cp1251->fromUnicode(QStringLiteral("привет"));
+	// Данные пришли как «однобайтовая строка»: байты не сохранены.
+	const QString latin1Text = QString::fromLatin1(raw);
+
+	CodeEditorDocument document(&highlighting, &formatters);
+	auto context = controller.globalContext()->createDocumentContext(QStringLiteral("editor"));
+	QVERIFY(context);
+	context->setVariable(QStringLiteral("data"), latin1Text);
+	document.setContext(context);
+
+	// Текущая кодировка — та, которой текст был ошибочно декодирован.
+	document.editor()->setEncoding(QStringLiteral("ISO-8859-1"));
+	QVERIFY(document.reopenWithEncoding(QStringLiteral("Windows-1251")));
+	QCOMPARE(document.editor()->toPlainText(), QStringLiteral("привет"));
+}
+
 void TestCodeEditorSearch::searchPropertiesGroupIsExposed() {
 	Resources resources;
 	HighlightingPluginManager highlighting(&resources);
@@ -610,7 +675,7 @@ void TestCodeEditorSearch::documentInfoGroupShowsCounts() {
 	QCOMPARE(lines->text(), QStringLiteral("3"));
 }
 
-void TestCodeEditorSearch::encodingComboIsSearchableAndApplied() {
+void TestCodeEditorSearch::encodingDialogIsSearchableAndApplied() {
 	Resources resources;
 	HighlightingPluginManager highlighting(&resources);
 	FormatterPluginManager formatters(&resources);
@@ -620,43 +685,66 @@ void TestCodeEditorSearch::encodingComboIsSearchableAndApplied() {
 	QWidget* properties = document.createPropertiesEditor(&host);
 	QVERIFY(properties);
 
-	auto* combo = properties->findChild<QComboBox*>(QStringLiteral("CodeEditorEncodingCombo"));
-	QVERIFY(combo);
-	QVERIFY(combo->isEditable());
-	QVERIFY(combo->completer());
-	QCOMPARE(combo->completer()->filterMode(), Qt::MatchContains);
-	QCOMPARE(combo->count(), CodeEditorWidget::availableEncodings().size());
+	auto* label = properties->findChild<QLabel*>(QStringLiteral("CodeEditorEncodingLabel"));
+	auto* button = properties->findChild<QToolButton*>(QStringLiteral("CodeEditorEncodingButton"));
+	QVERIFY(label);
+	QVERIFY(button);
+	QCOMPARE(label->text(), QStringLiteral("UTF-8"));
 
-	// Выбор кодировки в списке применяется к редактору.
-	const int utf16Index = combo->findData(static_cast<int>(QStringConverter::Utf16));
-	QVERIFY(utf16Index >= 0);
-	combo->setCurrentIndex(utf16Index);
-	QCOMPARE(document.editor()->encoding(), QStringConverter::Utf16);
+	// Кнопка открывает диалог: список с поиском и три действия.
+	bool dialogFound = false;
+	bool comboOk = false;
+	QTimer::singleShot(0, [&dialogFound, &comboOk] {
+		auto* dialog = qobject_cast<QDialog*>(QApplication::activeModalWidget());
+		if (!dialog) {
+			return;
+		}
 
-	// Чтение и сохранение используют выбранную кодировку.
+		dialogFound = true;
+		auto* combo = dialog->findChild<QComboBox*>(QStringLiteral("CodeEditorEncodingCombo"));
+		comboOk = combo && combo->isEditable() && combo->completer()
+			&& combo->completer()->filterMode() == Qt::MatchContains
+			&& dialog->findChild<QPushButton*>(QStringLiteral("CodeEditorEncodingReopen"))
+			&& dialog->findChild<QPushButton*>(QStringLiteral("CodeEditorEncodingResave"))
+			&& dialog->findChild<QPushButton*>(QStringLiteral("CodeEditorEncodingCancel"));
+		dialog->reject();
+	});
+	button->click();
+	QVERIFY2(dialogFound, "диалог кодировки не открылся");
+	QVERIFY2(comboOk, "в диалоге нет списка с поиском или кнопок действий");
+	QCOMPARE(label->text(), QStringLiteral("UTF-8"));
+
+	// Файл в Windows-1251: по умолчанию читается как UTF-8 (мусор),
+	// после переоткрытия в выбранной кодировке текст читается верно.
 	QTemporaryDir dir;
 	QVERIFY(dir.isValid());
 	const auto path = dir.filePath(QStringLiteral("encoded.md"));
+	QTextCodec* cp1251 = QTextCodec::codecForName("Windows-1251");
+	QVERIFY(cp1251);
 	{
-		QStringEncoder encoder(QStringConverter::Utf16);
-		const QByteArray bytes = encoder.encode(QStringLiteral("**привет**"));
 		QFile file(path);
 		QVERIFY(file.open(QIODevice::WriteOnly));
-		file.write(bytes);
+		file.write(cp1251->fromUnicode(QStringLiteral("**привет**")));
 	}
 
 	QVERIFY(document.openFile(path));
-	QTRY_COMPARE(document.editor()->toPlainText().trimmed(), QStringLiteral("**привет**"));
+	QTRY_VERIFY(document.editor()->toPlainText().trimmed()
+		!= QStringLiteral("**привет**"));
 
-	document.editor()->setText(QStringLiteral("**новый текст**"));
-	QVERIFY(document.save());
+	QVERIFY(document.reopenWithEncoding(QStringLiteral("Windows-1251")));
+	QTRY_COMPARE(document.editor()->toPlainText().trimmed(), QStringLiteral("**привет**"));
+	QCOMPARE(label->text(), QStringLiteral("Windows-1251 (кириллица)"));
+
+	// Пересохранение в указанную кодировку.
+	QVERIFY(document.saveWithEncoding(QStringLiteral("UTF-16")));
+	QCOMPARE(label->text(), QStringLiteral("UTF-16 (BOM)"));
 
 	QFile saved(path);
 	QVERIFY(saved.open(QIODevice::ReadOnly));
 	const QByteArray savedBytes = saved.readAll();
-	QStringDecoder decoder(QStringConverter::Utf16);
-	const QString savedText = decoder.decode(savedBytes);
-	QCOMPARE(savedText.trimmed(), QStringLiteral("**новый текст**"));
+	QTextCodec* utf16 = QTextCodec::codecForName("UTF-16");
+	QVERIFY(utf16);
+	QCOMPARE(utf16->toUnicode(savedBytes).trimmed(), QStringLiteral("**привет**"));
 }
 
 void TestCodeEditorSearch::searchPropertiesToggleModes() {

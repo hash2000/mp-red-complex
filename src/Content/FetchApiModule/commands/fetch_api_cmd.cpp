@@ -6,6 +6,7 @@
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/scripting/command_controller.h"
 #include "Libs/Engine/services/services_registry.h"
+#include "Libs/Engine/ui/main_window.h"
 
 #include <QJsonDocument>
 #include <QMap>
@@ -129,15 +130,28 @@ bool FetchApiCommand::Private::openResponseInEditor(
 
 	// Документ создаётся штатной командой зоны: код-редактор получает `data`
 	// и работает в режиме данных (файл не требуется).
+	const QString documentId = QUuid::createUuid().toString(QUuid::WithoutBraces);
 	const QMap<QString, QString> arguments = {
 		{ QStringLiteral("action"), QStringLiteral("create") },
 		{ QStringLiteral("target"), QStringLiteral("code-editor") },
-		{ QStringLiteral("id"), QUuid::createUuid().toString(QUuid::WithoutBraces) },
+		{ QStringLiteral("id"), documentId },
 		{ QStringLiteral("title"), QStringLiteral("fetch-api %1").arg(result.statusCode) },
 		{ QStringLiteral("data"), result.text() },
 	};
 
-	return controller->executeCommand(QStringLiteral("documents"), arguments);
+	if (!controller->executeCommand(QStringLiteral("documents"), arguments)) {
+		return false;
+	}
+
+	// Исходные байты тела сохраняем в контекст документа: редактор сможет
+	// переоткрыть данные в любой кодировке без сохранения в файл.
+	if (auto* window = controller->mainWindow()) {
+		if (auto documentContext = window->documentContext(documentId)) {
+			documentContext->setVariable(QStringLiteral("data-bytes"), result.data);
+		}
+	}
+
+	return true;
 }
 
 bool FetchApiCommand::Private::sendRequest(const std::shared_ptr<CommandContext>& context,

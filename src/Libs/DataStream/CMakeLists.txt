@@ -23,6 +23,7 @@ target_link_libraries(RedComplexDataStream
 		Qt6::Core
 		Qt6::Gui
 		Qt6::Widgets
+		Qt6::Core5Compat
 
 		ZLIB::ZLIB
 

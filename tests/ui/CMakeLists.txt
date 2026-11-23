@@ -151,6 +151,7 @@ target_link_libraries(TestCodeEditorSearch PRIVATE
     Qt6::Gui
     Qt6::Widgets
     Qt6::Test
+    Qt6::Core5Compat
 
     RedComplexCodeEditorWidget
     RedComplexEngine

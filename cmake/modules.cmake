@@ -12,6 +12,7 @@ find_package(Qt6
 		Xml
 		Svg
 		Concurrent
+		Core5Compat
 )
 
 qt_standard_project_setup()

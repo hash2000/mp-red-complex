@@ -14,20 +14,24 @@
 #include <QComboBox>
 #include <QCompleter>
 #include <QDebug>
+#include <QDialog>
 #include <QDir>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFormLayout>
+#include <QHBoxLayout>
 #include <QLabel>
+#include <QMessageBox>
 #include <QPair>
 #include <QPointer>
+#include <QPushButton>
 #include <QSignalBlocker>
-#include <QStringConverter>
 #include <QTextBlock>
+#include <QTextCodec>
 #include <QTextDocument>
-#include <QTextStream>
 #include <QTimer>
+#include <QToolButton>
 #include <QVBoxLayout>
 
 #include <algorithm>
@@ -76,6 +80,16 @@ public:
 
 	QWidget* createSearchPropertiesEditor(QWidget* parent);
 	QWidget* createInfoWidget(QWidget* parent);
+
+	/// Диалог выбора кодировки: переоткрыть или пересохранить файл.
+	void showEncodingDialog();
+	/// Подпись кодировки для пользователя по имени кодека.
+	QString encodingTitle(const QString& encoding) const;
+
+	/// Перекодировать данные документа (не файла): из data-bytes либо из текста.
+	bool applyDataEncoding(const QString& encoding);
+	/// Записать перекодированный текст в data (и data-bytes), если он есть.
+	bool persistData(const QString& encoding);
 	QList<PropertyData> searchPropertyData() const;
 	void applySearchProperty(const QString& id, bool enabled);
 	void setSearchOption(CodeEditorSearchPanel::Option option, bool enabled);
@@ -462,8 +476,20 @@ void CodeEditorDocument::Private::printInfo(const QString& message) const {
 
 bool CodeEditorDocument::Private::writeFile(const QString& path, const QString& text,
 	QString* error) const {
+	QTextCodec* codec = QTextCodec::codecForName(editor->encoding().toLatin1());
+	if (!codec) {
+		codec = QTextCodec::codecForName("UTF-8");
+	}
+	if (!codec) {
+		if (error) {
+			*error = q->tr("Не удалось подобрать кодировку для сохранения файла:\n%1")
+				.arg(QDir::toNativeSeparators(path));
+		}
+		return false;
+	}
+
 	QFile file(path);
-	if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+	if (!file.open(QIODevice::WriteOnly)) {
 		if (error) {
 			*error = q->tr("Не удалось записать файл:\n%1\n%2")
 				.arg(QDir::toNativeSeparators(path), file.errorString());
@@ -471,11 +497,15 @@ bool CodeEditorDocument::Private::writeFile(const QString& path, const QString& 
 		return false;
 	}
 
-	QTextStream stream(&file);
-	stream.setEncoding(editor->encoding());
-	stream << text;
-	stream.flush();
-	if (stream.status() != QTextStream::Ok) {
+	// Кодировка задаётся QTextCodec: QTextStream в Qt6 больше не принимает кодеки.
+	// Как и раньше, на Windows сохраняем с CRLF.
+	QString content = text;
+#ifdef Q_OS_WIN
+	content.replace(QLatin1String("\n"), QLatin1String("\r\n"));
+#endif
+
+	const QByteArray encoded = codec->fromUnicode(content);
+	if (file.write(encoded) != encoded.size()) {
 		if (error) {
 			*error = q->tr("Не удалось записать файл:\n%1")
 				.arg(QDir::toNativeSeparators(path));
@@ -490,6 +520,58 @@ void CodeEditorDocument::Private::applyDataText(const QString& data) {
 	editor->setText(data);
 	editor->document()->setModified(false);
 	q->setModified(false);
+}
+
+bool CodeEditorDocument::Private::applyDataEncoding(const QString& encoding) {
+	QTextCodec* target = QTextCodec::codecForName(encoding.toLatin1());
+	if (!target) {
+		printWarning(q->tr("Неизвестная кодировка: %1").arg(encoding));
+		return false;
+	}
+
+	// Если в контексте сохранены исходные байты (data-bytes), декодируем их:
+	// это единственный способ без потерь переоткрыть данные в другой кодировке.
+	const QVariant bytes = q->variable(QStringLiteral("data-bytes"), QVariant());
+	QString text;
+	if (bytes.isValid() && !bytes.toByteArray().isEmpty()) {
+		text = target->toUnicode(bytes.toByteArray());
+	}
+	else {
+		QTextCodec* source = QTextCodec::codecForName(editor->encoding().toLatin1());
+		if (!source) {
+			source = QTextCodec::codecForName("UTF-8");
+		}
+		if (encoding == editor->encoding()) {
+			return true;
+		}
+
+		// Байтов нет: переинтерпретируем текст из текущей кодировки в выбранную.
+		text = target->toUnicode(source->fromUnicode(editor->toPlainText()));
+	}
+
+	editor->setEncoding(encoding);
+	applyDataText(text);
+	emit q->propertiesChanged();
+	return true;
+}
+
+bool CodeEditorDocument::Private::persistData(const QString& encoding) {
+	if (!applyDataEncoding(encoding)) {
+		return false;
+	}
+
+	QTextCodec* codec = QTextCodec::codecForName(encoding.toLatin1());
+	const QString text = editor->toPlainText();
+	q->setVariable(QStringLiteral("data"), text);
+	if (codec) {
+		q->setVariable(QStringLiteral("data-bytes"), codec->fromUnicode(text));
+	}
+
+	if (auto context = q->context()) {
+		context->fireEvent(CommandContext::documentSaveCompleteEvent());
+	}
+	emit q->propertiesChanged();
+	return true;
 }
 
 void CodeEditorDocument::Private::setPath(const QString& value) {
@@ -676,6 +758,47 @@ bool CodeEditorDocument::save() {
 	return true;
 }
 
+bool CodeEditorDocument::reopenWithEncoding(const QString& encoding) {
+	if (!d->editor) {
+		return false;
+	}
+
+	// Файл — источник истины: перечитываем его байты в выбранной кодировке.
+	if (!d->path.isEmpty() && QFileInfo::exists(d->path)) {
+		d->editor->setEncoding(encoding);
+		return openFile(d->path);
+	}
+
+	// Файла нет (данные из контекста или буфер): перекодируем содержимое.
+	return d->applyDataEncoding(encoding);
+}
+
+bool CodeEditorDocument::saveWithEncoding(const QString& encoding) {
+	if (!d->editor) {
+		return false;
+	}
+
+	if (!d->path.isEmpty() && QFileInfo::exists(d->path)) {
+		d->editor->setEncoding(encoding);
+		return save();
+	}
+
+	if (d->dataMode) {
+		// Путь может быть задан, но файла ещё нет — save() создаст его.
+		if (!d->path.isEmpty()) {
+			d->editor->setEncoding(encoding);
+			return save();
+		}
+
+		// Чистые данные: результат перекодирования сохраняем в контекст.
+		return d->persistData(encoding);
+	}
+
+	d->printWarning(tr("Пересохранение в выбранной кодировке доступно только для файла: "
+		"сначала сохраните файл."));
+	return false;
+}
+
 void CodeEditorDocument::refresh() {
 	if (d->dataMode) {
 		return;
@@ -829,47 +952,27 @@ QWidget* CodeEditorDocument::createPropertiesEditor(QWidget* parent) {
 			}
 		});
 
-	auto* encodingCombo = new QComboBox(widget);
-	encodingCombo->setObjectName(QStringLiteral("CodeEditorEncodingCombo"));
-	encodingCombo->setToolTip(tr("Кодировка файла при чтении и сохранении"));
-	for (const auto& option : CodeEditorWidget::availableEncodings()) {
-		encodingCombo->addItem(option.name, static_cast<int>(option.encoding));
-	}
-	// Поиск по названию кодировки: поле редактируемое, фильтр — «содержит».
-	encodingCombo->setEditable(true);
-	encodingCombo->setInsertPolicy(QComboBox::NoInsert);
-	if (auto* completer = encodingCombo->completer()) {
-		completer->setCompletionMode(QCompleter::PopupCompletion);
-		completer->setFilterMode(Qt::MatchContains);
-		completer->setCaseSensitivity(Qt::CaseInsensitive);
-	}
-	encodingCombo->setCurrentIndex(encodingCombo->findData(
-		static_cast<int>(d->editor->encoding())));
-	connect(encodingCombo, &QComboBox::currentIndexChanged, this,
-		[this, encodingCombo](int index) {
-			if (index < 0) {
-				return;
-			}
+	// Текущая кодировка и кнопка выбора: сам выбор — в отдельном диалоге,
+	// где можно переоткрыть файл или пересохранить его в новой кодировке.
+	auto* encodingRow = new QWidget(widget);
+	auto* encodingLayout = new QHBoxLayout(encodingRow);
+	encodingLayout->setContentsMargins(0, 0, 0, 0);
 
-			const auto encoding = static_cast<QStringConverter::Encoding>(
-				encodingCombo->itemData(index).toInt());
-			if (encoding == d->editor->encoding()) {
-				return;
-			}
+	auto* encodingLabel = new QLabel(d->encodingTitle(d->editor->encoding()), encodingRow);
+	encodingLabel->setObjectName(QStringLiteral("CodeEditorEncodingLabel"));
+	auto* encodingButton = new QToolButton(encodingRow);
+	encodingButton->setObjectName(QStringLiteral("CodeEditorEncodingButton"));
+	encodingButton->setText(QStringLiteral("…"));
+	encodingButton->setToolTip(tr("Выбрать кодировку документа"));
+	encodingLayout->addWidget(encodingLabel, 1);
+	encodingLayout->addWidget(encodingButton);
 
-			d->editor->setEncoding(encoding);
-			if (d->dataMode || d->path.isEmpty()) {
-				return;
-			}
-
-			if (isModified()) {
-				d->printWarning(tr("Кодировка изменена. Файл не перечитан, пока есть "
-					"несохранённые изменения; при сохранении будет использована новая кодировка."));
-				return;
-			}
-
-			// Файл не изменён: перечитываем его в новой кодировке.
-			d->editor->openFile(d->path);
+	connect(encodingButton, &QToolButton::clicked, this, [this] {
+		d->showEncodingDialog();
+	});
+	connect(d->editor, &CodeEditorWidget::encodingChanged, encodingLabel,
+		[this, encodingLabel](const QString& encoding) {
+			encodingLabel->setText(d->encodingTitle(encoding));
 		});
 
 	auto* lineWrapCombo = new QComboBox(widget);
@@ -909,7 +1012,7 @@ QWidget* CodeEditorDocument::createPropertiesEditor(QWidget* parent) {
 
 	form->insertRow(0, tr("Файл:"), pathLabel);
 	form->addRow(tr("Язык:"), languageCombo);
-	form->addRow(tr("Кодировка:"), encodingCombo);
+	form->addRow(tr("Кодировка:"), encodingRow);
 	form->addRow(tr("Размер шрифта:"), fontSizeCombo);
 	form->addRow(tr("Перенос строк:"), lineWrapCombo);
 	return widget;
@@ -966,6 +1069,121 @@ QWidget* CodeEditorDocument::Private::createInfoWidget(QWidget* parent) {
 	}
 
 	return widget;
+}
+
+QString CodeEditorDocument::Private::encodingTitle(const QString& encoding) const {
+	for (const auto& info : CodeEditorWidget::availableEncodings()) {
+		if (info.name == encoding) {
+			return info.title;
+		}
+	}
+	return encoding;
+}
+
+void CodeEditorDocument::Private::showEncodingDialog() {
+	QDialog dialog(q);
+	dialog.setObjectName(QStringLiteral("CodeEditorEncodingDialog"));
+	dialog.setWindowTitle(q->tr("Кодировка документа"));
+	dialog.setModal(true);
+
+	auto* layout = new QVBoxLayout(&dialog);
+	layout->addWidget(new QLabel(q->tr("Выберите кодировку:"), &dialog));
+
+	auto* combo = new QComboBox(&dialog);
+	combo->setObjectName(QStringLiteral("CodeEditorEncodingCombo"));
+	for (const auto& info : CodeEditorWidget::availableEncodings()) {
+		combo->addItem(info.title, info.name);
+	}
+	// Поиск по названию: поле редактируемое, фильтр — «содержит».
+	combo->setEditable(true);
+	combo->setInsertPolicy(QComboBox::NoInsert);
+	if (auto* completer = combo->completer()) {
+		completer->setCompletionMode(QCompleter::PopupCompletion);
+		completer->setFilterMode(Qt::MatchContains);
+		completer->setCaseSensitivity(Qt::CaseInsensitive);
+	}
+	const int current = combo->findData(editor->encoding());
+	combo->setCurrentIndex(current >= 0 ? current : 0);
+	layout->addWidget(combo);
+
+	auto* hint = new QLabel(&dialog);
+	hint->setObjectName(QStringLiteral("CodeEditorEncodingHint"));
+	hint->setWordWrap(true);
+	const bool hasFile = !path.isEmpty() && QFileInfo::exists(path);
+	const bool hasBytes = q->variable(QStringLiteral("data-bytes"), QVariant())
+		.toByteArray().size() > 0;
+	if (hasFile) {
+		hint->setText(q->tr("Файл: %1").arg(QDir::toNativeSeparators(path)));
+	}
+	else if (hasBytes) {
+		hint->setText(q->tr("Данные будут декодированы из сохранённых байтов (data-bytes). "
+			"«Пересохранить» запишет результат в переменную data."));
+	}
+	else if (dataMode) {
+		hint->setText(q->tr("Файл не задан: текст будет перекодирован из текущей кодировки. "
+			"«Пересохранить» запишет результат в переменную data."));
+	}
+	else {
+		hint->setText(q->tr("Файл не задан: текст будет перекодирован из текущей кодировки "
+			"в выбранную."));
+	}
+	layout->addWidget(hint);
+
+	auto* buttons = new QHBoxLayout();
+	auto* reopenButton = new QPushButton(
+		q->tr("Переоткрыть в выбранной кодировке"), &dialog);
+	reopenButton->setObjectName(QStringLiteral("CodeEditorEncodingReopen"));
+	auto* resaveButton = new QPushButton(
+		q->tr("Пересохранить в указанную кодировку"), &dialog);
+	resaveButton->setObjectName(QStringLiteral("CodeEditorEncodingResave"));
+	auto* cancelButton = new QPushButton(q->tr("Отмена"), &dialog);
+	cancelButton->setObjectName(QStringLiteral("CodeEditorEncodingCancel"));
+	buttons->addWidget(reopenButton);
+	buttons->addWidget(resaveButton);
+	buttons->addStretch();
+	buttons->addWidget(cancelButton);
+	layout->addLayout(buttons);
+
+	connect(cancelButton, &QPushButton::clicked, &dialog, &QDialog::reject);
+
+	auto selected = [combo]() -> QString {
+		const int index = combo->currentIndex();
+		return index >= 0 ? combo->itemData(index).toString() : QString();
+	};
+
+	connect(reopenButton, &QPushButton::clicked, &dialog, [this, &dialog, selected] {
+		const QString encoding = selected();
+		if (encoding.isEmpty()) {
+			return;
+		}
+
+		if (q->isModified()) {
+			const auto answer = QMessageBox::question(&dialog, q->tr("Переоткрыть файл"),
+				q->tr("В файле есть несохранённые изменения: при перечитывании они будут "
+					"потеряны.\nПереоткрыть файл в выбранной кодировке?"),
+				QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+			if (answer != QMessageBox::Yes) {
+				return;
+			}
+		}
+
+		if (q->reopenWithEncoding(encoding)) {
+			dialog.accept();
+		}
+	});
+
+	connect(resaveButton, &QPushButton::clicked, &dialog, [this, &dialog, selected] {
+		const QString encoding = selected();
+		if (encoding.isEmpty()) {
+			return;
+		}
+
+		if (q->saveWithEncoding(encoding)) {
+			dialog.accept();
+		}
+	});
+
+	dialog.exec();
 }
 
 QList<DocumentPropertyGroup> CodeEditorDocument::createPropertyGroups(QWidget* parent) {
