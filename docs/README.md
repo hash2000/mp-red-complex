@@ -14,6 +14,7 @@
 | [Документы](documents/README.md) | создание документов и панелей, контексты документов, `DocumentWidget`, зоны, метаданные |
 | [Консоль](console/README.md) | синтаксис команд, контекст команды, `ICommand`, регистрация и вывод |
 | [Команды консоли](console/commands.md) | встроенные команды, параметры и примеры |
+| [Резервное копирование БД](database-backup/README.md) | копии файлов хранилищ `.store`, восстановление, страховочные копии |
 | [FetchApi](fetch-api/README.md) | REST-запросы: модель, сервис, контекст, документ, TLS и ошибки |
 | [SystemRouter](system-router/README.md) | устройство модуля, таблицы, сервисы и точки интеграции |
 | [Узлы SystemRouter](system-router/nodes.md) | `nodes`, свойства, mime-типы, блоки, настройка через UI |
@@ -58,6 +59,7 @@ system-router-blobs
 - `src/Libs/Engine/scripting/` — контексты, команды, парсер.
 - `src/Libs/Engine/ui/` — `MainWindow`, `DocumentWidget`, панели.
 - `src/Libs/BaseWidgets/tree_view/lazy_load/` — ленивое дерево.
+- `src/Content/DatabaseModule/` — доступ к SQLite/SQLCipher и резервное копирование.
 - `src/Content/FetchApiModule/` — REST-запросы: модель, сервис, документ и команда.
 - `src/Content/SystemRouter/` — маршрутизатор, узлы, команды и блоки.
 - `src/Content/ConsoleModule/` — консольные команды `help` и `echo`.

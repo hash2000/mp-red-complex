@@ -45,6 +45,11 @@ define:
             glyph: "🧭"
             title: Системный маршрутизатор
 
+          - xtype: database-backup
+            name: database-backup
+            glyph: "💾"
+            title: Резервное копирование
+
           - xtype: explorer
             name: explorer
             glyph: "📁"

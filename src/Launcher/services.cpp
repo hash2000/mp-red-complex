@@ -16,6 +16,7 @@
 #include "Content/SystemRouter/services/system_router_service.h"
 
 // DatabasesService
+#include "Content/DatabaseModule/services/database_backup_service.h"
 #include "Content/DatabaseModule/services/databases_service.h"
 
 // UsersModule
@@ -71,6 +72,15 @@ private:
 
 public:
 	void registerServices() {
+
+		// Резервное копирование файлов баз: использует DatabasesService для
+		// открытия/закрытия соединений и проверки копий.
+		registerFactory<DatabaseBackupService>([this] {
+			return std::make_unique<DatabaseBackupService>(
+				resources,
+				globalContext,
+				databasesService.get());
+		});
 
 		registerFactory<UsersService>([this] {
 			return std::make_unique<UsersService>(

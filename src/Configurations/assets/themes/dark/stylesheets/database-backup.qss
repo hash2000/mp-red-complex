@@ -1,0 +1,114 @@
+/* ------------------------------------------------------------------
+   Модуль DatabaseModule: резервное копирование баз данных.
+   Список хранилищ (.store), таблица копий и действия с файлами.
+   Состояние метки статуса задаётся динамическим свойством state
+   ("success" / "error"); пустое значение — нейтральное сообщение.
+   ------------------------------------------------------------------ */
+
+QWidget#DatabaseBackupDetails {
+  background-color: #1a202c;
+  border: 1px solid #2d3748;
+  border-radius: 6px;
+  padding: 8px;
+}
+
+QTreeWidget#DatabaseBackupStores,
+QTableWidget#DatabaseBackupList {
+  background-color: #1a202c;
+  alternate-background-color: #202a3a;
+  border: 1px solid #2d3748;
+  border-radius: 4px;
+  color: #e2e8f0;
+  selection-background-color: #3b82f6;
+  selection-color: #0f172a;
+}
+
+QTreeWidget#DatabaseBackupStores::item,
+QTableWidget#DatabaseBackupList::item {
+  padding: 3px 6px;
+}
+
+QTreeWidget#DatabaseBackupStores QHeaderView::section,
+QTableWidget#DatabaseBackupList QHeaderView::section {
+  background-color: #2d3748;
+  color: #a0aec0;
+  border: none;
+  border-bottom: 1px solid #4a5568;
+  padding: 4px 6px;
+}
+
+QLabel#DatabaseBackupStoreTitle {
+  color: #e2e8f0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+QLabel#DatabaseBackupStorePath {
+  color: #a0aec0;
+  font-family: monospace;
+}
+
+QLabel#DatabaseBackupStoreMeta {
+  color: #a0aec0;
+}
+
+QLabel#DatabaseBackupStatus {
+  color: #a0aec0;
+}
+QLabel#DatabaseBackupStatus[state="success"] {
+  color: #98c379;
+  font-weight: 600;
+}
+QLabel#DatabaseBackupStatus[state="error"] {
+  color: #e06c75;
+  font-weight: 600;
+}
+
+QPushButton#DatabaseBackupCreate {
+  background-color: #10b981;
+  color: #0f172a;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 12px;
+  font-weight: 600;
+}
+QPushButton#DatabaseBackupCreate:hover { background-color: #0da271; }
+QPushButton#DatabaseBackupCreate:pressed { background-color: #0a8c62; }
+QPushButton#DatabaseBackupCreate:disabled { background-color: #2d3748; color: #5c6370; }
+
+QPushButton#DatabaseBackupRestore {
+  background-color: #e5c07b;
+  color: #0f172a;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 12px;
+  font-weight: 600;
+}
+QPushButton#DatabaseBackupRestore:hover { background-color: #d4ae6a; }
+QPushButton#DatabaseBackupRestore:pressed { background-color: #c19d5c; }
+QPushButton#DatabaseBackupRestore:disabled { background-color: #2d3748; color: #5c6370; }
+
+QPushButton#DatabaseBackupDelete {
+  background-color: #e06c75;
+  color: #0f172a;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 12px;
+  font-weight: 600;
+}
+QPushButton#DatabaseBackupDelete:hover { background-color: #cf5c65; }
+QPushButton#DatabaseBackupDelete:pressed { background-color: #b94d56; }
+QPushButton#DatabaseBackupDelete:disabled { background-color: #2d3748; color: #5c6370; }
+
+QPushButton#DatabaseBackupOpenFolder,
+QPushButton#DatabaseBackupRefresh {
+  background-color: #4a5568;
+  color: #e2e8f0;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 12px;
+}
+QPushButton#DatabaseBackupOpenFolder:hover,
+QPushButton#DatabaseBackupRefresh:hover { background-color: #5a6678; }
+QPushButton#DatabaseBackupOpenFolder:pressed,
+QPushButton#DatabaseBackupRefresh:pressed { background-color: #6a7688; }
