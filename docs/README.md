@@ -19,6 +19,7 @@
 | [SystemRouter](system-router/README.md) | устройство модуля, таблицы, сервисы и точки интеграции |
 | [Узлы SystemRouter](system-router/nodes.md) | `nodes`, свойства, mime-типы, блоки, настройка через UI |
 | [Скрипты SystemRouter](system-router/scripts.md) | привязка команд, подстановка параметров, контекстные переменные |
+| [Релизы](releases/README.md) | тег версии, GitHub Actions, сборка архива и публикация релиза |
 
 ## Быстрый старт
 

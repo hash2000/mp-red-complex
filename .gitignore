@@ -93,5 +93,9 @@ htmlcov/
 # debug information files
 *.dwo
 
+# Релизные артефакты и кэш пакетов CI
+/artifacts/
+/.vcpkg-cache/
+
 CMakeSettings.json
 
