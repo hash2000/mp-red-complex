@@ -30,9 +30,9 @@ on:
 1. GitHub находит в запушенном коммите `.github/workflows/release.yml` и видит,
    что тег подходит под фильтр `v[0-9]*`.
 2. Запускается прогон во вкладке **Actions → Release**.
-3. Workflow ставит CMake 4.1+, окружение Visual Studio (MSVC) и компилятор
-   clang-cl, затем зависимости через vcpkg (триплет `x64-windows-release`,
-   только Release-библиотеки).
+3. Workflow ставит CMake 4.1+, окружение Visual Studio (MSVC), компилятор
+   clang-cl и Ninja, затем зависимости через vcpkg (триплет
+   `x64-windows-release`, только Release-библиотеки).
 4. `cmake --build build --target Launcher` собирает приложение.
 5. `scripts/package-release.ps1` собирает каталог развёртывания: `Launcher.exe`,
    библиотеки Qt и зависимости, плагины Qt, `src/Configurations`, `LICENSE`,
@@ -97,6 +97,15 @@ git push origin v0.1.0
 git tag -d v0.1.0                 # локально
 git push origin :refs/tags/v0.1.0 # удалить на GitHub
 ```
+
+Если прогон по тегу упал из-за ошибки в самом workflow, перезапуск
+(**Re-run all jobs**) не поможет: он использует тот же коммит и тот же файл.
+Порядок такой:
+
+1. Исправить workflow и запушить в `main`.
+2. Проверить сборку через **Run workflow** — ручной запуск берёт workflow из
+   выбранной ветки.
+3. Удалить тег (см. выше) и поставить его заново на новый коммит.
 
 ## Как проверить сборку, не выпуская версию
 
@@ -186,6 +195,8 @@ cmake --build build\x64-Clang-Debug --target Launcher
 |---|---|
 | Прогон вообще не появился | Тег поставлен на коммит без `.github/workflows/release.yml`, Actions выключены или имя тега не подходит под `v[0-9]*`. |
 | Ошибка 403 на шаге «GitHub Release» | Нет права `contents: write` (см. «Один раз перед первым релизом»). |
+| `Invalid triplet name … on expression: $env:VCPKG_TARGET_TRIPLET` | PowerShell не разворачивает `$env:` внутри аргумента, начинающегося с `-D`, и в CMake уходит буквальная строка. В workflow триплет подставляется выражением GitHub (`${{ env.… }}`); обновите файл до актуальной версии. |
+| `CMake was unable to find a build program corresponding to "Ninja"` | На `windows-latest` Ninja не предустановлен. Шаг «Ninja» скачивает его (в крайнем случае ставит через Chocolatey) и добавляет в `PATH`. |
 | Сборка падает на конфигурации | Проверьте лог шага «Конфигурация»: обычно это ошибка vcpkg или несовместимость версии CMake. |
 | Релиз создан, но без файла | Смотрите шаг «Упаковка» и «Артефакт прогона»: скрипт не создал zip (ошибка в логе). |
 | Пользователь запустил `Launcher.exe` и получил ошибку конфигурации | Нужно запускать `RedComplex.cmd`: он копирует `Configurations` в профиль. |

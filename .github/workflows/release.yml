@@ -90,6 +90,36 @@ jobs:
           Add-Content -Path $env:GITHUB_OUTPUT -Value "path=$clangCl"
           & $clangCl --version
 
+      - name: Ninja
+        run: |
+          # На образе windows-latest Ninja нет, поэтому ставим его сами:
+          # сначала официальный релиз, при проблемах с сетью — Chocolatey.
+          $ninja = Get-Command ninja.exe -ErrorAction SilentlyContinue
+          if ($ninja) {
+            $ninjaPath = $ninja.Source
+          }
+          else {
+            try {
+              $archive = Join-Path $env:RUNNER_TEMP 'ninja-win.zip'
+              Invoke-WebRequest -UseBasicParsing -MaximumRedirection 5 `
+                -Uri 'https://github.com/ninja-build/ninja/releases/latest/download/ninja-win.zip' `
+                -OutFile $archive
+              $directory = Join-Path $env:RUNNER_TEMP 'ninja'
+              Expand-Archive -LiteralPath $archive -DestinationPath $directory -Force
+              $ninjaPath = Join-Path $directory 'ninja.exe'
+            }
+            catch {
+              Write-Warning "Не удалось скачать Ninja ($($_.Exception.Message)), пробуем Chocolatey."
+              choco install ninja -y --no-progress
+              $ninjaPath = (Get-Command ninja.exe -ErrorAction Stop).Source
+            }
+            Split-Path -Parent $ninjaPath | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          }
+          & $ninjaPath --version
+          if ($LASTEXITCODE -ne 0) {
+            throw "ninja не запускается: $ninjaPath"
+          }
+
       - name: Кэш бинарных пакетов vcpkg
         uses: actions/cache@v6
         with:
@@ -102,24 +132,46 @@ jobs:
 
       - name: Проверка инструментов
         run: |
+          # Коды возврата нативных программ проверяются явно: в PowerShell
+          # ненулевой код возврата сам по себе не роняет шаг.
           if (-not $env:VCPKG_INSTALLATION_ROOT) {
             throw 'VCPKG_INSTALLATION_ROOT не задан: на образе windows-latest vcpkg должен быть предустановлен.'
           }
-          cmake --version
-          ninja --version
+          $cmake = Get-Command cmake.exe -ErrorAction SilentlyContinue
+          if (-not $cmake) { throw 'cmake не найден в PATH.' }
+          $ninja = Get-Command ninja.exe -ErrorAction SilentlyContinue
+          if (-not $ninja) { throw 'ninja не найден в PATH.' }
+          & $cmake.Source --version
+          if ($LASTEXITCODE -ne 0) { throw 'cmake не запускается.' }
+          & $ninja.Source --version
+          if ($LASTEXITCODE -ne 0) { throw 'ninja не запускается.' }
           & (Join-Path $env:VCPKG_INSTALLATION_ROOT 'vcpkg.exe') version
+          if ($LASTEXITCODE -ne 0) { throw 'vcpkg не запускается.' }
 
       - name: Конфигурация
         env:
           # Бинарный кэш ускоряет повторную установку зависимостей.
           VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/.vcpkg-cache,readwrite"
         run: |
-          cmake -S . -B $env:BUILD_DIR -G Ninja `
+          # Важно: в аргументе вида -DИМЯ=$env:ПЕРЕМЕННАЯ PowerShell не
+          # разворачивает переменную (аргумент начинается с «-»), и в CMake
+          # уходит буквальная строка. Поэтому значения подставляются
+          # выражениями GitHub и заранее вычисленными переменными.
+          $toolchain = Join-Path $env:VCPKG_INSTALLATION_ROOT 'scripts/buildsystems/vcpkg.cmake'
+          if (-not (Test-Path -LiteralPath $toolchain)) {
+            throw "Не найден toolchain vcpkg: $toolchain"
+          }
+          $ninja = (Get-Command ninja.exe -ErrorAction Stop).Source
+          cmake -S . -B "$env:BUILD_DIR" -G Ninja `
+            -DCMAKE_MAKE_PROGRAM="$ninja" `
             -DCMAKE_BUILD_TYPE=Release `
             -DCMAKE_C_COMPILER="${{ steps.compiler.outputs.path }}" `
             -DCMAKE_CXX_COMPILER="${{ steps.compiler.outputs.path }}" `
-            -DVCPKG_TARGET_TRIPLET=$env:VCPKG_TARGET_TRIPLET `
-            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+            -DVCPKG_TARGET_TRIPLET=${{ env.VCPKG_TARGET_TRIPLET }} `
+            -DCMAKE_TOOLCHAIN_FILE="$toolchain"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Конфигурация CMake завершилась с кодом $LASTEXITCODE."
+          }
 
       - name: Сборка Launcher
         run: cmake --build $env:BUILD_DIR --target Launcher --parallel
