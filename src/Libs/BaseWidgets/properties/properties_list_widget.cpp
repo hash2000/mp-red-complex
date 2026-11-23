@@ -35,6 +35,9 @@ public:
 	QFormLayout* formLayout = nullptr;
 	QSpacerItem* spacer = nullptr;
 	QString basePath;
+	bool scrollable = true;
+
+	void setScrollable(bool value);
 };
 
 void PropertiesListWidget::Private::initUI() {
@@ -64,6 +67,52 @@ void PropertiesListWidget::Private::initUI() {
 
 	scrollArea->setWidget(scrollContent);
 	mainLayout->addWidget(scrollArea);
+}
+
+void PropertiesListWidget::Private::setScrollable(bool value) {
+	if (scrollable == value) {
+		return;
+	}
+
+	scrollable = value;
+
+	if (!value) {
+		// Отключаем внутренний скролл: содержимое списка становится прямым
+		// потомком и растягивается вместе с родителем, а прокрутку выполняет
+		// внешняя панель.
+		if (!scrollArea) {
+			return;
+		}
+
+		scrollArea->takeWidget();
+		mainLayout->removeWidget(scrollArea);
+		// Сразу убираем скролл из дерева виджетов: до отложенного удаления
+		// он не должен оставаться видимым или находиться в findChildren().
+		scrollArea->hide();
+		scrollArea->setParent(nullptr);
+		scrollArea->deleteLater();
+		scrollArea = nullptr;
+
+		mainLayout->insertWidget(1, scrollContent, 1);
+		scrollContent->show();
+		return;
+	}
+
+	if (scrollArea) {
+		return;
+	}
+
+	// Возвращаем собственный скролл (для самостоятельного использования списка).
+	mainLayout->removeWidget(scrollContent);
+
+	scrollArea = new QScrollArea(q);
+	scrollArea->setObjectName(QStringLiteral("PropertiesScroll"));
+	scrollArea->setWidgetResizable(true);
+	scrollArea->setFrameShape(QFrame::NoFrame);
+	scrollArea->setWidget(scrollContent);
+
+	mainLayout->insertWidget(1, scrollArea, 1);
+	scrollContent->show();
 }
 
 void PropertiesListWidget::Private::clearUI() {
@@ -435,6 +484,14 @@ void PropertiesListWidget::setHeaderVisible(bool visible) {
 	if (d->headerLabel) {
 		d->headerLabel->setVisible(visible);
 	}
+}
+
+void PropertiesListWidget::setScrollable(bool scrollable) {
+	d->setScrollable(scrollable);
+}
+
+bool PropertiesListWidget::isScrollable() const {
+	return d->scrollable;
 }
 
 void PropertiesListWidget::clearProperties() {

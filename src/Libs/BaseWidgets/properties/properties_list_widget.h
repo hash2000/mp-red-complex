@@ -54,6 +54,12 @@ public:
 	/// свойств со своим заголовком).
 	void setHeaderVisible(bool visible);
 
+	/// Собственный вертикальный скролл списка. `false` — список не создаёт
+	/// внутреннюю прокрутку и растягивается по высоте; прокрутку обеспечивает
+	/// родитель (например, панель «Свойства»).
+	void setScrollable(bool scrollable);
+	bool isScrollable() const;
+
 	/// Удалить все свойства
 	void clearProperties();
 

@@ -299,6 +299,7 @@ QWidget* PropertiesPanel::Private::createContextVariables(QWidget* parent) {
 	auto* variables = new PropertiesListWidget(parent);
 	variables->setObjectName(QStringLiteral("PropertiesContextVariables"));
 	variables->setHeaderVisible(false);
+	variables->setScrollable(false);
 	variables->setProperties(contextProperties());
 	contextVariables = variables;
 	return variables;

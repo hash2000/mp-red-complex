@@ -17,6 +17,7 @@
 #include <QGuiApplication>
 #include <QLabel>
 #include <QLineEdit>
+#include <QScrollArea>
 #include <QToolButton>
 #include <QtTest/QtTest>
 
@@ -263,6 +264,7 @@ void TestPropertiesPanel::contextVariablesAreLazy() {
 	auto* variables = panel.findChild<PropertiesListWidget*>(
 		QStringLiteral("PropertiesContextVariables"));
 	QVERIFY(variables);
+	QVERIFY(!variables->isScrollable());
 	QVERIFY(variables->propertyIds().contains(QStringLiteral("path")));
 }
 
@@ -284,6 +286,11 @@ void TestPropertiesPanel::showsContextVariables() {
 	auto* variables = panel.findChild<PropertiesListWidget*>(
 		QStringLiteral("PropertiesContextVariables"));
 	QVERIFY(variables);
+	// Внутри панели свойств список не создаёт второй вертикальный скролл:
+	// прокручивается сама панель.
+	QVERIFY(!variables->isScrollable());
+	QVERIFY2(variables->findChildren<QScrollArea*>().isEmpty(),
+		"у списка остался внутренний QScrollArea");
 
 	const auto ids = variables->propertyIds();
 	QVERIFY(ids.contains(QStringLiteral("title")));

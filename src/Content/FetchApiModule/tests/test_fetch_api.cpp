@@ -496,6 +496,7 @@ void TestFetchApi::documentExposesSendProperties() {
 
 	auto* properties = qobject_cast<PropertiesListWidget*>(groups.first().editor);
 	QVERIFY(properties);
+	QVERIFY(!properties->isScrollable());
 	QCOMPARE(properties->propertyCount(), 3);
 
 	// Тип запроса: сейчас реализован только REST.

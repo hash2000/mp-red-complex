@@ -203,6 +203,7 @@ QWidget* FetchApiDocument::Private::createRequestPropertiesEditor(QWidget* paren
 	auto* properties = new PropertiesListWidget(parent);
 	properties->setObjectName(QStringLiteral("FetchRequestProperties"));
 	properties->setHeaderVisible(false);
+	properties->setScrollable(false);
 	properties->setProperties(requestProperties());
 
 	connect(properties, &PropertiesListWidget::propertyChanged, q,

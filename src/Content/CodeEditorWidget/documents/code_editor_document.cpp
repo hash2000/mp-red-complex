@@ -208,6 +208,7 @@ QWidget* CodeEditorDocument::Private::createSearchPropertiesEditor(QWidget* pare
 	auto* properties = new PropertiesListWidget(parent);
 	properties->setObjectName(QStringLiteral("CodeEditorSearchProperties"));
 	properties->setHeaderVisible(false);
+	properties->setScrollable(false);
 	properties->setProperties(searchPropertyData());
 	searchProperties = properties;
 

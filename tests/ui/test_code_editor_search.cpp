@@ -541,6 +541,7 @@ void TestCodeEditorSearch::searchPropertiesGroupIsExposed() {
 
 	auto* properties = qobject_cast<PropertiesListWidget*>(groups.first().editor);
 	QVERIFY(properties);
+	QVERIFY(!properties->isScrollable());
 	QCOMPARE(properties->propertyCount(), 4);
 	QVERIFY(properties->propertyIds().contains(QStringLiteral("search.regex")));
 	QVERIFY(properties->propertyIds().contains(QStringLiteral("search.case-sensitive")));
@@ -703,6 +704,7 @@ void TestCodeEditorSearch::propertiesVisibleOnFirstShow() {
 	auto* search = panel->findChild<PropertiesListWidget*>(
 		QStringLiteral("CodeEditorSearchProperties"));
 	QVERIFY(search);
+	QVERIFY(!search->isScrollable());
 	QVERIFY2(search->isVisible(), "параметры поиска не видны после раскрытия");
 	QVERIFY2(search->height() > 0, "у параметров поиска нулевая высота");
 }
