@@ -51,7 +51,7 @@ constexpr int kFormatTimeoutMs = 120000;
 constexpr int kLongLineWrapLimit = 256;
 
 /// Задержка перед повторной проверкой длины строк после правки.
-constexpr int kWrapCheckDelayMs = 150;
+constexpr int kLineLengthCheckDelayMs = 150;
 }
 
 class CodeEditorWidget::Private {
@@ -69,11 +69,18 @@ public:
 
 	QTimer* visibleTimer = nullptr;
 	QTimer* formatTimeout = nullptr;
-	QTimer* wrapTimer = nullptr;
+	QTimer* lineLengthTimer = nullptr;
 
-	/// Автоперенос включён пользователем (по умолчанию) и активен сейчас.
-	bool autoWrapEnabled = true;
-	bool autoWrapped = false;
+	/// Кодировка чтения/записи файла.
+	QStringConverter::Encoding encoding = QStringConverter::Utf8;
+
+	/// Режим переноса, выбранный пользователем, и фактическое состояние.
+	LineWrapPolicy wrapPolicy = LineWrapPolicy::Auto;
+	bool wrapped = false;
+	/// Режим подсветки (ручной выбор имеет приоритет над авто-запретом).
+	HighlightingPolicy highlightPolicy = HighlightingPolicy::Auto;
+	/// Есть ли строки длиннее предела автопереноса.
+	bool hasLongLines = false;
 
 	void setupUI();
 	void setupStyling();
@@ -84,7 +91,10 @@ public:
 	void syncHighlightingMode();
 	void scheduleVisibleHighlight(int delayMs = kVisibleHighlightDelayMs);
 	void updateVisibleHighlight();
-	void updateLineWrapping();
+	/// Применить перенос строк и запрет подсветки по длине строк документа.
+	void applyLineLengthPolicies();
+	/// Длина самой длинной строки (с ранним выходом за пределы подсветки).
+	int documentMaxLineLength() const;
 	void finishFormatting();
 };
 
@@ -120,48 +130,83 @@ void CodeEditorWidget::Private::setupUI() {
 		scheduleVisibleHighlight(0);
 	});
 
-	wrapTimer = new QTimer(q);
-	wrapTimer->setSingleShot(true);
-	wrapTimer->setInterval(kWrapCheckDelayMs);
-	QObject::connect(wrapTimer, &QTimer::timeout, q, [this] {
-		updateLineWrapping();
+	lineLengthTimer = new QTimer(q);
+	lineLengthTimer->setSingleShot(true);
+	lineLengthTimer->setInterval(kLineLengthCheckDelayMs);
+	QObject::connect(lineLengthTimer, &QTimer::timeout, q, [this] {
+		applyLineLengthPolicies();
 	});
 }
 
-void CodeEditorWidget::Private::updateLineWrapping() {
+int CodeEditorWidget::Private::documentMaxLineLength() const {
 	QTextDocument* doc = q->document();
 	if (!doc) {
-		return;
+		return 0;
 	}
 
-	if (!autoWrapEnabled) {
-		if (!autoWrapped) {
-			return;
-		}
-
-		autoWrapped = false;
-		q->setLineWrapMode(QPlainTextEdit::NoWrap);
-		emit q->lineWrappingChanged(false);
-		return;
-	}
-
-	// Ищем хотя бы одну строку длиннее предела: дальше документ не важен.
-	bool hasLongLine = false;
+	int maxLength = 0;
+	const int limit = Highlighter::MaxHighlightedBlockLength;
 	for (QTextBlock block = doc->begin(); block.isValid(); block = block.next()) {
-		if (block.length() > kLongLineWrapLimit) {
-			hasLongLine = true;
-			break;
+		maxLength = qMax(maxLength, block.length());
+		if (maxLength > limit) {
+			return maxLength;
 		}
 	}
 
-	if (hasLongLine == autoWrapped) {
-		return;
+	return maxLength;
+}
+
+void CodeEditorWidget::Private::applyLineLengthPolicies() {
+	const int maxLength = documentMaxLineLength();
+
+	bool wrap = false;
+	switch (wrapPolicy) {
+	case LineWrapPolicy::On:
+		wrap = true;
+		break;
+	case LineWrapPolicy::Auto:
+		wrap = maxLength > kLongLineWrapLimit;
+		break;
+	case LineWrapPolicy::Off:
+		// Приоритет пользователя: переноса нет совсем. Предупреждение
+		// о возможных тормозах выводит документ.
+		wrap = false;
+		break;
 	}
 
-	autoWrapped = hasLongLine;
-	q->setLineWrapMode(hasLongLine ? QPlainTextEdit::WidgetWidth
-		: QPlainTextEdit::NoWrap);
-	emit q->lineWrappingChanged(hasLongLine);
+	if (wrap != wrapped) {
+		wrapped = wrap;
+		q->setLineWrapMode(wrap ? QPlainTextEdit::WidgetWidth
+			: QPlainTextEdit::NoWrap);
+		emit q->lineWrappingChanged(wrap);
+	}
+
+	const bool longLines = maxLength > kLongLineWrapLimit;
+	if (longLines != hasLongLines) {
+		hasLongLines = longLines;
+		emit q->longLinesChanged(longLines);
+	}
+
+	// Слишком длинная строка отключает подсветку в автоматическом режиме:
+	// иначе она пересчитывается при каждой правке и подвешивает ввод.
+	// Ручной выбор пользователя имеет приоритет над этим запретом.
+	bool enabled = true;
+	switch (highlightPolicy) {
+	case HighlightingPolicy::Auto:
+		enabled = maxLength <= Highlighter::MaxHighlightedBlockLength;
+		break;
+	case HighlightingPolicy::On:
+		enabled = true;
+		break;
+	case HighlightingPolicy::Off:
+		enabled = false;
+		break;
+	}
+
+	if (highlighter->isEnabled() != enabled) {
+		highlighter->setEnabled(enabled);
+		emit q->highlightingEnabledChanged(enabled);
+	}
 }
 
 void CodeEditorWidget::Private::setupStyling() {
@@ -302,8 +347,8 @@ CodeEditorWidget::~CodeEditorWidget() {
 	if (d->formatTimeout) {
 		d->formatTimeout->stop();
 	}
-	if (d->wrapTimer) {
-		d->wrapTimer->stop();
+	if (d->lineLengthTimer) {
+		d->lineLengthTimer->stop();
 	}
 
 	if (d->currentFormatter) {
@@ -338,6 +383,10 @@ void CodeEditorWidget::openFile(const QString& path) {
 
 	setHoghlighterByPath(path);
 
+	// Открытие файла — новый документ: ручной выбор подсветки сбрасывается,
+	// дальше работает авто-режим (как при обычном открытии).
+	d->highlightPolicy = HighlightingPolicy::Auto;
+
 	// Предыдущее чтение больше не должно попадать в редактор.
 	if (d->reader) {
 		d->reader->disconnect(this);
@@ -348,6 +397,7 @@ void CodeEditorWidget::openFile(const QString& path) {
 	auto* reader = new FileReader();
 	d->reader = reader;
 	d->readerFailed = false;
+	reader->setEncoding(d->encoding);
 
 	QThread* thread = new QThread(this);
 	d->readerThread = thread;
@@ -375,7 +425,7 @@ void CodeEditorWidget::openFile(const QString& path) {
 		d->readerThread = nullptr;
 		setUndoRedoEnabled(true);
 		d->syncHighlightingMode();
-		d->updateLineWrapping();
+		d->applyLineLengthPolicies();
 		d->scheduleVisibleHighlight(0);
 		emit fileOpened(path, success);
 	});
@@ -459,21 +509,46 @@ bool CodeEditorWidget::isHighlightingLazy() const {
 	return d->highlighter && d->highlighter->isLazyMode();
 }
 
-bool CodeEditorWidget::isAutoWrapEnabled() const {
-	return d->autoWrapEnabled;
+CodeEditorWidget::LineWrapPolicy CodeEditorWidget::lineWrapPolicy() const {
+	return d->wrapPolicy;
+}
+
+void CodeEditorWidget::setLineWrapPolicy(LineWrapPolicy policy) {
+	if (d->wrapPolicy == policy) {
+		return;
+	}
+
+	d->wrapPolicy = policy;
+	d->applyLineLengthPolicies();
+}
+
+bool CodeEditorWidget::hasLongLines() const {
+	return d->documentMaxLineLength() > kLongLineWrapLimit;
+}
+
+CodeEditorWidget::HighlightingPolicy CodeEditorWidget::highlightingPolicy() const {
+	return d->highlightPolicy;
+}
+
+void CodeEditorWidget::setHighlightingPolicy(HighlightingPolicy policy) {
+	if (d->highlightPolicy == policy) {
+		return;
+	}
+
+	d->highlightPolicy = policy;
+	d->applyLineLengthPolicies();
+}
+
+bool CodeEditorWidget::isHighlightingEnabled() const {
+	return d->highlighter && d->highlighter->isEnabled();
 }
 
 int CodeEditorWidget::autoWrapLineLimit() {
 	return kLongLineWrapLimit;
 }
 
-void CodeEditorWidget::setAutoWrapEnabled(bool enabled) {
-	if (d->autoWrapEnabled == enabled) {
-		return;
-	}
-
-	d->autoWrapEnabled = enabled;
-	d->updateLineWrapping();
+int CodeEditorWidget::maxHighlightedLineLength() {
+	return Highlighter::MaxHighlightedBlockLength;
 }
 
 int CodeEditorWidget::fontSize() const {
@@ -496,6 +571,23 @@ const HighlightingPlugin* CodeEditorWidget::highlightingPlugin() const {
 	return d->highlighter->plugin();
 }
 
+QList<CodeEditorWidget::EncodingInfo> CodeEditorWidget::availableEncodings() {
+	return {
+		{ tr("UTF-8"), QStringConverter::Utf8 },
+		{ tr("UTF-16 (BOM)"), QStringConverter::Utf16 },
+		{ tr("Latin1 (ISO-8859-1)"), QStringConverter::Latin1 },
+		{ tr("Системная (ANSI)"), QStringConverter::System },
+	};
+}
+
+QStringConverter::Encoding CodeEditorWidget::encoding() const {
+	return d->encoding;
+}
+
+void CodeEditorWidget::setEncoding(QStringConverter::Encoding encoding) {
+	d->encoding = encoding;
+}
+
 void CodeEditorWidget::onTextChanged() {
 	if (d->currentFormatter) {
 		FormatterPlugin* formatter = d->currentFormatter;
@@ -509,8 +601,8 @@ void CodeEditorWidget::onTextChanged() {
 
 	// Длину строк проверяем с задержкой: обход всех блоков не должен
 	// выполняться на каждое нажатие клавиши.
-	if (d->wrapTimer) {
-		d->wrapTimer->start();
+	if (d->lineLengthTimer) {
+		d->lineLengthTimer->start();
 	}
 }
 
@@ -589,9 +681,13 @@ void CodeEditorWidget::onBlockRead(const QStringList& lines) {
 }
 
 void CodeEditorWidget::setText(const QString& text) {
+	// Новый текст — новый документ: ручной выбор подсветки сбрасывается,
+	// дальше снова работает авто-режим.
+	d->highlightPolicy = HighlightingPolicy::Auto;
+
 	if (text.isEmpty()) {
 		clear();
-		d->updateLineWrapping();
+		d->applyLineLengthPolicies();
 		return;
 	}
 
@@ -603,7 +699,7 @@ void CodeEditorWidget::setText(const QString& text) {
 	d->prepareBulkText(text);
 	QPlainTextEdit::setPlainText(text);
 	d->syncHighlightingMode();
-	d->updateLineWrapping();
+	d->applyLineLengthPolicies();
 
 	QTextCursor cursor = textCursor();
 	cursor.movePosition(QTextCursor::Start);

@@ -8,14 +8,9 @@
 #include <QTextLayout>
 
 namespace {
-/// Строки длиннее этого предела не подсвечиваются.
-///
-/// Одна строка в десятки килобайт — это, как правило, минифицированная
-/// разметка. Регулярные выражения на такой строке растут квадратично
-/// (жадные `[^...]+` с возвратом), из-за чего подсветка одной строки
-/// занимает секунды и вешает редактор при каждой правке. Форматы для
-/// таких строк не нужны: читать их построчно всё равно невозможно.
-constexpr int kMaxHighlightedBlockLength = 2048;
+/// Длинная строка не подсвечивается вовсе: регулярные выражения на ней
+/// растут квадратично (жадные `[^...]+` с возвратом), и подсветка одной
+/// строки занимает секунды. Граница — Highlighter::MaxHighlightedBlockLength.
 }
 
 class Highlighter::Private {
@@ -28,6 +23,8 @@ public:
 	HighlightingPlugin* embeddedSyntaxPlugin = nullptr;
 
 	bool lazy = false;
+	/// Подсветка включена: false — форматы сняты и правила не выполняются.
+	bool enabled = true;
 	int visibleFirst = 0;
 	int visibleLast = 0;
 	/// Диапазон, для которого форматы уже посчитаны: повторный вызов
@@ -65,6 +62,9 @@ bool Highlighter::setLanguage(const QString& language) {
 	// После смены языка старые форматы не должны оставаться: в ленивом
 	// режиме rehighlight() покрасит только видимые строки.
 	clearFormats();
+	if (!d->enabled) {
+		return plugin != nullptr;
+	}
 	if (d->lazy) {
 		refreshVisibleBlocks();
 	}
@@ -85,6 +85,9 @@ bool Highlighter::setContentType(const QString& type) {
 	d->plugin = plugin;
 	d->embeddedSyntaxPlugin = nullptr;
 	clearFormats();
+	if (!d->enabled) {
+		return plugin != nullptr;
+	}
 	if (d->lazy) {
 		refreshVisibleBlocks();
 	}
@@ -117,9 +120,38 @@ void Highlighter::setVisibleBlockRange(int first, int last) {
 	d->visibleLast = last;
 }
 
+bool Highlighter::isEnabled() const {
+	return d->enabled;
+}
+
+void Highlighter::setEnabled(bool enabled) {
+	if (d->enabled == enabled) {
+		return;
+	}
+
+	d->enabled = enabled;
+	if (!enabled) {
+		// Убираем и старые цвета: выключенная подсветка не должна
+		// оставлять разукрашенный текст.
+		clearFormats();
+		return;
+	}
+
+	if (!d->plugin) {
+		return;
+	}
+
+	if (d->lazy) {
+		refreshVisibleBlocks();
+	}
+	else {
+		rehighlight();
+	}
+}
+
 void Highlighter::refreshVisibleBlocks() {
 	QTextDocument* doc = document();
-	if (!doc || !d->plugin) {
+	if (!doc || !d->plugin || !d->enabled) {
 		return;
 	}
 
@@ -170,11 +202,16 @@ void Highlighter::highlightBlock(const QString& text) {
 		return;
 	}
 
-	// Длинные строки пропускаем до регулярных выражений: иначе правка
-	// одной такой строки пересчитывает её целиком и подвешивает ввод.
-	// Форматы на длинной строке ещё и заставляют документ заново
-	// раскладывать её целиком при каждом обновлении подсветки.
-	if (text.length() > kMaxHighlightedBlockLength) {
+	// Документ с слишком длинной строкой не подсвечивается целиком:
+	// вызывающая сторона снимает запрет, когда строка станет короче.
+	if (!d->enabled) {
+		setCurrentBlockState(0);
+		return;
+	}
+
+	// Защита на случай, если длинную строку ещё не заметили снаружи:
+	// регулярные выражения на ней растут квадратично и подвешивают ввод.
+	if (text.length() > MaxHighlightedBlockLength) {
 		setCurrentBlockState(0);
 		return;
 	}

@@ -18,6 +18,7 @@
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QCompleter>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -27,6 +28,7 @@
 #include <QPlainTextEdit>
 #include <QScrollBar>
 #include <QSignalSpy>
+#include <QStringConverter>
 #include <QTemporaryDir>
 #include <QTextBlock>
 #include <QTextLayout>
@@ -97,6 +99,16 @@ int formattedBlocks(QTextDocument* document) {
 	}
 	return count;
 }
+
+/// Редактор группы свойств документа по её id.
+QWidget* groupEditor(const QList<DocumentPropertyGroup>& groups, const QString& id) {
+	for (const auto& group : groups) {
+		if (group.id == id) {
+			return group.editor;
+		}
+	}
+	return nullptr;
+}
 } // namespace
 
 /// Форматтер для тестов: отвечает синхронно, без внешнего процесса.
@@ -156,14 +168,22 @@ private slots:
 	void documentMetadataDeclaresPath();
 	void newDocumentDialogShowsCodeEditorPath();
 	void searchPropertiesGroupIsExposed();
+	void documentInfoGroupShowsCounts();
+	void encodingComboIsSearchableAndApplied();
 	void searchPropertiesToggleModes();
 	void ribbonSearchButtonControlsPanel();
 	void ribbonSearchButtonOpensProperties();
 	void propertiesVisibleOnFirstShow();
 	void smallDocumentHighlightsAllBlocks();
 	void largeDocumentHighlightsOnlyVisibleBlocks();
-	void veryLongLinesAreNotHighlighted();
+	void longLineDisablesHighlighting();
+	void longLineSuppressionIsReportedToConsole();
+	void manualHighlightingOverridesLongLines();
+	void manualHighlightingIsReportedToConsole();
+	void ribbonHighlightButtonToggles();
+	void newTextResetsHighlightingPolicy();
 	void longLinesEnableAutoWrap();
+	void lineWrapComboControlsWrap();
 	void formatAppliesResultAndKeepsCursor();
 	void formatFailureIsReported();
 
@@ -535,11 +555,13 @@ void TestCodeEditorSearch::searchPropertiesGroupIsExposed() {
 	QWidget host;
 	const auto groups = document.createPropertyGroups(&host);
 
-	QCOMPARE(groups.size(), 1);
-	QCOMPARE(groups.first().id, QStringLiteral("search"));
-	QCOMPARE(groups.first().title, QStringLiteral("Параметры поиска"));
+	// Групп две: «Информация о документе» и «Параметры поиска».
+	QCOMPARE(groups.size(), 2);
+	QVERIFY(groupEditor(groups, QStringLiteral("info")));
+	QVERIFY(groupEditor(groups, QStringLiteral("search")));
 
-	auto* properties = qobject_cast<PropertiesListWidget*>(groups.first().editor);
+	auto* properties = qobject_cast<PropertiesListWidget*>(
+		groupEditor(groups, QStringLiteral("search")));
 	QVERIFY(properties);
 	QVERIFY(!properties->isScrollable());
 	QCOMPARE(properties->propertyCount(), 4);
@@ -557,6 +579,86 @@ void TestCodeEditorSearch::searchPropertiesGroupIsExposed() {
 	QVERIFY(labels.contains(QStringLiteral("ab  Слово целиком")));
 }
 
+void TestCodeEditorSearch::documentInfoGroupShowsCounts() {
+	Resources resources;
+	HighlightingPluginManager highlighting(&resources);
+	FormatterPluginManager formatters(&resources);
+
+	CodeEditorDocument document(&highlighting, &formatters);
+	document.editor()->setText(QStringLiteral("abc\ndefg\nh"));
+
+	QWidget host;
+	const auto groups = document.createPropertyGroups(&host);
+	QWidget* info = groupEditor(groups, QStringLiteral("info"));
+	QVERIFY(info);
+
+	auto* lines = info->findChild<QLabel*>(QStringLiteral("CodeEditorInfoLines"));
+	auto* characters = info->findChild<QLabel*>(QStringLiteral("CodeEditorInfoChars"));
+	auto* longest = info->findChild<QLabel*>(QStringLiteral("CodeEditorInfoLongest"));
+	QVERIFY(lines);
+	QVERIFY(characters);
+	QVERIFY(longest);
+
+	QCOMPARE(lines->text(), QStringLiteral("3"));
+	QCOMPARE(characters->text(), QStringLiteral("10"));
+	QCOMPARE(longest->text(), QStringLiteral("4"));
+
+	// После правки значения обновляются (символы и длинная строка — с задержкой).
+	document.editor()->setText(QStringLiteral("a\nbbbbbb\ncc"));
+	QTRY_COMPARE(longest->text(), QStringLiteral("6"));
+	QCOMPARE(characters->text(), QStringLiteral("11"));
+	QCOMPARE(lines->text(), QStringLiteral("3"));
+}
+
+void TestCodeEditorSearch::encodingComboIsSearchableAndApplied() {
+	Resources resources;
+	HighlightingPluginManager highlighting(&resources);
+	FormatterPluginManager formatters(&resources);
+
+	CodeEditorDocument document(&highlighting, &formatters);
+	QWidget host;
+	QWidget* properties = document.createPropertiesEditor(&host);
+	QVERIFY(properties);
+
+	auto* combo = properties->findChild<QComboBox*>(QStringLiteral("CodeEditorEncodingCombo"));
+	QVERIFY(combo);
+	QVERIFY(combo->isEditable());
+	QVERIFY(combo->completer());
+	QCOMPARE(combo->completer()->filterMode(), Qt::MatchContains);
+	QCOMPARE(combo->count(), CodeEditorWidget::availableEncodings().size());
+
+	// Выбор кодировки в списке применяется к редактору.
+	const int utf16Index = combo->findData(static_cast<int>(QStringConverter::Utf16));
+	QVERIFY(utf16Index >= 0);
+	combo->setCurrentIndex(utf16Index);
+	QCOMPARE(document.editor()->encoding(), QStringConverter::Utf16);
+
+	// Чтение и сохранение используют выбранную кодировку.
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto path = dir.filePath(QStringLiteral("encoded.md"));
+	{
+		QStringEncoder encoder(QStringConverter::Utf16);
+		const QByteArray bytes = encoder.encode(QStringLiteral("**привет**"));
+		QFile file(path);
+		QVERIFY(file.open(QIODevice::WriteOnly));
+		file.write(bytes);
+	}
+
+	QVERIFY(document.openFile(path));
+	QTRY_COMPARE(document.editor()->toPlainText().trimmed(), QStringLiteral("**привет**"));
+
+	document.editor()->setText(QStringLiteral("**новый текст**"));
+	QVERIFY(document.save());
+
+	QFile saved(path);
+	QVERIFY(saved.open(QIODevice::ReadOnly));
+	const QByteArray savedBytes = saved.readAll();
+	QStringDecoder decoder(QStringConverter::Utf16);
+	const QString savedText = decoder.decode(savedBytes);
+	QCOMPARE(savedText.trimmed(), QStringLiteral("**новый текст**"));
+}
+
 void TestCodeEditorSearch::searchPropertiesToggleModes() {
 	Resources resources;
 	HighlightingPluginManager highlighting(&resources);
@@ -565,7 +667,8 @@ void TestCodeEditorSearch::searchPropertiesToggleModes() {
 	CodeEditorDocument document(&highlighting, &formatters);
 	QWidget host;
 	auto groups = document.createPropertyGroups(&host);
-	auto* properties = qobject_cast<PropertiesListWidget*>(groups.first().editor);
+	auto* properties = qobject_cast<PropertiesListWidget*>(
+		groupEditor(groups, QStringLiteral("search")));
 	QVERIFY(properties);
 
 	// Меняем флажок в панели свойств: документ передаёт его панели поиска
@@ -590,7 +693,8 @@ void TestCodeEditorSearch::searchPropertiesToggleModes() {
 	}
 
 	groups = document.createPropertyGroups(&host);
-	properties = qobject_cast<PropertiesListWidget*>(groups.first().editor);
+	properties = qobject_cast<PropertiesListWidget*>(
+		groupEditor(groups, QStringLiteral("search")));
 	QVERIFY(properties);
 	QVERIFY(propertyValue(properties, QStringLiteral("search.regex")));
 	QVERIFY(!propertyValue(properties, QStringLiteral("search.simplified")));
@@ -610,7 +714,8 @@ void TestCodeEditorSearch::searchPropertiesToggleModes() {
 	}
 
 	groups = document.createPropertyGroups(&host);
-	properties = qobject_cast<PropertiesListWidget*>(groups.first().editor);
+	properties = qobject_cast<PropertiesListWidget*>(
+		groupEditor(groups, QStringLiteral("search")));
 	QVERIFY(properties);
 	QVERIFY(propertyValue(properties, QStringLiteral("search.simplified")));
 	QVERIFY(!propertyValue(properties, QStringLiteral("search.regex")));
@@ -770,7 +875,7 @@ void TestCodeEditorSearch::largeDocumentHighlightsOnlyVisibleBlocks() {
 		"последняя строка не подсвечена после прокрутки");
 }
 
-void TestCodeEditorSearch::veryLongLinesAreNotHighlighted() {
+void TestCodeEditorSearch::longLineDisablesHighlighting() {
 	Resources resources;
 	resources.Directories.set(QStringLiteral("path.theme"), QDir(themeDirectory()));
 	HighlightingPluginManager highlighting(&resources);
@@ -784,19 +889,229 @@ void TestCodeEditorSearch::veryLongLinesAreNotHighlighted() {
 	auto* editor = document.editor();
 	editor->setLanguage(QStringLiteral("md"));
 
-	// Минифицированная разметка: одна строка в несколько тысяч символов.
+	// Обычный текст подсвечивается.
+	editor->setText(QStringLiteral("**короткая** строка"));
+	QVERIFY(editor->isHighlightingEnabled());
+	QVERIFY(!editor->document()->firstBlock().layout()->formats().isEmpty());
+
+	// Длинная строка отключает подсветку всего документа и сообщает об этом.
+	QSignalSpy enabledChanged(editor, &CodeEditorWidget::highlightingEnabledChanged);
 	const QString longLine = QStringLiteral("**жирно** ").repeated(600);
 	editor->setText(longLine + QStringLiteral("\n**короткая** строка"));
-	QTest::qWait(120);
 
+	QVERIFY(!editor->isHighlightingEnabled());
+	QCOMPARE(enabledChanged.count(), 1);
+	QCOMPARE(enabledChanged.first().at(0).toBool(), false);
+
+	// Форматы сняты со всех строк, включая короткую.
+	const auto formatsEmpty = [](const QTextBlock& block) {
+		return !block.layout() || block.layout()->formats().isEmpty();
+	};
 	const QTextBlock first = editor->document()->firstBlock();
-	const QTextBlock second = first.next();
-	QVERIFY(first.layout());
-	QVERIFY2(first.layout()->formats().isEmpty(),
-		"длинная строка не должна подсвечиваться");
-	QVERIFY(second.layout());
-	QVERIFY2(!second.layout()->formats().isEmpty(),
-		"короткая строка должна подсвечиваться");
+	QVERIFY(formatsEmpty(first));
+	QVERIFY(formatsEmpty(first.next()));
+
+	// Как только длинная строка исчезла, подсветка включается снова.
+	editor->setText(QStringLiteral("**короткая** строка"));
+	QVERIFY(editor->isHighlightingEnabled());
+	QCOMPARE(enabledChanged.count(), 2);
+	QCOMPARE(enabledChanged.last().at(0).toBool(), true);
+	QVERIFY(!editor->document()->firstBlock().layout()->formats().isEmpty());
+}
+
+void TestCodeEditorSearch::longLineSuppressionIsReportedToConsole() {
+	Resources resources;
+	resources.Directories.set(QStringLiteral("path.theme"), QDir(themeDirectory()));
+	HighlightingPluginManager highlighting(&resources);
+	FormatterPluginManager formatters(&resources);
+
+	TestCommandController controller;
+	CodeEditorDocument document(&highlighting, &formatters);
+	document.resize(800, 600);
+	document.show();
+	QCoreApplication::processEvents();
+
+	auto context = controller.globalContext()->createDocumentContext(QStringLiteral("editor"));
+	QVERIFY(context);
+	document.setContext(context);
+	document.editor()->setLanguage(QStringLiteral("md"));
+
+	QSignalSpy output(&controller, &CommandController::outputRequested);
+
+	// Длинная строка выключает подсветку — документ сообщает об этом.
+	document.editor()->setText(QString(QStringLiteral("x")).repeated(
+		CodeEditorWidget::maxHighlightedLineLength() + 100));
+	QCoreApplication::processEvents();
+
+	QVERIFY(!document.editor()->isHighlightingEnabled());
+	bool warnedOff = false;
+	for (const auto& args : output) {
+		if (args.at(0).toString().contains(QStringLiteral("Подсветка отключена"))) {
+			warnedOff = true;
+		}
+	}
+	QVERIFY2(warnedOff, "нет предупреждения об отключении подсветки");
+
+	// Строка стала короткой — подсветка вернулась, тоже с сообщением.
+	output.clear();
+	document.editor()->setText(QStringLiteral("short line"));
+	QCoreApplication::processEvents();
+
+	QVERIFY(document.editor()->isHighlightingEnabled());
+	bool notifiedOn = false;
+	for (const auto& args : output) {
+		if (args.at(0).toString().contains(QStringLiteral("Подсветка снова включена"))) {
+			notifiedOn = true;
+		}
+	}
+	QVERIFY2(notifiedOn, "нет сообщения о включении подсветки");
+}
+
+void TestCodeEditorSearch::manualHighlightingOverridesLongLines() {
+	Resources resources;
+	resources.Directories.set(QStringLiteral("path.theme"), QDir(themeDirectory()));
+	HighlightingPluginManager highlighting(&resources);
+	FormatterPluginManager formatters(&resources);
+
+	CodeEditorDocument document(&highlighting, &formatters);
+	document.resize(800, 600);
+	document.show();
+	QCoreApplication::processEvents();
+
+	auto* editor = document.editor();
+	editor->setLanguage(QStringLiteral("md"));
+
+	const QString longLine = QStringLiteral("**жирно** ").repeated(600);
+	editor->setText(longLine + QStringLiteral("\n**короткая** строка"));
+	QVERIFY(!editor->isHighlightingEnabled());
+
+	const auto formatsEmpty = [](const QTextBlock& block) {
+		return !block.layout() || block.layout()->formats().isEmpty();
+	};
+
+	// Ручное включение имеет приоритет: короткие строки снова подсвечены,
+	// хотя сама длинная строка остаётся без форматов (защита от зависания).
+	editor->setHighlightingPolicy(CodeEditorWidget::HighlightingPolicy::On);
+	QCOMPARE(editor->highlightingPolicy(), CodeEditorWidget::HighlightingPolicy::On);
+	QVERIFY(editor->isHighlightingEnabled());
+	QVERIFY(formatsEmpty(editor->document()->firstBlock()));
+	QVERIFY(!editor->document()->firstBlock().next().layout()->formats().isEmpty());
+
+	// Ручное выключение снимает форматы со всех строк.
+	editor->setHighlightingPolicy(CodeEditorWidget::HighlightingPolicy::Off);
+	QCOMPARE(editor->highlightingPolicy(), CodeEditorWidget::HighlightingPolicy::Off);
+	QVERIFY(!editor->isHighlightingEnabled());
+	QVERIFY(formatsEmpty(editor->document()->firstBlock()));
+	QVERIFY(formatsEmpty(editor->document()->firstBlock().next()));
+
+	// Возврат в «авто» с длинной строкой снова выключает подсветку.
+	editor->setHighlightingPolicy(CodeEditorWidget::HighlightingPolicy::Auto);
+	QVERIFY(!editor->isHighlightingEnabled());
+}
+
+void TestCodeEditorSearch::manualHighlightingIsReportedToConsole() {
+	Resources resources;
+	resources.Directories.set(QStringLiteral("path.theme"), QDir(themeDirectory()));
+	HighlightingPluginManager highlighting(&resources);
+	FormatterPluginManager formatters(&resources);
+
+	TestCommandController controller;
+	CodeEditorDocument document(&highlighting, &formatters);
+	auto context = controller.globalContext()->createDocumentContext(QStringLiteral("editor"));
+	QVERIFY(context);
+	document.setContext(context);
+	document.editor()->setLanguage(QStringLiteral("md"));
+
+	// Документ с длинной строкой: авто-режим подсветку выключает.
+	document.editor()->setText(QStringLiteral("x").repeated(
+		CodeEditorWidget::maxHighlightedLineLength() + 100));
+	QCoreApplication::processEvents();
+	QVERIFY(!document.editor()->isHighlightingEnabled());
+
+	// Ручное включение: подсветка включается, но с предупреждением о тормозах.
+	QSignalSpy output(&controller, &CommandController::outputRequested);
+	document.editor()->setHighlightingPolicy(CodeEditorWidget::HighlightingPolicy::On);
+	QCoreApplication::processEvents();
+
+	QVERIFY(document.editor()->isHighlightingEnabled());
+	bool warnedManual = false;
+	for (const auto& args : output) {
+		if (args.at(0).toString().contains(QStringLiteral("включена вручную"))) {
+			warnedManual = true;
+		}
+	}
+	QVERIFY2(warnedManual, "нет предупреждения о ручном включении подсветки");
+}
+
+void TestCodeEditorSearch::ribbonHighlightButtonToggles() {
+	Resources resources;
+	resources.Directories.set(QStringLiteral("path.theme"), QDir(themeDirectory()));
+	HighlightingPluginManager highlighting(&resources);
+	FormatterPluginManager formatters(&resources);
+
+	CodeEditorDocument document(&highlighting, &formatters);
+	document.resize(800, 600);
+	document.show();
+	QCoreApplication::processEvents();
+
+	auto* editor = document.editor();
+	editor->setLanguage(QStringLiteral("md"));
+
+	auto* button = document.findChild<RibbonButton*>(
+		QStringLiteral("CodeEditorHighlightButton"));
+	QVERIFY(button);
+	QVERIFY(button->isCheckable());
+	QVERIFY(button->isChecked());
+
+	// Авто-запрет из-за длинной строки снимает галочку.
+	editor->setText(QStringLiteral("**жирно** ").repeated(600)
+		+ QStringLiteral("\n**короткая** строка"));
+	QVERIFY(!button->isChecked());
+
+	// Ручное включение кнопкой работает даже при длинной строке.
+	button->mainButton()->click();
+	QVERIFY(button->isChecked());
+	QCOMPARE(editor->highlightingPolicy(), CodeEditorWidget::HighlightingPolicy::On);
+	QVERIFY(editor->isHighlightingEnabled());
+
+	// Ручное выключение кнопкой.
+	button->mainButton()->click();
+	QVERIFY(!button->isChecked());
+	QCOMPARE(editor->highlightingPolicy(), CodeEditorWidget::HighlightingPolicy::Off);
+	QVERIFY(!editor->isHighlightingEnabled());
+}
+
+void TestCodeEditorSearch::newTextResetsHighlightingPolicy() {
+	Resources resources;
+	resources.Directories.set(QStringLiteral("path.theme"), QDir(themeDirectory()));
+	HighlightingPluginManager highlighting(&resources);
+	FormatterPluginManager formatters(&resources);
+
+	CodeEditorDocument document(&highlighting, &formatters);
+	auto* editor = document.editor();
+	editor->setLanguage(QStringLiteral("md"));
+
+	editor->setHighlightingPolicy(CodeEditorWidget::HighlightingPolicy::Off);
+	QCOMPARE(editor->highlightingPolicy(), CodeEditorWidget::HighlightingPolicy::Off);
+
+	// Замена текста — новый документ, снова работает авто-режим.
+	editor->setText(QStringLiteral("**короткая** строка"));
+	QCOMPARE(editor->highlightingPolicy(), CodeEditorWidget::HighlightingPolicy::Auto);
+	QVERIFY(editor->isHighlightingEnabled());
+
+	// Открытие файла тоже сбрасывает ручной выбор.
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto path = dir.filePath(QStringLiteral("sample.md"));
+	QFile file(path);
+	QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Text));
+	file.write("# sample");
+	file.close();
+
+	editor->setHighlightingPolicy(CodeEditorWidget::HighlightingPolicy::Off);
+	QVERIFY(document.openFile(path));
+	QTRY_COMPARE(editor->toPlainText().trimmed(), QStringLiteral("# sample"));
+	QCOMPARE(editor->highlightingPolicy(), CodeEditorWidget::HighlightingPolicy::Auto);
 }
 
 void TestCodeEditorSearch::longLinesEnableAutoWrap() {
@@ -806,6 +1121,7 @@ void TestCodeEditorSearch::longLinesEnableAutoWrap() {
 
 	CodeEditorDocument document(&highlighting, &formatters);
 	auto* editor = document.editor();
+	QCOMPARE(editor->lineWrapPolicy(), CodeEditorWidget::LineWrapPolicy::Auto);
 	QCOMPARE(editor->lineWrapMode(), QPlainTextEdit::NoWrap);
 
 	// Строка длиннее предела включает перенос: без него QPlainTextEdit
@@ -813,17 +1129,57 @@ void TestCodeEditorSearch::longLinesEnableAutoWrap() {
 	const QString longLine(CodeEditorWidget::autoWrapLineLimit() + 100, QLatin1Char('x'));
 	editor->setText(longLine);
 	QCOMPARE(editor->lineWrapMode(), QPlainTextEdit::WidgetWidth);
+	QVERIFY(editor->hasLongLines());
 
 	// Короткий текст возвращает обычный режим.
 	editor->setText(QStringLiteral("short line"));
 	QCOMPARE(editor->lineWrapMode(), QPlainTextEdit::NoWrap);
+	QVERIFY(!editor->hasLongLines());
 
-	// Автоперенос можно отключить.
-	editor->setText(longLine);
+	// Явно включённый перенос работает и на коротких строках — именно этого
+	// не делал прежний флажок «автоперенос».
+	editor->setLineWrapPolicy(CodeEditorWidget::LineWrapPolicy::On);
 	QCOMPARE(editor->lineWrapMode(), QPlainTextEdit::WidgetWidth);
-	editor->setAutoWrapEnabled(false);
+
+	// Выключенный режим возвращает NoWrap для обычных длинных строк...
+	editor->setLineWrapPolicy(CodeEditorWidget::LineWrapPolicy::Off);
+	editor->setText(longLine);
 	QCOMPARE(editor->lineWrapMode(), QPlainTextEdit::NoWrap);
-	QVERIFY(!editor->isAutoWrapEnabled());
+
+	// ...и даже очень длинную строку не переносим: приоритет у пользователя.
+	const QString hugeLine(CodeEditorWidget::maxHighlightedLineLength() + 100, QLatin1Char('y'));
+	editor->setText(hugeLine);
+	QCOMPARE(editor->lineWrapMode(), QPlainTextEdit::NoWrap);
+
+	// Обратно в «авто» — перенос снова включается по длине строки.
+	editor->setLineWrapPolicy(CodeEditorWidget::LineWrapPolicy::Auto);
+	QCOMPARE(editor->lineWrapMode(), QPlainTextEdit::WidgetWidth);
+}
+
+void TestCodeEditorSearch::lineWrapComboControlsWrap() {
+	Resources resources;
+	HighlightingPluginManager highlighting(&resources);
+	FormatterPluginManager formatters(&resources);
+
+	CodeEditorDocument document(&highlighting, &formatters);
+	document.editor()->setText(QStringLiteral("short line"));
+
+	QWidget host;
+	QWidget* properties = document.createPropertiesEditor(&host);
+	QVERIFY(properties);
+
+	auto* combo = properties->findChild<QComboBox*>(QStringLiteral("CodeEditorLineWrapCombo"));
+	QVERIFY(combo);
+	QCOMPARE(combo->count(), 3);
+
+	// «Выключен» и «Включён» действуют независимо от длины строк.
+	combo->setCurrentIndex(combo->findData(
+		static_cast<int>(CodeEditorWidget::LineWrapPolicy::On)));
+	QCOMPARE(document.editor()->lineWrapMode(), QPlainTextEdit::WidgetWidth);
+
+	combo->setCurrentIndex(combo->findData(
+		static_cast<int>(CodeEditorWidget::LineWrapPolicy::Off)));
+	QCOMPARE(document.editor()->lineWrapMode(), QPlainTextEdit::NoWrap);
 }
 
 void TestCodeEditorSearch::formatAppliesResultAndKeepsCursor() {

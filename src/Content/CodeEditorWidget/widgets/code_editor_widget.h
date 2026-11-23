@@ -1,5 +1,6 @@
 #pragma once
 #include <QPlainTextEdit>
+#include <QStringConverter>
 #include <QWheelEvent>
 #include <memory>
 
@@ -50,14 +51,53 @@ public:
 	/// и перерисовывает всю строку целиком, поэтому строки в сотни и тысячи
 	/// символов дают секунды на кадр; с переносом стоимость не зависит от
 	/// длины строки. Включается автоматически, когда такая строка появляется.
-	bool isAutoWrapEnabled() const;
-	void setAutoWrapEnabled(bool enabled);
+	enum class LineWrapPolicy {
+		Auto,  ///< перенос только для длинных строк (по умолчанию)
+		On,    ///< переносить всегда
+		Off,   ///< не переносить; на очень длинных строках редактор тормозит
+	};
+
+	LineWrapPolicy lineWrapPolicy() const;
+	void setLineWrapPolicy(LineWrapPolicy policy);
+
+	/// Есть ли в документе строка длиннее предела автопереноса.
+	bool hasLongLines() const;
+
+	/// Режим подсветки: автоматический (с отключением на длинных строках),
+	/// принудительно включённый или выключенный вручную.
+	enum class HighlightingPolicy {
+		Auto,  ///< включена, но отключается на слишком длинных строках
+		On,    ///< включена всегда, даже при длинных строках
+		Off,   ///< выключена всегда
+	};
+
+	HighlightingPolicy highlightingPolicy() const;
+	void setHighlightingPolicy(HighlightingPolicy policy);
+
+	/// Подсветка реально работает сейчас (режим не Off и нет авто-запрета).
+	bool isHighlightingEnabled() const;
 
 	/// Длина строки (в символах), начиная с которой включается автоперенос.
 	static int autoWrapLineLimit();
 
+	/// Длина строки, после которой подсветка отключается (и сама строка
+	/// не подсвечивается): без этого регулярные выражения подвешивают редактор.
+	static int maxHighlightedLineLength();
+
 	int fontSize() const;
 	void setFontSize(int size);
+
+	/// Кодировка файла для чтения и сохранения.
+	struct EncodingInfo {
+		QString name;
+		QStringConverter::Encoding encoding = QStringConverter::Utf8;
+	};
+
+	/// Доступные кодировки (Qt6 поддерживает только встроенные).
+	static QList<EncodingInfo> availableEncodings();
+
+	QStringConverter::Encoding encoding() const;
+	void setEncoding(QStringConverter::Encoding encoding);
 
 	/// Плагин подсветки, выбранный для текущего содержимого.
 	const HighlightingPlugin* highlightingPlugin() const;
@@ -76,8 +116,14 @@ signals:
 	void formattingStarted();
 	/// Форматирование завершилось (успешно или с ошибкой).
 	void formattingCompleted();
-	/// Изменился режим переноса строк (длинная строка появилась/исчезла).
+	/// Изменился режим переноса строк (длинная строка появилась/исчезла
+	/// или режим выбран пользователем).
 	void lineWrappingChanged(bool wrapped);
+	/// В документе появились/исчезли строки длиннее autoWrapLineLimit().
+	void longLinesChanged(bool hasLongLines);
+	/// Подсветка включена (enabled=true) или выключена: вручную либо
+	/// автоматически из-за слишком длинной строки.
+	void highlightingEnabledChanged(bool enabled);
 
 private slots:
 	void onBlockRead(const QStringList& lines);

@@ -11,8 +11,8 @@
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/scripting/command_controller.h"
 
-#include <QCheckBox>
 #include <QComboBox>
+#include <QCompleter>
 #include <QDebug>
 #include <QDir>
 #include <QFile>
@@ -24,8 +24,10 @@
 #include <QPointer>
 #include <QSignalBlocker>
 #include <QStringConverter>
+#include <QTextBlock>
 #include <QTextDocument>
 #include <QTextStream>
+#include <QTimer>
 #include <QVBoxLayout>
 
 #include <algorithm>
@@ -52,6 +54,7 @@ public:
 	DocumentRibbon* ribbon = nullptr;
 	RibbonButton* searchButton = nullptr;
 	RibbonButton* formatButton = nullptr;
+	RibbonButton* highlightButton = nullptr;
 
 	CodeEditorSearchPanel* searchPanel = nullptr;
 
@@ -72,6 +75,7 @@ public:
 	void setSearchVisible(bool visible);
 
 	QWidget* createSearchPropertiesEditor(QWidget* parent);
+	QWidget* createInfoWidget(QWidget* parent);
 	QList<PropertyData> searchPropertyData() const;
 	void applySearchProperty(const QString& id, bool enabled);
 	void setSearchOption(CodeEditorSearchPanel::Option option, bool enabled);
@@ -87,6 +91,7 @@ public:
 	CommandController* controller() const;
 	void printError(const QString& message) const;
 	void printWarning(const QString& message) const;
+	void printInfo(const QString& message) const;
 	bool writeFile(const QString& path, const QString& text, QString* error) const;
 	void applyDataText(const QString& data);
 };
@@ -185,6 +190,31 @@ QWidget* CodeEditorDocument::Private::createRibbon() {
 			formatButton->setEnabled(true);
 		}
 	});
+
+	// Ручное включение/выключение подсветки. Приоритет у кнопки: даже при
+	// длинных строках подсветка включается (с предупреждением о тормозах),
+	// пока пользователь не сменит документ или сам режим.
+	highlightButton = ribbon->addButton(editGroup, QStringLiteral("🎨"),
+		q->tr("Подсветка текста (включить/выключить)"));
+	highlightButton->setObjectName(QStringLiteral("CodeEditorHighlightButton"));
+	highlightButton->setCheckable(true);
+	highlightButton->setChecked(editor->isHighlightingEnabled());
+	connect(highlightButton, &RibbonButton::toggled, q, [this](bool checked) {
+		editor->setHighlightingPolicy(checked
+			? CodeEditorWidget::HighlightingPolicy::On
+			: CodeEditorWidget::HighlightingPolicy::Off);
+	});
+	// Авто-режим мог выключить подсветку из-за длинной строки: кнопка
+	// должна показывать фактическое состояние.
+	connect(editor, &CodeEditorWidget::highlightingEnabledChanged,
+		q, [this](bool enabled) {
+			if (!highlightButton) {
+				return;
+			}
+
+			const QSignalBlocker blocker(highlightButton);
+			highlightButton->setChecked(enabled);
+		});
 
 	auto* searchGroup = ribbon->addGroup(q->tr("Поиск"));
 	searchButton = ribbon->addButton(searchGroup, QStringLiteral("🔍"),
@@ -424,6 +454,12 @@ void CodeEditorDocument::Private::printWarning(const QString& message) const {
 	}
 }
 
+void CodeEditorDocument::Private::printInfo(const QString& message) const {
+	if (auto* c = controller()) {
+		c->print(message);
+	}
+}
+
 bool CodeEditorDocument::Private::writeFile(const QString& path, const QString& text,
 	QString* error) const {
 	QFile file(path);
@@ -436,7 +472,7 @@ bool CodeEditorDocument::Private::writeFile(const QString& path, const QString& 
 	}
 
 	QTextStream stream(&file);
-	stream.setEncoding(QStringConverter::Utf8);
+	stream.setEncoding(editor->encoding());
 	stream << text;
 	stream.flush();
 	if (stream.status() != QTextStream::Ok) {
@@ -505,6 +541,49 @@ CodeEditorDocument::CodeEditorDocument(
 	});
 	connect(d->editor, &CodeEditorWidget::fontSizeChanged, this, [this](int size) {
 		d->syncFontSizeCombo(size);
+	});
+
+	// Подсветка включается и выключается автоматически (длинная строка)
+	// или вручную кнопкой ленты. Пользователь должен знать о причинах.
+	connect(d->editor, &CodeEditorWidget::highlightingEnabledChanged,
+		this, [this](bool enabled) {
+			const auto policy = d->editor->highlightingPolicy();
+			const bool longLines = d->editor->hasLongLines();
+
+			if (!enabled) {
+				// Ручное выключение — это осознанное действие, молчим.
+				if (policy == CodeEditorWidget::HighlightingPolicy::Auto && longLines) {
+					d->printWarning(tr("Подсветка отключена: в документе есть строка длиннее "
+						"%1 символов, подсветка таких строк подвешивает редактор. "
+						"Она включится снова, когда строки станут короче")
+						.arg(CodeEditorWidget::maxHighlightedLineLength()));
+				}
+				return;
+			}
+
+			if (policy == CodeEditorWidget::HighlightingPolicy::On && longLines) {
+				d->printWarning(tr("Подсветка включена вручную. Строки длиннее %1 символов "
+					"не подсвечиваются (иначе редактор может зависнуть), на длинных "
+					"строках возможны замедления")
+					.arg(CodeEditorWidget::maxHighlightedLineLength()));
+				return;
+			}
+
+			d->printInfo(tr("Подсветка снова включена."));
+		});
+
+	// Пользователь выбрал «без переноса», а в документе есть длинные строки:
+	// уважаем выбор, но предупреждаем о возможных тормозах.
+	connect(d->editor, &CodeEditorWidget::longLinesChanged, this, [this](bool longLines) {
+		if (!longLines
+			|| d->editor->lineWrapPolicy() != CodeEditorWidget::LineWrapPolicy::Off) {
+			return;
+		}
+
+		d->printWarning(tr("В документе есть строка длиннее %1 символов, а перенос строк "
+			"выключен: редактор может заметно тормозить. Включите «Авто» или «Включён», "
+			"если это произойдёт")
+			.arg(CodeEditorWidget::autoWrapLineLimit()));
 	});
 }
 
@@ -750,32 +829,156 @@ QWidget* CodeEditorDocument::createPropertiesEditor(QWidget* parent) {
 			}
 		});
 
-	auto* linesLabel = new QLabel(QString::number(d->editor->document()->blockCount()), widget);
-	connect(d->editor->document(), &QTextDocument::blockCountChanged,
-		linesLabel, [linesLabel](int count) {
-			linesLabel->setNum(count);
+	auto* encodingCombo = new QComboBox(widget);
+	encodingCombo->setObjectName(QStringLiteral("CodeEditorEncodingCombo"));
+	encodingCombo->setToolTip(tr("Кодировка файла при чтении и сохранении"));
+	for (const auto& option : CodeEditorWidget::availableEncodings()) {
+		encodingCombo->addItem(option.name, static_cast<int>(option.encoding));
+	}
+	// Поиск по названию кодировки: поле редактируемое, фильтр — «содержит».
+	encodingCombo->setEditable(true);
+	encodingCombo->setInsertPolicy(QComboBox::NoInsert);
+	if (auto* completer = encodingCombo->completer()) {
+		completer->setCompletionMode(QCompleter::PopupCompletion);
+		completer->setFilterMode(Qt::MatchContains);
+		completer->setCaseSensitivity(Qt::CaseInsensitive);
+	}
+	encodingCombo->setCurrentIndex(encodingCombo->findData(
+		static_cast<int>(d->editor->encoding())));
+	connect(encodingCombo, &QComboBox::currentIndexChanged, this,
+		[this, encodingCombo](int index) {
+			if (index < 0) {
+				return;
+			}
+
+			const auto encoding = static_cast<QStringConverter::Encoding>(
+				encodingCombo->itemData(index).toInt());
+			if (encoding == d->editor->encoding()) {
+				return;
+			}
+
+			d->editor->setEncoding(encoding);
+			if (d->dataMode || d->path.isEmpty()) {
+				return;
+			}
+
+			if (isModified()) {
+				d->printWarning(tr("Кодировка изменена. Файл не перечитан, пока есть "
+					"несохранённые изменения; при сохранении будет использована новая кодировка."));
+				return;
+			}
+
+			// Файл не изменён: перечитываем его в новой кодировке.
+			d->editor->openFile(d->path);
 		});
 
-	auto* autoWrap = new QCheckBox(tr("Автоперенос длинных строк"), widget);
-	autoWrap->setObjectName(QStringLiteral("CodeEditorAutoWrapCheck"));
-	autoWrap->setToolTip(tr("Длинные строки (от %1 символов) переносятся по ширине окна: "
-		"без переноса редактор заметно тормозит на них при изменении размера и прокрутке")
+	auto* lineWrapCombo = new QComboBox(widget);
+	lineWrapCombo->setObjectName(QStringLiteral("CodeEditorLineWrapCombo"));
+	lineWrapCombo->setToolTip(tr("Перенос строк. «Авто» включает перенос только для строк длиннее "
+		"%1 символов. «Включён» переносит всегда, «Выключен» — не переносит вовсе: "
+		"на длинных строках редактор при этом может заметно тормозить")
 		.arg(CodeEditorWidget::autoWrapLineLimit()));
-	autoWrap->setChecked(d->editor->isAutoWrapEnabled());
-	connect(autoWrap, &QCheckBox::toggled, d->editor, &CodeEditorWidget::setAutoWrapEnabled);
+	lineWrapCombo->addItem(tr("Авто (длинные строки)"),
+		static_cast<int>(CodeEditorWidget::LineWrapPolicy::Auto));
+	lineWrapCombo->addItem(tr("Включён"),
+		static_cast<int>(CodeEditorWidget::LineWrapPolicy::On));
+	lineWrapCombo->addItem(tr("Выключен"),
+		static_cast<int>(CodeEditorWidget::LineWrapPolicy::Off));
+	lineWrapCombo->setCurrentIndex(lineWrapCombo->findData(
+		static_cast<int>(d->editor->lineWrapPolicy())));
+	connect(lineWrapCombo, &QComboBox::currentIndexChanged, this,
+		[this, lineWrapCombo](int index) {
+			if (index < 0) {
+				return;
+			}
+
+			const auto policy = static_cast<CodeEditorWidget::LineWrapPolicy>(
+				lineWrapCombo->itemData(index).toInt());
+			d->editor->setLineWrapPolicy(policy);
+
+			// Выбор пользователя важнее: перенос не включаем насильно,
+			// но предупреждаем о возможных тормозах.
+			if (policy == CodeEditorWidget::LineWrapPolicy::Off
+				&& d->editor->hasLongLines()) {
+				d->printWarning(tr("Перенос строк выключен. На строках длиннее %1 символов "
+					"редактор может заметно тормозить; включите «Авто» или «Включён», "
+					"если появятся зависания")
+					.arg(CodeEditorWidget::autoWrapLineLimit()));
+			}
+		});
 
 	form->insertRow(0, tr("Файл:"), pathLabel);
 	form->addRow(tr("Язык:"), languageCombo);
+	form->addRow(tr("Кодировка:"), encodingCombo);
 	form->addRow(tr("Размер шрифта:"), fontSizeCombo);
-	form->addRow(tr("Перенос строк:"), autoWrap);
-	form->addRow(tr("Строк:"), linesLabel);
+	form->addRow(tr("Перенос строк:"), lineWrapCombo);
+	return widget;
+}
+
+QWidget* CodeEditorDocument::Private::createInfoWidget(QWidget* parent) {
+	auto* widget = new QWidget(parent);
+	auto* form = new QFormLayout(widget);
+	form->setContentsMargins(0, 0, 0, 0);
+
+	auto* lines = new QLabel(widget);
+	lines->setObjectName(QStringLiteral("CodeEditorInfoLines"));
+	auto* characters = new QLabel(widget);
+	characters->setObjectName(QStringLiteral("CodeEditorInfoChars"));
+	auto* longest = new QLabel(widget);
+	longest->setObjectName(QStringLiteral("CodeEditorInfoLongest"));
+
+	form->addRow(tr("Строк:"), lines);
+	form->addRow(tr("Символов:"), characters);
+	form->addRow(tr("Самая длинная строка:"), longest);
+
+	// Считаем через QPointer: панель свойств может пережить документ.
+	QPointer<CodeEditorWidget> editorPtr(editor);
+	auto update = [editorPtr, lines, characters, longest] {
+		if (!editorPtr) {
+			return;
+		}
+
+		QTextDocument* document = editorPtr->document();
+		lines->setNum(document->blockCount());
+		characters->setNum(qMax(0, document->characterCount() - 1));
+
+		int maxLength = 0;
+		for (QTextBlock block = document->begin(); block.isValid(); block = block.next()) {
+			maxLength = qMax(maxLength, block.length() - 1);
+		}
+		longest->setNum(maxLength);
+	};
+
+	update();
+
+	if (auto* document = editor->document()) {
+		connect(document, &QTextDocument::blockCountChanged, widget,
+			[update](int) { update(); });
+
+		// Содержимое меняется на каждое нажатие — пересчитываем с задержкой.
+		auto* timer = new QTimer(widget);
+		timer->setSingleShot(true);
+		timer->setInterval(150);
+		connect(timer, &QTimer::timeout, widget, update);
+		connect(document, &QTextDocument::contentsChanged, widget, [timer] {
+			timer->start();
+		});
+	}
+
 	return widget;
 }
 
 QList<DocumentPropertyGroup> CodeEditorDocument::createPropertyGroups(QWidget* parent) {
+	DocumentPropertyGroup info;
+	info.id = QStringLiteral("info");
+	info.title = tr("Информация о документе");
+	info.expanded = true;
+	info.editor = d->createInfoWidget(parent);
+
 	DocumentPropertyGroup search;
 	search.id = QStringLiteral("search");
 	search.title = tr("Параметры поиска");
 	search.editor = d->createSearchPropertiesEditor(parent);
-	return { search };
+
+	return { info, search };
 }

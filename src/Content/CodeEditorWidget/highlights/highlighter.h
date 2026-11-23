@@ -16,12 +16,23 @@ class Highlighter : public QSyntaxHighlighter {
 	Q_OBJECT
 
 public:
+	/// Строки длиннее этого предела не подсвечиваются: регулярные выражения
+	/// на них растут квадратично. Если такая строка есть в документе,
+	/// подсветка отключается целиком (см. setEnabled).
+	static constexpr int MaxHighlightedBlockLength = 2048;
+
 	explicit Highlighter(HighlightingPluginManager* pluginManager, QTextDocument* parent = nullptr);
 	~Highlighter() override;
 
 	const HighlightingPlugin* plugin() const;
 	bool setLanguage(const QString& language);
 	bool setContentType(const QString& type);
+
+	/// Подсветка выключена (вручную или из-за слишком длинной строки):
+	/// форматы сняты, регулярные выражения не выполняются. При включении
+	/// подсветка восстанавливается (полностью или для видимых строк).
+	bool isEnabled() const;
+	void setEnabled(bool enabled);
 
 	/// Ленивый режим: подсветка только видимого диапазона строк.
 	/// Переключает режим, не пересчитывая подсветку: после включения

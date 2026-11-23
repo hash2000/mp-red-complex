@@ -11,6 +11,10 @@ void FileReader::setChunkSize(int lines) {
 	_chunkSize = lines;
 }
 
+void FileReader::setEncoding(QStringConverter::Encoding encoding) {
+	_encoding = encoding;
+}
+
 void FileReader::readFileAsync(const QString& filePath) {
 	QFile file(filePath);
 	if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -20,6 +24,9 @@ void FileReader::readFileAsync(const QString& filePath) {
 	}
 
 	QTextStream stream(&file);
+	stream.setEncoding(_encoding);
+	// BOM определяем только для UTF-8: явно выбранную кодировку не переопределяем.
+	stream.setAutoDetectUnicode(_encoding == QStringConverter::Utf8);
 	QStringList buffer;
 	buffer.reserve(_chunkSize);
 
