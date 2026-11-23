@@ -90,17 +90,14 @@ struct FetchApiDocument::Private {
 	void writeContextVariable(const char* name, const QVariant& value);
 };
 
-FetchApiDocument::FetchApiDocument(FetchApiService* service,
-	HighlightingPluginManager* highlighting,
-	FormatterPluginManager* formatters,
-	QWidget* parent)
+FetchApiDocument::FetchApiDocument(FetchApiService* service, QWidget* parent)
 	: DocumentWidget(parent)
 	, d(std::make_unique<Private>()) {
 	d->q = this;
 	setGlyph(QStringLiteral("🌐"));
 	setTitle(tr("Fetch API"));
 
-	d->widget = new FetchApiWidget(service, highlighting, formatters, this);
+	d->widget = new FetchApiWidget(service, this);
 
 	// Лента документа содержит функцию «Отправить»; её параметры
 	// (тип запроса и обработка TLS) редактируются в панели «Свойства».

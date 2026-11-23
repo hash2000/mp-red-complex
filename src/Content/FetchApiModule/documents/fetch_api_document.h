@@ -6,8 +6,6 @@
 
 class FetchApiService;
 class FetchApiWidget;
-class FormatterPluginManager;
-class HighlightingPluginManager;
 
 /// Документ модуля FetchApi: редактор и выполнение REST-запросов.
 ///
@@ -25,10 +23,7 @@ class HighlightingPluginManager;
 class FetchApiDocument final : public DocumentWidget {
 	Q_OBJECT
 public:
-	FetchApiDocument(FetchApiService* service,
-		HighlightingPluginManager* highlighting,
-		FormatterPluginManager* formatters,
-		QWidget* parent = nullptr);
+	FetchApiDocument(FetchApiService* service, QWidget* parent = nullptr);
 	~FetchApiDocument() override;
 
 	FetchApiWidget* widget() const;

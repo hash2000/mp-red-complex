@@ -39,16 +39,9 @@ QPlainTextEdit#FetchBodyEdit {
   border: 1px solid #444;
 }
 
-/* Ответ отображается в CodeEditorWidget (наследник QTextEdit), поэтому
-   правило ниже активно, а прежний вариант с QPlainTextEdit не срабатывал —
-   он оставлен закомментированным как история конфликта селекторов.
+/* Ответ отображается в простом текстовом поле (QPlainTextEdit):
+   подсветка синтаксиса модулю не нужна. */
 QPlainTextEdit#FetchResponseBody {
-  background-color: #2D2D2D;
-  color: #F8F8F2;
-  border: 1px solid #444;
-}
-*/
-CodeEditorWidget#FetchResponseBody {
   background-color: #2D2D2D;
   color: #F8F8F2;
   border: 1px solid #444;

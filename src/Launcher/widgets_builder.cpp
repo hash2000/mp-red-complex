@@ -213,14 +213,11 @@ void WidgetsBuilder::Private::registerAll() {
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* services = servicesFor(type, handler);
 			auto* fetchService = requiredService<FetchApiService>(services, type, "FetchApiService");
-			auto* highlighting = requiredService<HighlightingPluginManager>(services, type,
-				"HighlightingPluginManager");
-			auto* formatters = requiredService<FormatterPluginManager>(services, type,
-				"FormatterPluginManager");
-			if (!fetchService || !highlighting || !formatters) {
+			if (!fetchService) {
 				return nullptr;
 			}
-			return new FetchApiDocument(fetchService, highlighting, formatters, handler.parent);
+			// FetchApi не зависит от редактора кода: ответ — текстовое поле.
+			return new FetchApiDocument(fetchService, handler.parent);
 		});
 
 	// Переменные, из которых документ восстанавливает запрос после открытия.

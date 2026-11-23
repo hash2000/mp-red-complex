@@ -5,10 +5,6 @@
 #include "Libs/Base/extensions/text_edit_extensions.h"
 #include "Libs/BaseWidgets/key_value/key_value_editor_widget.h"
 
-#include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
-#include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
-#include "Content/CodeEditorWidget/widgets/code_editor_widget.h"
-
 #include <QComboBox>
 #include <QFont>
 #include <QFormLayout>
@@ -58,11 +54,6 @@ QString prettyResponseText(const FetchApiResult& result) {
 
 class FetchApiWidget::Private {
 public:
-	enum class ResponseBodyKind {
-		CodeEditor,
-		PlainText,
-	};
-
 	/// Тип авторизации; значение хранится в данных элемента комбобокса.
 	enum AuthType {
 		AuthNone = 0,
@@ -75,8 +66,6 @@ public:
 	FetchApiWidget* q;
 
 	FetchApiService* service = nullptr;
-	HighlightingPluginManager* highlighting = nullptr;
-	FormatterPluginManager* formatters = nullptr;
 
 	QComboBox* methodCombo = nullptr;
 	QLineEdit* urlEdit = nullptr;
@@ -96,8 +85,8 @@ public:
 	QLabel* authValueLabel = nullptr;
 	QComboBox* authAddToCombo = nullptr;
 
-	QWidget* responseBody = nullptr;
-	ResponseBodyKind responseBodyKind = ResponseBodyKind::PlainText;
+	/// Ответ — простое текстовое поле без подсветки.
+	QPlainTextEdit* responseBody = nullptr;
 	KeyValueEditorWidget* responseHeaders = nullptr;
 	KeyValueEditorWidget* responseCookies = nullptr;
 	QLabel* statusLabel = nullptr;
@@ -115,7 +104,7 @@ public:
 
 	void applyAuth(FetchApiOpt& options) const;
 
-	void setResponseText(const QString& text, const QString& contentType);
+	void setResponseText(const QString& text);
 	void clearResponseText();
 	void setResponseHeaders(const QHttpHeaders& headers);
 	void setResponseCookies(const QList<QPair<QString, QString>>& cookies);
@@ -127,15 +116,10 @@ public:
 	static QString formatBytes(qint64 bytes);
 };
 
-FetchApiWidget::FetchApiWidget(FetchApiService* service,
-	HighlightingPluginManager* highlighting,
-	FormatterPluginManager* formatters,
-	QWidget* parent)
+FetchApiWidget::FetchApiWidget(FetchApiService* service, QWidget* parent)
 	: QWidget(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->service = service;
-	d->highlighting = highlighting;
-	d->formatters = formatters;
 	d->setupUi();
 
 	if (!d->service) {
@@ -266,24 +250,13 @@ void FetchApiWidget::Private::setupUi() {
 	auto* responseTabs = new QTabWidget();
 	responseTabs->setObjectName(QStringLiteral("FetchResponseTabs"));
 
-	if (highlighting && formatters) {
-		auto* editor = new CodeEditorWidget(highlighting, formatters);
-		editor->setObjectName(QStringLiteral("FetchResponseBody"));
-		editor->setReadOnly(true);
-		editor->setFont(monoFont());
-		editor->setPlaceholderText(QStringLiteral("Ответ сервера появится здесь..."));
-		responseBody = editor;
-		responseBodyKind = ResponseBodyKind::CodeEditor;
-	}
-	else {
-		auto* plain = new QPlainTextEdit();
-		plain->setObjectName(QStringLiteral("FetchResponseBody"));
-		plain->setReadOnly(true);
-		plain->setFont(monoFont());
-		plain->setPlaceholderText(QStringLiteral("Ответ сервера появится здесь..."));
-		responseBody = plain;
-		responseBodyKind = ResponseBodyKind::PlainText;
-	}
+	// Ответ показывается в простом текстовом поле: модуль не зависит от
+	// редактора кода и его подсветки.
+	responseBody = new QPlainTextEdit();
+	responseBody->setObjectName(QStringLiteral("FetchResponseBody"));
+	responseBody->setReadOnly(true);
+	responseBody->setFont(monoFont());
+	responseBody->setPlaceholderText(QStringLiteral("Ответ сервера появится здесь..."));
 
 	responseHeaders = new KeyValueEditorWidget();
 	responseHeaders->setObjectName(QStringLiteral("FetchResponseHeaders"));
@@ -413,25 +386,12 @@ void FetchApiWidget::Private::applyAuth(FetchApiOpt& options) const {
 	}
 }
 
-void FetchApiWidget::Private::setResponseText(const QString& text, const QString& contentType) {
-	if (responseBodyKind == ResponseBodyKind::CodeEditor) {
-		auto* editor = static_cast<CodeEditorWidget*>(responseBody);
-		editor->setContentType(contentType);
-		editor->setText(text);
-		return;
-	}
-
-	auto* plain = static_cast<QPlainTextEdit*>(responseBody);
-	plain->setPlainText(text);
+void FetchApiWidget::Private::setResponseText(const QString& text) {
+	responseBody->setPlainText(text);
 }
 
 void FetchApiWidget::Private::clearResponseText() {
-	if (responseBodyKind == ResponseBodyKind::CodeEditor) {
-		static_cast<CodeEditorWidget*>(responseBody)->clear();
-		return;
-	}
-
-	static_cast<QPlainTextEdit*>(responseBody)->clear();
+	responseBody->clear();
 }
 
 void FetchApiWidget::Private::setResponseHeaders(const QHttpHeaders& headers) {
@@ -699,7 +659,7 @@ void FetchApiWidget::showResult(const FetchApiResult& result) {
 	if (result.failed && text.isEmpty()) {
 		text = result.errorMessage();
 	}
-	d->setResponseText(text, result.contentType());
+	d->setResponseText(text);
 	d->setResponseHeaders(result.headers);
 	d->setResponseCookies(result.cookies());
 
@@ -721,7 +681,7 @@ void FetchApiWidget::showError(const QString& message) {
 	d->timeLabel->setText(QStringLiteral("Time: —"));
 	d->sizeLabel->setText(QStringLiteral("Size: —"));
 
-	d->setResponseText(message, QString());
+	d->setResponseText(message);
 	d->setResponseHeaders(QHttpHeaders());
 	d->setResponseCookies({});
 

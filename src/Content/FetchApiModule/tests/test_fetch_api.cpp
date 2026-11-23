@@ -12,6 +12,7 @@
 #include <QHostAddress>
 #include <QLabel>
 #include <QLineEdit>
+#include <QPlainTextEdit>
 #include <QSignalSpy>
 #include <QTcpServer>
 #include <QTcpSocket>
@@ -80,6 +81,7 @@ private slots:
 	void widgetParameterRoundTrip();
 	void widgetAuthentication();
 	void widgetShowsResult();
+	void widgetShowsPlainTextResponse();
 
 	void documentExposesSendProperties();
 	void documentRequestPropertiesChangeWidget();
@@ -385,7 +387,7 @@ void TestFetchApi::serviceExecutesRequest() {
 }
 
 void TestFetchApi::widgetParameterRoundTrip() {
-	FetchApiWidget widget(nullptr, nullptr, nullptr);
+	FetchApiWidget widget(nullptr);
 
 	widget.setLocation(QStringLiteral("https://api.example.com/v1/items"));
 	widget.setMethod(FetchApiMethod::Put);
@@ -412,7 +414,7 @@ void TestFetchApi::widgetParameterRoundTrip() {
 }
 
 void TestFetchApi::widgetAuthentication() {
-	FetchApiWidget widget(nullptr, nullptr, nullptr);
+	FetchApiWidget widget(nullptr);
 	widget.setLocation(QStringLiteral("https://example.com"));
 
 	auto* authType = widget.findChild<QComboBox*>(QStringLiteral("FetchAuthTypeCombo"));
@@ -451,7 +453,7 @@ void TestFetchApi::widgetAuthentication() {
 }
 
 void TestFetchApi::widgetShowsResult() {
-	FetchApiWidget widget(nullptr, nullptr, nullptr);
+	FetchApiWidget widget(nullptr);
 
 	FetchApiResult result;
 	result.statusCode = 200;
@@ -483,7 +485,7 @@ void TestFetchApi::widgetShowsResult() {
 }
 
 void TestFetchApi::documentExposesSendProperties() {
-	FetchApiDocument document(nullptr, nullptr, nullptr);
+	FetchApiDocument document(nullptr);
 	QWidget host;
 	const auto groups = document.createPropertyGroups(&host);
 
@@ -514,7 +516,7 @@ void TestFetchApi::documentExposesSendProperties() {
 }
 
 void TestFetchApi::documentRequestPropertiesChangeWidget() {
-	FetchApiDocument document(nullptr, nullptr, nullptr);
+	FetchApiDocument document(nullptr);
 	QWidget host;
 	const auto groups = document.createPropertyGroups(&host);
 	auto* properties = qobject_cast<PropertiesListWidget*>(groups.first().editor);
@@ -537,7 +539,7 @@ void TestFetchApi::documentRequestPropertiesWriteContext() {
 	auto global = makeGlobalContext();
 	auto context = std::make_shared<CommandContext>(nullptr, global, QStringLiteral("doc"));
 
-	FetchApiDocument document(nullptr, nullptr, nullptr);
+	FetchApiDocument document(nullptr);
 	document.setContext(context);
 
 	QWidget host;
@@ -558,7 +560,7 @@ void TestFetchApi::documentRequestPropertiesWriteContext() {
 }
 
 void TestFetchApi::documentRibbonSendsRequest() {
-	FetchApiDocument document(nullptr, nullptr, nullptr);
+	FetchApiDocument document(nullptr);
 	QVERIFY(document.widget());
 
 	auto* send = findRibbonButton(&document, QStringLiteral("Отправить"));
@@ -576,6 +578,33 @@ void TestFetchApi::documentRibbonSendsRequest() {
 	send->propertiesButton()->click();
 	QCOMPARE(requested.count(), 1);
 	QCOMPARE(requested.first().at(0).toString(), QStringLiteral("request"));
+}
+
+void TestFetchApi::widgetShowsPlainTextResponse() {
+	FetchApiWidget widget(nullptr);
+
+	// Ответ — простое текстовое поле: модуль не использует CodeEditorWidget.
+	auto* body = widget.findChild<QPlainTextEdit*>(QStringLiteral("FetchResponseBody"));
+	QVERIFY(body);
+	QVERIFY(body->isReadOnly());
+	QCOMPARE(QString::fromLatin1(body->metaObject()->className()),
+		QStringLiteral("QPlainTextEdit"));
+
+	for (auto* child : widget.findChildren<QWidget*>()) {
+		QVERIFY2(!QString::fromLatin1(child->metaObject()->className())
+			.contains(QStringLiteral("CodeEditorWidget")),
+			"в FetchApi не должно быть редактора кода");
+	}
+
+	FetchApiResult result;
+	result.statusCode = 200;
+	result.statusText = QStringLiteral("OK");
+	result.data = QByteArray("plain response");
+	result.headers.append(QStringLiteral("Content-Type"), QStringLiteral("text/plain"));
+	result.failed = false;
+
+	widget.showResult(result);
+	QCOMPARE(body->toPlainText(), QStringLiteral("plain response"));
 }
 
 QTEST_MAIN(TestFetchApi)
