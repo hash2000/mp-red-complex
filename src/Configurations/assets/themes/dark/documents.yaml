@@ -29,6 +29,10 @@ tabs:
     Content.SystemRouter.SystemRouterNodePropertiesDocument: "#c678dd"
     system-router-node-properties: "#c678dd"
 
+    # DatabaseModule
+    Content.Database.DatabaseBackupDocument: "#4ec9b0"
+    database-backup: "#4ec9b0"
+
     # FetchApi
     Content.FetchApi.FetchApiDocument: "#98c379"
     fetch-api: "#98c379"
@@ -70,6 +74,10 @@ tabs:
     system-router: "🗂"
     Content.SystemRouter.SystemRouterNodePropertiesDocument: "🛠"
     system-router-node-properties: "🛠"
+
+    # DatabaseModule
+    Content.Database.DatabaseBackupDocument: "💾"
+    database-backup: "💾"
 
     # FetchApi
     Content.FetchApi.FetchApiDocument: "🌐"

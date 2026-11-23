@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QString>
 #include <QStringList>
 
 class FileReader : public QObject {
@@ -10,6 +11,8 @@ public:
 	explicit FileReader(QObject* parent = nullptr);
 
 	void setChunkSize(int lines);
+	/// Кодировка файла при чтении (имя кодека QTextCodec, по умолчанию UTF-8).
+	void setEncoding(const QString& encoding);
 
 public slots:
 	void readFileAsync(const QString& filePath);
@@ -22,4 +25,5 @@ signals:
 
 private:
 	int _chunkSize = 500;
+	QString _encoding = QStringLiteral("UTF-8");
 };

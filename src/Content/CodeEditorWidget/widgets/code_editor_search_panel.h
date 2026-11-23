@@ -3,13 +3,14 @@
 
 #include <memory>
 
-class QTextEdit;
+class QPlainTextEdit;
 
 /// Панель поиска над редактором кода.
 ///
 /// Показывает поле запроса, счётчик совпадений и переходы по ним,
-/// подсвечивает все вхождения в документе через ExtraSelections
-/// (текущее — ярче). При скрытии подсветка снимается.
+/// подсвечивает вхождения в документе через ExtraSelections
+/// (текущее — ярче; при большом числе совпадений подсвечивается окно
+/// вокруг текущего). При скрытии подсветка снимается.
 class CodeEditorSearchPanel : public QWidget {
 	Q_OBJECT
 public:
@@ -20,7 +21,7 @@ public:
 		WholeWord,             ///< слово целиком
 	};
 
-	explicit CodeEditorSearchPanel(QTextEdit* editor, QWidget* parent = nullptr);
+	explicit CodeEditorSearchPanel(QPlainTextEdit* editor, QWidget* parent = nullptr);
 	~CodeEditorSearchPanel() override;
 
 	void setOption(Option option, bool enabled);

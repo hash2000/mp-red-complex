@@ -40,3 +40,11 @@ target_link_libraries(TestLazyNodesDataProviderDb PRIVATE
   RedComplexBaseWidgets
 )
 set_target_properties(TestLazyNodesDataProviderDb PROPERTIES CMAKE_AUTOMOC ON)
+
+# Резервное копирование баз: сервис копий, виджет и документ.
+qt_add_executable(TestDatabaseBackup tests/test_database_backup.cpp)
+target_link_libraries(TestDatabaseBackup PRIVATE
+  Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test
+  RedComplexDatabaseModule RedComplexEngine RedComplexResources RedComplexBase RedComplexBaseWidgets
+)
+set_target_properties(TestDatabaseBackup PROPERTIES CMAKE_AUTOMOC ON)

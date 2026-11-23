@@ -6,4 +6,6 @@
 class FetchApiDocumentMetadata final : public IDocumentMetadata {
 public:
 	QList<DocumentVariable> variables() const override;
+	/// Подсказка вкладки — фактический URL последнего ответа.
+	QString tooltipVariable() const override;
 };

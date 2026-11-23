@@ -3,6 +3,9 @@
 #include "Content/CodeEditorWidget/documents/code_editor_document_metadata.h"
 #include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
+#include "Content/DatabaseModule/documents/database_backup_document.h"
+#include "Content/DatabaseModule/documents/database_backup_document_metadata.h"
+#include "Content/DatabaseModule/services/database_backup_service.h"
 #include "Content/FetchApiModule/documents/fetch_api_document.h"
 #include "Content/FetchApiModule/documents/fetch_api_document_metadata.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
@@ -213,14 +216,11 @@ void WidgetsBuilder::Private::registerAll() {
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* services = servicesFor(type, handler);
 			auto* fetchService = requiredService<FetchApiService>(services, type, "FetchApiService");
-			auto* highlighting = requiredService<HighlightingPluginManager>(services, type,
-				"HighlightingPluginManager");
-			auto* formatters = requiredService<FormatterPluginManager>(services, type,
-				"FormatterPluginManager");
-			if (!fetchService || !highlighting || !formatters) {
+			if (!fetchService) {
 				return nullptr;
 			}
-			return new FetchApiDocument(fetchService, highlighting, formatters, handler.parent);
+			// FetchApi не зависит от редактора кода: ответ — текстовое поле.
+			return new FetchApiDocument(fetchService, handler.parent);
 		});
 
 	// Переменные, из которых документ восстанавливает запрос после открытия.
@@ -252,6 +252,22 @@ void WidgetsBuilder::Private::registerAll() {
 			return service ? new SystemRouterNodePropertiesDocument(service, blobService, {},
 				handler.parent) : nullptr;
 		});
+
+	// Резервное копирование баз данных, зарегистрированных в контекстах
+	// `.store.<alias>`. Документ-синглтон: одновременно открыт один менеджер
+	// копий, повторное создание активирует его.
+	registry->registerFactory({ "Content.Database.DatabaseBackupDocument", "database-backup",
+		/*singletone*/ true, QStringLiteral("Резервное копирование баз данных") },
+		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
+			auto* service = requiredService<DatabaseBackupService>(servicesFor(type, handler), type,
+				"DatabaseBackupService");
+			return service ? new DatabaseBackupDocument(service, handler.parent) : nullptr;
+		});
+
+	// Диалог создания документа показывает обязательную переменную `store`:
+	// по ней документ восстанавливает выбранное хранилище.
+	registry->registerDocumentMetadata(QStringLiteral("Content.Database.DatabaseBackupDocument"),
+		std::make_unique<DatabaseBackupDocumentMetadata>());
 
 	// Редактор кода — обычный документ: экземпляров может быть несколько.
 	registry->registerFactory({ "Content.CodeEditor.CodeEditorDocument", "code-editor",

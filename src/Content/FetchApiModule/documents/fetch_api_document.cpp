@@ -3,6 +3,9 @@
 #include "Content/FetchApiModule/services/fetch_service.h"
 #include "Content/FetchApiModule/widgets/fetch_api_widget.h"
 
+#include "Libs/BaseWidgets/properties/properties_list_widget.h"
+#include "Libs/BaseWidgets/ribbon/document_ribbon.h"
+#include "Libs/BaseWidgets/ribbon/ribbon_button.h"
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/scripting/command_controller.h"
 
@@ -13,6 +16,15 @@
 #include <utility>
 
 namespace {
+
+/// Идентификаторы свойств панели «Свойства» в группе «Параметры отправки».
+const QString kHandlerProperty = QStringLiteral("handler");
+const QString kSslPolicyProperty = QStringLiteral("ssl-policy");
+const QString kSslCaFileProperty = QStringLiteral("ssl-ca-file");
+
+/// Идентификатор группы свойств, которую раскрывает значок у кнопки
+/// «Отправить».
+const QString kRequestGroup = QStringLiteral("request");
 
 /// Прочитать метод запроса из контекста; некорректное значение игнорируется.
 std::optional<FetchApiMethod> methodFromContext(const QVariant& value) {
@@ -27,37 +39,109 @@ std::optional<FetchApiHandlerType> handlerFromContext(const QVariant& value) {
 	return From<FetchApiHandlerType>::from(value.toString());
 }
 
+/// Подпись типа обработчика в панели свойств (сейчас реализован только REST).
+QString handlerTitle(FetchApiHandlerType handler) {
+	return handler == FetchApiHandlerType::Rest ? QStringLiteral("REST") : QString();
+}
+
+QString sslPolicyTitle(FetchApiSslPolicy policy) {
+	switch (policy) {
+	case FetchApiSslPolicy::Strict:
+		return QStringLiteral("Strict");
+	case FetchApiSslPolicy::TrustCustomCa:
+		return QStringLiteral("Trust custom CA");
+	case FetchApiSslPolicy::IgnoreErrors:
+		return QStringLiteral("Ignore errors");
+	}
+
+	return QStringLiteral("Strict");
+}
+
+std::optional<FetchApiSslPolicy> sslPolicyFromTitle(const QString& title) {
+	if (title == QStringLiteral("Strict")) {
+		return FetchApiSslPolicy::Strict;
+	}
+	if (title == QStringLiteral("Trust custom CA")) {
+		return FetchApiSslPolicy::TrustCustomCa;
+	}
+	if (title == QStringLiteral("Ignore errors")) {
+		return FetchApiSslPolicy::IgnoreErrors;
+	}
+
+	return From<FetchApiSslPolicy>::from(title);
+}
+
 } // namespace
 
 struct FetchApiDocument::Private {
+	FetchApiDocument* q = nullptr;
+
 	FetchApiWidget* widget = nullptr;
-	/// true — документ сам обновляет виджет из контекста: обратная реакция
+	DocumentRibbon* ribbon = nullptr;
+	RibbonButton* sendButton = nullptr;
+
+	/// true — документ сам обновляет виджет или контекст: обратная реакция
 	/// на изменение переменных в это время не нужна.
 	bool applying = false;
+
+	QWidget* createRequestPropertiesEditor(QWidget* parent);
+	QList<PropertyData> requestProperties() const;
+	void applyRequestProperty(const QString& id, const QVariant& value);
+	void writeContextVariable(const char* name, const QVariant& value);
 };
 
-FetchApiDocument::FetchApiDocument(FetchApiService* service,
-	HighlightingPluginManager* highlighting,
-	FormatterPluginManager* formatters,
-	QWidget* parent)
+FetchApiDocument::FetchApiDocument(FetchApiService* service, QWidget* parent)
 	: DocumentWidget(parent)
 	, d(std::make_unique<Private>()) {
+	d->q = this;
 	setGlyph(QStringLiteral("🌐"));
 	setTitle(tr("Fetch API"));
 
-	d->widget = new FetchApiWidget(service, highlighting, formatters, this);
+	d->widget = new FetchApiWidget(service, this);
+
+	// Лента документа содержит функцию «Отправить»; её параметры
+	// (тип запроса и обработка TLS) редактируются в панели «Свойства».
+	d->ribbon = new DocumentRibbon(this);
+	auto* requestGroup = d->ribbon->addGroup(tr("Запрос"));
+	d->sendButton = d->ribbon->addButton(requestGroup, tr("Отправить"),
+		tr("Отправить запрос"), kRequestGroup);
+	connect(d->sendButton, &RibbonButton::clicked, this, [this] {
+		if (d->widget) {
+			d->widget->sendRequest();
+		}
+	});
+	connect(d->ribbon, &DocumentRibbon::propertiesRequested, this,
+		[this](const QString& groupId) {
+			showProperties(groupId);
+		});
+
 	auto* layout = new QVBoxLayout(this);
 	layout->setContentsMargins(0, 0, 0, 0);
-	layout->addWidget(d->widget);
+	layout->setSpacing(0);
+	layout->addWidget(d->ribbon, 0);
+	layout->addWidget(d->widget, 1);
 
 	// Параметры запроса попадают в контекст перед отправкой, поэтому даже
 	// после перезапуска документ можно восстановить из переменных.
 	connect(d->widget, &FetchApiWidget::requestStarted,
 		this, &FetchApiDocument::writeRequestToContext);
+	connect(d->widget, &FetchApiWidget::requestStarted, this, [this] {
+		if (d->sendButton) {
+			d->sendButton->setEnabled(false);
+		}
+	});
 	connect(d->widget, &FetchApiWidget::requestFinished,
 		this, &FetchApiDocument::onRequestFinished);
+	connect(d->widget, &FetchApiWidget::requestFinished, this, [this](const FetchApiResult&) {
+		if (d->sendButton) {
+			d->sendButton->setEnabled(true);
+		}
+	});
 	connect(d->widget, &FetchApiWidget::requestFailed, this,
 		[this](const QString& message) {
+			if (d->sendButton) {
+				d->sendButton->setEnabled(true);
+			}
 			printError(message);
 		});
 }
@@ -66,6 +150,103 @@ FetchApiDocument::~FetchApiDocument() = default;
 
 FetchApiWidget* FetchApiDocument::widget() const {
 	return d->widget;
+}
+
+void FetchApiDocument::Private::writeContextVariable(const char* name, const QVariant& value) {
+	applying = true;
+	q->setVariable(QString::fromLatin1(name), value);
+	applying = false;
+}
+
+QList<PropertyData> FetchApiDocument::Private::requestProperties() const {
+	QList<PropertyData> result;
+	if (!widget) {
+		return result;
+	}
+
+	PropertyData handler;
+	handler.id = kHandlerProperty;
+	handler.label = q->tr("Тип запроса");
+	handler.type = PropertyType::Combo;
+	handler.comboOptions = { handlerTitle(FetchApiHandlerType::Rest) };
+	handler.value = handlerTitle(widget->handler());
+	handler.tooltip = q->tr("Тип обработчика запроса. Сейчас реализован только REST.");
+	result << handler;
+
+	PropertyData policy;
+	policy.id = kSslPolicyProperty;
+	policy.label = q->tr("Политика TLS");
+	policy.type = PropertyType::Combo;
+	policy.comboOptions = {
+		sslPolicyTitle(FetchApiSslPolicy::Strict),
+		sslPolicyTitle(FetchApiSslPolicy::TrustCustomCa),
+		sslPolicyTitle(FetchApiSslPolicy::IgnoreErrors),
+	};
+	policy.value = sslPolicyTitle(widget->sslPolicy());
+	policy.tooltip = q->tr("Strict — проверять сертификаты, Trust custom CA — "
+		"доверять только указанному файлу, Ignore errors — не проверять TLS.");
+	result << policy;
+
+	PropertyData caFile;
+	caFile.id = kSslCaFileProperty;
+	caFile.label = q->tr("Файл CA-сертификата");
+	caFile.type = PropertyType::PathFile;
+	caFile.value = widget->caFile();
+	caFile.fileFilter = q->tr("Сертификаты (*.pem *.crt *.cer *.der);;Все файлы (*.*)");
+	caFile.tooltip = q->tr("Используется при политике «Trust custom CA».");
+	result << caFile;
+
+	return result;
+}
+
+QWidget* FetchApiDocument::Private::createRequestPropertiesEditor(QWidget* parent) {
+	auto* properties = new PropertiesListWidget(parent);
+	properties->setObjectName(QStringLiteral("FetchRequestProperties"));
+	properties->setHeaderVisible(false);
+	properties->setScrollable(false);
+	properties->setProperties(requestProperties());
+
+	connect(properties, &PropertiesListWidget::propertyChanged, q,
+		[this](const QString& id, const QVariant& value) {
+			applyRequestProperty(id, value);
+		});
+
+	return properties;
+}
+
+void FetchApiDocument::Private::applyRequestProperty(const QString& id, const QVariant& value) {
+	if (!widget) {
+		return;
+	}
+
+	if (id == kHandlerProperty) {
+		const auto handler = From<FetchApiHandlerType>::from(value.toString());
+		if (!handler) {
+			return;
+		}
+
+		widget->setHandler(*handler);
+		writeContextVariable(FetchApiVariables::kHandler,
+			Format<FetchApiHandlerType>::format(*handler));
+		return;
+	}
+
+	if (id == kSslPolicyProperty) {
+		const auto policy = sslPolicyFromTitle(value.toString());
+		if (!policy) {
+			return;
+		}
+
+		widget->setSslPolicy(*policy);
+		writeContextVariable(FetchApiVariables::kSslPolicy,
+			Format<FetchApiSslPolicy>::format(*policy));
+		return;
+	}
+
+	if (id == kSslCaFileProperty) {
+		widget->setCaFile(value.toString());
+		writeContextVariable(FetchApiVariables::kSslCaFile, value.toString());
+	}
 }
 
 void FetchApiDocument::applyContextToWidget() {
@@ -160,11 +341,8 @@ void FetchApiDocument::onRequestFinished(const FetchApiResult& result) {
 		result.applyToContext(*context);
 	}
 
-	if (d->widget) {
-		setToolTip(QStringLiteral("%1\n%2")
-			.arg(d->widget->location())
-			.arg(result.failed ? result.errorMessage() : result.contentType()));
-	}
+	// Подсказка вкладки — переменная `url` из метаданных типа документа;
+	// на самом документе tooltip не выставляется.
 
 	emit requestCompleted(result);
 	emit propertiesChanged();
@@ -215,11 +393,13 @@ void FetchApiDocument::onContextVariableChanged(const QString& name, const QVari
 		if (const auto policy = sslPolicyFromContext(value)) {
 			d->widget->setSslPolicy(*policy);
 		}
+		emit propertiesChanged();
 		return;
 	}
 
 	if (name == QLatin1String(FetchApiVariables::kSslCaFile)) {
 		d->widget->setCaFile(value.toString());
+		emit propertiesChanged();
 		return;
 	}
 
@@ -227,6 +407,7 @@ void FetchApiDocument::onContextVariableChanged(const QString& name, const QVari
 		if (const auto handler = handlerFromContext(value)) {
 			d->widget->setHandler(*handler);
 		}
+		emit propertiesChanged();
 		return;
 	}
 }
@@ -248,7 +429,6 @@ QWidget* FetchApiDocument::createPropertiesEditor(QWidget* parent) {
 	auto* statusLabel = new QLabel(QStringLiteral("—"), editor);
 	auto* timeLabel = new QLabel(QStringLiteral("—"), editor);
 	auto* sizeLabel = new QLabel(QStringLiteral("—"), editor);
-	auto* sslLabel = new QLabel(Format<FetchApiSslPolicy>::format(d->widget->sslPolicy()), editor);
 
 	// Получатель — сама метка: связь исчезнет вместе с панелью свойств.
 	connect(this, &FetchApiDocument::requestCompleted, statusLabel,
@@ -264,8 +444,15 @@ QWidget* FetchApiDocument::createPropertiesEditor(QWidget* parent) {
 	form->addRow(tr("Статус:"), statusLabel);
 	form->addRow(tr("Время:"), timeLabel);
 	form->addRow(tr("Размер:"), sizeLabel);
-	form->addRow(tr("TLS:"), sslLabel);
 	return editor;
+}
+
+QList<DocumentPropertyGroup> FetchApiDocument::createPropertyGroups(QWidget* parent) {
+	DocumentPropertyGroup request;
+	request.id = kRequestGroup;
+	request.title = tr("Параметры отправки");
+	request.editor = d->createRequestPropertiesEditor(parent);
+	return { request };
 }
 
 void FetchApiDocument::refresh() {

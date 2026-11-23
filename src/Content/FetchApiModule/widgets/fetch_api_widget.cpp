@@ -5,12 +5,7 @@
 #include "Libs/Base/extensions/text_edit_extensions.h"
 #include "Libs/BaseWidgets/key_value/key_value_editor_widget.h"
 
-#include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
-#include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
-#include "Content/CodeEditorWidget/widgets/code_editor_widget.h"
-
 #include <QComboBox>
-#include <QFileDialog>
 #include <QFont>
 #include <QFormLayout>
 #include <QHBoxLayout>
@@ -21,11 +16,9 @@
 #include <QPlainTextEdit>
 #include <QPointer>
 #include <QProgressBar>
-#include <QPushButton>
 #include <QSplitter>
 #include <QStyle>
 #include <QTabWidget>
-#include <QToolButton>
 #include <QVBoxLayout>
 
 namespace {
@@ -61,11 +54,6 @@ QString prettyResponseText(const FetchApiResult& result) {
 
 class FetchApiWidget::Private {
 public:
-	enum class ResponseBodyKind {
-		CodeEditor,
-		PlainText,
-	};
-
 	/// Тип авторизации; значение хранится в данных элемента комбобокса.
 	enum AuthType {
 		AuthNone = 0,
@@ -78,16 +66,14 @@ public:
 	FetchApiWidget* q;
 
 	FetchApiService* service = nullptr;
-	HighlightingPluginManager* highlighting = nullptr;
-	FormatterPluginManager* formatters = nullptr;
 
-	QComboBox* handlerCombo = nullptr;
 	QComboBox* methodCombo = nullptr;
 	QLineEdit* urlEdit = nullptr;
-	QPushButton* sendButton = nullptr;
-	QComboBox* sslPolicyCombo = nullptr;
-	QLineEdit* caFileEdit = nullptr;
-	QToolButton* caBrowseButton = nullptr;
+
+	/// Параметры отправки, которыми управляет документ через панель свойств.
+	FetchApiHandlerType handlerType = FetchApiHandlerType::Rest;
+	FetchApiSslPolicy sslPolicyValue = FetchApiSslPolicy::Strict;
+	QString caFileValue;
 
 	QPlainTextEdit* bodyEdit = nullptr;
 	KeyValueEditorWidget* headersEditor = nullptr;
@@ -99,8 +85,8 @@ public:
 	QLabel* authValueLabel = nullptr;
 	QComboBox* authAddToCombo = nullptr;
 
-	QWidget* responseBody = nullptr;
-	ResponseBodyKind responseBodyKind = ResponseBodyKind::PlainText;
+	/// Ответ — простое текстовое поле без подсветки.
+	QPlainTextEdit* responseBody = nullptr;
 	KeyValueEditorWidget* responseHeaders = nullptr;
 	KeyValueEditorWidget* responseCookies = nullptr;
 	QLabel* statusLabel = nullptr;
@@ -111,17 +97,14 @@ public:
 	bool busy = false;
 
 	void setupUi();
-	void updateSslControls();
 	void updateAuthControls();
 	void setBusy(bool value);
 
 	FetchApiMethod currentMethod() const;
-	FetchApiSslPolicy currentSslPolicy() const;
-	FetchApiHandlerType currentHandler() const;
 
 	void applyAuth(FetchApiOpt& options) const;
 
-	void setResponseText(const QString& text, const QString& contentType);
+	void setResponseText(const QString& text);
 	void clearResponseText();
 	void setResponseHeaders(const QHttpHeaders& headers);
 	void setResponseCookies(const QList<QPair<QString, QString>>& cookies);
@@ -133,19 +116,13 @@ public:
 	static QString formatBytes(qint64 bytes);
 };
 
-FetchApiWidget::FetchApiWidget(FetchApiService* service,
-	HighlightingPluginManager* highlighting,
-	FormatterPluginManager* formatters,
-	QWidget* parent)
+FetchApiWidget::FetchApiWidget(FetchApiService* service, QWidget* parent)
 	: QWidget(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->service = service;
-	d->highlighting = highlighting;
-	d->formatters = formatters;
 	d->setupUi();
 
 	if (!d->service) {
-		d->sendButton->setEnabled(false);
 		d->statusLabel->setProperty("state", QStringLiteral("error"));
 		refreshStyle(d->statusLabel);
 		d->statusLabel->setText(tr("HTTP-сервис недоступен"));
@@ -159,15 +136,10 @@ void FetchApiWidget::Private::setupUi() {
 	mainLayout->setContentsMargins(15, 15, 15, 15);
 	mainLayout->setSpacing(10);
 
-	// --- Строка запроса: обработчик, метод, адрес, отправка ----------------
+	// --- Строка запроса: метод и адрес -------------------------------------
+	// Отправка и её параметры (тип обработчика, TLS) живут в ленте документа
+	// и панели «Свойства».
 	auto* topBar = new QHBoxLayout();
-
-	handlerCombo = new QComboBox();
-	handlerCombo->setObjectName(QStringLiteral("FetchHandlerCombo"));
-	handlerCombo->addItem(QStringLiteral("REST"),
-		static_cast<int>(FetchApiHandlerType::Rest));
-	handlerCombo->setMinimumWidth(110);
-	handlerCombo->setToolTip(QStringLiteral("Тип обработчика запроса. Сейчас реализован только REST."));
 
 	methodCombo = new QComboBox();
 	methodCombo->setObjectName(QStringLiteral("FetchMethodCombo"));
@@ -185,57 +157,8 @@ void FetchApiWidget::Private::setupUi() {
 	urlEdit->setPlaceholderText(QStringLiteral(
 		"https://api.example.com/v1/users"));
 
-	sendButton = new QPushButton(QStringLiteral("Send"));
-	sendButton->setObjectName(QStringLiteral("FetchSendButton"));
-	sendButton->setMinimumWidth(90);
-	sendButton->setCursor(Qt::PointingHandCursor);
-
-	topBar->addWidget(handlerCombo);
 	topBar->addWidget(methodCombo);
 	topBar->addWidget(urlEdit, 1);
-	topBar->addWidget(sendButton);
-
-	// --- Строка TLS: политика и файл сертификатов ---------------------------
-	auto* sslBar = new QHBoxLayout();
-	sslBar->setSpacing(6);
-
-	auto* sslTitle = new QLabel(QStringLiteral("TLS:"));
-	sslTitle->setObjectName(QStringLiteral("FetchSslTitle"));
-	sslTitle->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-
-	// Подписи пунктов короткие, чтобы список не растягивался и стоял рядом
-	// с подписью; полное пояснение — в подсказке пункта.
-	sslPolicyCombo = new QComboBox();
-	sslPolicyCombo->setObjectName(QStringLiteral("FetchSslPolicyCombo"));
-	sslPolicyCombo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
-	sslPolicyCombo->setMinimumContentsLength(16);
-	sslPolicyCombo->addItem(QStringLiteral("Strict"),
-		static_cast<int>(FetchApiSslPolicy::Strict));
-	sslPolicyCombo->setItemData(0, QStringLiteral(
-		"Проверять сертификаты: любая ошибка TLS прерывает запрос"), Qt::ToolTipRole);
-	sslPolicyCombo->addItem(QStringLiteral("Trust custom CA"),
-		static_cast<int>(FetchApiSslPolicy::TrustCustomCa));
-	sslPolicyCombo->setItemData(1, QStringLiteral(
-		"Доверять только сертификатам из указанного файла"), Qt::ToolTipRole);
-	sslPolicyCombo->addItem(QStringLiteral("Ignore errors"),
-		static_cast<int>(FetchApiSslPolicy::IgnoreErrors));
-	sslPolicyCombo->setItemData(2, QStringLiteral(
-		"Не проверять TLS: принимать любой сертификат"), Qt::ToolTipRole);
-
-	caFileEdit = new QLineEdit();
-	caFileEdit->setObjectName(QStringLiteral("FetchSslCaFileEdit"));
-	caFileEdit->setPlaceholderText(QStringLiteral(
-		"Файл CA-сертификата (PEM/DER) для политики Trust custom CA"));
-
-	caBrowseButton = new QToolButton();
-	caBrowseButton->setObjectName(QStringLiteral("FetchSslCaBrowseButton"));
-	caBrowseButton->setText(QStringLiteral("…"));
-	caBrowseButton->setToolTip(QStringLiteral("Выбрать файл CA-сертификата"));
-
-	sslBar->addWidget(sslTitle);
-	sslBar->addWidget(sslPolicyCombo);
-	sslBar->addWidget(caFileEdit, 1);
-	sslBar->addWidget(caBrowseButton);
 
 	// --- Область запроса ----------------------------------------------------
 	auto* requestPanel = new QWidget();
@@ -327,24 +250,13 @@ void FetchApiWidget::Private::setupUi() {
 	auto* responseTabs = new QTabWidget();
 	responseTabs->setObjectName(QStringLiteral("FetchResponseTabs"));
 
-	if (highlighting && formatters) {
-		auto* editor = new CodeEditorWidget(highlighting, formatters);
-		editor->setObjectName(QStringLiteral("FetchResponseBody"));
-		editor->setReadOnly(true);
-		editor->setFont(monoFont());
-		editor->setPlaceholderText(QStringLiteral("Ответ сервера появится здесь..."));
-		responseBody = editor;
-		responseBodyKind = ResponseBodyKind::CodeEditor;
-	}
-	else {
-		auto* plain = new QPlainTextEdit();
-		plain->setObjectName(QStringLiteral("FetchResponseBody"));
-		plain->setReadOnly(true);
-		plain->setFont(monoFont());
-		plain->setPlaceholderText(QStringLiteral("Ответ сервера появится здесь..."));
-		responseBody = plain;
-		responseBodyKind = ResponseBodyKind::PlainText;
-	}
+	// Ответ показывается в простом текстовом поле: модуль не зависит от
+	// редактора кода и его подсветки.
+	responseBody = new QPlainTextEdit();
+	responseBody->setObjectName(QStringLiteral("FetchResponseBody"));
+	responseBody->setReadOnly(true);
+	responseBody->setFont(monoFont());
+	responseBody->setPlaceholderText(QStringLiteral("Ответ сервера появится здесь..."));
 
 	responseHeaders = new KeyValueEditorWidget();
 	responseHeaders->setObjectName(QStringLiteral("FetchResponseHeaders"));
@@ -368,33 +280,14 @@ void FetchApiWidget::Private::setupUi() {
 	splitter->setStretchFactor(1, 1);
 
 	mainLayout->addLayout(topBar);
-	mainLayout->addLayout(sslBar);
 	mainLayout->addWidget(splitter, 1);
 
 	// --- Связи --------------------------------------------------------------
-	QObject::connect(sendButton, &QPushButton::clicked, q, &FetchApiWidget::sendRequest);
 	QObject::connect(urlEdit, &QLineEdit::returnPressed, q, &FetchApiWidget::sendRequest);
-	QObject::connect(sslPolicyCombo, &QComboBox::currentIndexChanged, q,
-		[this](int) { updateSslControls(); });
 	QObject::connect(authTypeCombo, &QComboBox::currentIndexChanged, q,
 		[this](int) { updateAuthControls(); });
-	QObject::connect(caBrowseButton, &QToolButton::clicked, q, [this]() {
-		const auto path = QFileDialog::getOpenFileName(q,
-			QStringLiteral("CA-сертификат"), caFileEdit->text(),
-			QStringLiteral("Сертификаты (*.pem *.crt *.cer *.der);;Все файлы (*.*)"));
-		if (!path.isEmpty()) {
-			caFileEdit->setText(path);
-		}
-	});
 
-	updateSslControls();
 	updateAuthControls();
-}
-
-void FetchApiWidget::Private::updateSslControls() {
-	const bool customCa = currentSslPolicy() == FetchApiSslPolicy::TrustCustomCa;
-	caFileEdit->setVisible(customCa);
-	caBrowseButton->setVisible(customCa);
 }
 
 void FetchApiWidget::Private::updateAuthControls() {
@@ -437,7 +330,6 @@ void FetchApiWidget::Private::updateAuthControls() {
 
 void FetchApiWidget::Private::setBusy(bool value) {
 	busy = value;
-	sendButton->setEnabled(!value && service != nullptr);
 	methodCombo->setEnabled(!value);
 	urlEdit->setReadOnly(value);
 
@@ -452,16 +344,6 @@ void FetchApiWidget::Private::setBusy(bool value) {
 FetchApiMethod FetchApiWidget::Private::currentMethod() const {
 	const auto value = methodCombo->currentData().toInt();
 	return static_cast<FetchApiMethod>(value);
-}
-
-FetchApiSslPolicy FetchApiWidget::Private::currentSslPolicy() const {
-	const auto value = sslPolicyCombo->currentData().toInt();
-	return static_cast<FetchApiSslPolicy>(value);
-}
-
-FetchApiHandlerType FetchApiWidget::Private::currentHandler() const {
-	const auto value = handlerCombo->currentData().toInt();
-	return static_cast<FetchApiHandlerType>(value);
 }
 
 void FetchApiWidget::Private::applyAuth(FetchApiOpt& options) const {
@@ -504,25 +386,12 @@ void FetchApiWidget::Private::applyAuth(FetchApiOpt& options) const {
 	}
 }
 
-void FetchApiWidget::Private::setResponseText(const QString& text, const QString& contentType) {
-	if (responseBodyKind == ResponseBodyKind::CodeEditor) {
-		auto* editor = static_cast<CodeEditorWidget*>(responseBody);
-		editor->setContentType(contentType);
-		editor->setText(text);
-		return;
-	}
-
-	auto* plain = static_cast<QPlainTextEdit*>(responseBody);
-	plain->setPlainText(text);
+void FetchApiWidget::Private::setResponseText(const QString& text) {
+	responseBody->setPlainText(text);
 }
 
 void FetchApiWidget::Private::clearResponseText() {
-	if (responseBodyKind == ResponseBodyKind::CodeEditor) {
-		static_cast<CodeEditorWidget*>(responseBody)->clear();
-		return;
-	}
-
-	static_cast<QPlainTextEdit*>(responseBody)->clear();
+	responseBody->clear();
 }
 
 void FetchApiWidget::Private::setResponseHeaders(const QHttpHeaders& headers) {
@@ -617,8 +486,8 @@ FetchApiOpt FetchApiWidget::requestOptions() const {
 		Private::editorKeyValues(d->headersEditor));
 	options.setMethod(d->currentMethod());
 	options.setBodyText(bodyText());
-	options.setSslPolicy(d->currentSslPolicy());
-	options.setHandler(d->currentHandler());
+	options.setSslPolicy(d->sslPolicyValue);
+	options.setHandler(d->handlerType);
 
 	if (options.sslPolicy() == FetchApiSslPolicy::TrustCustomCa) {
 		const auto path = caFile();
@@ -684,35 +553,27 @@ void FetchApiWidget::setHeadersFormatted(const QString& headers) {
 }
 
 FetchApiSslPolicy FetchApiWidget::sslPolicy() const {
-	return d->currentSslPolicy();
+	return d->sslPolicyValue;
 }
 
 void FetchApiWidget::setSslPolicy(FetchApiSslPolicy policy) {
-	const auto index = d->sslPolicyCombo->findData(static_cast<int>(policy));
-	if (index >= 0) {
-		d->sslPolicyCombo->setCurrentIndex(index);
-	}
-
-	d->updateSslControls();
+	d->sslPolicyValue = policy;
 }
 
 QString FetchApiWidget::caFile() const {
-	return d->caFileEdit->text().trimmed();
+	return d->caFileValue;
 }
 
 void FetchApiWidget::setCaFile(const QString& path) {
-	d->caFileEdit->setText(path);
+	d->caFileValue = path;
 }
 
 FetchApiHandlerType FetchApiWidget::handler() const {
-	return d->currentHandler();
+	return d->handlerType;
 }
 
 void FetchApiWidget::setHandler(FetchApiHandlerType handler) {
-	const auto index = d->handlerCombo->findData(static_cast<int>(handler));
-	if (index >= 0) {
-		d->handlerCombo->setCurrentIndex(index);
-	}
+	d->handlerType = handler;
 }
 
 bool FetchApiWidget::isBusy() const {
@@ -798,7 +659,7 @@ void FetchApiWidget::showResult(const FetchApiResult& result) {
 	if (result.failed && text.isEmpty()) {
 		text = result.errorMessage();
 	}
-	d->setResponseText(text, result.contentType());
+	d->setResponseText(text);
 	d->setResponseHeaders(result.headers);
 	d->setResponseCookies(result.cookies());
 
@@ -820,7 +681,7 @@ void FetchApiWidget::showError(const QString& message) {
 	d->timeLabel->setText(QStringLiteral("Time: —"));
 	d->sizeLabel->setText(QStringLiteral("Size: —"));
 
-	d->setResponseText(message, QString());
+	d->setResponseText(message);
 	d->setResponseHeaders(QHttpHeaders());
 	d->setResponseCookies({});
 

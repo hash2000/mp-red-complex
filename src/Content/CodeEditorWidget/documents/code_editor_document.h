@@ -29,7 +29,13 @@ public:
 	/// Загрузить файл в редактор (чтение выполняется асинхронно).
 	bool openFile(const QString& path);
 
+	/// Перечитать файл в указанной кодировке (имя кодека QTextCodec).
+	bool reopenWithEncoding(const QString& encoding);
+	/// Сохранить файл в указанной кодировке (имя кодека QTextCodec).
+	bool saveWithEncoding(const QString& encoding);
+
 	QWidget* createPropertiesEditor(QWidget* parent) override;
+	QList<DocumentPropertyGroup> createPropertyGroups(QWidget* parent) override;
 	void refresh() override;
 	bool save() override;
 

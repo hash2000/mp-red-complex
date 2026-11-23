@@ -8,6 +8,9 @@ public:
 	FormatterPluginAsync* q;
 
 	QFutureWatcher<QString>* watcher = nullptr;
+	/// Номер запуска: результат устаревшего запуска не должен попадать
+	/// в редактор (QFutureWatcher::cancel() не останавливает вычисление).
+	int generation = 0;
 };
 
 FormatterPluginAsync::FormatterPluginAsync()
@@ -21,15 +24,26 @@ FormatterPluginAsync::~FormatterPluginAsync() {
 void FormatterPluginAsync::formatAsync(const QString& text) {
 	stop();
 
-	d->watcher = new QFutureWatcher<QString>(this);
+	if (!d->watcher) {
+		d->watcher = new QFutureWatcher<QString>(this);
+	}
+
+	auto* watcher = d->watcher;
+	const int generation = d->generation;
 
 	// Связываем сигнал завершения с нашим сигналом
-	connect(d->watcher, &QFutureWatcher<QString>::finished, this, [this]() {
-		if (!d->watcher->isCanceled()) {
-			emit formattingFinished(d->watcher->result());
+	connect(watcher, &QFutureWatcher<QString>::finished, this, [this, watcher, generation]() {
+		if (generation != d->generation || watcher->isCanceled()) {
+			// Устаревший запуск: watcher уже удаляется из stop().
+			return;
 		}
-		d->watcher->deleteLater();
-		d->watcher = nullptr;
+
+		const QString result = watcher->result();
+		watcher->deleteLater();
+		if (d->watcher == watcher) {
+			d->watcher = nullptr;
+		}
+		emit formattingFinished(result);
 	});
 
 	QFuture<QString> future = QtConcurrent::run([this](const QString& inputText) {
@@ -37,10 +51,11 @@ void FormatterPluginAsync::formatAsync(const QString& text) {
 		return formatted;
 	}, text);
 
-	d->watcher->setFuture(future);
+	watcher->setFuture(future);
 }
 
 void FormatterPluginAsync::stop() {
+	++d->generation;
 	if (d->watcher) {
 		d->watcher->cancel();
 		d->watcher->deleteLater();

@@ -6,4 +6,6 @@
 class CodeEditorDocumentMetadata final : public IDocumentMetadata {
 public:
 	QList<DocumentVariable> variables() const override;
+	/// Подсказка вкладки — путь к открытому файлу.
+	QString tooltipVariable() const override;
 };

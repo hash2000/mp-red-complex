@@ -8,8 +8,6 @@
 
 class FetchApiOpt;
 class FetchApiService;
-class FormatterPluginManager;
-class HighlightingPluginManager;
 
 /// Виджет «аналог Postman»: редактор REST-запроса и просмотр ответа.
 ///
@@ -17,13 +15,13 @@ class HighlightingPluginManager;
 /// запроса он отдаёт через `requestOptions()`, выполняет запрос сам (через
 /// `FetchApiService`) и сообщает о завершении сигналом `requestFinished`.
 /// Документ, которому принадлежит виджет, решает, что делать с результатом.
+///
+/// Ответ показывается в простом текстовом поле (`QPlainTextEdit`) без
+/// подсветки синтаксиса: модуль не зависит от редактора кода.
 class FetchApiWidget : public QWidget {
 	Q_OBJECT
 public:
-	FetchApiWidget(FetchApiService* service,
-		HighlightingPluginManager* highlighting,
-		FormatterPluginManager* formatters,
-		QWidget* parent = nullptr);
+	explicit FetchApiWidget(FetchApiService* service, QWidget* parent = nullptr);
 	~FetchApiWidget() override;
 
 	/// Параметры запроса из полей редактора, включая авторизацию.

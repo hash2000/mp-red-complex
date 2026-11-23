@@ -15,6 +15,15 @@
 			"name": "qtsvg"
 		},
 		{
+			"name": "qt5compat",
+			"default-features": false,
+			"features": [
+				"textcodec",
+				"codecs",
+				"big-codecs"
+			]
+		},
+		{
 			"name": "zlib"
 		},
 		{

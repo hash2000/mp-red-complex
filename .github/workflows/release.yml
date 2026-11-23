@@ -1,0 +1,164 @@
+name: Release
+
+# Тег вида v0.1.0 запускает сборку Release и публикацию GitHub Release:
+# архив прикладывается к релизу этого тега.
+#
+# Ручной запуск (Actions -> Release -> Run workflow) собирает архив и
+# прикладывает его только к прогону как artifact — без тега и без релиза.
+# Так можно проверить весь конвейер, не создавая версию.
+on:
+  push:
+    tags:
+      - 'v[0-9]*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Версия для имени архива (без ведущей v), например 0.1.0-test'
+        required: true
+        default: '0.0.0-dev'
+
+# Нужно право создавать релиз и загружать в него файлы.
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # Только Release-библиотеки: Qt из vcpkg собирается заметно быстрее,
+  # а Debug-зависимости в релизном архиве не нужны.
+  VCPKG_TARGET_TRIPLET: x64-windows-release
+  BUILD_DIR: build
+
+jobs:
+  windows-x64:
+    name: Windows x64 (Release)
+    runs-on: windows-latest
+    # Первый прогон собирает Qt из исходников через vcpkg: это долго.
+    # Повторные прогоны берут пакеты из кэша и занимают несколько минут.
+    timeout-minutes: 300
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          # Нужны теги и история: по ним GitHub генерирует заметки к релизу.
+          fetch-depth: 0
+
+      - name: Версия пакета
+        id: version
+        run: |
+          if ('${{ github.event_name }}' -eq 'push') {
+            $version = '${{ github.ref_name }}'.TrimStart('v')
+          }
+          else {
+            $version = '${{ inputs.version }}'
+          }
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "version=$version"
+          Write-Host "Версия пакета: $version"
+
+      - name: CMake 4.1+
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '4.1.x'
+
+      - name: Окружение MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Компилятор clang-cl
+        id: compiler
+        run: |
+          # Проект штатно собирается clang-cl (см. CMakeSettings.json), поэтому
+          # в CI используется тот же компилятор из состава Visual Studio.
+          $candidates = @()
+          if ($env:VCINSTALLDIR) {
+            $candidates += (Join-Path $env:VCINSTALLDIR 'Tools\Llvm\x64\bin\clang-cl.exe')
+            $candidates += (Join-Path $env:VCINSTALLDIR 'Tools\Llvm\bin\clang-cl.exe')
+          }
+          $candidates += 'C:\Program Files\LLVM\bin\clang-cl.exe'
+          $clangCl = $candidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+          if (-not $clangCl) {
+            throw 'clang-cl не найден: на образе windows-latest он входит в Visual Studio и LLVM.'
+          }
+          Split-Path -Parent $clangCl | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "path=$clangCl"
+          & $clangCl --version
+
+      - name: Кэш бинарных пакетов vcpkg
+        uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}/.vcpkg-cache
+          # Ключ зависит от манифеста и триплета: при изменении vcpkg.json
+          # пакеты пересобираются, иначе берутся из кэша.
+          key: vcpkg-${{ runner.os }}-${{ env.VCPKG_TARGET_TRIPLET }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-${{ env.VCPKG_TARGET_TRIPLET }}-
+
+      - name: Проверка инструментов
+        run: |
+          if (-not $env:VCPKG_INSTALLATION_ROOT) {
+            throw 'VCPKG_INSTALLATION_ROOT не задан: на образе windows-latest vcpkg должен быть предустановлен.'
+          }
+          cmake --version
+          ninja --version
+          & (Join-Path $env:VCPKG_INSTALLATION_ROOT 'vcpkg.exe') version
+
+      - name: Конфигурация
+        env:
+          # Бинарный кэш ускоряет повторную установку зависимостей.
+          VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/.vcpkg-cache,readwrite"
+        run: |
+          cmake -S . -B $env:BUILD_DIR -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_C_COMPILER="${{ steps.compiler.outputs.path }}" `
+            -DCMAKE_CXX_COMPILER="${{ steps.compiler.outputs.path }}" `
+            -DVCPKG_TARGET_TRIPLET=$env:VCPKG_TARGET_TRIPLET `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+
+      - name: Сборка Launcher
+        run: cmake --build $env:BUILD_DIR --target Launcher --parallel
+
+      - name: Упаковка
+        id: package
+        run: |
+          .\scripts\package-release.ps1 `
+            -Version '${{ steps.version.outputs.version }}' `
+            -BuildDirectory $env:BUILD_DIR `
+            -OutputDirectory artifacts
+
+      - name: Артефакт прогона
+        uses: actions/upload-artifact@v7
+        with:
+          name: RedComplex-${{ steps.version.outputs.version }}-win64
+          path: artifacts/*.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: GitHub Release
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: RedComplex ${{ steps.version.outputs.version }}
+          files: artifacts/RedComplex-${{ steps.version.outputs.version }}-win64.zip
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+          # Версия с дефисом (0.2.0-beta) публикуется как pre-release.
+          prerelease: ${{ contains(steps.version.outputs.version, '-') }}
+          body: |
+            Переносимая сборка RedComplex для Windows x64.
+
+            **Как запустить:** скачайте zip, распакуйте в любую папку и запустите
+            `RedComplex.cmd`. При первом запуске эталонная конфигурация копируется
+            в профиль `%LOCALAPPDATA%\Hash2000\red-complex`.
+
+            **Как обновить конфигурацию:** `RedComplex.cmd /update-config`
+            (базы данных в профиле не затрагиваются).
+
+            Подробности — в `README.txt` внутри архива.

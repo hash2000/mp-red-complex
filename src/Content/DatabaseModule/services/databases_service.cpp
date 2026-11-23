@@ -3,6 +3,7 @@
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Resources/db/sqlite/migration_manager.h"
 #include "Libs/Resources/db/sqlite/sqlite_connection.h"
+#include "Libs/Resources/db/sqlite/sqlite_reader.h"
 #include "Libs/Resources/db/sqlite/sqlite_wal_manager.h"
 #include "Libs/Resources/resources.h"
 
@@ -18,6 +19,49 @@
 namespace {
 constexpr int kDefaultWalInterval = 60000;
 constexpr int kDefaultWalMaxSizeMb = 20;
+
+// Имя базы используется и как имя файла, и в namespace контекста, поэтому
+// допускаются только латиница, цифры, подчёркивание и дефис.
+bool validAlias(const QString& alias) {
+  static const QRegularExpression expression(QStringLiteral("^[a-z0-9_-]+$"));
+  return expression.match(alias).hasMatch();
+}
+
+// Путь к файлу базы: `path` из контекста `.store.<alias>` (относительно
+// профиля) либо `data/<alias>.db` в каталоге баз. Пустая строка — путь
+// вычислить нельзя (нет каталогов или имя недопустимо).
+QString resolveDatabasePath(Resources* resources, const std::shared_ptr<CommandContext>& globalContext,
+  const QString& alias) {
+  if (!resources) {
+    return {};
+  }
+
+  const auto context = globalContext ? globalContext->context(".store." + alias) : nullptr;
+  const auto databasesDir = resources->Directories.get("path.databases");
+  const auto profileDir = resources->Directories.get("path.profile");
+  QString dbPath = context ? context->variable("path").toString() : QString();
+  if (dbPath.isEmpty()) {
+    if (!databasesDir) {
+      qCritical() << "Database directory is not configured:" << alias;
+      return {};
+    }
+    dbPath = databasesDir->filePath(alias + ".db");
+  } else if (QDir::isRelativePath(dbPath)) {
+    if (!profileDir) {
+      qCritical() << "Profile directory is not configured:" << alias;
+      return {};
+    }
+    dbPath = profileDir->filePath(dbPath);
+  }
+
+  dbPath = QFileInfo(dbPath).absoluteFilePath();
+  if (dbPath.contains(';') || dbPath.contains('=')) {
+    qCritical() << "Unsupported character in database path:" << dbPath;
+    return {};
+  }
+
+  return dbPath;
+}
 
 int positiveSetting(const std::shared_ptr<CommandContext>& context, const QString& name, int fallback) {
   if (!context) {
@@ -106,6 +150,84 @@ void DatabasesService::reloadAliases() {
   shutdown();
 }
 
+QString DatabasesService::databasePath(const QString& name) const {
+  const auto alias = name.toLower();
+  if (!validAlias(alias) || !d->resources) {
+    return {};
+  }
+
+  return resolveDatabasePath(d->resources, d->globalContext, alias);
+}
+
+bool DatabasesService::closeDatabase(const QString& name) {
+  const auto alias = name.toLower();
+  const auto entry = d->entries.find(alias);
+  if (entry == d->entries.end()) {
+    return false;
+  }
+
+  if (entry->second.walManager) {
+    entry->second.walManager->stopAutoCheckpoint();
+    entry->second.walManager->checkpoint(SQLiteWalManager::TRUNCATE);
+  }
+  if (entry->second.connection) {
+    entry->second.connection->execute("PRAGMA optimize");
+  }
+  // WAL-менеджер уничтожается раньше соединения (порядок полей DatabaseEntry).
+  d->entries.erase(entry);
+  return true;
+}
+
+bool DatabasesService::verifyDatabaseFile(const QString& name, const QString& path,
+  QString* error) const {
+  const auto fail = [error](const QString& message) {
+    if (error) {
+      *error = message;
+    }
+    return false;
+  };
+
+  const auto alias = name.toLower();
+  if (!validAlias(alias)) {
+    return fail(QStringLiteral("Недопустимое имя базы данных"));
+  }
+
+  const QFileInfo file(path);
+  if (!file.exists() || !file.isFile() || file.size() <= 0) {
+    return fail(QStringLiteral("Файл не найден или пуст"));
+  }
+
+  const auto context = d->globalContext ? d->globalContext->context(".store." + alias) : nullptr;
+  const bool encrypted = context && context->variable("encrypted", false).toBool();
+  QString connectionString = QString("file=%1;").arg(file.absoluteFilePath());
+  if (encrypted) {
+    if (!d->encryptionKey || d->encryptionKey->isEmpty()) {
+      return fail(QStringLiteral("Ключ шифрования не установлен"));
+    }
+    connectionString += QString("token=%1;").arg(QString::fromLatin1(d->encryptionKey->toHex()));
+  }
+
+  // Проверка идёт на отдельном соединении: рабочее не открывается и не меняется.
+  SQLiteConnection probe;
+  if (!probe.open(connectionString)) {
+    return fail(QStringLiteral("Файл не открывается как база данных"));
+  }
+
+  // Неверный ключ SQLCipher обнаруживается только при чтении страниц,
+  // поэтому недостаточно успешного open().
+  const auto reader = probe.executeQuery(QStringLiteral("PRAGMA integrity_check"));
+  if (!reader || !reader->next()) {
+    return fail(QStringLiteral("Не удалось выполнить проверку целостности"));
+  }
+
+  const auto result = reader->value(0).toString();
+  if (result.compare(QStringLiteral("ok"), Qt::CaseInsensitive) != 0) {
+    return fail(QStringLiteral("Проверка целостности: %1").arg(result));
+  }
+
+  return true;
+}
+
 void DatabasesService::shutdown() {
   for (auto& [name, entry] : d->entries) {
     entry.walManager->stopAutoCheckpoint();
@@ -118,8 +240,7 @@ void DatabasesService::shutdown() {
 
 SQLiteConnection* DatabasesService::connection(const QString& name) {
   const auto alias = name.toLower();
-  static const QRegularExpression validAlias("^[a-z0-9_-]+$");
-  if (!validAlias.match(alias).hasMatch() || !d->resources) {
+  if (!validAlias(alias) || !d->resources) {
     qCritical() << "Invalid database alias or resources:" << name;
     return nullptr;
   }
@@ -129,25 +250,9 @@ SQLiteConnection* DatabasesService::connection(const QString& name) {
   }
 
   const auto context = d->globalContext ? d->globalContext->context(".store." + alias) : nullptr;
-  const auto databasesDir = d->resources->Directories.get("path.databases");
-  const auto profileDir = d->resources->Directories.get("path.profile");
-  QString dbPath = context ? context->variable("path").toString() : QString();
+  const auto dbPath = resolveDatabasePath(d->resources, d->globalContext, alias);
   if (dbPath.isEmpty()) {
-    if (!databasesDir) {
-      qCritical() << "Database directory is not configured:" << name;
-      return nullptr;
-    }
-    dbPath = databasesDir->filePath(alias + ".db");
-  } else if (QDir::isRelativePath(dbPath)) {
-    if (!profileDir) {
-      qCritical() << "Profile directory is not configured:" << name;
-      return nullptr;
-    }
-    dbPath = profileDir->filePath(dbPath);
-  }
-  dbPath = QFileInfo(dbPath).absoluteFilePath();
-  if (dbPath.contains(';') || dbPath.contains('=')) {
-    qCritical() << "Unsupported character in database path:" << dbPath;
+    qCritical() << "Database path is not configured:" << name;
     return nullptr;
   }
   if (!QDir().mkpath(QFileInfo(dbPath).absolutePath())) {

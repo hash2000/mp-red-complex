@@ -131,6 +131,7 @@ private slots:
 	void documentTabThemeIgnoresMissingFile();
 	void documentTabThemeFromConfigurations();
 	void panelKeepsManualOrder();
+	void panelTabToolTipFromContextVariable();
 	void panelMovesDocument();
 	void panelGroupsByColor();
 	void panelGroupsByType();
@@ -352,6 +353,40 @@ void TestDocumentTabs::panelKeepsManualOrder() {
 	// Удаление убирает документ из порядка.
 	panel.removeDocument(&first);
 	QCOMPARE(panel.documents(), QList<DocumentWidget*>({ &second }));
+}
+
+void TestDocumentTabs::panelTabToolTipFromContextVariable() {
+	TestCommandController controller;
+	DocumentTabsPanel panel;
+	panel.resize(220, 400);
+
+	DocumentWidget document;
+	auto context = controller.globalContext()->createDocumentContext(
+		QStringLiteral("editor"));
+	QVERIFY(context);
+	document.setContext(context);
+	document.setTitle(QStringLiteral("Файл"));
+	document.setTabToolTipVariable(QStringLiteral("path"));
+	context->setVariable(QStringLiteral("path"), QStringLiteral("/tmp/file.txt"));
+
+	panel.addDocument(&document);
+	panel.show();
+	QCoreApplication::processEvents();
+
+	const auto items = tabItems(panel);
+	QCOMPARE(items.size(), 1);
+	QCOMPARE(items.first()->toolTip(), QStringLiteral("/tmp/file.txt"));
+
+	// Путь изменился — подсказка вкладки обновилась.
+	context->setVariable(QStringLiteral("path"), QStringLiteral("/tmp/other.txt"));
+	QCOMPARE(tabItems(panel).first()->toolTip(), QStringLiteral("/tmp/other.txt"));
+
+	// Переменная не задана — подсказкой служит заголовок.
+	document.setTabToolTipVariable(QString());
+	QCOMPARE(tabItems(panel).first()->toolTip(), document.title());
+
+	// Сам документ (рабочая область) подсказку не получает.
+	QVERIFY(document.toolTip().isEmpty());
 }
 
 void TestDocumentTabs::panelMovesDocument() {

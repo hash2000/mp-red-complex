@@ -1,4 +1,5 @@
 #include "Libs/Engine/ui/doc_widget.h"
+#include "Libs/Engine/ui/main_window.h"
 #include "Libs/BaseWidgets/properties/tab_color_editor.h"
 #include "Libs/Engine/scripting/command_context.h"
 
@@ -32,6 +33,8 @@ struct DocumentWidget::Private {
 	QColor color;
 	QString xtype;
 	QString className;
+	/// Имя переменной контекста для подсказки вкладки (из метаданных типа).
+	QString tabToolTipVariable;
 	std::shared_ptr<CommandContext> context;
 	QMetaObject::Connection variableConnection;
 };
@@ -175,6 +178,27 @@ std::shared_ptr<CommandContext> DocumentWidget::context() const {
 	return d->context;
 }
 
+QString DocumentWidget::tabToolTipVariable() const {
+	return d->tabToolTipVariable;
+}
+
+void DocumentWidget::setTabToolTipVariable(const QString& variable) {
+	if (d->tabToolTipVariable == variable) {
+		return;
+	}
+
+	d->tabToolTipVariable = variable;
+	emit tabToolTipChanged();
+}
+
+QString DocumentWidget::tabToolTip() const {
+	if (d->tabToolTipVariable.isEmpty() || !d->context) {
+		return QString();
+	}
+
+	return d->context->variable(d->tabToolTipVariable).toString();
+}
+
 void DocumentWidget::setContext(const std::shared_ptr<CommandContext>& context) {
 	if (d->context == context) {
 		return;
@@ -301,6 +325,10 @@ void DocumentWidget::setContext(const std::shared_ptr<CommandContext>& context) 
 					d->className = newValue.toString();
 				}
 
+				if (name == d->tabToolTipVariable) {
+					emit tabToolTipChanged();
+				}
+
 				onContextVariableChanged(name, newValue);
 			});
 	}
@@ -339,6 +367,18 @@ QWidget* DocumentWidget::createPropertiesEditor(QWidget* parent) {
 	auto* w = new QWidget(parent);
 	auto* form = new QFormLayout(w);
 	form->setLabelAlignment(Qt::AlignRight);
+	return w;
+}
+
+QList<DocumentPropertyGroup> DocumentWidget::createPropertyGroups(QWidget* parent) {
+	Q_UNUSED(parent);
+	return { };
+}
+
+QWidget* DocumentWidget::createTabPropertiesEditor(QWidget* parent) {
+	auto* w = new QWidget(parent);
+	auto* form = new QFormLayout(w);
+	form->setLabelAlignment(Qt::AlignRight);
 
 	auto* titleEdit = new QLineEdit(title(), w);
 	connect(titleEdit, &QLineEdit::textEdited, this, &DocumentWidget::setTitle);
@@ -372,6 +412,18 @@ QWidget* DocumentWidget::createPropertiesEditor(QWidget* parent) {
 	form->addRow(tr("Тип:"), xtypeLabel);
 	form->addRow(tr("Изменён:"), modified);
 	return w;
+}
+
+bool DocumentWidget::showProperties(const QString& groupId) {
+	// Документы создаются как дочерние виджеты окна, поэтому оболочка
+	// находится по цепочке родителей. Без окна показывать панель некому.
+	for (QWidget* parent = parentWidget(); parent; parent = parent->parentWidget()) {
+		if (auto* window = qobject_cast<MainWindow*>(parent)) {
+			return window->showDocumentProperties(this, groupId);
+		}
+	}
+
+	return false;
 }
 
 bool DocumentWidget::maybeClose() {

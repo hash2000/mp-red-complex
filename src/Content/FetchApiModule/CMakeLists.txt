@@ -26,7 +26,6 @@ target_link_libraries(RedComplexFetchApiModule
 		RedComplexBase
 		RedComplexBaseWidgets
 		RedComplexResources
-		RedComplexCodeEditorWidget
 )
 
 qt_import_plugins(RedComplexFetchApiModule

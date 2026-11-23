@@ -1,5 +1,6 @@
 #include "Content/CodeEditorWidget/widgets/code_editor_search_panel.h"
 
+#include <QPlainTextEdit>
 #include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QKeyEvent>
@@ -17,6 +18,12 @@
 namespace {
 /// Задержка перед пересчётом совпадений при вводе и правке текста.
 constexpr int kRefreshDelayMs = 120;
+
+/// Больше этого числа вхождений подсвечивать в редакторе не нужно:
+/// каждая ExtraSelection — отдельный курсор, их отрисовка на большом
+/// документе заметно тормозит прокрутку. Счётчик совпадений при этом
+/// остаётся полным.
+constexpr int kMaxHighlights = 1000;
 }
 
 class CodeEditorSearchPanel::Private {
@@ -24,7 +31,7 @@ public:
 	Private(CodeEditorSearchPanel* parent) : q(parent) {}
 	CodeEditorSearchPanel* q;
 
-	QTextEdit* editor = nullptr;
+	QPlainTextEdit* editor = nullptr;
 	QLineEdit* input = nullptr;
 	QLabel* counter = nullptr;
 	QToolButton* previousButton = nullptr;
@@ -119,7 +126,7 @@ void CodeEditorSearchPanel::setupUi() {
 	updateCounter();
 }
 
-CodeEditorSearchPanel::CodeEditorSearchPanel(QTextEdit* editor, QWidget* parent)
+CodeEditorSearchPanel::CodeEditorSearchPanel(QPlainTextEdit* editor, QWidget* parent)
 	: QWidget(parent)
 	, d(std::make_unique<Private>(this)) {
 	d->editor = editor;
@@ -342,9 +349,12 @@ void CodeEditorSearchPanel::applyHighlights() {
 	currentColor.setAlpha(160);
 
 	QList<QTextEdit::ExtraSelection> selections;
-	selections.reserve(d->matches.size());
+	const int first = d->matches.size() > kMaxHighlights
+		? qMax(0, d->current - kMaxHighlights / 2) : 0;
+	const int last = qMin(d->matches.size(), first + kMaxHighlights);
+	selections.reserve(last - first);
 
-	for (int i = 0; i < d->matches.size(); i++) {
+	for (int i = first; i < last; i++) {
 		const auto& match = d->matches.at(i);
 		QTextCursor cursor(d->editor->document());
 		cursor.setPosition(match.start);

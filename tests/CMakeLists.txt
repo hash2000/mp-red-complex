@@ -21,6 +21,7 @@ add_subdirectory(basewidgets)
 enable_testing()
 add_test(NAME TestDatabasesService COMMAND TestDatabasesService)
 add_test(NAME TestLazyNodesDataProviderDb COMMAND TestLazyNodesDataProviderDb)
+add_test(NAME TestDatabaseBackup COMMAND TestDatabaseBackup)
 add_test(NAME TestSystemRouter COMMAND TestSystemRouter)
 add_test(NAME TestSystemRouterCommandsDb COMMAND TestSystemRouterCommandsDb)
 add_test(NAME TestFetchApi COMMAND TestFetchApi)
@@ -28,6 +29,6 @@ add_test(NAME TestFetchApi COMMAND TestFetchApi)
 # Цель для запуска всех тестов
 add_custom_target(run_tests
     COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
-    DEPENDS TestItemsService TestInventoriesService TestEngine TestDatabasesService TestUiZones TestDocumentTabs TestPropertiesPanel TestClassManager TestHighlighters TestCodeEditorSearch TestLazyTreeView TestLazyTreeWidget TestLazyNodesDataProviderDb TestSystemRouter TestSystemRouterCommandsDb TestFetchApi
+    DEPENDS TestItemsService TestInventoriesService TestEngine TestDatabasesService TestDatabaseBackup TestUiZones TestDocumentTabs TestPropertiesPanel TestClassManager TestHighlighters TestCodeEditorSearch TestLazyTreeView TestLazyTreeWidget TestLazyNodesDataProviderDb TestSystemRouter TestSystemRouterCommandsDb TestFetchApi
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )

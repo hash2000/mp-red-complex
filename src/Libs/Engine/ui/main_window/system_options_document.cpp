@@ -138,6 +138,7 @@ QWidget* SystemOptionsDocument::createPropertiesEditor(QWidget* parent) {
 
 	auto* properties = new PropertiesListWidget(editor);
 	properties->setObjectName(QStringLiteral("SystemOptionsProperties"));
+	properties->setScrollable(false);
 	properties->setProperties(optionProperties(*this));
 	connect(properties, &PropertiesListWidget::propertyChanged, this,
 		[this](const QString& name, const QVariant& value) {

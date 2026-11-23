@@ -1,10 +1,24 @@
 #pragma once
 #include <QColor>
+#include <QList>
+#include <QString>
 #include <QWidget>
 #include <QVariant>
 #include <memory>
 
 class CommandContext;
+
+/// Группа свойств документа для панели «Свойства».
+///
+/// Документ отдаёт такие группы из `createPropertyGroups()`; панель показывает
+/// их вложенными в раздел «Свойства документа». Например, у редактора кода это
+/// «Параметры поиска», которые раскрывает значок свойств у кнопки ленты.
+struct DocumentPropertyGroup {
+	QString id;                 ///< стабильный идентификатор ("search")
+	QString title;              ///< подпись группы
+	QWidget* editor = nullptr;  ///< содержимое; nullptr — пустая группа
+	bool expanded = false;      ///< раскрыта ли группа по умолчанию
+};
 
 /// Базовый класс для всех виджетов-документов.
 /// Каждому DocumentWidget автоматически соответствует вкладка слева.
@@ -53,6 +67,15 @@ public:
 	QString className() const;
 	void setClassName(const QString& className);
 
+	/// Имя переменной контекста, значение которой показывается подсказкой
+	/// вкладки (из метаданных типа документа). Пустая строка — подсказки нет.
+	QString tabToolTipVariable() const;
+	void setTabToolTipVariable(const QString& variable);
+
+	/// Подсказка вкладки: значение переменной tabToolTipVariable().
+	/// Пустая строка — переменная не задана или её значение пусто.
+	QString tabToolTip() const;
+
 	/// Контекст документа. Может быть nullptr у документов, созданных
 	/// напрямую (например, в тестах или legacy-окнах).
 	std::shared_ptr<CommandContext> context() const;
@@ -69,10 +92,22 @@ public:
 	/// true, если переменная видна в контексте (собственная или унаследованная).
 	bool hasVariable(const QString& name) const;
 
-	/// Редактор свойств (показывается в панели «Свойства»).
-	/// Базовая реализация возвращает QWidget с QFormLayout — наследники
-	/// могут дополнять его строками.
+	/// Редактор свойств (показывается в группе «Свойства документа»).
+	/// Базовая реализация возвращает QWidget с пустым QFormLayout — наследники
+	/// дополняют его строками.
 	virtual QWidget* createPropertiesEditor(QWidget* parent);
+
+	/// Дополнительные группы свойств документа (например, «Параметры поиска»).
+	/// Показываются вложенными в группу «Свойства документа».
+	virtual QList<DocumentPropertyGroup> createPropertyGroups(QWidget* parent);
+
+	/// Редактор свойств вкладки (заголовок, значок, цвет, тип, изменённость).
+	/// Показывается в отдельной группе «Свойства вкладки».
+	virtual QWidget* createTabPropertiesEditor(QWidget* parent);
+
+	/// Открыть панель «Свойства» на этом документе и раскрыть группу
+	/// (пустая строка — только показать панель). false — оболочка недоступна.
+	bool showProperties(const QString& groupId = QString());
 
 	/// «Обновить» (кнопка ⟳ в панели свойств)
 	virtual void refresh() {}
@@ -91,6 +126,7 @@ signals:
 	void modifiedChanged(bool modified);
 	void colorChanged(const QColor& color);
 	void xtypeChanged(const QString& xtype);
+	void tabToolTipChanged();
 	void propertiesChanged();   // попросить панель свойств перестроить редактор
 
 protected:

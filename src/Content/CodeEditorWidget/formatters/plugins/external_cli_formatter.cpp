@@ -1,9 +1,9 @@
 #include "Content/CodeEditorWidget/formatters/plugins/external_cli_formatter.h"
 #include "Content/CodeEditorWidget/language_info.h"
 
-#include <QProcess>
-#include <QDir>
 #include <QDebug>
+#include <QDir>
+#include <QProcess>
 
 class ExternalCliFormatterPlugin::Private {
 public:
@@ -41,14 +41,17 @@ void ExternalCliFormatterPlugin::formatAsync(const QString& text) {
 	stop();
 
 	d->process = new QProcess(this);
-
-	auto process = d->process;
+	QProcess* process = d->process;
 
 	connect(process, &QProcess::readyReadStandardError, process, [process, mimeType = d->mimeType]() {
 		qWarning() << mimeType << "Processing error:" << process->readAllStandardError();
 	});
 
 	connect(process, &QProcess::errorOccurred, this, [this, process](QProcess::ProcessError error) {
+		if (d->process != process) {
+			return;
+		}
+
 		QStringList message;
 		message << "Process failed to start.";
 		message << "Error:";
@@ -62,25 +65,31 @@ void ExternalCliFormatterPlugin::formatAsync(const QString& text) {
 		default: message << "Unknown error.";
 		}
 
-		const auto errString = process->errorString();
-		message << errString;
+		message << process->errorString();
 		qWarning() << message;
 
 		emit formattingFailed(message.join(" "));
 	});
 
-	connect(d->process, &QProcess::finished, this, [this, text](int exitCode, QProcess::ExitStatus status) {
-		if (status == QProcess::NormalExit && exitCode == 0) {
-			QString result = QString::fromUtf8(d->process->readAllStandardOutput());
-			emit formattingFinished(result);
-		}
-		else {
-			QString err = QString::fromUtf8(d->process->readAllStandardError());
-			emit formattingFailed(err.isEmpty() ? "Formatting failed" : err);
-		}
-		d->process->deleteLater();
-		d->process = nullptr;
-	});
+	connect(process, &QProcess::finished, this,
+		[this, process](int exitCode, QProcess::ExitStatus status) {
+			// Процесс мог быть остановлен (stop()) и уже не быть текущим.
+			if (d->process != process) {
+				return;
+			}
+
+			d->process = nullptr;
+
+			if (status == QProcess::NormalExit && exitCode == 0) {
+				emit formattingFinished(QString::fromUtf8(process->readAllStandardOutput()));
+			}
+			else {
+				const QString error = QString::fromUtf8(process->readAllStandardError());
+				emit formattingFailed(error.isEmpty() ? QStringLiteral("Formatting failed") : error);
+			}
+
+			process->deleteLater();
+		});
 
 	QStringList argsList = d->leadingArguments;
 	for (auto it = d->arguments.begin(); it != d->arguments.end(); it++) {
@@ -92,17 +101,25 @@ void ExternalCliFormatterPlugin::formatAsync(const QString& text) {
 	QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
 	env.insert("NO_COLOR", "1");
 	env.insert("FORCE_COLOR", "0");
-	d->process->setProcessEnvironment(env);
+	process->setProcessEnvironment(env);
 
-	d->process->start(d->formatterProgram, argsList);
-	d->process->write(text.toUtf8());
-	d->process->closeWriteChannel();
+	process->start(d->formatterProgram, argsList);
+
+	// QProcess буферизует запись до фактического запуска процесса.
+	process->write(text.toUtf8());
+	process->closeWriteChannel();
 }
 
 void ExternalCliFormatterPlugin::stop() {
-	if (d->process) {
-		d->process->kill();
-		d->process->deleteLater();
-		d->process = nullptr;
+	if (!d->process) {
+		return;
 	}
+
+	// Отключаем сигналы до kill(): finished придёт асинхронно, когда
+	// указатель на процесс уже сброшен.
+	QProcess* process = d->process;
+	d->process = nullptr;
+	process->disconnect(this);
+	process->kill();
+	process->deleteLater();
 }

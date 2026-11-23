@@ -6,3 +6,7 @@ QList<DocumentVariable> CodeEditorDocumentMetadata::variables() const {
 		{ QStringLiteral("path"), QString::fromLatin1(DocumentVariableMime::kFilePath) }
 	};
 }
+
+QString CodeEditorDocumentMetadata::tooltipVariable() const {
+	return QStringLiteral("path");
+}

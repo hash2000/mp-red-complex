@@ -152,7 +152,8 @@ public:
 		const auto explicitColor = _doc->color();
 		_color->setColor(explicitColor.isValid() ? explicitColor : _themeColor);
 		_fullTitle = _doc->title() + (_doc->isModified() ? QStringLiteral(" ●") : QString());
-		setToolTip(_doc->toolTip().isEmpty() ? _doc->title() : _doc->toolTip());
+		const auto tooltip = _doc->tabToolTip();
+		setToolTip(tooltip.isEmpty() ? _doc->title() : tooltip);
 		_title->setProperty("modified", _doc->isModified());
 		style()->unpolish(this);
 		style()->polish(this);
@@ -650,6 +651,7 @@ void DocumentTabsPanel::addDocument(DocumentWidget* doc) {
 	connect(doc, &DocumentWidget::glyphChanged, item, refresh);
 	connect(doc, &DocumentWidget::modifiedChanged, item, refresh);
 	connect(doc, &DocumentWidget::colorChanged, item, refresh);
+	connect(doc, &DocumentWidget::tabToolTipChanged, item, refresh);
 
 	// Цвет вкладки и тип документа влияют на группировку.
 	connect(doc, &DocumentWidget::colorChanged, this, [this] { d->rebuild(); });

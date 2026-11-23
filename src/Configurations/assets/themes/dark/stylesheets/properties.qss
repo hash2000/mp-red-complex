@@ -59,6 +59,36 @@ QWidget#PropertyContainer {
   background: transparent;
 }
 
+/* ------------------------------------------------------------------
+   Группы панели свойств (PropertiesGroupWidget): заголовок-кнопка
+   с треугольником и содержимое группы.
+   ------------------------------------------------------------------ */
+
+QWidget#PropertiesGroup {
+  background: transparent;
+}
+
+QPushButton#PropertiesGroupHeader {
+  background: #2d2d30;
+  color: #cccccc;
+  border: none;
+  border-bottom: 1px solid #3e3e42;
+  padding: 5px 8px;
+  text-align: left;
+  font-weight: 600;
+}
+QPushButton#PropertiesGroupHeader:hover { background: #37373d; }
+QPushButton#PropertiesGroupHeader:checked { color: #ffffff; }
+
+/* Подпись группы — отдельная метка внутри кнопки: всегда слева. */
+QLabel#PropertiesGroupTitle {
+  font-weight: 600;
+}
+
+QWidget#PropertiesGroupContent {
+  background: transparent;
+}
+
 /* Цвет фона и текста кнопки выбора цвета задаются кодом (значение свойства),
    здесь — только рамка и отступы. */
 QPushButton#PropertyColorButton {
@@ -91,15 +121,9 @@ QToolButton#TabColorReset:hover { background: #007ACC; }
 QToolButton#TabColorReset:disabled { background: #333333; color: #666666; }
 
 /* ------------------------------------------------------------------
-   Контекст документа: полное имя (только для чтения) и переменные.
+   Контекст документа: полное имя (только для чтения).
+   Список переменных — PropertiesListWidget внутри вложенной группы.
    ------------------------------------------------------------------ */
-
-QLabel#PropertiesContextTitle,
-QLabel#PropertiesContextVariablesTitle {
-  color: #CCCCCC;
-  font-weight: 600;
-  padding-top: 4px;
-}
 
 QLineEdit#PropertiesContextName {
   background: #252526;

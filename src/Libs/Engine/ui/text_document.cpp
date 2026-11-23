@@ -53,7 +53,6 @@ bool TextDocument::loadFile(const QString& path) {
 	d->editor->setPlainText(QString::fromUtf8(f.readAll()));
 	d->editor->document()->setModified(false);
 	setPath(path);
-	setToolTip(QDir::toNativeSeparators(path));
 	setTitle(QFileInfo(path).fileName());
 	emit propertiesChanged();
 	return true;
@@ -75,7 +74,6 @@ bool TextDocument::save() {
 		return false;
 	f.write(d->editor->toPlainText().toUtf8());
 	d->editor->document()->setModified(false);
-	setToolTip(QDir::toNativeSeparators(d->path));
 	setTitle(QFileInfo(d->path).fileName());
 	emit propertiesChanged();
 	return true;
@@ -112,7 +110,6 @@ void TextDocument::onContextVariableChanged(const QString& name, const QVariant&
 		d->editor->document()->setModified(false);
 		setPath(QString());
 		setTitle(tr("Без имени"));
-		setToolTip(QString());
 		emit propertiesChanged();
 		return;
 	}

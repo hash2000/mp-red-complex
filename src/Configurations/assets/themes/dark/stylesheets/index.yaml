@@ -5,3 +5,4 @@ items:
   - properties # панель и список свойств
   - fetch-api # модуль FetchApi
   - users # вход, регистрация, карточка пользователя
+  - database-backup # модуль DatabaseModule: резервное копирование

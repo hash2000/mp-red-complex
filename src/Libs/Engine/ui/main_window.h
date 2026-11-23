@@ -78,6 +78,10 @@ public:
 	/// Панель свойств, связанная с активным документом.
 	PropertiesPanel* propertiesPanel() const;
 
+	/// Показать документ в панели «Свойства» и раскрыть группу его свойств.
+	/// false — панель свойств недоступна.
+	bool showDocumentProperties(DocumentWidget* doc, const QString& groupId = QString());
+
 	/// Открыть файл в новом документе (используется панелью «Проводник»).
 	void openFile(const QString& path);
 

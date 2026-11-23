@@ -1,16 +1,15 @@
 /* ------------------------------------------------------------------
    Модуль FetchApi: панель запроса и ответа.
    Состояние индикатора и метки статуса задаётся динамическим свойством
-   state ("success" / "error").
+   state ("success" / "error"). Параметры отправки (тип запроса и TLS)
+   редактируются в панели «Свойства» и оформляются общими правилами.
    ------------------------------------------------------------------ */
 
-QComboBox#FetchMethodCombo,
-QComboBox#FetchHandlerCombo {
+QComboBox#FetchMethodCombo {
   padding: 5px;
   font-weight: bold;
 }
 
-QComboBox#FetchSslPolicyCombo,
 QComboBox#FetchAuthTypeCombo,
 QComboBox#FetchAuthAddToCombo {
   padding: 5px;
@@ -22,7 +21,6 @@ QLineEdit#FetchUrlEdit {
   border-radius: 4px;
 }
 
-QLineEdit#FetchSslCaFileEdit,
 QLineEdit#FetchAuthNameEdit,
 QLineEdit#FetchAuthValueEdit {
   padding: 4px 6px;
@@ -30,36 +28,9 @@ QLineEdit#FetchAuthValueEdit {
   border-radius: 3px;
 }
 
-QToolButton#FetchSslCaBrowseButton {
-  padding: 2px 8px;
-  border: 1px solid #4a5568;
-  border-radius: 3px;
-  background-color: #2d3748;
-  color: #e2e8f0;
-}
-QToolButton#FetchSslCaBrowseButton:hover {
-  background-color: #4a5568;
-}
-
-QLabel#FetchSslTitle,
 QLabel#FetchTime,
 QLabel#FetchSize {
   color: #a0aec0;
-}
-
-QPushButton#FetchSendButton {
-  background-color: #2d3748;
-  color: #e2e8f0;
-  border: 1px solid #4a5568;
-  border-radius: 3px;
-  font-size: 12px;
-}
-QPushButton#FetchSendButton:hover {
-  background-color: #4a5568;
-  border: 1px solid #718096;
-}
-QPushButton#FetchSendButton:pressed {
-  background-color: #1a202c;
 }
 
 QPlainTextEdit#FetchBodyEdit {
@@ -68,16 +39,9 @@ QPlainTextEdit#FetchBodyEdit {
   border: 1px solid #444;
 }
 
-/* Ответ отображается в CodeEditorWidget (наследник QTextEdit), поэтому
-   правило ниже активно, а прежний вариант с QPlainTextEdit не срабатывал —
-   он оставлен закомментированным как история конфликта селекторов.
+/* Ответ отображается в простом текстовом поле (QPlainTextEdit):
+   подсветка синтаксиса модулю не нужна. */
 QPlainTextEdit#FetchResponseBody {
-  background-color: #2D2D2D;
-  color: #F8F8F2;
-  border: 1px solid #444;
-}
-*/
-CodeEditorWidget#FetchResponseBody {
   background-color: #2D2D2D;
   color: #F8F8F2;
   border: 1px solid #444;
