@@ -1,6 +1,6 @@
-#include "Content/CodeEditorWidget/highlights/highlighter_plugin.h"
-#include "Content/CodeEditorWidget/highlights/theme_highlighter_plugin.h"
-#include "Content/CodeEditorWidget/language_info.h"
+#include "Content/TextEditorModule/highlights/highlighter_plugin.h"
+#include "Content/TextEditorModule/highlights/theme_highlighter_plugin.h"
+#include "Content/TextEditorModule/language_info.h"
 
 #include <QDir>
 #include <QFile>

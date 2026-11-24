@@ -22,6 +22,8 @@ tabs:
     # Редактор кода
     Content.CodeEditor.CodeEditorDocument: "#61afef"
     code-editor: "#61afef"
+    Content.CodeEditor.PagedTextDocument: "#61afef"
+    paged-text-viewer: "#61afef"
 
     # SystemRouter
     Content.SystemRouter.SystemRouterTreeDocument: "#e06c75"
@@ -68,6 +70,8 @@ tabs:
     # Редактор кода
     Content.CodeEditor.CodeEditorDocument: "📝"
     code-editor: "📝"
+    Content.CodeEditor.PagedTextDocument: "📝"
+    paged-text-viewer: "📝"
 
     # SystemRouter
     Content.SystemRouter.SystemRouterTreeDocument: "🗂"

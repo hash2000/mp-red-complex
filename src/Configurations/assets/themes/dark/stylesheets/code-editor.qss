@@ -11,13 +11,17 @@ CodeEditorWidget {
   border-radius: 3px;
 }
 
-/* ---------- Панель поиска ---------- */
+/* ---------- Строка поиска (общая для редактора и просмотрщика) ---------- */
 QWidget#CodeEditorSearchPanel {
+  background-color: #252526;
+}
+
+QWidget#TextEditorSearchBar {
   background-color: #252526;
   border-bottom: 1px solid #3e3e42;
 }
 
-QLineEdit#CodeEditorSearchInput {
+QLineEdit#TextEditorSearchInput {
   background-color: #1e1e1e;
   color: #d4d4d4;
   border: 1px solid #3e3e42;
@@ -25,13 +29,13 @@ QLineEdit#CodeEditorSearchInput {
   padding: 2px 6px;
   min-height: 20px;
 }
-QLineEdit#CodeEditorSearchInput:focus { border-color: #1177bb; }
+QLineEdit#TextEditorSearchInput:focus { border-color: #1177bb; }
 
-QLabel#CodeEditorSearchCount {
+QLabel#TextEditorSearchCount {
   color: #8f8f8f;
 }
 
-QToolButton#CodeEditorSearchButton {
+QToolButton#TextEditorSearchButton {
   color: #d4d4d4;
   background: transparent;
   border: 1px solid transparent;
@@ -40,8 +44,8 @@ QToolButton#CodeEditorSearchButton {
   min-width: 22px;
   min-height: 22px;
 }
-QToolButton#CodeEditorSearchButton:hover { background-color: #3e3e42; }
-QToolButton#CodeEditorSearchButton:pressed { background-color: #094771; }
+QToolButton#TextEditorSearchButton:hover { background-color: #3e3e42; }
+QToolButton#TextEditorSearchButton:pressed { background-color: #094771; }
 
 /* Параметры документа в панели «Свойства»: язык и размер шрифта. */
 QComboBox#CodeEditorLanguageCombo,

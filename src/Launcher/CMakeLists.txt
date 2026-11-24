@@ -29,7 +29,7 @@ target_link_libraries(Launcher
 		RedComplexGraphics		
 		RedComplexEngine
 
-		RedComplexCodeEditorWidget
+		RedComplexTextEditorModule
 
 		RedComplexConsoleModule
 		RedComplexDatabaseModule

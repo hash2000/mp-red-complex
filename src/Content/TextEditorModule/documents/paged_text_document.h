@@ -13,9 +13,12 @@ public:
 	~PagedTextDocument() override;
 
 	QWidget* createPropertiesEditor(QWidget* parent) override;
+	QList<DocumentPropertyGroup> createPropertyGroups(QWidget* parent) override;
+	void refresh() override;
 
 	/// Открыть файл и записать путь в контекст документа.
 	void openFile(const QString& path);
+	void newFile();
 
 protected:
 	void onContextAttached() override;

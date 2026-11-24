@@ -28,6 +28,7 @@
 #include <QToolButton>
 #include <QtTest/QtTest>
 
+#include <algorithm>
 #include <memory>
 
 namespace {
@@ -137,6 +138,7 @@ private slots:
 	void sharedVariablesCopiedToCreator();
 	void newDocumentDialogFiltersTypes();
 	void newDocumentDialogUsesDocumentMetadata();
+	void newDocumentDialogSortsByClass();
 	void propertiesListWidgetAddsAndRemoves();
 	void registryBuildWrapsWidgetIntoDocument();
 };
@@ -691,6 +693,40 @@ void TestUiZones::sharedVariablesCopiedToCreator() {
 	QVERIFY(editorContext);
 	QCOMPARE(editorContext->variable(QStringLiteral("data")).toString(),
 		QStringLiteral("blob data"));
+}
+
+void TestUiZones::newDocumentDialogSortsByClass() {
+	TestCommandController controller;
+	controller.widgets()->registerFactory({ "Bbb.Class", "zzz-xtype", false,
+		QStringLiteral("Bbb") },
+		[](const QString&, const WidgetBuildHandler&) -> QWidget* {
+			return new QLabel(QStringLiteral("b"));
+		});
+	controller.widgets()->registerFactory({ "Aaa.Class", "yyy-xtype", false,
+		QStringLiteral("Aaa") },
+		[](const QString&, const WidgetBuildHandler&) -> QWidget* {
+			return new QLabel(QStringLiteral("a"));
+		});
+
+	NewDocumentDialog dialog(controller.widgets(), controller.globalContext());
+	auto* list = dialog.findChild<QListWidget*>(QStringLiteral("NewDocumentDialogTypes"));
+	QVERIFY(list);
+	QVERIFY(list->count() >= 2);
+
+	QStringList classes;
+	for (int i = 0; i < list->count(); i++) {
+		const auto text = list->item(i)->text();
+		const int close = text.indexOf(QStringLiteral(") "));
+		QVERIFY(close >= 0);
+		classes << text.mid(close + 2);
+	}
+
+	QStringList sorted = classes;
+	std::sort(sorted.begin(), sorted.end(),
+		[](const QString& left, const QString& right) {
+			return QString::localeAwareCompare(left, right) < 0;
+		});
+	QCOMPARE(classes, sorted);
 }
 
 void TestUiZones::newDocumentDialogUsesDocumentMetadata() {

@@ -34,16 +34,47 @@ public:
 	/// Текст строки (читается из страницы; для тестов и копирования).
 	QString lineText(int line) const;
 
+	/// Позиция курсора: строка и колонка (в символах, с нуля).
+	int cursorLine() const;
+	int cursorColumn() const;
+	void setCursorPosition(int line, int column, bool keepAnchor = false);
+	void selectAll();
+	/// Выделенный текст (многострочный — через '\n').
+	QString selectedText() const;
+
+	/// Кодировка, которой открыт файл.
+	QString encoding() const;
+	/// Переоткрыть текущий файл в другой кодировке.
+	void setEncoding(const QString& encoding);
+
+	/// Поиск по строкам: счётчик считается в фоне, подсвечиваются
+	/// только видимые вхождения.
+	void setSearchQuery(const QString& query);
+	QString searchQuery() const;
+	int searchMatchCount() const;
+	int currentSearchIndex() const;
+	void searchNext();
+	void searchPrevious();
+	void setSearchCaseSensitive(bool enabled);
+	bool searchCaseSensitive() const;
+
 signals:
 	/// Индексация завершилась; false — файл не открыт или кодировка не та.
 	void indexingFinished(bool success, const QString& errorMessage);
 	void lineCountChanged(int lines);
+	void cursorPositionChanged(int line, int column);
+	void searchCountChanged(int matches);
+	void searchCurrentChanged(int current, int total);
 
 protected:
 	void paintEvent(QPaintEvent* event) override;
 	void resizeEvent(QResizeEvent* event) override;
 	void scrollContentsBy(int dx, int dy) override;
 	void keyPressEvent(QKeyEvent* event) override;
+	void mousePressEvent(QMouseEvent* event) override;
+	void mouseMoveEvent(QMouseEvent* event) override;
+	void mouseReleaseEvent(QMouseEvent* event) override;
+	void mouseDoubleClickEvent(QMouseEvent* event) override;
 
 private:
 	struct Private;

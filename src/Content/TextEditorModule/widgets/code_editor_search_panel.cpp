@@ -1,4 +1,5 @@
-#include "Content/CodeEditorWidget/widgets/code_editor_search_panel.h"
+#include "Content/TextEditorModule/widgets/code_editor_search_panel.h"
+#include "Content/TextEditorModule/widgets/search_bar.h"
 
 #include <QFutureWatcher>
 #include <QPlainTextEdit>
@@ -15,6 +16,7 @@
 #include <QTextEdit>
 #include <QTimer>
 #include <QToolButton>
+#include <QVBoxLayout>
 #include <QtConcurrent/QtConcurrentRun>
 
 #include <algorithm>
@@ -93,6 +95,7 @@ public:
 	CodeEditorSearchPanel* q;
 
 	QPlainTextEdit* editor = nullptr;
+	SearchBar* searchBar = nullptr;
 	QLineEdit* input = nullptr;
 	QLabel* counter = nullptr;
 	QToolButton* previousButton = nullptr;
@@ -123,6 +126,7 @@ public:
 
 	void resetMatches();
 	void refreshDebounced();
+	void updateCurrentForCursor();
 };
 
 void CodeEditorSearchPanel::Private::resetMatches() {
@@ -133,6 +137,44 @@ void CodeEditorSearchPanel::Private::resetMatches() {
 
 void CodeEditorSearchPanel::Private::refreshDebounced() {
 	refreshTimer.start();
+}
+
+void CodeEditorSearchPanel::Private::updateCurrentForCursor() {
+	if (matches.isEmpty() || !editor) {
+		return;
+	}
+
+	const int position = editor->textCursor().position();
+	// Курсор в текущем совпадении (в том числе на его конце) не должен
+	// переключать счётчик на следующее.
+	if (current >= 0 && current < matches.size()) {
+		const auto& match = matches.at(current);
+		if (position >= match.start && position <= match.start + match.length) {
+			return;
+		}
+	}
+
+	int index = -1;
+	for (int i = 0; i < matches.size(); i++) {
+		const auto& match = matches.at(i);
+		if (match.start + match.length > position) {
+			index = i;
+			break;
+		}
+	}
+	if (index < 0) {
+		index = 0;
+	}
+
+	if (current == index) {
+		return;
+	}
+
+	current = index;
+	q->updateCounter();
+	if (q->isVisible() && matches.size() <= 200) {
+		q->applyHighlights();
+	}
 }
 
 void CodeEditorSearchPanel::startLargeSearch(const QRegularExpression& expression) {
@@ -214,63 +256,31 @@ void CodeEditorSearchPanel::setupUi() {
 	setAttribute(Qt::WA_StyledBackground);
 	setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
-	auto* layout = new QHBoxLayout(this);
-	layout->setContentsMargins(6, 4, 6, 4);
-	layout->setSpacing(4);
+	auto* layout = new QVBoxLayout(this);
+	layout->setContentsMargins(0, 0, 0, 0);
+	layout->setSpacing(0);
 
-	d->input = new QLineEdit(this);
-	d->input->setObjectName(QStringLiteral("CodeEditorSearchInput"));
-	d->input->setPlaceholderText(tr("Найти"));
-	d->input->setClearButtonEnabled(true);
-	layout->addWidget(d->input, 1);
+	d->searchBar = new SearchBar(this);
+	layout->addWidget(d->searchBar);
+	d->input = d->searchBar->input();
+	d->counter = d->searchBar->counter();
 
-	d->counter = new QLabel(this);
-	d->counter->setObjectName(QStringLiteral("CodeEditorSearchCount"));
-	d->counter->setMinimumWidth(64);
-	d->counter->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-	layout->addWidget(d->counter);
-
-	auto makeButton = [this, layout](const QString& glyph, const QString& tooltip) {
-		auto* button = new QToolButton(this);
-		button->setObjectName(QStringLiteral("CodeEditorSearchButton"));
-		button->setText(glyph);
-		button->setToolTip(tooltip);
-		button->setToolButtonStyle(Qt::ToolButtonTextOnly);
-		button->setCursor(Qt::PointingHandCursor);
-		button->setFocusPolicy(Qt::NoFocus);
-		layout->addWidget(button);
-		return button;
-	};
-
-	d->previousButton = makeButton(QStringLiteral("↑"), tr("Предыдущее совпадение"));
-	d->nextButton = makeButton(QStringLiteral("↓"), tr("Следующее совпадение"));
-	d->closeButton = makeButton(QStringLiteral("✕"), tr("Закрыть поиск"));
-
-	connect(d->previousButton, &QToolButton::clicked, this, &CodeEditorSearchPanel::activatePrevious);
-	connect(d->nextButton, &QToolButton::clicked, this, &CodeEditorSearchPanel::activateNext);
-	connect(d->closeButton, &QToolButton::clicked, this, [this] {
+	connect(d->searchBar, &SearchBar::queryChanged, this, [this] {
+		d->refreshDebounced();
+	});
+	connect(d->searchBar, &SearchBar::nextRequested,
+		this, &CodeEditorSearchPanel::activateNext);
+	connect(d->searchBar, &SearchBar::previousRequested,
+		this, &CodeEditorSearchPanel::activatePrevious);
+	connect(d->searchBar, &SearchBar::closeRequested, this, [this] {
 		emit closed();
 	});
 
-	connect(d->input, &QLineEdit::textChanged, this, [this] {
-		d->refreshDebounced();
-	});
-
-	// Enter — следующее совпадение, Shift+Enter — предыдущее.
-	connect(d->input, &QLineEdit::returnPressed, this, [this] {
-		if (QGuiApplication::keyboardModifiers() & Qt::ShiftModifier) {
-			activatePrevious();
-		}
-		else {
-			activateNext();
-		}
-	});
-
+	d->refreshTimer.setSingleShot(true);
+	d->refreshTimer.setInterval(kRefreshDelayMs);
 	connect(&d->refreshTimer, &QTimer::timeout, this, [this] {
 		refresh();
 	});
-	d->refreshTimer.setSingleShot(true);
-	d->refreshTimer.setInterval(kRefreshDelayMs);
 
 	d->watcher = new QFutureWatcher<SearchOutcome>(this);
 	connect(d->watcher, &QFutureWatcher<SearchOutcome>::finished, this, [this] {
@@ -305,6 +315,12 @@ CodeEditorSearchPanel::CodeEditorSearchPanel(QPlainTextEdit* editor, QWidget* pa
 				}
 			});
 		}
+
+		// Ручной перенос курсора делает текущим ближайшее совпадение,
+		// чтобы «↑/↓» продолжали путь от курсора, а не от старой позиции.
+		connect(d->editor, &QPlainTextEdit::cursorPositionChanged, this, [this] {
+			d->updateCurrentForCursor();
+		});
 	}
 }
 
@@ -361,7 +377,7 @@ void CodeEditorSearchPanel::clearSearch() {
 	d->generation++;
 	d->hasPending = false;
 	d->resetMatches();
-	d->counter->clear();
+	d->searchBar->setCounter(-1, 0);
 
 	if (d->editor) {
 		d->editor->setExtraSelections({});
@@ -532,9 +548,9 @@ void CodeEditorSearchPanel::applyHighlights() {
 	// Цвета берутся из палитры темы, чтобы подсветка не выбивалась из оформления.
 	const auto highlight = d->editor->palette().color(QPalette::Highlight);
 	QColor matchesColor = highlight;
-	matchesColor.setAlpha(70);
+	matchesColor.setAlpha(120);
 	QColor currentColor = highlight;
-	currentColor.setAlpha(160);
+	currentColor.setAlpha(210);
 
 	QList<QTextEdit::ExtraSelection> selections;
 	if (d->largeSearch) {
@@ -661,7 +677,31 @@ void CodeEditorSearchPanel::activateNext() {
 		return;
 	}
 
-	d->current = (d->current + 1) % d->matches.size();
+	const int position = d->editor ? d->editor->textCursor().position() : 0;
+	bool insideCurrent = false;
+	if (d->current >= 0 && d->current < d->matches.size()) {
+		const auto& match = d->matches.at(d->current);
+		insideCurrent = position >= match.start
+			&& position <= match.start + match.length;
+	}
+
+	int index = -1;
+	if (insideCurrent) {
+		index = (d->current + 1) % d->matches.size();
+	}
+	else {
+		for (int i = 0; i < d->matches.size(); i++) {
+			if (d->matches.at(i).start >= position) {
+				index = i;
+				break;
+			}
+		}
+		if (index < 0) {
+			index = 0;
+		}
+	}
+
+	d->current = index;
 	applyHighlights();
 	updateCounter();
 	moveToCurrent();
@@ -672,7 +712,33 @@ void CodeEditorSearchPanel::activatePrevious() {
 		return;
 	}
 
-	d->current = (d->current - 1 + d->matches.size()) % d->matches.size();
+	const int position = d->editor ? d->editor->textCursor().position() : 0;
+	bool insideCurrent = false;
+	if (d->current >= 0 && d->current < d->matches.size()) {
+		const auto& match = d->matches.at(d->current);
+		insideCurrent = position >= match.start
+			&& position <= match.start + match.length;
+	}
+
+	int index = -1;
+	if (insideCurrent) {
+		index = (d->current - 1 + d->matches.size()) % d->matches.size();
+	}
+	else {
+		for (int i = 0; i < d->matches.size(); i++) {
+			if (d->matches.at(i).start < position) {
+				index = i;
+			}
+			else {
+				break;
+			}
+		}
+		if (index < 0) {
+			index = d->matches.size() - 1;
+		}
+	}
+
+	d->current = index;
 	applyHighlights();
 	updateCounter();
 	moveToCurrent();

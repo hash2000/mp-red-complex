@@ -1,4 +1,4 @@
-add_subdirectory(CodeEditorWidget)
+add_subdirectory(TextEditorModule)
 add_subdirectory(ConsoleModule)
 add_subdirectory(DatabaseModule)
 add_subdirectory(FetchApiModule)

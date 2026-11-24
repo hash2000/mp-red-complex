@@ -1,10 +1,11 @@
-#include "Content/CodeEditorWidget/documents/code_editor_document.h"
-#include "Content/CodeEditorWidget/widgets/code_editor_widget.h"
-#include "Content/CodeEditorWidget/widgets/code_editor_search_panel.h"
-#include "Content/CodeEditorWidget/language_info.h"
-#include "Content/CodeEditorWidget/highlights/highlighter_plugin.h"
-#include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
-#include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
+#include "Content/TextEditorModule/documents/code_editor_document.h"
+#include "Content/TextEditorModule/widgets/code_editor_widget.h"
+#include "Content/TextEditorModule/widgets/code_editor_search_panel.h"
+#include "Content/TextEditorModule/widgets/encoding_dialog.h"
+#include "Content/TextEditorModule/language_info.h"
+#include "Content/TextEditorModule/highlights/highlighter_plugin.h"
+#include "Content/TextEditorModule/highlights/highlighter_plugin_manager.h"
+#include "Content/TextEditorModule/formatters/formatter_plugin_manager.h"
 #include "Libs/BaseWidgets/properties/properties_list_widget.h"
 #include "Libs/BaseWidgets/ribbon/document_ribbon.h"
 #include "Libs/BaseWidgets/ribbon/ribbon_button.h"
@@ -1073,109 +1074,52 @@ QString CodeEditorDocument::Private::encodingTitle(const QString& encoding) cons
 }
 
 void CodeEditorDocument::Private::showEncodingDialog() {
-	QDialog dialog(q);
-	dialog.setObjectName(QStringLiteral("CodeEditorEncodingDialog"));
-	dialog.setWindowTitle(q->tr("Кодировка документа"));
-	dialog.setModal(true);
-
-	auto* layout = new QVBoxLayout(&dialog);
-	layout->addWidget(new QLabel(q->tr("Выберите кодировку:"), &dialog));
-
-	auto* combo = new QComboBox(&dialog);
-	combo->setObjectName(QStringLiteral("CodeEditorEncodingCombo"));
-	for (const auto& info : CodeEditorWidget::availableEncodings()) {
-		combo->addItem(info.title, info.name);
-	}
-	// Поиск по названию: поле редактируемое, фильтр — «содержит».
-	combo->setEditable(true);
-	combo->setInsertPolicy(QComboBox::NoInsert);
-	if (auto* completer = combo->completer()) {
-		completer->setCompletionMode(QCompleter::PopupCompletion);
-		completer->setFilterMode(Qt::MatchContains);
-		completer->setCaseSensitivity(Qt::CaseInsensitive);
-	}
-	const int current = combo->findData(editor->encoding());
-	combo->setCurrentIndex(current >= 0 ? current : 0);
-	layout->addWidget(combo);
-
-	auto* hint = new QLabel(&dialog);
-	hint->setObjectName(QStringLiteral("CodeEditorEncodingHint"));
-	hint->setWordWrap(true);
 	const bool hasFile = !path.isEmpty() && QFileInfo::exists(path);
 	const bool hasBytes = q->variable(QStringLiteral("data-bytes"), QVariant())
 		.toByteArray().size() > 0;
+	QString hint;
 	if (hasFile) {
-		hint->setText(q->tr("Файл: %1").arg(QDir::toNativeSeparators(path)));
+		hint = q->tr("Файл: %1").arg(QDir::toNativeSeparators(path));
 	}
 	else if (hasBytes) {
-		hint->setText(q->tr("Данные будут декодированы из сохранённых байтов (data-bytes). "
-			"«Пересохранить» запишет результат в переменную data."));
+		hint = q->tr("Данные будут декодированы из сохранённых байтов (data-bytes). "
+			"«Пересохранить» запишет результат в переменную data.");
 	}
 	else if (dataMode) {
-		hint->setText(q->tr("Файл не задан: текст будет перекодирован из текущей кодировки. "
-			"«Пересохранить» запишет результат в переменную data."));
+		hint = q->tr("Файл не задан: текст будет перекодирован из текущей кодировки. "
+			"«Пересохранить» запишет результат в переменную data.");
 	}
 	else {
-		hint->setText(q->tr("Файл не задан: текст будет перекодирован из текущей кодировки "
-			"в выбранную."));
+		hint = q->tr("Файл не задан: текст будет перекодирован из текущей кодировки "
+			"в выбранную.");
 	}
-	layout->addWidget(hint);
 
-	auto* buttons = new QHBoxLayout();
-	auto* reopenButton = new QPushButton(
-		q->tr("Переоткрыть в выбранной кодировке"), &dialog);
-	reopenButton->setObjectName(QStringLiteral("CodeEditorEncodingReopen"));
-	auto* resaveButton = new QPushButton(
-		q->tr("Пересохранить в указанную кодировку"), &dialog);
-	resaveButton->setObjectName(QStringLiteral("CodeEditorEncodingResave"));
-	auto* cancelButton = new QPushButton(q->tr("Отмена"), &dialog);
-	cancelButton->setObjectName(QStringLiteral("CodeEditorEncodingCancel"));
-	buttons->addWidget(reopenButton);
-	buttons->addWidget(resaveButton);
-	buttons->addStretch();
-	buttons->addWidget(cancelButton);
-	layout->addLayout(buttons);
+	EncodingDialog dialog(editor->encoding(), hint, /*allowResave*/ true, q);
+	if (dialog.exec() != QDialog::Accepted) {
+		return;
+	}
 
-	connect(cancelButton, &QPushButton::clicked, &dialog, &QDialog::reject);
+	const QString encoding = dialog.selectedEncoding();
+	if (encoding.isEmpty()) {
+		return;
+	}
 
-	auto selected = [combo]() -> QString {
-		const int index = combo->currentIndex();
-		return index >= 0 ? combo->itemData(index).toString() : QString();
-	};
+	if (dialog.action() == EncodingDialog::Action::Resave) {
+		q->saveWithEncoding(encoding);
+		return;
+	}
 
-	connect(reopenButton, &QPushButton::clicked, &dialog, [this, &dialog, selected] {
-		const QString encoding = selected();
-		if (encoding.isEmpty()) {
+	if (q->isModified()) {
+		const auto answer = QMessageBox::question(q, q->tr("Переоткрыть файл"),
+			q->tr("В файле есть несохранённые изменения: при перечитывании они будут "
+				"потеряны.\nПереоткрыть файл в выбранной кодировке?"),
+			QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+		if (answer != QMessageBox::Yes) {
 			return;
 		}
+	}
 
-		if (q->isModified()) {
-			const auto answer = QMessageBox::question(&dialog, q->tr("Переоткрыть файл"),
-				q->tr("В файле есть несохранённые изменения: при перечитывании они будут "
-					"потеряны.\nПереоткрыть файл в выбранной кодировке?"),
-				QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
-			if (answer != QMessageBox::Yes) {
-				return;
-			}
-		}
-
-		if (q->reopenWithEncoding(encoding)) {
-			dialog.accept();
-		}
-	});
-
-	connect(resaveButton, &QPushButton::clicked, &dialog, [this, &dialog, selected] {
-		const QString encoding = selected();
-		if (encoding.isEmpty()) {
-			return;
-		}
-
-		if (q->saveWithEncoding(encoding)) {
-			dialog.accept();
-		}
-	});
-
-	dialog.exec();
+	q->reopenWithEncoding(encoding);
 }
 
 QList<DocumentPropertyGroup> CodeEditorDocument::createPropertyGroups(QWidget* parent) {

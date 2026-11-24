@@ -1,6 +1,6 @@
-#include "Content/CodeEditorWidget/highlights/highlighter.h"
-#include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
-#include "Content/CodeEditorWidget/highlights/highlighter_plugin.h"
+#include "Content/TextEditorModule/highlights/highlighter.h"
+#include "Content/TextEditorModule/highlights/highlighter_plugin_manager.h"
+#include "Content/TextEditorModule/highlights/highlighter_plugin.h"
 
 #include <QTextBlock>
 #include <QTextCursor>

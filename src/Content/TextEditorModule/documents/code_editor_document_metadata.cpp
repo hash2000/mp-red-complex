@@ -1,4 +1,4 @@
-#include "Content/CodeEditorWidget/documents/code_editor_document_metadata.h"
+#include "Content/TextEditorModule/documents/code_editor_document_metadata.h"
 
 QList<DocumentVariable> CodeEditorDocumentMetadata::variables() const {
 	// Путь к файлу: редактор открывает его при привязке контекста.

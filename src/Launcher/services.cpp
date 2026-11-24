@@ -25,8 +25,8 @@
 #include "Content/UsersModule/data_providers/users_registry/users_registry_data_provider_db.h"
 
 // HighlightingPluginManager
-#include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
-#include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
+#include "Content/TextEditorModule/highlights/highlighter_plugin_manager.h"
+#include "Content/TextEditorModule/formatters/formatter_plugin_manager.h"
 
 #include <mutex>
 #include <utility>

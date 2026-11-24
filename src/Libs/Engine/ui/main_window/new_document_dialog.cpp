@@ -315,7 +315,15 @@ void NewDocumentDialog::Private::fillTypes() {
 		return;
 	}
 
-	for (const auto& type : registry->types()) {
+	// Список документов сортируется по классу, а не по xtype: класс —
+	// постоянное имя типа, xtype остаётся псевдонимом.
+	auto types = registry->types();
+	std::sort(types.begin(), types.end(), [](const auto& left, const auto& right) {
+		const int byClass = QString::localeAwareCompare(left.className, right.className);
+		return byClass != 0 ? byClass < 0 : left.xtype < right.xtype;
+	});
+
+	for (const auto& type : types) {
 		auto* item = new QListWidgetItem(
 			QStringLiteral("(%1) %2").arg(type.xtype, type.className), typeList);
 		item->setData(kTypeXtypeRole, type.xtype);

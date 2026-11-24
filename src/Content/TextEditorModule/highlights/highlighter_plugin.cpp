@@ -1,4 +1,4 @@
-#include "Content/CodeEditorWidget/highlights/highlighter_plugin.h"
+#include "Content/TextEditorModule/highlights/highlighter_plugin.h"
 
 #include <algorithm>
 #include <list>

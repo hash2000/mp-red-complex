@@ -1,5 +1,5 @@
 #pragma once
-#include "Content/CodeEditorWidget/formatters/formatter_plugin.h"
+#include "Content/TextEditorModule/formatters/formatter_plugin.h"
 #include <QMap>
 #include <QStringList>
 #include <memory>

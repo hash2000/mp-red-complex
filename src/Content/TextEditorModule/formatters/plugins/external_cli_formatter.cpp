@@ -1,5 +1,5 @@
-#include "Content/CodeEditorWidget/formatters/plugins/external_cli_formatter.h"
-#include "Content/CodeEditorWidget/language_info.h"
+#include "Content/TextEditorModule/formatters/plugins/external_cli_formatter.h"
+#include "Content/TextEditorModule/language_info.h"
 
 #include <QDebug>
 #include <QDir>

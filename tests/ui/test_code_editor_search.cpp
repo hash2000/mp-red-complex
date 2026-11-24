@@ -1,10 +1,10 @@
-#include "Content/CodeEditorWidget/documents/code_editor_document.h"
-#include "Content/CodeEditorWidget/documents/code_editor_document_metadata.h"
-#include "Content/CodeEditorWidget/formatters/formatter_plugin.h"
-#include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
-#include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
-#include "Content/CodeEditorWidget/widgets/code_editor_search_panel.h"
-#include "Content/CodeEditorWidget/widgets/code_editor_widget.h"
+#include "Content/TextEditorModule/documents/code_editor_document.h"
+#include "Content/TextEditorModule/documents/code_editor_document_metadata.h"
+#include "Content/TextEditorModule/formatters/formatter_plugin.h"
+#include "Content/TextEditorModule/formatters/formatter_plugin_manager.h"
+#include "Content/TextEditorModule/highlights/highlighter_plugin_manager.h"
+#include "Content/TextEditorModule/widgets/code_editor_search_panel.h"
+#include "Content/TextEditorModule/widgets/code_editor_widget.h"
 #include "Libs/BaseWidgets/properties/properties_list_widget.h"
 #include "Libs/BaseWidgets/ribbon/document_ribbon.h"
 #include "Libs/BaseWidgets/ribbon/ribbon_button.h"
@@ -724,12 +724,12 @@ void TestCodeEditorSearch::encodingDialogIsSearchableAndApplied() {
 		}
 
 		dialogFound = true;
-		auto* combo = dialog->findChild<QComboBox*>(QStringLiteral("CodeEditorEncodingCombo"));
+		auto* combo = dialog->findChild<QComboBox*>(QStringLiteral("TextEditorEncodingCombo"));
 		comboOk = combo && combo->isEditable() && combo->completer()
 			&& combo->completer()->filterMode() == Qt::MatchContains
-			&& dialog->findChild<QPushButton*>(QStringLiteral("CodeEditorEncodingReopen"))
-			&& dialog->findChild<QPushButton*>(QStringLiteral("CodeEditorEncodingResave"))
-			&& dialog->findChild<QPushButton*>(QStringLiteral("CodeEditorEncodingCancel"));
+			&& dialog->findChild<QPushButton*>(QStringLiteral("TextEditorEncodingReopen"))
+			&& dialog->findChild<QPushButton*>(QStringLiteral("TextEditorEncodingResave"))
+			&& dialog->findChild<QPushButton*>(QStringLiteral("TextEditorEncodingCancel"));
 		dialog->reject();
 	});
 	button->click();

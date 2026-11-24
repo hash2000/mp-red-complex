@@ -124,7 +124,7 @@ target_link_libraries(TestHighlighters PRIVATE
     Qt6::Widgets
     Qt6::Test
 
-    RedComplexCodeEditorWidget
+    RedComplexTextEditorModule
     RedComplexEngine
     RedComplexBase
     RedComplexResources
@@ -153,7 +153,7 @@ target_link_libraries(TestCodeEditorSearch PRIVATE
     Qt6::Test
     Qt6::Core5Compat
 
-    RedComplexCodeEditorWidget
+    RedComplexTextEditorModule
     RedComplexEngine
     RedComplexBase
     RedComplexResources
@@ -176,7 +176,7 @@ target_link_libraries(TestPagedTextEditor PRIVATE
     Qt6::Test
     Qt6::Core5Compat
 
-    RedComplexCodeEditorWidget
+    RedComplexTextEditorModule
     RedComplexEngine
     RedComplexBase
     RedComplexResources
@@ -203,7 +203,7 @@ target_link_libraries(BenchCodeEditor PRIVATE
     Qt6::Gui
     Qt6::Widgets
 
-    RedComplexCodeEditorWidget
+    RedComplexTextEditorModule
     RedComplexEngine
     RedComplexBase
     RedComplexResources

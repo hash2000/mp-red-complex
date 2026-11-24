@@ -1,7 +1,7 @@
-#include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
-#include "Content/CodeEditorWidget/formatters/formatter_plugin.h"
-#include "Content/CodeEditorWidget/formatters/plugins/external_cli_formatter.h"
-#include "Content/CodeEditorWidget/language_info.h"
+#include "Content/TextEditorModule/formatters/formatter_plugin_manager.h"
+#include "Content/TextEditorModule/formatters/formatter_plugin.h"
+#include "Content/TextEditorModule/formatters/plugins/external_cli_formatter.h"
+#include "Content/TextEditorModule/language_info.h"
 #include "Libs/Resources/resources.h"
 
 #include <QDebug>

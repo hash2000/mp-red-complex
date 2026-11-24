@@ -1,6 +1,6 @@
 #pragma once
-#include "Content/CodeEditorWidget/highlights/highlighter_plugin.h"
-#include "Content/CodeEditorWidget/language_info.h"
+#include "Content/TextEditorModule/highlights/highlighter_plugin.h"
+#include "Content/TextEditorModule/language_info.h"
 
 #include <QRegularExpression>
 #include <QTextCharFormat>
