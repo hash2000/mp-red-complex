@@ -17,8 +17,9 @@
 
     RedComplex.cmd /update-config
 
-Базы данных и пользовательские файлы в
-%LOCALAPPDATA%\Hash2000\red-complex\data при этом не затрагиваются.
+Базы данных, пользовательские профили и файлы в
+%LOCALAPPDATA%\Hash2000\red-complex\data, users и profiles при этом не
+затрагиваются.
 
 Состав архива
 -------------

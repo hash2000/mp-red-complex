@@ -2,6 +2,10 @@ version: "0.0.1"
 name: Entrypoint configuration
 description: Стартовые настройки начинаются тут.
 
+# appearance — значения по умолчанию. При первом открытии профиля
+# (profiles/default/appearance.yaml) они копируются в его настройки;
+# дальше приложение читает профиль, и менять оформление можно там,
+# не трогая эту конфигурацию.
 appearance:
   theme: dark
   application:

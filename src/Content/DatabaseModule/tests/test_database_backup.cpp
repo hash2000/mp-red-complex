@@ -108,6 +108,7 @@ class TestDatabaseBackup : public QObject {
 	Q_OBJECT
 private slots:
 	void storesComeFromStoreContexts();
+	void defaultProfileHidesEncryptedStores();
 	void createsBackupAndListsIt();
 	void restoreReplacesDatabaseAndKeepsSafetyCopy();
 	void encryptedBackupStaysEncrypted();
@@ -134,6 +135,26 @@ void TestDatabaseBackup::storesComeFromStoreContexts() {
 	const auto directory = environment.backup->backupDirectory(QStringLiteral("alpha"));
 	QVERIFY(directory.endsWith(QStringLiteral("backups/alpha"))
 		|| directory.endsWith(QStringLiteral("backups\\alpha")));
+}
+
+void TestDatabaseBackup::defaultProfileHidesEncryptedStores() {
+	TestEnvironment environment;
+	environment.resources.Directories.set(QStringLiteral("path.profiles"),
+		QDir(environment.dir.path()).filePath(QStringLiteral("profiles")));
+	environment.addStore(QStringLiteral("alpha"));
+	environment.addStore(QStringLiteral("secret"), true);
+
+	// Профиль неавторизованного пользователя: только открытые хранилища.
+	QVERIFY(environment.resources.selectProfile(QStringLiteral("default")));
+	const auto restricted = environment.backup->stores();
+	QCOMPARE(restricted.size(), 1);
+	QCOMPARE(restricted.first().alias, QStringLiteral("alpha"));
+	QVERIFY(!environment.backup->store(QStringLiteral("secret")).has_value());
+
+	// После входа зашифрованное хранилище снова доступно.
+	QVERIFY(environment.resources.selectProfile(QStringLiteral("abc123")));
+	QCOMPARE(environment.backup->stores().size(), 2);
+	QVERIFY(environment.backup->store(QStringLiteral("secret")).has_value());
 }
 
 void TestDatabaseBackup::createsBackupAndListsIt() {

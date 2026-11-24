@@ -4,6 +4,7 @@
 #include <memory>
 
 class Resources;
+class Profile;
 
 class BootstrapManager {
 public:
@@ -14,6 +15,10 @@ public:
 
 	/// Конфигурация, загруженная из bootstrap.yaml (тема и описываемое приложение).
 	const BootstrapConfig::Config& config() const;
+
+	/// Имя профиля, настройки которого применены (default для
+	/// неавторизованного пользователя).
+	QString profileName() const;
 
 private:
 	class Private;

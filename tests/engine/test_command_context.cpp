@@ -491,7 +491,9 @@ migrations:
 	// Имя из списка нормализуется к нижнему регистру — так же называется файл.
 	QVERIFY(writeTestFile(dir.filePath("stores/mixedcase.yaml"), "path: data/mixed.db\n"));
 	const auto config = BootstrapConfig::loadBootstrap(dir.filePath("bootstrap.yaml"));
-	QCOMPARE(config.themeName, QString("dark"));
+	QCOMPARE(config.appearance.themeName, QString("dark"));
+	QCOMPARE(config.appearance.application.name, QString("base"));
+	QCOMPARE(config.appearance.application.viewport, QString("Test"));
 	QCOMPARE(config.stores.size(), size_t(3));
 	auto ctl = std::make_unique<TestCommandController>();
 	BootstrapContextBuilder builder(ctl.get());
@@ -640,6 +642,9 @@ void TestEngine::testContext_ReferenceBootstrap() {
 	QVERIFY(QFile::exists(path));
 
 	const auto config = BootstrapConfig::loadBootstrap(path);
+	QCOMPARE(config.appearance.themeName, QStringLiteral("dark"));
+	QCOMPARE(config.appearance.application.name, QStringLiteral("base"));
+	QCOMPARE(config.appearance.application.viewport, QStringLiteral("BaseViewport"));
 	QCOMPARE(config.stores.size(), size_t(5));
 
 	const auto findStore = [&config](const QString& name) -> const BootstrapConfig::Store* {

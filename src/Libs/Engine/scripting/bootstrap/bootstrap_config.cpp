@@ -12,16 +12,16 @@
 
 namespace BootstrapConfig {
 
-void loadTheme(const YAML::Node& root, Config& cfg) {
+void loadTheme(const YAML::Node& root, Appearance& appearance) {
 	if (root["theme"]) {
-		cfg.themeName = QString::fromStdString(root["theme"].as<std::string>());
+		appearance.themeName = QString::fromStdString(root["theme"].as<std::string>());
 	}
 	else {
-		cfg.themeName = "dark";
+		appearance.themeName = "dark";
 	}
 }
 
-void loadApplication(const YAML::Node& root, Config& cfg) {
+void loadApplication(const YAML::Node& root, Appearance& appearance) {
 	if (!root["application"]) {
 		throw std::runtime_error("Need Bootstrap parameter: appearance.application");
 	}
@@ -35,8 +35,8 @@ void loadApplication(const YAML::Node& root, Config& cfg) {
 		throw std::runtime_error("Need Bootstrap parameter: appearance.application.viewport.xtype");
 	}
 
-	cfg.application.name = QString::fromStdString(app["name"].as<std::string>());
-	cfg.application.viewport = QString::fromStdString(app["viewport"]["xtype"].as<std::string>());
+	appearance.application.name = QString::fromStdString(app["name"].as<std::string>());
+	appearance.application.viewport = QString::fromStdString(app["viewport"]["xtype"].as<std::string>());
 }
 
 QString readMigrationFile(const QDir& configDir, const QString& path) {
@@ -203,10 +203,12 @@ Config loadBootstrap(const QString& path) {
 	}
 
 	Config cfg;
+	// appearance в bootstrap.yaml — значения по умолчанию для профиля:
+	// первый запуск создаёт по ним profiles/default/appearance.yaml.
 	const YAML::Node appearance = root["appearance"];
 
-	loadTheme(appearance, cfg);
-	loadApplication(appearance, cfg);
+	loadTheme(appearance, cfg.appearance);
+	loadApplication(appearance, cfg.appearance);
 	loadStores(root, cfg, QFileInfo(path).absoluteDir());
 
 	return cfg;

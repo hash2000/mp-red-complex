@@ -10,6 +10,14 @@ struct Application {
 	QString viewport;
 };
 
+/// Блок appearance: оформление и описываемое приложение. В bootstrap.yaml
+/// это значения по умолчанию, из которых создаётся пустой профиль
+/// пользователя (profiles/<имя>/appearance.yaml).
+struct Appearance {
+	QString themeName;
+	Application application;
+};
+
 struct Migration {
 	qint64 version = 0;
 	QString description;
@@ -30,8 +38,7 @@ struct Store {
 };
 
 struct Config {
-	QString themeName;
-	Application application;
+	Appearance appearance;
 	std::list<Store> stores;
 };
 

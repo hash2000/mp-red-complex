@@ -127,7 +127,7 @@ CommandController* Application::Private::initializeCommandController() {
 
 std::unique_ptr<QWidget> Application::Private::createViewport(CommandController* commandController) {
 	ClassManager classManager(resources.get(), commandController);
-	return std::unique_ptr<QWidget>(classManager.createViewport(bootstrapConfig.application));
+	return std::unique_ptr<QWidget>(classManager.createViewport(bootstrapConfig.appearance.application));
 }
 
 bool Application::Private::setupResources() {

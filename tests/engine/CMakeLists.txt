@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 4.1)
 
 project(TestItemsService LANGUAGES CXX)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Test)
+find_package(Qt6 REQUIRED COMPONENTS Core Test Gui Widgets)
 
 add_executable(TestEngine
     test_command.h
@@ -11,6 +11,7 @@ add_executable(TestEngine
     test_command_parser_command.cpp
     test_command_parsers.cpp
     test_command_parsers_palette.cpp
+    test_profile.cpp
 )
 
 target_include_directories(TestEngine PRIVATE
@@ -22,6 +23,7 @@ target_link_libraries(TestEngine PRIVATE
     Qt6::Core
     Qt6::Test
     Qt6::Gui
+    Qt6::Widgets
 
     RedComplexConsoleModule
 		RedComplexResources

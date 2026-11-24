@@ -65,4 +65,14 @@ private slots:
 
 	// palette
 	void testPalette_ParsePalette_ShouldReturnPaletteOptions();
+
+	// test_profile
+	void testProfile_EmptyProfileInitializedFromDefaults();
+	void testProfile_SettingsOverrideDefaults();
+	void testProfile_PartialSettingsFallback();
+	void testProfile_InvalidSettings();
+	void testProfile_UserProfileAllowsEncryptedStores();
+	void testProfile_SelectsProfileDirectory();
+	void testProfile_HidesEncryptedStoresWithoutAccess();
+	void testProfile_BootstrapManagerAppliesProfile();
 };

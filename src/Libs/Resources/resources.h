@@ -24,6 +24,20 @@ public:
 	std::optional<QDir> createProfilePath(const QString& userHash, bool checkOnly = false);
 	QString defaultUseerName() const;
 
+	/// Текущий профиль настроек: default для неавторизованного пользователя,
+	/// user hash — после входа.
+	QString currentProfileName() const;
+	std::optional<QDir> currentProfilePath() const;
+
+	/// Профилю default доступны только открытые (незашифрованные) базы.
+	/// До выбора профиля ограничение не действует: так тесты и отдельные
+	/// сервисы могут работать без загруженного профиля.
+	bool allowsEncryptedStores() const;
+
+	/// Выбирает профиль и создаёт его каталог
+	/// (<path.profile>/profiles/<name>), если его ещё нет.
+	bool selectProfile(const QString& name);
+
 	using ItemsCollection = decltype(make_deref_view(std::declval<const std::list<std::unique_ptr<DataStreamContainer>>&>()));
 	ItemsCollection items() const;
 

@@ -15,6 +15,7 @@
 | [Консоль](console/README.md) | синтаксис команд, контекст команды, `ICommand`, регистрация и вывод |
 | [Команды консоли](console/commands.md) | встроенные команды, параметры и примеры |
 | [Резервное копирование БД](database-backup/README.md) | копии файлов хранилищ `.store`, восстановление, страховочные копии |
+| [Профили](profiles/README.md) | каталог настроек пользователя, профиль `default`, инициализация из `bootstrap.yaml`, доступ к базам |
 | [FetchApi](fetch-api/README.md) | REST-запросы: модель, сервис, контекст, документ, TLS и ошибки |
 | [SystemRouter](system-router/README.md) | устройство модуля, таблицы, сервисы и точки интеграции |
 | [Узлы SystemRouter](system-router/nodes.md) | `nodes`, свойства, mime-типы, блоки, настройка через UI |

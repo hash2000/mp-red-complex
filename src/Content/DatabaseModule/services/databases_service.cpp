@@ -199,6 +199,9 @@ bool DatabasesService::verifyDatabaseFile(const QString& name, const QString& pa
 
   const auto context = d->globalContext ? d->globalContext->context(".store." + alias) : nullptr;
   const bool encrypted = context && context->variable("encrypted", false).toBool();
+  if (encrypted && d->resources && !d->resources->allowsEncryptedStores()) {
+    return fail(QStringLiteral("Зашифрованная база недоступна для текущего профиля"));
+  }
   QString connectionString = QString("file=%1;").arg(file.absoluteFilePath());
   if (encrypted) {
     if (!d->encryptionKey || d->encryptionKey->isEmpty()) {
@@ -244,12 +247,20 @@ SQLiteConnection* DatabasesService::connection(const QString& name) {
     qCritical() << "Invalid database alias or resources:" << name;
     return nullptr;
   }
+  const auto context = d->globalContext ? d->globalContext->context(".store." + alias) : nullptr;
+  const bool encrypted = context && context->variable("encrypted", false).toBool();
+  // Проверка профиля стоит до поиска открытого соединения: смена профиля
+  // не должна оставлять доступ к ранее открытой зашифрованной базе.
+  if (encrypted && d->resources && !d->resources->allowsEncryptedStores()) {
+    qCritical() << "Encrypted database is not available for the current profile:" << name;
+    return nullptr;
+  }
+
   const auto existing = d->entries.find(alias);
   if (existing != d->entries.end()) {
     return existing->second.connection.get();
   }
 
-  const auto context = d->globalContext ? d->globalContext->context(".store." + alias) : nullptr;
   const auto dbPath = resolveDatabasePath(d->resources, d->globalContext, alias);
   if (dbPath.isEmpty()) {
     qCritical() << "Database path is not configured:" << name;
@@ -260,7 +271,6 @@ SQLiteConnection* DatabasesService::connection(const QString& name) {
     return nullptr;
   }
 
-  const bool encrypted = context && context->variable("encrypted", false).toBool();
   if (encrypted && (!d->encryptionKey || d->encryptionKey->isEmpty())) {
     qCritical() << "Encryption key is required for database:" << name;
     return nullptr;

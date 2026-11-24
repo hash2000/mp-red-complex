@@ -27,6 +27,7 @@ private slots:
   void chronologicalMultiStatementMigrations();
   void retryAfterFailedMigration();
   void encryptedDatabase();
+  void encryptedDatabaseRestrictedByProfile();
   void rollbackIsAtomic();
 };
 
@@ -144,6 +145,36 @@ void TestDatabasesService::encryptedDatabase() {
   QVERIFY(!service.connection("secret"));
   service.setEncryptionKey(QByteArray(32, 'a'));
   QVERIFY(service.connection("secret"));
+}
+
+void TestDatabasesService::encryptedDatabaseRestrictedByProfile() {
+  QTemporaryDir dir;
+  QVERIFY(dir.isValid());
+  Resources resources;
+  resources.Directories.set("path.databases", dir.path());
+  resources.Directories.set("path.profiles", QDir(dir.path()).filePath("profiles"));
+  TestController controller(&resources);
+  auto store = controller.globalContext()->createScopedContext("store");
+  auto ctx = store->createScopedContext("secret");
+  ctx->setVariable("encrypted", true);
+  DatabasesService service(&resources, controller.globalContext());
+  service.setEncryptionKey(QByteArray(32, 'a'));
+
+  // Профиль неавторизованного пользователя: зашифрованная база недоступна,
+  // даже если ключ установлен.
+  QVERIFY(resources.selectProfile("default"));
+  QVERIFY(!resources.allowsEncryptedStores());
+  QVERIFY(!service.connection("secret"));
+
+  // Профиль авторизованного пользователя открывает базу.
+  QVERIFY(resources.selectProfile("abc123"));
+  QVERIFY(resources.allowsEncryptedStores());
+  QVERIFY(service.connection("secret"));
+
+  // Возврат к default закрывает доступ, в том числе к уже открытому
+  // соединению.
+  QVERIFY(resources.selectProfile("default"));
+  QVERIFY(!service.connection("secret"));
 }
 
 void TestDatabasesService::rollbackIsAtomic() {

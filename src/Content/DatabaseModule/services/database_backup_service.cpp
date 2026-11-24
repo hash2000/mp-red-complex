@@ -148,6 +148,13 @@ std::optional<DatabaseStoreInfo> DatabaseBackupService::Private::storeInfo(const
 	}
 
 	info.encrypted = context->variable(QStringLiteral("encrypted"), false).toBool();
+	// Профилю по умолчанию доступны только открытые базы: зашифрованные
+	// хранилища не показываются в списке и не участвуют в операциях с копиями.
+	if (info.encrypted && resources && !resources->allowsEncryptedStores()) {
+		qWarning() << "DatabaseBackupService: encrypted store is not available for the current profile:"
+			<< alias;
+		return std::nullopt;
+	}
 	info.walCheckInterval = positiveValue(
 		context->variable(QStringLiteral("wal.checkInterval"), kDefaultWalInterval),
 		kDefaultWalInterval);
