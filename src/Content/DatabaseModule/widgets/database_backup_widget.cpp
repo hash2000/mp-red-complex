@@ -5,7 +5,7 @@
 #include <QDesktopServices>
 #include <QDir>
 #include <QFileInfo>
-#include <QGridLayout>
+#include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
 #include <QLocale>
@@ -141,37 +141,46 @@ void DatabaseBackupWidget::Private::buildUi() {
 	detailsLayout->addWidget(backups, 1);
 
 	// Две строки кнопок: панель может быть уже, чем суммарная ширина действий.
-	auto* buttons = new QGridLayout();
-	buttons->setHorizontalSpacing(6);
-	buttons->setVerticalSpacing(6);
+	// «Удалить» — разрушающее действие, поэтому оно отделено и прижато вправо.
+	auto* primaryButtons = new QHBoxLayout();
+	primaryButtons->setContentsMargins(0, 0, 0, 0);
+	primaryButtons->setSpacing(6);
 
 	createButton = new QPushButton(tr("Создать копию"), details);
 	createButton->setObjectName(QStringLiteral("DatabaseBackupCreate"));
 	createButton->setToolTip(tr("Сохранить копию файла базы в каталог резервных копий"));
-	buttons->addWidget(createButton, 0, 0);
+	primaryButtons->addWidget(createButton);
 
 	restoreButton = new QPushButton(tr("Восстановить"), details);
 	restoreButton->setObjectName(QStringLiteral("DatabaseBackupRestore"));
 	restoreButton->setToolTip(tr("Заменить базу выбранной копией"));
-	buttons->addWidget(restoreButton, 0, 1);
+	primaryButtons->addWidget(restoreButton);
+
+	primaryButtons->addStretch(1);
 
 	deleteButton = new QPushButton(tr("Удалить"), details);
 	deleteButton->setObjectName(QStringLiteral("DatabaseBackupDelete"));
 	deleteButton->setToolTip(tr("Удалить выбранный файл копии"));
-	buttons->addWidget(deleteButton, 0, 2);
+	primaryButtons->addWidget(deleteButton, 0, Qt::AlignRight);
+
+	detailsLayout->addLayout(primaryButtons);
+
+	auto* secondaryButtons = new QHBoxLayout();
+	secondaryButtons->setContentsMargins(0, 0, 0, 0);
+	secondaryButtons->setSpacing(6);
 
 	openFolderButton = new QPushButton(tr("Каталог"), details);
 	openFolderButton->setObjectName(QStringLiteral("DatabaseBackupOpenFolder"));
 	openFolderButton->setToolTip(tr("Открыть каталог резервных копий хранилища"));
-	buttons->addWidget(openFolderButton, 1, 0);
+	secondaryButtons->addWidget(openFolderButton);
 
 	refreshButton = new QPushButton(tr("Обновить"), details);
 	refreshButton->setObjectName(QStringLiteral("DatabaseBackupRefresh"));
 	refreshButton->setToolTip(tr("Перечитать список хранилищ и копий"));
-	buttons->addWidget(refreshButton, 1, 1);
-	buttons->setColumnStretch(2, 1);
+	secondaryButtons->addWidget(refreshButton);
 
-	detailsLayout->addLayout(buttons);
+	secondaryButtons->addStretch(1);
+	detailsLayout->addLayout(secondaryButtons);
 
 	statusLabel = new QLabel(details);
 	statusLabel->setObjectName(QStringLiteral("DatabaseBackupStatus"));

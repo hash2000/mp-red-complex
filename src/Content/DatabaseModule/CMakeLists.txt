@@ -48,3 +48,7 @@ target_link_libraries(TestDatabaseBackup PRIVATE
   RedComplexDatabaseModule RedComplexEngine RedComplexResources RedComplexBase RedComplexBaseWidgets
 )
 set_target_properties(TestDatabaseBackup PROPERTIES CMAKE_AUTOMOC ON)
+# Тест читает оформление кнопок прямо из эталонной темы.
+target_compile_definitions(TestDatabaseBackup PRIVATE
+  REDCOMPLEX_CONFIGURATIONS_DIR="${CMAKE_SOURCE_DIR}/src/Configurations"
+)

@@ -13,6 +13,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QPushButton>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -113,6 +114,7 @@ private slots:
 	void restoreRejectsBrokenBackup();
 	void removeBackupOnlyInsideBackupDirectory();
 	void widgetAndDocumentShareSelectedStore();
+	void deleteButtonIsRightAlignedAndRed();
 };
 
 void TestDatabaseBackup::storesComeFromStoreContexts() {
@@ -289,6 +291,49 @@ void TestDatabaseBackup::widgetAndDocumentShareSelectedStore() {
 
 	document.widget()->selectStore(QStringLiteral("alpha"));
 	QCOMPARE(context->variable(QStringLiteral("store")).toString(), QStringLiteral("alpha"));
+}
+
+void TestDatabaseBackup::deleteButtonIsRightAlignedAndRed() {
+	TestEnvironment environment;
+	environment.addStore(QStringLiteral("alpha"));
+	QVERIFY(environment.databases->connection(QStringLiteral("alpha")));
+	QString error;
+	QVERIFY2(environment.backup->createBackup(QStringLiteral("alpha"), &error).has_value(),
+		qPrintable(error));
+
+	// Проверяем именно оформление из темы: кнопка удаления красная и не растянута.
+	QFile stylesheet(QStringLiteral(REDCOMPLEX_CONFIGURATIONS_DIR)
+		+ QStringLiteral("/assets/themes/dark/stylesheets/database-backup.qss"));
+	QVERIFY(stylesheet.open(QIODevice::ReadOnly));
+	qApp->setStyleSheet(QString::fromUtf8(stylesheet.readAll()));
+
+	DatabaseBackupWidget widget(environment.backup.get());
+	widget.resize(640, 520);
+	widget.show();
+	QVERIFY(QTest::qWaitForWindowExposed(&widget));
+
+	auto* create = widget.findChild<QPushButton*>(QStringLiteral("DatabaseBackupCreate"));
+	auto* remove = widget.findChild<QPushButton*>(QStringLiteral("DatabaseBackupDelete"));
+	QVERIFY(create);
+	QVERIFY(remove);
+	QVERIFY(remove->isVisible());
+
+	// Кнопка справа от «Создать копию», прижата к правому краю и не растянута.
+	QVERIFY(remove->geometry().left() > create->geometry().right());
+	QVERIFY(remove->width() <= create->width());
+	const int contentRight = widget.contentsRect().right() - 8;
+	QVERIFY2(qAbs(remove->geometry().right() - contentRight) <= 12,
+		qPrintable(QStringLiteral("right=%1 content=%2")
+			.arg(remove->geometry().right()).arg(contentRight)));
+
+	// Красный фон: точка слева от текста (внутри скругления и padding).
+	const auto image = remove->grab().toImage();
+	const auto color = image.pixelColor(6, image.height() / 2);
+	QVERIFY2(color.red() > 180 && color.green() < 90 && color.blue() < 90,
+		qPrintable(color.name()));
+
+	widget.close();
+	qApp->setStyleSheet(QString());
 }
 
 QTEST_MAIN(TestDatabaseBackup)

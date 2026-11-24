@@ -88,16 +88,17 @@ QPushButton#DatabaseBackupRestore:hover { background-color: #d4ae6a; }
 QPushButton#DatabaseBackupRestore:pressed { background-color: #c19d5c; }
 QPushButton#DatabaseBackupRestore:disabled { background-color: #2d3748; color: #5c6370; }
 
+/* Разрушающее действие: красная кнопка, прижата вправо. */
 QPushButton#DatabaseBackupDelete {
-  background-color: #e06c75;
-  color: #0f172a;
+  background-color: #dc2626;
+  color: #ffffff;
   border: none;
   border-radius: 4px;
   padding: 5px 12px;
   font-weight: 600;
 }
-QPushButton#DatabaseBackupDelete:hover { background-color: #cf5c65; }
-QPushButton#DatabaseBackupDelete:pressed { background-color: #b94d56; }
+QPushButton#DatabaseBackupDelete:hover { background-color: #b91c1c; }
+QPushButton#DatabaseBackupDelete:pressed { background-color: #991b1b; }
 QPushButton#DatabaseBackupDelete:disabled { background-color: #2d3748; color: #5c6370; }
 
 QPushButton#DatabaseBackupOpenFolder,
