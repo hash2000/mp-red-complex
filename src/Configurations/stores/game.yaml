@@ -1,0 +1,10 @@
+# Настройки хранилища game.
+# Хранилище загружается, пока его имя есть в stores.items в bootstrap.yaml.
+name: game
+encrypted: true
+
+migrations:
+  - version: 20251113181900
+    description: Initialize database
+    up: stores/migrations/game/20251113181900-up-Initialize-database.sql
+    down: stores/migrations/game/20251113181900-down.sql

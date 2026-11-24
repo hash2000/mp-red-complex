@@ -28,4 +28,9 @@ target_link_libraries(TestEngine PRIVATE
 		RedComplexGraphics
 )
 
+# Тест проверяет эталонную конфигурацию хранилищ: bootstrap.yaml и stores/<имя>.yaml.
+target_compile_definitions(TestEngine PRIVATE
+    REDCOMPLEX_CONFIGURATIONS_DIR="${CMAKE_SOURCE_DIR}/src/Configurations"
+)
+
 add_test(NAME TestEngine COMMAND TestEngine)

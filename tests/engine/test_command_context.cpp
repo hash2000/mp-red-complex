@@ -460,29 +460,36 @@ void TestEngine::testContext_BootstrapMigrations() {
 	QTemporaryDir dir;
 	QVERIFY(dir.isValid());
 	QVERIFY(QDir(dir.path()).mkdir("sql"));
+	QVERIFY(QDir(dir.path()).mkdir("stores"));
 	QVERIFY(writeTestFile(dir.filePath("sql/20251113181900-up-Initialize-database.sql"), "CREATE TABLE first(id INTEGER);"));
 	QVERIFY(writeTestFile(dir.filePath("sql/20251113181900-down.sql"), "DROP TABLE first;"));
 	QVERIFY(writeTestFile(dir.filePath("sql/20261113181900-up.sql"), "CREATE TABLE second(id INTEGER);"));
 	QVERIFY(writeTestFile(dir.filePath("sql/20261113181900-down.sql"), "DROP TABLE second;"));
 	// Неуказанный файл не должен загружаться.
 	QVERIFY(writeTestFile(dir.filePath("sql/20271113181900-up.sql"), "unexpected"));
+	// В bootstrap.yaml — только перечисление имён, настройки — в stores/<имя>.yaml.
 	const QByteArray yaml = R"(appearance:
   application:
     name: base
     viewport: {xtype: Test}
 stores:
   items:
-    accounts:
-      path: data/accounts.db
-      encrypted: true
-      wal: {checkInterval: 1234, maxSizeMb: 7}
-      migrations:
-        - {version: 20261113181900, up: sql/20261113181900-up.sql, down: sql/20261113181900-down.sql}
-        - {version: 20251113181900, description: Initialize, up: sql/20251113181900-up-Initialize-database.sql, down: sql/20251113181900-down.sql}
-    empty: {}
-    MixedCase: {path: data/mixed.db}
+    - accounts
+    - empty
+    - MixedCase
 )";
 	QVERIFY(writeTestFile(dir.filePath("bootstrap.yaml"), yaml));
+	QVERIFY(writeTestFile(dir.filePath("stores/accounts.yaml"), R"(name: accounts
+path: data/accounts.db
+encrypted: true
+wal: {checkInterval: 1234, maxSizeMb: 7}
+migrations:
+  - {version: 20261113181900, up: sql/20261113181900-up.sql, down: sql/20261113181900-down.sql}
+  - {version: 20251113181900, description: Initialize, up: sql/20251113181900-up-Initialize-database.sql, down: sql/20251113181900-down.sql}
+)"));
+	QVERIFY(writeTestFile(dir.filePath("stores/empty.yaml"), "{}"));
+	// Имя из списка нормализуется к нижнему регистру — так же называется файл.
+	QVERIFY(writeTestFile(dir.filePath("stores/mixedcase.yaml"), "path: data/mixed.db\n"));
 	const auto config = BootstrapConfig::loadBootstrap(dir.filePath("bootstrap.yaml"));
 	QCOMPARE(config.themeName, QString("dark"));
 	QCOMPARE(config.stores.size(), size_t(3));
@@ -541,28 +548,134 @@ stores:
 void TestEngine::testContext_BootstrapMigrationErrors() {
 	QTemporaryDir dir;
 	QVERIFY(dir.isValid());
-	const QByteArray prefix = "appearance:\n  application:\n    name: base\n    viewport: {xtype: Test}\nstores:\n  items:\n    test:\n      migrations:\n";
+	QVERIFY(QDir(dir.path()).mkdir("stores"));
 	const auto path = dir.filePath("bootstrap.yaml");
-	QVERIFY(writeTestFile(path, prefix + "        - {version: 20251113181900, up: 20251113181900-up.sql, down: 20251113181900-down.sql}\n"));
+	const auto storePath = dir.filePath("stores/test.yaml");
+	const QByteArray bootstrap = "appearance:\n  application:\n    name: base\n    viewport: {xtype: Test}\nstores:\n  items:\n    - test\n";
+	QVERIFY(writeTestFile(path, bootstrap));
+
+	const auto writeMigrations = [&storePath](const QByteArray& migrations) {
+		return writeTestFile(storePath, "migrations:\n" + migrations);
+	};
+
+	QVERIFY(writeMigrations("  - {version: 20251113181900, up: 20251113181900-up.sql, down: 20251113181900-down.sql}\n"));
 	QVERIFY_EXCEPTION_THROWN(BootstrapConfig::loadBootstrap(path), std::runtime_error);
 	QVERIFY(writeTestFile(dir.filePath("20251113181900-up.sql"), "up"));
 	// Отсутствие отдельного down-файла также приводит к ошибке.
 	QVERIFY_EXCEPTION_THROWN(BootstrapConfig::loadBootstrap(path), std::runtime_error);
 	QVERIFY(writeTestFile(dir.filePath("20251113181900-down.sql"), "down"));
-	QVERIFY(writeTestFile(path, prefix + "        - {version: 20251113181900, up: 20251113181900-up.sql, down: 20251113181900-down.sql}\n        - {version: 20251113181900, up: 20251113181900-up.sql, down: 20251113181900-down.sql}\n"));
+	QVERIFY(writeMigrations("  - {version: 20251113181900, up: 20251113181900-up.sql, down: 20251113181900-down.sql}\n"
+		"  - {version: 20251113181900, up: 20251113181900-up.sql, down: 20251113181900-down.sql}\n"));
 	QVERIFY_EXCEPTION_THROWN(BootstrapConfig::loadBootstrap(path), std::runtime_error);
-	QVERIFY(writeTestFile(path, prefix + "        - {version: 20251113181900, up: 20251113181900-up.sql, down: 20261113181900-down.sql}\n"));
+	QVERIFY(writeMigrations("  - {version: 20251113181900, up: 20251113181900-up.sql, down: 20261113181900-down.sql}\n"));
 	QVERIFY_EXCEPTION_THROWN(BootstrapConfig::loadBootstrap(path), std::runtime_error);
-	QVERIFY(writeTestFile(path, prefix + "        - {version: 20251313181900, up: 20251313181900-up.sql, down: 20251313181900-down.sql}\n"));
+	QVERIFY(writeMigrations("  - {version: 20251313181900, up: 20251313181900-up.sql, down: 20251313181900-down.sql}\n"));
 	QVERIFY_EXCEPTION_THROWN(BootstrapConfig::loadBootstrap(path), std::runtime_error);
-	QVERIFY(writeTestFile(path, prefix + "        - {version: 20251113181900, up: 20261113181900-up.sql, down: 20251113181900-down.sql}\n"));
+	QVERIFY(writeMigrations("  - {version: 20251113181900, up: 20261113181900-up.sql, down: 20251113181900-down.sql}\n"));
 	QVERIFY_EXCEPTION_THROWN(BootstrapConfig::loadBootstrap(path), std::runtime_error);
-	QVERIFY(writeTestFile(path, prefix + "        - {version: 20251113181900, up: 20251113181900-up.sql, down: 20251113181900-down-extra.sql}\n"));
+	QVERIFY(writeMigrations("  - {version: 20251113181900, up: 20251113181900-up.sql, down: 20251113181900-down-extra.sql}\n"));
 	QVERIFY_EXCEPTION_THROWN(BootstrapConfig::loadBootstrap(path), std::runtime_error);
-	QVERIFY(writeTestFile(path, prefix + "        - {version: 20251113181900, up: 20251113181900-up.sql}\n"));
+	QVERIFY(writeMigrations("  - {version: 20251113181900, up: 20251113181900-up.sql}\n"));
 	QVERIFY_EXCEPTION_THROWN(BootstrapConfig::loadBootstrap(path), std::runtime_error);
-	QVERIFY(writeTestFile(path, prefix + "        - {version: 20251113181900, down: 20251113181900-down.sql}\n"));
+	QVERIFY(writeMigrations("  - {version: 20251113181900, down: 20251113181900-down.sql}\n"));
 	QVERIFY_EXCEPTION_THROWN(BootstrapConfig::loadBootstrap(path), std::runtime_error);
+}
+
+void TestEngine::testContext_BootstrapStoreFiles() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	QVERIFY(QDir(dir.path()).mkdir("stores"));
+	const auto path = dir.filePath("bootstrap.yaml");
+	const QByteArray header = "appearance:\n  application:\n    name: base\n    viewport: {xtype: Test}\nstores:\n";
+
+	const auto writeBootstrap = [&path, &header](const QByteArray& stores) {
+		return writeTestFile(path, header + stores);
+	};
+
+	// 1. Хранилище перечислено, но файла настроек нет — ошибка.
+	QVERIFY(writeBootstrap("  items:\n    - missing\n"));
+	QVERIFY_EXCEPTION_THROWN(BootstrapConfig::loadBootstrap(path), std::runtime_error);
+
+	// 2. Файл существует, но имя не перечислено: хранилище отключено,
+	//    файл настроек не читается и не мешает запуску.
+	QVERIFY(writeTestFile(dir.filePath("stores/disabled.yaml"), "path: data/disabled.db\n"));
+	QVERIFY(writeBootstrap("  items: []\n"));
+	const auto disabled = BootstrapConfig::loadBootstrap(path);
+	QVERIFY(disabled.stores.empty());
+
+	// 3. Старый формат (map с настройками в bootstrap) отклоняется.
+	QVERIFY(writeBootstrap("  items:\n    disabled:\n      path: data/disabled.db\n"));
+	QVERIFY_EXCEPTION_THROWN(BootstrapConfig::loadBootstrap(path), std::runtime_error);
+
+	// 4. Дубликаты имён без учёта регистра.
+	QVERIFY(writeTestFile(dir.filePath("stores/dup.yaml"), "{}"));
+	QVERIFY(writeBootstrap("  items:\n    - dup\n    - DUP\n"));
+	QVERIFY_EXCEPTION_THROWN(BootstrapConfig::loadBootstrap(path), std::runtime_error);
+
+	// 5. Недопустимое имя хранилища.
+	QVERIFY(writeBootstrap("  items:\n    - ../escape\n"));
+	QVERIFY_EXCEPTION_THROWN(BootstrapConfig::loadBootstrap(path), std::runtime_error);
+
+	// 6. Имя в файле не совпадает с именем файла.
+	QVERIFY(writeTestFile(dir.filePath("stores/named.yaml"), "name: other\n"));
+	QVERIFY(writeBootstrap("  items:\n    - named\n"));
+	QVERIFY_EXCEPTION_THROWN(BootstrapConfig::loadBootstrap(path), std::runtime_error);
+
+	// 7. Пустой файл настроек — значения по умолчанию.
+	QVERIFY(writeTestFile(dir.filePath("stores/plain.yaml"), "# только комментарий\n"));
+	QVERIFY(writeBootstrap("  items:\n    - plain\n"));
+	const auto plain = BootstrapConfig::loadBootstrap(path);
+	QCOMPARE(plain.stores.size(), size_t(1));
+	QCOMPARE(plain.stores.front().name, QString("plain"));
+	QVERIFY(plain.stores.front().path.isEmpty());
+	QVERIFY(!plain.stores.front().encrypted);
+	QCOMPARE(plain.stores.front().wal.checkInterval, 60000);
+	QCOMPARE(plain.stores.front().wal.maxSizeMb, 20);
+	QVERIFY(plain.stores.front().migrations.empty());
+}
+
+void TestEngine::testContext_ReferenceBootstrap() {
+	const auto path = QStringLiteral(REDCOMPLEX_CONFIGURATIONS_DIR)
+		+ QStringLiteral("/bootstrap.yaml");
+	QVERIFY(QFile::exists(path));
+
+	const auto config = BootstrapConfig::loadBootstrap(path);
+	QCOMPARE(config.stores.size(), size_t(5));
+
+	const auto findStore = [&config](const QString& name) -> const BootstrapConfig::Store* {
+		for (const auto& store : config.stores) {
+			if (store.name == name) {
+				return &store;
+			}
+		}
+		return nullptr;
+	};
+
+	// Настройки вынесены в stores/<имя>.yaml и читаются по списку stores.items.
+	const auto* fetch = findStore(QStringLiteral("fetch_api"));
+	QVERIFY(fetch);
+	QCOMPARE(fetch->wal.checkInterval, 60000);
+	QCOMPARE(fetch->wal.maxSizeMb, 40);
+	QCOMPARE(fetch->migrations.size(), size_t(2));
+	QVERIFY(!fetch->encrypted);
+
+	const auto* messages = findStore(QStringLiteral("messages"));
+	QVERIFY(messages);
+	QVERIFY(messages->migrations.empty());
+
+	const auto* router = findStore(QStringLiteral("system_router"));
+	QVERIFY(router);
+	QCOMPARE(router->migrations.size(), size_t(3));
+
+	const auto* accounts = findStore(QStringLiteral("accounts"));
+	QVERIFY(accounts);
+	QCOMPARE(accounts->wal.checkInterval, 120000);
+	QCOMPARE(accounts->migrations.size(), size_t(1));
+
+	const auto* game = findStore(QStringLiteral("game"));
+	QVERIFY(game);
+	QVERIFY(game->encrypted);
+	QCOMPARE(game->migrations.size(), size_t(1));
 }
 
 void TestEngine::testContext_RemoveVariable() {

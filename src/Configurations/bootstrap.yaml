@@ -9,55 +9,13 @@ appearance:
     viewport:
       xtype: BaseViewport
 
+# Только перечисление хранилищ. Настройки каждого хранилища лежат отдельно
+# в stores/<имя>.yaml (path, encrypted, wal, migrations). Чтобы отключить
+# хранилище, уберите его имя из items — файл настроек останется на месте.
 stores:
   items:
-    fetch_api:
-      wal:
-        checkInterval: 60000
-        maxSizeMb: 40
-      migrations:
-        - version: 20251113181900
-          description: Initialize database
-          up: stores/migrations/fetch_api/20251113181900-up-Initialize-database.sql
-          down: stores/migrations/fetch_api/20251113181900-down.sql
-        - version: 20261121120000
-          description: Add expanded to queries
-          up: stores/migrations/fetch_api/20261121120000-up-Add-expanded-to-queries.sql
-          down: stores/migrations/fetch_api/20261121120000-down.sql
-    messages:
-      wal:
-        checkInterval: 60000
-        maxSizeMb: 40
-    system_router:
-      wal:
-        checkInterval: 60000
-        maxSizeMb: 20
-      migrations:
-        - version: 20261120090000
-          description: Initialize system router
-          up: stores/migrations/system_router/20261120090000-up-Initialize-database.sql
-          down: stores/migrations/system_router/20261120090000-down.sql
-        - version: 20261120130000
-          description: Rename commands to data_blobs
-          up: stores/migrations/system_router/20261120130000-up-Rename-commands-to-data-blobs.sql
-          down: stores/migrations/system_router/20261120130000-down.sql
-        - version: 20261121120000
-          description: Add expanded to nodes
-          up: stores/migrations/system_router/20261121120000-up-Add-expanded-to-nodes.sql
-          down: stores/migrations/system_router/20261121120000-down.sql
-    accounts:
-      wal:
-        checkInterval: 120000
-        maxSizeMb: 20
-      migrations:
-        - version: 20251113181900
-          description: Initialize database
-          up: stores/migrations/accounts/20251113181900-up-Initialize-database.sql
-          down: stores/migrations/accounts/20251113181900-down.sql
-    game:
-      encrypted: true
-      migrations:
-        - version: 20251113181900
-          description: Initialize database
-          up: stores/migrations/game/20251113181900-up-Initialize-database.sql
-          down: stores/migrations/game/20251113181900-down.sql
+    - fetch_api
+    - messages
+    - system_router
+    - accounts
+    - game

@@ -1,0 +1,7 @@
+# Настройки хранилища messages (модуль MessagerModule).
+# Хранилище загружается, пока его имя есть в stores.items в bootstrap.yaml.
+name: messages
+
+wal:
+  checkInterval: 60000
+  maxSizeMb: 40

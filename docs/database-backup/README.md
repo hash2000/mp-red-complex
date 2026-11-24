@@ -2,8 +2,9 @@
 
 Документ модуля `DatabaseModule` создаёт копии файлов баз, зарегистрированных в
 контекстах `.store.<alias>`, и восстанавливает базу из копии. Реестр хранилищ —
-тот же, что использует `DatabasesService`: список берётся из `bootstrap.yaml`
-(`stores.items`) через `BootstrapContextBuilder`.
+тот же, что использует `DatabasesService`: `bootstrap.yaml` (`stores.items`)
+содержит только перечисление имён, а настройки каждого хранилища лежат в
+`stores/<alias>.yaml`; контексты создаёт `BootstrapContextBuilder`.
 
 Основные классы:
 

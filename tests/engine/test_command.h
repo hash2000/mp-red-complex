@@ -45,6 +45,8 @@ private slots:
 	void testContext_CleanupRunsInBackground();
 	void testContext_BootstrapMigrations();
 	void testContext_BootstrapMigrationErrors();
+	void testContext_BootstrapStoreFiles();
+	void testContext_ReferenceBootstrap();
 	void testContext_RemoveVariable();
 	void testContext_DocumentRuleDocument();
 	void testContext_DocumentsContextIsReadOnly();

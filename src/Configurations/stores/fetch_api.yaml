@@ -1,0 +1,17 @@
+# Настройки хранилища fetch_api (модуль FetchApi).
+# Хранилище загружается, пока его имя есть в stores.items в bootstrap.yaml.
+name: fetch_api
+
+wal:
+  checkInterval: 60000
+  maxSizeMb: 40
+
+migrations:
+  - version: 20251113181900
+    description: Initialize database
+    up: stores/migrations/fetch_api/20251113181900-up-Initialize-database.sql
+    down: stores/migrations/fetch_api/20251113181900-down.sql
+  - version: 20261121120000
+    description: Add expanded to queries
+    up: stores/migrations/fetch_api/20261121120000-up-Add-expanded-to-queries.sql
+    down: stores/migrations/fetch_api/20261121120000-down.sql

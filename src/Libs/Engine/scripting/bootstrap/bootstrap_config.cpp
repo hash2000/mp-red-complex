@@ -93,58 +93,100 @@ void loadMigrations(const YAML::Node& node, const QDir& configDir, Store& store)
 	store.migrations.sort([](const Migration& a, const Migration& b) { return a.version < b.version; });
 }
 
+// Настройки одного хранилища лежат в отдельном файле stores/<name>.yaml
+// рядом с bootstrap.yaml. Пути SQL-миграций по-прежнему разрешаются
+// относительно каталога bootstrap.yaml.
+Store loadStore(const QString& name, const QDir& configDir) {
+	const auto storePath = configDir.filePath(QStringLiteral("stores/%1.yaml").arg(name));
+	QFile file(storePath);
+	if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+		throw std::runtime_error("Cannot open store config: " + storePath.toStdString());
+	}
+	const auto contents = file.readAll();
+	if (file.error() != QFileDevice::NoError) {
+		throw std::runtime_error("Cannot read store config: " + storePath.toStdString());
+	}
+
+	YAML::Node body;
+	try {
+		body = YAML::Load(contents.toStdString());
+	}
+	catch (const YAML::Exception& error) {
+		throw std::runtime_error("Invalid YAML in store config " + storePath.toStdString()
+			+ ": " + error.what());
+	}
+
+	Store store;
+	store.name = name;
+	// Пустой файл (или только комментарии) — хранилище с настройками
+	// по умолчанию.
+	if (body.IsNull()) {
+		return store;
+	}
+	if (!body.IsMap()) {
+		throw std::runtime_error("Store config must be a map: " + storePath.toStdString());
+	}
+
+	if (body["name"]) {
+		const auto declared = QString::fromStdString(body["name"].as<std::string>()).toLower();
+		if (declared != name) {
+			throw std::runtime_error("Store config name does not match its file name: "
+				+ storePath.toStdString());
+		}
+	}
+	if (body["path"]) {
+		store.path = QString::fromStdString(body["path"].as<std::string>());
+	}
+	if (body["encrypted"]) {
+		store.encrypted = body["encrypted"].as<bool>();
+	}
+	loadMigrations(body["migrations"], configDir, store);
+
+	const auto& wal = body["wal"];
+	if (!wal) {
+		return store;
+	}
+	if (!wal.IsMap()) {
+		throw std::runtime_error("Store parameter wal must be a map: "
+			+ storePath.toStdString());
+	}
+	if (wal["checkInterval"]) {
+		store.wal.checkInterval = wal["checkInterval"].as<int>();
+	}
+	if (wal["maxSizeMb"]) {
+		store.wal.maxSizeMb = wal["maxSizeMb"].as<int>();
+	}
+
+	return store;
+}
+
 void loadStores(const YAML::Node& root, Config& cfg, const QDir& configDir) {
 	const auto stores = root["stores"];
 	if (!stores || !stores["items"]) {
 		return;
 	}
 
+	// В bootstrap.yaml остаётся только перечисление имён: настройки хранилищ
+	// вынесены в stores/<name>.yaml. Чтобы отключить хранилище, достаточно
+	// убрать его имя из списка — файл настроек при этом сохраняется.
 	const auto& items = stores["items"];
-	if (!items.IsMap()) {
-		throw std::runtime_error("Bootstrap parameter stores.items must be a map");
+	if (!items.IsSequence()) {
+		throw std::runtime_error("Bootstrap parameter stores.items must be a sequence "
+			"of store names; store settings live in stores/<name>.yaml");
 	}
 
 	QSet<QString> names;
 	static const QRegularExpression validName("^[a-z0-9_-]+$");
 	for (const auto& item : items) {
-		Store store;
-		store.name = QString::fromStdString(item.first.as<std::string>()).toLower();
-		if (!validName.match(store.name).hasMatch() || names.contains(store.name)) {
-			throw std::runtime_error("Invalid or duplicate store name: " + store.name.toStdString());
+		if (!item.IsScalar()) {
+			throw std::runtime_error("Bootstrap store name must be a string");
 		}
-		names.insert(store.name);
-
-		const auto& body = item.second;
-		if (!body.IsMap()) {
-			throw std::runtime_error("Bootstrap store must be a map: " + store.name.toStdString());
+		const auto name = QString::fromStdString(item.as<std::string>()).toLower();
+		if (!validName.match(name).hasMatch() || names.contains(name)) {
+			throw std::runtime_error("Invalid or duplicate store name: " + name.toStdString());
 		}
-		if (body["path"]) {
-			store.path = QString::fromStdString(body["path"].as<std::string>());
-		}
-		if (body["encrypted"]) {
-			store.encrypted = body["encrypted"].as<bool>();
-		}
-		loadMigrations(body["migrations"], configDir, store);
-		const auto& wal = body["wal"];
-		if (!wal) {
-			cfg.stores.push_back(std::move(store));
-			continue;
-		}
-
-		if (!wal.IsMap()) {
-			throw std::runtime_error("Bootstrap parameter stores.items."
-				+ store.name.toStdString() + ".wal must be a map");
-		}
-
-		if (wal["checkInterval"]) {
-			store.wal.checkInterval = wal["checkInterval"].as<int>();
-		}
-
-		if (wal["maxSizeMb"]) {
-			store.wal.maxSizeMb = wal["maxSizeMb"].as<int>();
-		}
-
-		cfg.stores.push_back(std::move(store));
+		names.insert(name);
+		cfg.stores.push_back(loadStore(name, configDir));
 	}
 }
 
