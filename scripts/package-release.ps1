@@ -49,6 +49,8 @@ param(
 
 	[switch]$NoQtDeploy,
 
+	[switch]$VerifyDependencies,
+
 	[switch]$KeepStaging
 )
 
@@ -58,6 +60,27 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot '_common.ps1')
 
 $root = Get-RedComplexRepositoryRoot
+
+function Get-RedComplexPeDependency {
+	# Возвращает имена DLL из таблицы импорта PE-файла (через dumpbin).
+	param(
+		[Parameter(Mandatory = $true)]
+		[string]$Path,
+
+		[Parameter(Mandatory = $true)]
+		[string]$Dumpbin
+	)
+
+	$output = & $Dumpbin /nologo /dependents $Path 2>&1
+	$dependencies = New-Object 'System.Collections.Generic.List[string]'
+	foreach ($line in $output) {
+		$text = $line.ToString()
+		if ($text -match '^\s+(?<name>[A-Za-z0-9_.\-]+\.dll)\s*$') {
+			$dependencies.Add($matches['name'])
+		}
+	}
+	return $dependencies
+}
 
 if (-not $BuildDirectory) {
 	$BuildDirectory = Resolve-RedComplexBuildDirectory
@@ -111,6 +134,21 @@ if ($isDebug -and (Test-Path -LiteralPath (Join-Path $installedRoot 'debug\Qt6\p
 }
 if (-not (Test-Path -LiteralPath $pluginsRoot)) {
 	throw "Не найден каталог плагинов Qt '$pluginsRoot'."
+}
+
+# Часть рантайм-зависимостей Qt vcpkg держит не в bin, а в tools: например,
+# brotlidec.dll и bz2.dll лежат в tools\Qt6\bin. Без них Launcher.exe не
+# запустится, поэтому эти каталоги тоже используются как источник DLL.
+$toolRoots = @()
+$toolsRoot = Join-Path $installedRoot 'tools'
+if (Test-Path -LiteralPath $toolsRoot) {
+	foreach ($toolDirectory in Get-ChildItem -LiteralPath $toolsRoot -Directory) {
+		# tools\tcl — утилиты sqlite3, приложению не нужны.
+		if ($toolDirectory.Name -eq 'tcl') {
+			continue
+		}
+		$toolRoots += $toolDirectory.FullName
+	}
 }
 
 # --- Имена и каталоги -------------------------------------------------------
@@ -189,6 +227,7 @@ elseif (-not $NoQtDeploy) {
 
 # Копируются только отсутствующие файлы, чтобы не перетирать результат
 # windeployqt и не тащить в архив отладочные файлы.
+$copiedLibraries = 0
 foreach ($directory in (@($build) + $libraryDirectories)) {
 	if (-not (Test-Path -LiteralPath $directory)) {
 		continue
@@ -197,8 +236,28 @@ foreach ($directory in (@($build) + $libraryDirectories)) {
 		$target = Join-Path $staging $library.Name
 		if (-not (Test-Path -LiteralPath $target)) {
 			Copy-Item -LiteralPath $library.FullName -Destination $target
+			$copiedLibraries++
 		}
 	}
+}
+
+# То же для tools: там лежат зависимости инструментов Qt (brotli, bzip2 и др.),
+# которые нужны и самому приложению. Для Debug-сборки этот источник не нужен:
+# отладочные зависимости уже лежат в debug\bin, а release-копии только
+# раздували бы архив.
+if (-not $isDebug) {
+	foreach ($directory in $toolRoots) {
+		foreach ($library in Get-ChildItem -LiteralPath $directory -Filter '*.dll' -File -Recurse) {
+			$target = Join-Path $staging $library.Name
+			if (-not (Test-Path -LiteralPath $target)) {
+				Copy-Item -LiteralPath $library.FullName -Destination $target
+				$copiedLibraries++
+			}
+		}
+	}
+}
+if ($copiedLibraries -gt 0) {
+	Write-Host "Добавлено DLL из vcpkg: $copiedLibraries"
 }
 
 # --- 4. Плагины Qt: platforms, styles, tls, imageformats и прочие ----------
@@ -231,11 +290,21 @@ foreach ($extra in @('RedComplex.cmd', 'README.txt')) {
 
 Copy-Item -LiteralPath (Join-Path $root 'LICENSE') -Destination (Join-Path $staging 'LICENSE')
 
-$versionInfo = @(
-	"RedComplex $packageVersion"
-	"Сборка: $buildType, $triplet"
-	"Упаковано: $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
-)
+$versionInfo = New-Object 'System.Collections.Generic.List[string]'
+$versionInfo.Add("RedComplex $packageVersion")
+$versionInfo.Add("Сборка: $buildType, $triplet")
+
+# Версии портов vcpkg задаёт builtin-baseline в манифесте: по нему видно,
+# из каких именно версий библиотек собран пакет.
+$manifestPath = Join-Path $root 'vcpkg.json'
+if (Test-Path -LiteralPath $manifestPath) {
+	$manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+	if ($manifest.PSObject.Properties.Name -contains 'builtin-baseline') {
+		$versionInfo.Add("vcpkg baseline: $($manifest.'builtin-baseline')")
+	}
+}
+
+$versionInfo.Add("Упаковано: $(Get-Date -Format 'yyyy-MM-dd HH:mm')")
 Set-Content -LiteralPath (Join-Path $staging 'version.txt') -Value $versionInfo -Encoding utf8
 
 # --- 6. Проверка комплектности ---------------------------------------------
@@ -267,7 +336,58 @@ if ($tlsPlugins.Count -eq 0) {
 	Write-Warning 'В архив не попал плагин TLS (tls\qopensslbackend*.dll): HTTPS-запросы могут не работать.'
 }
 
-# --- 7. Упаковка ------------------------------------------------------------
+# --- 7. Проверка зависимостей -----------------------------------------------
+
+if ($VerifyDependencies) {
+	$dumpbinCommand = Get-Command dumpbin.exe -ErrorAction SilentlyContinue
+	$dumpbin = if ($dumpbinCommand) { $dumpbinCommand.Source } else { $null }
+	if (-not $dumpbin) {
+		# dumpbin ставится вместе с Visual Studio: подхватываем его окружение.
+		Initialize-RedComplexVsEnvironment
+		$dumpbinCommand = Get-Command dumpbin.exe -ErrorAction SilentlyContinue
+		$dumpbin = if ($dumpbinCommand) { $dumpbinCommand.Source } else { $null }
+	}
+
+	if (-not $dumpbin) {
+		Write-Warning 'dumpbin не найден: проверка зависимостей пропущена.'
+	}
+	else {
+		# Все собранные DLL и exe + их импорт: любая внешняя DLL, которой нет
+		# в пакете и в System32, означает, что сборка не запустится у пользователя.
+		$stagedLibraries = @{}
+		$binaries = New-Object 'System.Collections.Generic.List[System.IO.FileInfo]'
+		$binaries.Add((Get-Item -LiteralPath (Join-Path $staging 'Launcher.exe')))
+		foreach ($file in Get-ChildItem -LiteralPath $staging -Filter '*.dll' -File -Recurse) {
+			$stagedLibraries[$file.Name.ToLowerInvariant()] = $true
+			$binaries.Add($file)
+		}
+
+		# Эти DLL подгружаются по необходимости на стороне Windows, их может не быть.
+		$optionalDependencies = @('d3dcompiler_47.dll', 'opengl32sw.dll', 'libegl.dll', 'libglesv2.dll')
+		$missingDependencies = New-Object 'System.Collections.Generic.List[string]'
+
+		foreach ($binary in $binaries) {
+			foreach ($dependency in (Get-RedComplexPeDependency -Path $binary.FullName -Dumpbin $dumpbin)) {
+				$key = $dependency.ToLowerInvariant()
+				if ($stagedLibraries.ContainsKey($key)) { continue }
+				if ($key -like 'api-ms-win-*') { continue }
+				if ($optionalDependencies -contains $key) { continue }
+				if (Test-Path -LiteralPath (Join-Path (Join-Path $env:SystemRoot 'System32') $dependency)) { continue }
+				if (-not $missingDependencies.Contains($dependency)) {
+					$missingDependencies.Add($dependency)
+				}
+			}
+		}
+
+		if ($missingDependencies.Count -gt 0) {
+			throw ("В пакете нет DLL, от которых зависят Launcher.exe/Qt: " + ($missingDependencies -join ', ') +
+				'. Добавьте каталог с ними в источник DLL в package-release.ps1.')
+		}
+		Write-Host "Проверка зависимостей: $($binaries.Count) файлов, все внешние DLL в пакете." -ForegroundColor Green
+	}
+}
+
+# --- 8. Упаковка ------------------------------------------------------------
 
 if (Test-Path -LiteralPath $archivePath) {
 	Remove-Item -LiteralPath $archivePath -Force

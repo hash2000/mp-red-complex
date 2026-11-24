@@ -147,6 +147,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'ninja не запускается.' }
           & (Join-Path $env:VCPKG_INSTALLATION_ROOT 'vcpkg.exe') version
           if ($LASTEXITCODE -ne 0) { throw 'vcpkg не запускается.' }
+          # Версии портов задаёт builtin-baseline: печатаем его для диагностики.
+          $manifest = Get-Content -LiteralPath 'vcpkg.json' -Raw | ConvertFrom-Json
+          Write-Host "vcpkg baseline (vcpkg.json): $($manifest.'builtin-baseline')"
 
       - name: Конфигурация
         env:
@@ -182,7 +185,8 @@ jobs:
           .\scripts\package-release.ps1 `
             -Version '${{ steps.version.outputs.version }}' `
             -BuildDirectory $env:BUILD_DIR `
-            -OutputDirectory artifacts
+            -OutputDirectory artifacts `
+            -VerifyDependencies
 
       - name: Артефакт прогона
         uses: actions/upload-artifact@v7
