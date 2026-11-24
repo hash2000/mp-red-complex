@@ -1,6 +1,7 @@
 #include "Launcher/widgets_builder.h"
 #include "Content/CodeEditorWidget/documents/code_editor_document.h"
 #include "Content/CodeEditorWidget/documents/code_editor_document_metadata.h"
+#include "Content/CodeEditorWidget/documents/paged_text_document.h"
 #include "Content/CodeEditorWidget/formatters/formatter_plugin_manager.h"
 #include "Content/CodeEditorWidget/highlights/highlighter_plugin_manager.h"
 #include "Content/DatabaseModule/documents/database_backup_document.h"
@@ -282,6 +283,16 @@ void WidgetsBuilder::Private::registerAll() {
 	// Обязательные переменные документа-редактора: путь к файлу.
 	registry->registerDocumentMetadata(QStringLiteral("Content.CodeEditor.CodeEditorDocument"),
 		std::make_unique<CodeEditorDocumentMetadata>());
+
+	// Прототип виртуального редактора для очень больших файлов: страницы
+	// читаются с диска, в памяти только индекс строк и кэш страниц.
+	registry->registerFactory({ "Content.CodeEditor.PagedTextDocument", "paged-text-viewer",
+		/*singletone*/ false, QStringLiteral("Просмотр больших файлов") },
+		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
+			return new PagedTextDocument(handler.parent);
+		});
+	registry->registerDocumentMetadata(QStringLiteral("Content.CodeEditor.PagedTextDocument"),
+		std::make_unique<PagedTextDocumentMetadata>());
 
 	//registry->registerFactory({ "Launcher.WarmupWidget", "warmup" },
 	//	[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {

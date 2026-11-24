@@ -1037,13 +1037,11 @@ QWidget* CodeEditorDocument::Private::createInfoWidget(QWidget* parent) {
 
 		QTextDocument* document = editorPtr->document();
 		lines->setNum(document->blockCount());
-		characters->setNum(qMax(0, document->characterCount() - 1));
-
-		int maxLength = 0;
-		for (QTextBlock block = document->begin(); block.isValid(); block = block.next()) {
-			maxLength = qMax(maxLength, block.length() - 1);
-		}
-		longest->setNum(maxLength);
+		characters->setText(QString::number(
+			qMax<qint64>(0, document->characterCount() - 1)));
+		// Длина строки берётся из метрик: для больших файлов они посчитаны
+		// при чтении, обход всех блоков на каждую правку не нужен.
+		longest->setNum(editorPtr->documentMetrics().maxLineLength);
 	};
 
 	update();

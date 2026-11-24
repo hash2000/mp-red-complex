@@ -81,6 +81,9 @@ public:
 	HighlightingPolicy highlightPolicy = HighlightingPolicy::Auto;
 	/// Есть ли строки длиннее предела автопереноса.
 	bool hasLongLines = false;
+	/// Длина самой длинной строки, если уже известна (файл/пакетный текст).
+	/// -1 — нужно пересчитать обходом блоков.
+	int cachedMaxLineLength = -1;
 
 	void setupUI();
 	void setupStyling();
@@ -139,6 +142,10 @@ void CodeEditorWidget::Private::setupUI() {
 }
 
 int CodeEditorWidget::Private::documentMaxLineLength() const {
+	if (cachedMaxLineLength >= 0) {
+		return cachedMaxLineLength;
+	}
+
 	QTextDocument* doc = q->document();
 	if (!doc) {
 		return 0;
@@ -147,7 +154,7 @@ int CodeEditorWidget::Private::documentMaxLineLength() const {
 	int maxLength = 0;
 	const int limit = Highlighter::MaxHighlightedBlockLength;
 	for (QTextBlock block = doc->begin(); block.isValid(); block = block.next()) {
-		maxLength = qMax(maxLength, block.length());
+		maxLength = qMax(maxLength, block.length() - 1);
 		if (maxLength > limit) {
 			return maxLength;
 		}
@@ -216,6 +223,21 @@ void CodeEditorWidget::Private::setupStyling() {
 }
 
 void CodeEditorWidget::Private::prepareBulkText(const QString& text) {
+	// Метрики пакетного текста считаем за один проход, пока строка уже в памяти:
+	// иначе на 140 МБ обход блоков в GUI-потоке заметен.
+	int maxLineLength = 0;
+	int lineStart = 0;
+	for (int i = 0; i < text.size(); i++) {
+		if (text.at(i) != QLatin1Char('\n')) {
+			continue;
+		}
+
+		maxLineLength = qMax(maxLineLength, i - lineStart);
+		lineStart = i + 1;
+	}
+	maxLineLength = qMax(maxLineLength, text.size() - lineStart);
+	cachedMaxLineLength = maxLineLength;
+
 	if (!highlighter) {
 		return;
 	}
@@ -398,6 +420,9 @@ void CodeEditorWidget::openFile(const QString& path) {
 	d->reader = reader;
 	d->readerFailed = false;
 	reader->setEncoding(d->encoding);
+	// Крупные файлы вставляем реже и большими пачками: меньше edit-блоков
+	// и пересчётов раскладки при загрузке.
+	reader->setChunkSize(info.size() > kPreloadLazyByteLimit ? 5000 : 500);
 
 	QThread* thread = new QThread(this);
 	d->readerThread = thread;
@@ -420,6 +445,11 @@ void CodeEditorWidget::openFile(const QString& path) {
 		}
 
 		const bool success = !d->readerFailed;
+		if (success) {
+			// Метрики уже посчитаны в фоновом потоке — сохраняем их до
+			// applyLineLengthPolicies(), чтобы не обходить блоки на GUI.
+			d->cachedMaxLineLength = reader->maxLineLength();
+		}
 		d->reader = nullptr;
 		d->readerFailed = false;
 		d->readerThread = nullptr;
@@ -432,9 +462,14 @@ void CodeEditorWidget::openFile(const QString& path) {
 	connect(thread, &QThread::finished, reader, &QObject::deleteLater);
 	connect(thread, &QThread::finished, thread, &QObject::deleteLater);
 	connect(reader, &FileReader::blockRead, this, &CodeEditorWidget::onBlockRead);
+	connect(reader, &FileReader::metricsComputed, this,
+		[this](int, qint64, int maxLineLength) {
+			d->cachedMaxLineLength = maxLineLength;
+		});
 
 	// Загрузку файла не нужно записывать в undo: это экономит память
 	// на больших текстах (история всё равно очищается при открытии).
+	d->cachedMaxLineLength = -1;
 	setUndoRedoEnabled(false);
 	clear();
 
@@ -524,6 +559,18 @@ void CodeEditorWidget::setLineWrapPolicy(LineWrapPolicy policy) {
 
 bool CodeEditorWidget::hasLongLines() const {
 	return d->documentMaxLineLength() > kLongLineWrapLimit;
+}
+
+CodeEditorWidget::DocumentMetrics CodeEditorWidget::documentMetrics() const {
+	DocumentMetrics metrics;
+	if (!document()) {
+		return metrics;
+	}
+
+	metrics.lines = document()->blockCount();
+	metrics.characters = qMax<qint64>(0, document()->characterCount() - 1);
+	metrics.maxLineLength = d->documentMaxLineLength();
+	return metrics;
 }
 
 CodeEditorWidget::HighlightingPolicy CodeEditorWidget::highlightingPolicy() const {
@@ -624,6 +671,13 @@ void CodeEditorWidget::onTextChanged() {
 	d->syncHighlightingMode();
 	d->scheduleVisibleHighlight();
 
+	// На больших документах полный обход блоков после каждой правки дорог:
+	// оставляем ранее посчитанную длину самой длинной строки.
+	if (d->cachedMaxLineLength >= 0
+		&& document()->blockCount() <= kFullHighlightBlockLimit) {
+		d->cachedMaxLineLength = -1;
+	}
+
 	// Длину строк проверяем с задержкой: обход всех блоков не должен
 	// выполняться на каждое нажатие клавиши.
 	if (d->lineLengthTimer) {
@@ -711,6 +765,7 @@ void CodeEditorWidget::setText(const QString& text) {
 	d->highlightPolicy = HighlightingPolicy::Auto;
 
 	if (text.isEmpty()) {
+		d->cachedMaxLineLength = 0;
 		clear();
 		d->applyLineLengthPolicies();
 		return;

@@ -161,6 +161,28 @@ target_link_libraries(TestCodeEditorSearch PRIVATE
 
 add_test(NAME TestCodeEditorSearch COMMAND TestCodeEditorSearch)
 
+# Прототип виртуального редактора больших файлов.
+add_executable(TestPagedTextEditor
+    test_paged_text_editor.cpp
+)
+target_include_directories(TestPagedTextEditor PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/tests
+)
+target_link_libraries(TestPagedTextEditor PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+    Qt6::Test
+    Qt6::Core5Compat
+
+    RedComplexCodeEditorWidget
+    RedComplexEngine
+    RedComplexBase
+    RedComplexResources
+)
+add_test(NAME TestPagedTextEditor COMMAND TestPagedTextEditor)
+
 # Тест подсветки и форматирования читает правила из эталонной темы.
 target_compile_definitions(TestCodeEditorSearch PRIVATE
     REDCOMPLEX_CONFIGURATIONS_DIR="${CMAKE_SOURCE_DIR}/src/Configurations"

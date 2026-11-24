@@ -1,5 +1,6 @@
 #include "Content/CodeEditorWidget/widgets/code_editor_search_panel.h"
 
+#include <QFutureWatcher>
 #include <QPlainTextEdit>
 #include <QGuiApplication>
 #include <QHBoxLayout>
@@ -14,6 +15,11 @@
 #include <QTextEdit>
 #include <QTimer>
 #include <QToolButton>
+#include <QtConcurrent/QtConcurrentRun>
+
+#include <algorithm>
+#include <atomic>
+#include <memory>
 
 namespace {
 /// Задержка перед пересчётом совпадений при вводе и правке текста.
@@ -24,7 +30,62 @@ constexpr int kRefreshDelayMs = 120;
 /// документе заметно тормозит прокрутку. Счётчик совпадений при этом
 /// остаётся полным.
 constexpr int kMaxHighlights = 1000;
+
+/// Документы больше этого размера ищутся в фоне (regex по 140 МБ
+/// на GUI-потоке вешает окно на минуты).
+constexpr qint64 kAsyncSearchCharLimit = 2 * 1024 * 1024;
+
+/// Сколько совпадений храним для переходов. Полный счётчик считается
+/// всегда, но миллионы смещений в памяти не нужны.
+constexpr int kMaxStoredMatches = 200000;
+
+/// Сколько вхождений подсвечивать в видимой области при фоновом поиске.
+constexpr int kMaxVisibleHighlights = 2000;
+
+/// Совпадение, найденное в фоновом потоке.
+struct WorkerMatch {
+	int start = 0;
+	int length = 0;
+};
+
+/// Результат фонового поиска.
+struct SearchOutcome {
+	QVector<WorkerMatch> matches;
+	int total = 0;
+	bool truncated = false;
+	bool cancelled = false;
+};
+
+/// Поиск по снимку текста. Отмена проверяется между совпадениями, чтобы
+/// при смене запроса старый проход быстро завершился.
+SearchOutcome runSearch(QString text, QRegularExpression expression,
+	const std::shared_ptr<std::atomic_bool>& cancel) {
+	SearchOutcome outcome;
+	auto it = expression.globalMatch(text);
+	while (it.hasNext()) {
+		if (cancel && (outcome.total & 0x3FFF) == 0 && cancel->load()) {
+			outcome.cancelled = true;
+			return outcome;
+		}
+
+		const auto match = it.next();
+		if (match.capturedLength() <= 0) {
+			continue;
+		}
+
+		outcome.total++;
+		if (outcome.matches.size() < kMaxStoredMatches) {
+			outcome.matches.append({ static_cast<int>(match.capturedStart()),
+				static_cast<int>(match.capturedLength()) });
+		}
+		else {
+			outcome.truncated = true;
+		}
+	}
+
+	return outcome;
 }
+} // namespace
 
 class CodeEditorSearchPanel::Private {
 public:
@@ -41,6 +102,19 @@ public:
 
 	QList<Match> matches;
 	int current = -1;
+	int totalMatches = 0;
+
+	// Фоновый поиск по большим документам.
+	QFutureWatcher<SearchOutcome>* watcher = nullptr;
+	std::shared_ptr<std::atomic_bool> cancelFlag;
+	QString snapshot;
+	bool snapshotValid = false;
+	bool largeSearch = false;
+	bool busy = false;
+	quint64 generation = 0;
+	quint64 activeGeneration = 0;
+	bool hasPending = false;
+	QRegularExpression pendingExpression;
 
 	bool regularExpression = false;
 	bool simplifiedExpression = false;
@@ -54,10 +128,85 @@ public:
 void CodeEditorSearchPanel::Private::resetMatches() {
 	matches.clear();
 	current = -1;
+	totalMatches = 0;
 }
 
 void CodeEditorSearchPanel::Private::refreshDebounced() {
 	refreshTimer.start();
+}
+
+void CodeEditorSearchPanel::startLargeSearch(const QRegularExpression& expression) {
+	if (!d->editor) {
+		return;
+	}
+
+	if (d->cancelFlag) {
+		d->cancelFlag->store(true);
+	}
+
+	const quint64 generation = ++d->generation;
+	if (d->busy) {
+		d->pendingExpression = expression;
+		d->hasPending = true;
+		return;
+	}
+
+	// Снимок текста делается один раз на правку: toPlainText() для 140 МБ
+	// стоит сотни миллисекунд, а regex по нему на GUI-потоке — минуты.
+	if (!d->snapshotValid) {
+		d->snapshot = d->editor->toPlainText();
+		d->snapshotValid = true;
+	}
+
+	auto cancel = std::make_shared<std::atomic_bool>(false);
+	d->cancelFlag = cancel;
+	d->busy = true;
+	d->activeGeneration = generation;
+	d->largeSearch = true;
+	d->resetMatches();
+	d->counter->setText(tr("…"));
+
+	d->watcher->setFuture(QtConcurrent::run(
+		[text = d->snapshot, expression, cancel] {
+			return runSearch(text, expression, cancel);
+		}));
+}
+
+void CodeEditorSearchPanel::finishLargeSearch() {
+	d->busy = false;
+
+	const bool isCurrent = d->activeGeneration == d->generation;
+	const SearchOutcome outcome = d->watcher->result();
+	if (isCurrent && !outcome.cancelled) {
+		d->matches.clear();
+		d->matches.reserve(outcome.matches.size());
+		for (const auto& match : outcome.matches) {
+			d->matches.append({ match.start, match.length });
+		}
+
+		d->totalMatches = outcome.total;
+		d->current = -1;
+		if (!d->matches.isEmpty()) {
+			// Начинаем с первого совпадения после текущей позиции курсора.
+			const int position = d->editor ? d->editor->textCursor().position() : 0;
+			d->current = 0;
+			for (int i = 0; i < d->matches.size(); i++) {
+				if (d->matches.at(i).start >= position) {
+					d->current = i;
+					break;
+				}
+			}
+		}
+
+		applyHighlights();
+		updateCounter();
+	}
+
+	if (d->hasPending) {
+		const auto expression = d->pendingExpression;
+		d->hasPending = false;
+		startLargeSearch(expression);
+	}
 }
 
 void CodeEditorSearchPanel::setupUi() {
@@ -123,6 +272,11 @@ void CodeEditorSearchPanel::setupUi() {
 	d->refreshTimer.setSingleShot(true);
 	d->refreshTimer.setInterval(kRefreshDelayMs);
 
+	d->watcher = new QFutureWatcher<SearchOutcome>(this);
+	connect(d->watcher, &QFutureWatcher<SearchOutcome>::finished, this, [this] {
+		finishLargeSearch();
+	});
+
 	updateCounter();
 }
 
@@ -135,10 +289,22 @@ CodeEditorSearchPanel::CodeEditorSearchPanel(QPlainTextEdit* editor, QWidget* pa
 	if (d->editor) {
 		// Правка текста (в том числе форматирование) пересчитывает совпадения.
 		connect(d->editor->document(), &QTextDocument::contentsChanged, this, [this] {
+			// Снимок для фонового поиска устарел: следующий поиск снимет новый.
+			d->snapshotValid = false;
 			if (isVisible()) {
 				d->refreshDebounced();
 			}
 		});
+
+		// При фоновом поиске подсвечиваем только видимые совпадения:
+		// при прокрутке набор ExtraSelections обновляется.
+		if (auto* scroll = d->editor->verticalScrollBar()) {
+			connect(scroll, &QScrollBar::valueChanged, this, [this] {
+				if (d->largeSearch) {
+					applyHighlights();
+				}
+			});
+		}
 	}
 }
 
@@ -189,6 +355,11 @@ void CodeEditorSearchPanel::focusSearch() {
 
 void CodeEditorSearchPanel::clearSearch() {
 	d->refreshTimer.stop();
+	if (d->cancelFlag) {
+		d->cancelFlag->store(true);
+	}
+	d->generation++;
+	d->hasPending = false;
 	d->resetMatches();
 	d->counter->clear();
 
@@ -200,7 +371,7 @@ void CodeEditorSearchPanel::clearSearch() {
 }
 
 int CodeEditorSearchPanel::matchCount() const {
-	return static_cast<int>(d->matches.size());
+	return d->totalMatches;
 }
 
 void CodeEditorSearchPanel::setQuery(const QString& text) {
@@ -294,6 +465,21 @@ void CodeEditorSearchPanel::refresh() {
 		return;
 	}
 
+	const bool largeDocument =
+		d->editor->document()->characterCount() > kAsyncSearchCharLimit;
+	if (largeDocument) {
+		startLargeSearch(expression);
+		return;
+	}
+
+	// Небольшой документ ищем сразу; фоновый результат больше не нужен.
+	if (d->cancelFlag) {
+		d->cancelFlag->store(true);
+	}
+	d->generation++;
+	d->hasPending = false;
+	d->largeSearch = false;
+
 	const auto text = d->editor->toPlainText();
 	auto it = expression.globalMatch(text);
 	while (it.hasNext()) {
@@ -305,6 +491,7 @@ void CodeEditorSearchPanel::refresh() {
 		d->matches.append({ static_cast<int>(match.capturedStart()),
 			static_cast<int>(match.capturedLength()) });
 	}
+	d->totalMatches = static_cast<int>(d->matches.size());
 
 	if (!d->matches.isEmpty()) {
 		// Начинаем с первого совпадения после текущей позиции курсора.
@@ -327,13 +514,14 @@ void CodeEditorSearchPanel::updateCounter() {
 		return;
 	}
 
-	const int total = static_cast<int>(d->matches.size());
+	const int total = d->totalMatches;
 	if (total == 0) {
 		d->counter->setText(QStringLiteral("0/0"));
 		return;
 	}
 
-	d->counter->setText(QStringLiteral("%1/%2").arg(d->current + 1).arg(total));
+	const int position = d->current >= 0 ? d->current + 1 : 0;
+	d->counter->setText(QStringLiteral("%1/%2").arg(position).arg(total));
 }
 
 void CodeEditorSearchPanel::applyHighlights() {
@@ -349,6 +537,12 @@ void CodeEditorSearchPanel::applyHighlights() {
 	currentColor.setAlpha(160);
 
 	QList<QTextEdit::ExtraSelection> selections;
+	if (d->largeSearch) {
+		applyVisibleHighlights(selections, matchesColor, currentColor);
+		d->editor->setExtraSelections(selections);
+		return;
+	}
+
 	const int first = d->matches.size() > kMaxHighlights
 		? qMax(0, d->current - kMaxHighlights / 2) : 0;
 	const int last = qMin(d->matches.size(), first + kMaxHighlights);
@@ -367,6 +561,61 @@ void CodeEditorSearchPanel::applyHighlights() {
 	}
 
 	d->editor->setExtraSelections(selections);
+}
+
+void CodeEditorSearchPanel::applyVisibleHighlights(
+	QList<QTextEdit::ExtraSelection>& selections,
+	const QColor& matchesColor, const QColor& currentColor) const {
+	if (!d->editor || d->matches.isEmpty()) {
+		return;
+	}
+
+	// Диапазон видимых символов: подсвечиваем только загруженный/видимый блок.
+	int firstPosition = 0;
+	int lastPosition = d->editor->document()->characterCount();
+	if (auto* viewport = d->editor->viewport()) {
+		const auto top = d->editor->cursorForPosition(QPoint(0, 0));
+		const auto bottom = d->editor->cursorForPosition(
+			QPoint(viewport->width(), qMax(0, viewport->height() - 1)));
+		firstPosition = qMin(top.position(), bottom.position());
+		lastPosition = qMax(top.position(), bottom.position());
+	}
+
+	const auto addSelection = [this, &selections, &matchesColor, &currentColor](
+		const Match& match, bool current) {
+		QTextCursor cursor(d->editor->document());
+		cursor.setPosition(match.start);
+		cursor.setPosition(match.start + match.length, QTextCursor::KeepAnchor);
+
+		QTextEdit::ExtraSelection selection;
+		selection.cursor = cursor;
+		selection.format.setBackground(current ? currentColor : matchesColor);
+		selections.append(selection);
+	};
+
+	const auto begin = std::lower_bound(d->matches.cbegin(), d->matches.cend(),
+		firstPosition, [](const Match& match, int value) { return match.start < value; });
+	int added = 0;
+	for (auto it = begin; it != d->matches.cend() && it->start <= lastPosition
+		&& added < kMaxVisibleHighlights; ++it, ++added) {
+		addSelection(*it, false);
+	}
+
+	// Текущее совпадение показываем всегда, даже если оно за пределами экрана.
+	if (d->current >= 0 && d->current < d->matches.size()) {
+		const auto& match = d->matches.at(d->current);
+		if (match.start < firstPosition || match.start > lastPosition) {
+			addSelection(match, true);
+		}
+		else {
+			// Перекрашиваем текущее внутри видимого диапазона.
+			for (auto& selection : selections) {
+				if (selection.cursor.selectionStart() == match.start) {
+					selection.format.setBackground(currentColor);
+				}
+			}
+		}
+	}
 }
 
 void CodeEditorSearchPanel::moveToCurrent() {

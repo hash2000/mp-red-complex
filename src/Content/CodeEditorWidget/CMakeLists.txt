@@ -6,8 +6,15 @@ set(CodeEditorWidget-Sources
 
 file(GLOB_RECURSE SRCS ${CodeEditorWidget-Sources}/*.cpp)
 
+# Заголовок с Q_OBJECT добавляем явно: AUTOMOC собирает moc по списку
+# исходников цели, а GLOB выше перечисляет только .cpp.
+set(CodeEditorWidget-Headers
+	${CodeEditorWidget-Sources}/documents/paged_text_document.h
+)
+
 qt_add_library(RedComplexCodeEditorWidget STATIC
 	${SRCS}
+	${CodeEditorWidget-Headers}
 )
 
 set_target_properties(RedComplexCodeEditorWidget PROPERTIES CMAKE_AUTOMOC ON)

@@ -161,6 +161,7 @@ private slots:
 	void simplifiedExpressionMatchesNewline();
 	void invalidRegexKeepsNoMatches();
 	void nextAndPreviousWrapAround();
+	void largeDocumentSearchRunsAsync();
 	void clearRemovesHighlights();
 	void longLineScrollsToMatchStart();
 	void documentPathComesFromContext();
@@ -280,6 +281,28 @@ void TestCodeEditorSearch::nextAndPreviousWrapAround() {
 	_panel->activatePrevious();
 	_panel->activatePrevious();
 	QCOMPARE(_panel->matchCount(), 3);
+}
+
+void TestCodeEditorSearch::largeDocumentSearchRunsAsync() {
+	// Больше порога фонового поиска (2 МиБ): regex не должен считаться
+	// на GUI-потоке, а подсвечиваются только видимые вхождения.
+	const int lineCount = 120000;
+	const QString line = QStringLiteral("foo bar baz qux quux corge grault");
+	QString text;
+	text.reserve(lineCount * (line.size() + 1));
+	for (int i = 0; i < lineCount; i++) {
+		text += line;
+		text += QLatin1Char('\n');
+	}
+	_editor->setPlainText(text);
+	QVERIFY(_editor->document()->characterCount() > 2 * 1024 * 1024);
+
+	_panel->setQuery(QStringLiteral("foo"));
+	QTRY_COMPARE_WITH_TIMEOUT(_panel->matchCount(), lineCount, 30000);
+
+	// Подсветка ограничена видимой областью, а не всем документом.
+	QVERIFY(_panel->highlightedCount() > 0);
+	QVERIFY(_panel->highlightedCount() < lineCount);
 }
 
 void TestCodeEditorSearch::clearRemovesHighlights() {

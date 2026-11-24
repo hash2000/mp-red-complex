@@ -1,9 +1,13 @@
 #pragma once
+#include <QColor>
+#include <QList>
+#include <QTextEdit>
 #include <QWidget>
 
 #include <memory>
 
 class QPlainTextEdit;
+class QRegularExpression;
 
 /// Панель поиска над редактором кода.
 ///
@@ -62,6 +66,10 @@ private:
 	void setupUi();
 	void updateCounter();
 	void applyHighlights();
+	void applyVisibleHighlights(QList<QTextEdit::ExtraSelection>& selections,
+		const QColor& matchesColor, const QColor& currentColor) const;
+	void startLargeSearch(const QRegularExpression& expression);
+	void finishLargeSearch();
 	void moveToCurrent();
 	QString buildPattern(bool& valid) const;
 

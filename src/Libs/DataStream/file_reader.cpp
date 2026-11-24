@@ -25,6 +25,18 @@ void FileReader::setEncoding(const QString& encoding) {
 	_encoding = encoding;
 }
 
+int FileReader::lineCount() const {
+	return _lineCount;
+}
+
+qint64 FileReader::characterCount() const {
+	return _characterCount;
+}
+
+int FileReader::maxLineLength() const {
+	return _maxLineLength;
+}
+
 void FileReader::readFileAsync(const QString& filePath) {
 	QFile file(filePath);
 	// Файл читается как двоичный: переводы строк и кодировку разбираем сами.
@@ -55,6 +67,17 @@ void FileReader::readFileAsync(const QString& filePath) {
 	buffer.reserve(_chunkSize);
 	QString pending;
 	bool firstChunk = true;
+	int lineCount = 0;
+	qint64 characters = 0;
+	int maxLineLength = 0;
+
+	const auto addLine = [&buffer, &lineCount, &characters, &maxLineLength](
+		const QString& line) {
+		buffer.append(line);
+		lineCount++;
+		characters += line.size() + 1; // редактор завершает каждую строку '\n'
+		maxLineLength = qMax(maxLineLength, line.size());
+	};
 
 	while (!file.atEnd()) {
 		const QByteArray chunk = file.read(kReadChunkSize);
@@ -82,13 +105,12 @@ void FileReader::readFileAsync(const QString& filePath) {
 				lineEnd--;
 			}
 
-			buffer.append(pending.mid(lineStart, lineEnd - lineStart));
+			addLine(pending.mid(lineStart, lineEnd - lineStart));
 			lineStart = i + 1;
 
 			if (buffer.size() >= _chunkSize) {
 				emit blockRead(buffer);
 				buffer.clear();
-				QThread::msleep(10);
 			}
 		}
 
@@ -101,7 +123,7 @@ void FileReader::readFileAsync(const QString& filePath) {
 			pending.chop(1);
 		}
 		if (!pending.isEmpty()) {
-			buffer.append(pending);
+			addLine(pending);
 		}
 	}
 
@@ -109,5 +131,9 @@ void FileReader::readFileAsync(const QString& filePath) {
 		emit blockRead(buffer);
 	}
 
+	emit metricsComputed(lineCount, characters, maxLineLength);
+	_lineCount = lineCount;
+	_characterCount = characters;
+	_maxLineLength = maxLineLength;
 	emit finished();
 }

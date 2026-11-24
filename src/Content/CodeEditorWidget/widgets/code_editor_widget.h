@@ -62,6 +62,16 @@ public:
 	/// Есть ли в документе строка длиннее предела автопереноса.
 	bool hasLongLines() const;
 
+	/// Метрики документа. Для больших файлов считаются при чтении в фоне,
+	/// а не полным обходом блоков на GUI-потоке.
+	struct DocumentMetrics {
+		int lines = 0;
+		qint64 characters = 0;
+		int maxLineLength = 0;
+	};
+
+	DocumentMetrics documentMetrics() const;
+
 	/// Режим подсветки: автоматический (с отключением на длинных строках),
 	/// принудительно включённый или выключенный вручную.
 	enum class HighlightingPolicy {
