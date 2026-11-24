@@ -2,6 +2,10 @@ version: "0.0.1"
 name: palette
 description: Тёмная тема (Dark)
 
+# Палитра задаётся полностью, а не только «основными» ролями: неродной стиль
+# (Fusion) и стандартные контролы рисуют кнопки, вкладки, рамки и подсказки по
+# ролям QPalette. Незаданная роль берёт светлый системный цвет — из-за этого
+# на другой машине появлялись белые кнопки и вкладки.
 palette:
  Extends: [35, 35, 35]
  Base: [35, 35, 35]
@@ -16,16 +20,6 @@ palette:
     modifiers:
      darker: 200
 
-  ButtonText:
-   Active:
-    value: [207, 207, 207]
-   Inactive:
-    value: [207, 207, 207]
-   Disabled:
-    value: [207, 207, 207]
-    modifiers:
-     darker: 200
-
   WindowText:
    Active:
     value: [207, 207, 207]
@@ -33,6 +27,14 @@ palette:
     value: [207, 207, 207]
    Disabled:
     value: [207, 207, 207]
+
+  AlternateBase:
+   Active:
+    value: [45, 45, 45]
+   Inactive:
+    value: [45, 45, 45]
+   Disabled:
+    value: [45, 45, 45]
 
   Text:
    Active:
@@ -46,6 +48,72 @@ palette:
    Disabled:
     value: [102, 102, 102]
 
+  Button:
+   Active:
+    value: [49, 49, 49]
+   Inactive:
+    value: [49, 49, 49]
+   Disabled:
+    value: [42, 42, 42]
+
+  ButtonText:
+   Active:
+    value: [207, 207, 207]
+   Inactive:
+    value: [207, 207, 207]
+   Disabled:
+    value: [207, 207, 207]
+    modifiers:
+     darker: 200
+
+  BrightText:
+   Active:
+    value: [255, 255, 255]
+   Inactive:
+    value: [255, 255, 255]
+   Disabled:
+    value: [255, 255, 255]
+
+  Light:
+   Active:
+    value: [82, 82, 82]
+   Inactive:
+    value: [82, 82, 82]
+   Disabled:
+    value: [60, 60, 60]
+
+  Midlight:
+   Active:
+    value: [66, 66, 66]
+   Inactive:
+    value: [66, 66, 66]
+   Disabled:
+    value: [52, 52, 52]
+
+  Mid:
+   Active:
+    value: [54, 54, 54]
+   Inactive:
+    value: [54, 54, 54]
+   Disabled:
+    value: [44, 44, 44]
+
+  Dark:
+   Active:
+    value: [28, 28, 28]
+   Inactive:
+    value: [28, 28, 28]
+   Disabled:
+    value: [24, 24, 24]
+
+  Shadow:
+   Active:
+    value: [12, 12, 12]
+   Inactive:
+    value: [12, 12, 12]
+   Disabled:
+    value: [12, 12, 12]
+
   Highlight:
    Active:
     value: [62, 112, 205]
@@ -56,3 +124,42 @@ palette:
    Disabled:
      value: [62, 112, 205]
 
+  HighlightedText:
+   Active:
+    value: [255, 255, 255]
+   Inactive:
+    value: [255, 255, 255]
+   Disabled:
+    value: [255, 255, 255]
+
+  Link:
+   Active:
+    value: [113, 96, 232]
+   Inactive:
+    value: [113, 96, 232]
+   Disabled:
+    value: [113, 96, 232]
+
+  PlaceholderText:
+   Active:
+    value: [128, 128, 128]
+   Inactive:
+    value: [128, 128, 128]
+   Disabled:
+    value: [96, 96, 96]
+
+  ToolTipBase:
+   Active:
+    value: [37, 37, 38]
+   Inactive:
+    value: [37, 37, 38]
+   Disabled:
+    value: [37, 37, 38]
+
+  ToolTipText:
+   Active:
+    value: [204, 204, 204]
+   Inactive:
+    value: [204, 204, 204]
+   Disabled:
+    value: [204, 204, 204]

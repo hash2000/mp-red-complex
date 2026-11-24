@@ -8,7 +8,11 @@
 #include "Libs/Resources/resources.h"
 #include <QSurfaceFormat>
 #include <QApplication>
+#include <QStyle>
+#include <QStyleFactory>
 #include <QStyleHints>
+#include <QScreen>
+#include <QFont>
 #include <QSettings>
 #include <QWidget>
 
@@ -25,6 +29,7 @@ public:
 
 private:
 	void setupQt();
+	void setupAppearance();
 	bool setupResources();
 	CommandController* initializeCommandController();
 	std::unique_ptr<QWidget> createViewport(CommandController* commandController);
@@ -56,6 +61,7 @@ int Application::Private::tryRun(int& argc, char** argv) {
 	setupQt();
 
 	QApplication app(argc, argv);
+	setupAppearance();
 
 	if (!setupResources()) {
 		return 1;
@@ -110,6 +116,34 @@ void Application::Private::setupQt() {
 
 	qDebug() << "Plugin path:" << qgetenv("QT_PLUGIN_PATH");
 	qDebug() << "Current platform:" << qgetenv("QT_QPA_PLATFORM");
+}
+
+void Application::Private::setupAppearance() {
+	// Стиль Fusion выбран намеренно: windows11/windowsvista рисуют кнопки,
+	// вкладки и рамки по системной теме Windows (светлая тема, версия ОС,
+	// высокий контраст), поэтому на разных машинах одинаковый QSS выглядел
+	// по-разному. Fusion использует только палитру и QSS темы.
+	if (auto* fusion = QStyleFactory::create(QStringLiteral("Fusion"))) {
+		QApplication::setStyle(fusion);
+	}
+	else {
+		qWarning() << "Qt style Fusion is not available, platform default is used:"
+			<< QApplication::style()->objectName();
+	}
+
+	// Шрифт задаётся явно: иначе системная настройка «Размер текста» и
+	// подстановка другого шрифта меняют метрики текста и размеры кнопок.
+	QFont applicationFont(QStringLiteral("Segoe UI"));
+	applicationFont.setPointSizeF(9.0);
+	QApplication::setFont(applicationFont);
+
+	const auto* screen = QGuiApplication::primaryScreen();
+	qInfo().nospace()
+		<< "Appearance: style=" << QApplication::style()->objectName()
+		<< " font=" << QApplication::font().family()
+		<< " size=" << QApplication::font().pointSizeF()
+		<< " dpr=" << (screen ? screen->devicePixelRatio() : 0.0)
+		<< " scaleFactor=" << qgetenv("QT_SCALE_FACTOR");
 }
 
 CommandController* Application::Private::initializeCommandController() {

@@ -21,6 +21,7 @@
 | [Узлы SystemRouter](system-router/nodes.md) | `nodes`, свойства, mime-типы, блоки, настройка через UI |
 | [Скрипты SystemRouter](system-router/scripts.md) | привязка команд, подстановка параметров, контекстные переменные |
 | [Релизы](releases/README.md) | тег версии, GitHub Actions, сборка архива и публикация релиза |
+| [Внешний вид](appearance/README.md) | стиль Fusion, палитра и шрифт; почему тема отличалась на разных машинах |
 
 ## Быстрый старт
 

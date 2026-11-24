@@ -92,7 +92,7 @@ bool BootstrapManager::reload() {
 		QByteArray cssData = themeMgr.loadStylesheet();
 		if (!cssData.isEmpty()) {
 			qApp->setStyleSheet(QString::fromUtf8(cssData));
-			qDebug() << "Stylesheet applied.";
+			qDebug() << "Stylesheet applied:" << cssData.size() << "bytes";
 		}
 		else {
 			qWarning() << "Empty stylesheet loaded.";
@@ -110,7 +110,10 @@ bool BootstrapManager::reload() {
 		QPalette palette = PaletteParser::parseFromFile(paletteFile);
 		qApp->setPalette(palette);
 		qApp->styleHints()->setColorScheme(themeMgr.getColorScheme(d->config.appearance.themeName));
-		qDebug() << "Palette applied.";
+		qDebug() << "Palette applied: window" << palette.color(QPalette::Window).name()
+			<< "base" << palette.color(QPalette::Base).name()
+			<< "button" << palette.color(QPalette::Button).name()
+			<< "text" << palette.color(QPalette::Text).name();
 	}
 	catch (const std::exception& e) {
 		qCritical() << "Fatal error during startup:" << e.what();

@@ -22,6 +22,8 @@ QPalette::ColorRole mapRole(const std::string& roleStr) {
 	if (roleStr == "Shadow") return QPalette::Shadow;
 	if (roleStr == "Highlight") return QPalette::Highlight;
 	if (roleStr == "HighlightedText") return QPalette::HighlightedText;
+	if (roleStr == "Link") return QPalette::Link;
+	if (roleStr == "PlaceholderText") return QPalette::PlaceholderText;
 
 	throw std::runtime_error("Unknown palette role: " + roleStr);
 }
@@ -54,12 +56,13 @@ void applyModifier(QColor& color, const YAML::Node& mods) {
 
 	if (mods["darker"]) {
 		const auto val = mods["darker"].as<int>();
-		color.darker(val);
+		// QColor::darker() возвращает новый цвет, а не меняет текущий.
+		color = color.darker(val);
 	}
 
 	if (mods["lighter"]) {
 		const auto val = mods["lighter"].as<int>();
-		color.lighter(val);
+		color = color.lighter(val);
 	}
 }
 
