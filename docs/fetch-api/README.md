@@ -249,7 +249,7 @@ documents action=create, target=fetch-api, id=api,
 ## 9. Оформление
 
 Стандартные глиф и цвет вкладки задаёт тема:
-`assets/themes/{theme}/documents.yaml` — `Content.FetchApi.FetchApiDocument` и
+`assets/themes/{theme}/documents.yaml` — `Content.FetchApi.FetchApi` и
 `fetch-api`. Стили контролов — `assets/themes/{theme}/stylesheets/fetch-api.qss`;
 лента и значок свойств оформляются общими правилами `base.qss`. Динамическое
 состояние метки статуса и индикатора — свойство `state` (`success` / `error`).
@@ -259,7 +259,7 @@ documents action=create, target=fetch-api, id=api,
 - `ServicesFactory` (`src/Launcher/services.cpp`):
   `registerFactory<FetchApiService>([]{ return std::make_unique<FetchApiService>(resources); })`;
 - `WidgetsBuilder` (`src/Launcher/widgets_builder.cpp`) регистрирует
-  `Content.FetchApi.FetchApiDocument` / `fetch-api` и метаданные документа;
+  `Content.FetchApi.FetchApi` / `fetch-api` и метаданные документа;
 - команда регистрируется в `ApplicationController::initContext()`
   как `FetchApiCommand`;
 - цель сборки — `RedComplexFetchApiModule`, тест — `TestFetchApi`.

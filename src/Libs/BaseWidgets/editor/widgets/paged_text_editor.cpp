@@ -1,4 +1,4 @@
-#include "Content/TextEditorModule/widgets/paged_text_editor.h"
+#include "Libs/BaseWidgets/editor/widgets/paged_text_editor.h"
 
 #include <QClipboard>
 #include <QFile>
@@ -17,7 +17,10 @@
 #include <QTextLayout>
 #include <QTextLine>
 #include <QTextOption>
+#include <QTextLayout>
+#include <QWheelEvent>
 #include <QtConcurrent/QtConcurrentRun>
+#include <QtMath>
 
 #include <atomic>
 #include <algorithm>
@@ -183,6 +186,8 @@ struct PagedTextEditor::Private {
 
 	bool indexing = false;
 	bool ready = false;
+	bool wrapLines = false;
+	bool showLineNumbers = true;
 	QString error;
 
 	int lines = 0;
@@ -234,9 +239,13 @@ struct PagedTextEditor::Private {
 	QString selectedToken() const;
 	int columnAt(int line, int x) const;
 	void configureLayout(QTextLayout& layout) const;
+	int gutterWidth() const;
+	int logicalLineAtY(int y) const;
+	bool positionAt(int x, int y, int& line, int& column) const;
 	void ensureCursorVisible();
 	void selectMatch(int index);
 	void updateCurrentForCursor();
+	void moveCursorVertically(int delta, bool keepAnchor);
 };
 
 void PagedTextEditor::Private::clearPages() {
@@ -384,15 +393,94 @@ int PagedTextEditor::Private::columnAt(int line, int x) const {
 
 void PagedTextEditor::Private::configureLayout(QTextLayout& layout) const {
 	QTextOption option;
-	option.setWrapMode(QTextOption::NoWrap);
+	option.setWrapMode(wrapLines ? QTextOption::WrapAtWordBoundaryOrAnywhere
+		: QTextOption::NoWrap);
 	option.setTabStopDistance(charWidth() * kTabWidth);
 	layout.setTextOption(option);
 	layout.beginLayout();
-	QTextLine line = layout.createLine();
-	if (line.isValid()) {
-		line.setLineWidth(1e9);
+	const qreal width = wrapLines
+		? qMax(1, q->viewport()->width() - gutterWidth() - 8) : 1e9;
+	while (true) {
+		QTextLine line = layout.createLine();
+		if (!line.isValid()) {
+			break;
+		}
+		line.setLineWidth(width);
+		if (!wrapLines) {
+			break;
+		}
 	}
 	layout.endLayout();
+}
+
+int PagedTextEditor::Private::gutterWidth() const {
+	if (!showLineNumbers) {
+		return 0;
+	}
+
+	const int digits = qMax(2, QString::number(qMax(1, lines)).size());
+	return q->fontMetrics().horizontalAdvance(QLatin1Char('9')) * digits + 14;
+}
+
+int PagedTextEditor::Private::logicalLineAtY(int y) const {
+	if (!ready || lines <= 0) {
+		return 0;
+	}
+
+	const int first = q->verticalScrollBar()->value();
+	int top = 0;
+	for (int i = first; i < lines; i++) {
+		QTextLayout layout(lineAt(i), q->font());
+		configureLayout(layout);
+		const int count = qMax(1, layout.lineCount());
+		for (int visual = 0; visual < count; visual++) {
+			const QTextLine textLine = layout.lineAt(visual);
+			const int height = textLine.isValid()
+				? qMax(1, qCeil(textLine.height())) : q->fontMetrics().height();
+			if (y < top + height) {
+				return i;
+			}
+			top += height;
+		}
+		if (top > q->viewport()->height()) {
+			break;
+		}
+	}
+	return qMax(0, lines - 1);
+}
+
+bool PagedTextEditor::Private::positionAt(int x, int y, int& line, int& column) const {
+	if (!ready || lines <= 0) {
+		return false;
+	}
+
+	const int first = q->verticalScrollBar()->value();
+	const int gutter = gutterWidth();
+	const qreal contentX = x - gutter
+		+ (wrapLines ? 0 : q->horizontalScrollBar()->value());
+	int top = 0;
+	for (int i = first; i < lines; i++) {
+		const QString text = lineAt(i);
+		QTextLayout layout(text, q->font());
+		configureLayout(layout);
+		const int count = qMax(1, layout.lineCount());
+		for (int visual = 0; visual < count; visual++) {
+			const QTextLine textLine = layout.lineAt(visual);
+			const int height = textLine.isValid()
+				? qMax(1, qCeil(textLine.height())) : q->fontMetrics().height();
+			if (y < top + height) {
+				line = i;
+				column = textLine.isValid()
+					? qBound(0, textLine.xToCursor(contentX), text.size()) : 0;
+				return true;
+			}
+			top += height;
+		}
+		if (top > q->viewport()->height()) {
+			break;
+		}
+	}
+	return false;
 }
 
 void PagedTextEditor::Private::ensureCursorVisible() {
@@ -404,6 +492,68 @@ void PagedTextEditor::Private::ensureCursorVisible() {
 	else if (cursorLine >= vertical->value() + pageStep) {
 		vertical->setValue(cursorLine - pageStep + 2);
 	}
+}
+
+void PagedTextEditor::Private::moveCursorVertically(int delta, bool keepAnchor) {
+	if (!ready || lines <= 0 || delta == 0) {
+		return;
+	}
+
+	const int line = cursorLine;
+	QTextLayout layout(lineAt(line), q->font());
+	configureLayout(layout);
+	if (layout.lineCount() <= 0) {
+		return;
+	}
+
+	int visual = -1;
+	qreal cursorX = 0;
+	for (int i = 0; i < layout.lineCount(); i++) {
+		const QTextLine textLine = layout.lineAt(i);
+		const int end = textLine.textStart() + textLine.textLength();
+		if (cursorColumn >= textLine.textStart()
+			&& (cursorColumn < end
+				|| (i + 1 == layout.lineCount() && cursorColumn == end))) {
+			visual = i;
+			cursorX = textLine.cursorToX(cursorColumn);
+			break;
+		}
+	}
+	if (visual < 0) {
+		return;
+	}
+
+	int targetLine = line;
+	int targetVisual = visual + delta;
+	if (targetVisual < 0) {
+		targetLine = line - 1;
+		if (targetLine < 0) {
+			return;
+		}
+	}
+	else if (targetVisual >= layout.lineCount()) {
+		targetLine = line + 1;
+		if (targetLine >= lines) {
+			return;
+		}
+	}
+
+	QTextLayout targetLayout(lineAt(targetLine), q->font());
+	configureLayout(targetLayout);
+	if (targetLayout.lineCount() <= 0) {
+		return;
+	}
+
+	if (targetLine != line) {
+		targetVisual = delta < 0 ? targetLayout.lineCount() - 1 : 0;
+	}
+
+	targetVisual = qBound(0, targetVisual, targetLayout.lineCount() - 1);
+	const QTextLine target = targetLayout.lineAt(targetVisual);
+	const int targetColumn = qBound(0, target.xToCursor(cursorX),
+		lineAt(targetLine).size());
+
+	q->setCursorPosition(targetLine, targetColumn, keepAnchor);
 }
 
 void PagedTextEditor::Private::selectMatch(int index) {
@@ -470,10 +620,16 @@ void PagedTextEditor::Private::updateScrollBars() {
 
 	const int charWidth = qMax(1, q->fontMetrics().horizontalAdvance(QLatin1Char('W')));
 	const qint64 contentWidth = static_cast<qint64>(maxLineLength) * charWidth;
+	const int availableWidth = qMax(1, q->viewport()->width() - gutterWidth());
 	const int maxHorizontal = static_cast<int>(qMin<qint64>(
-		qMax<qint64>(0, contentWidth - q->viewport()->width()),
+		qMax<qint64>(0, contentWidth - availableWidth),
 		std::numeric_limits<int>::max()));
 	auto* horizontal = q->horizontalScrollBar();
+	if (wrapLines) {
+		horizontal->setRange(0, 0);
+		horizontal->setPageStep(0);
+		return;
+	}
 	horizontal->setRange(0, maxHorizontal);
 	horizontal->setPageStep(q->viewport()->width());
 	horizontal->setSingleStep(qMax(1, charWidth));
@@ -695,6 +851,25 @@ int PagedTextEditor::cursorColumn() const {
 	return d->cursorColumn;
 }
 
+int PagedTextEditor::cursorVisualRow() const {
+	if (!d->ready || d->cursorLine < 0 || d->cursorLine >= d->lines) {
+		return 0;
+	}
+
+	QTextLayout layout(d->lineAt(d->cursorLine), font());
+	d->configureLayout(layout);
+	for (int visual = 0; visual < layout.lineCount(); visual++) {
+		const QTextLine textLine = layout.lineAt(visual);
+		const int end = textLine.textStart() + textLine.textLength();
+		if (d->cursorColumn >= textLine.textStart()
+			&& (d->cursorColumn < end
+				|| (visual + 1 == layout.lineCount() && d->cursorColumn == end))) {
+			return visual;
+		}
+	}
+	return 0;
+}
+
 void PagedTextEditor::setCursorPosition(int line, int column, bool keepAnchor) {
 	if (!d->ready) {
 		return;
@@ -770,6 +945,59 @@ void PagedTextEditor::setEncoding(const QString& encoding) {
 	const int oldLine = verticalScrollBar()->value();
 	openFile(d->path, encoding);
 	d->restoreLine = oldLine;
+}
+
+int PagedTextEditor::fontSize() const {
+	const int pointSize = font().pointSize();
+	return pointSize > 0 ? pointSize : 10;
+}
+
+void PagedTextEditor::setFontSize(int size) {
+	if (size <= 0 || size == font().pointSize()) {
+		return;
+	}
+
+	const int first = verticalScrollBar()->value();
+	QFont current = font();
+	current.setPointSize(size);
+	setFont(current);
+	d->updateScrollBars();
+	verticalScrollBar()->setValue(qMin(first, verticalScrollBar()->maximum()));
+	viewport()->update();
+	emit fontSizeChanged(size);
+}
+
+bool PagedTextEditor::wordWrap() const {
+	return d->wrapLines;
+}void PagedTextEditor::setWordWrap(bool enabled) {
+	if (d->wrapLines == enabled) {
+		return;
+	}
+
+	const int first = verticalScrollBar()->value();
+	d->wrapLines = enabled;
+	setHorizontalScrollBarPolicy(enabled ? Qt::ScrollBarAlwaysOff : Qt::ScrollBarAsNeeded);
+	d->updateScrollBars();
+	verticalScrollBar()->setValue(qMin(first, verticalScrollBar()->maximum()));
+	viewport()->update();
+	emit wordWrapChanged(enabled);
+}
+
+bool PagedTextEditor::lineNumbersVisible() const {
+	return d->showLineNumbers;
+}
+
+void PagedTextEditor::setLineNumbersVisible(bool visible) {
+	if (d->showLineNumbers == visible) {
+		return;
+	}
+
+	const int first = verticalScrollBar()->value();
+	d->showLineNumbers = visible;
+	d->updateScrollBars();
+	verticalScrollBar()->setValue(qMin(first, verticalScrollBar()->maximum()));
+	viewport()->update();
+	emit lineNumbersVisibleChanged(visible);
 }
 
 void PagedTextEditor::setSearchQuery(const QString& query) {
@@ -932,9 +1160,19 @@ void PagedTextEditor::paintEvent(QPaintEvent* event) {
 
 	const QFontMetrics metrics = painter.fontMetrics();
 	const int lineHeight = qMax(1, metrics.height());
+	const int gutter = d->gutterWidth();
 	const int first = verticalScrollBar()->value();
-	const int visibleCount = viewport()->height() / lineHeight + 2;
-	const int lastLine = qMin(d->lines, first + visibleCount);
+	const int viewportWidth = viewport()->width();
+	const int viewportHeight = viewport()->height();
+	const int horizontalOffset = d->wrapLines ? 0 : horizontalScrollBar()->value();
+
+	if (gutter > 0) {
+		painter.fillRect(QRect(0, 0, gutter, viewportHeight),
+			palette().alternateBase());
+		painter.setPen(palette().mid().color());
+		painter.drawLine(gutter - 1, 0, gutter - 1, viewportHeight);
+		painter.setPen(palette().placeholderText().color());
+	}
 
 	const QColor selectionColor = palette().highlight().color();
 	const QColor tokenColor = palette().highlight().color();
@@ -954,84 +1192,118 @@ void PagedTextEditor::paintEvent(QPaintEvent* event) {
 	const bool highlightToken = !token.isEmpty() && token.size() >= 2;
 
 	painter.save();
-	painter.translate(-horizontalScrollBar()->value(), 0);
-
-	for (int i = first; i < lastLine; i++) {
+	int y = 0;
+	for (int i = first; i < d->lines && y < viewportHeight; i++) {
 		QString text = d->lineAt(i);
 		if (text.endsWith(QLatin1Char('\r'))) {
 			text.chop(1);
 		}
 
-		const int y = (i - first) * lineHeight;
-
-		// Раскладка строки: те же координаты используются для отрисовки,
-		// выделения, подсветки и попадания мыши.
 		QTextLayout textLayout(text, painter.font());
 		d->configureLayout(textLayout);
-		const QTextLine textLine = textLayout.lineAt(0);
-		const auto xAt = [&textLine, &text](int column) {
+		const int visualCount = qMax(1, textLayout.lineCount());
+		bool firstVisual = true;
+
+		for (int visual = 0; visual < visualCount && y < viewportHeight; visual++) {
+			const QTextLine textLine = textLayout.lineAt(visual);
+			const int visualHeight = textLine.isValid()
+				? qMax(1, qCeil(textLine.height())) : lineHeight;
 			if (!textLine.isValid()) {
-				return 0.0;
+				if (firstVisual) {
+					painter.setPen(palette().placeholderText().color());
+					painter.drawText(QRectF(0, y, gutter - 8, visualHeight),
+						Qt::AlignRight | Qt::AlignVCenter, QString::number(i + 1));
+					firstVisual = false;
+				}
+				y += visualHeight;
+				continue;
 			}
-			return textLine.cursorToX(qBound(0, column, text.size()));
-		};
 
-		// Все вхождения выделенного токена (как в VS Code).
-		if (highlightToken) {
-			int position = 0;
-			while ((position = text.indexOf(token, position, Qt::CaseSensitive)) >= 0) {
-				QColor color = tokenColor;
-				color.setAlpha(80);
-				const int x1 = qRound(xAt(position));
-				const int x2 = qRound(xAt(position + token.size()));
-				painter.fillRect(x1, y, x2 - x1, lineHeight, color);
-				position += token.size();
+			const int segmentStart = textLine.textStart();
+			const int segmentEnd = segmentStart + textLine.textLength();
+			// QTextLine::cursorToX() принимает абсолютную позицию в тексте
+			// строки, поэтому не вычитаем начало сегмента.
+			const auto xAt = [&textLine](int column) {
+				return textLine.cursorToX(column);
+			};
+
+			// Все вхождения выделенного токена (как в VS Code).
+			if (highlightToken) {
+				int position = text.indexOf(token, 0, Qt::CaseSensitive);
+				while (position >= 0) {
+					const int from = qMax(position, segmentStart);
+					const int to = qMin(position + token.size(), segmentEnd);
+					if (to > from) {
+						QColor color = tokenColor;
+						color.setAlpha(80);
+						const int x1 = qRound(xAt(from));
+						const int x2 = qRound(xAt(to));
+						painter.fillRect(gutter - horizontalOffset + x1, y,
+							x2 - x1, visualHeight, color);
+					}
+					position = text.indexOf(token, position + token.size(),
+						Qt::CaseSensitive);
+				}
 			}
-		}
 
-		// Найденные совпадения — только на видимых строках.
-		if (!d->searchMatches.isEmpty() && i >= d->searchMatches.first().line) {
-			auto match = std::lower_bound(d->searchMatches.cbegin(),
-				d->searchMatches.cend(), i,
-				[](const SearchMatch& value, int line) { return value.line < line; });
-			for (; match != d->searchMatches.cend() && match->line == i; ++match) {
-				const int index = static_cast<int>(match - d->searchMatches.cbegin());
-				QColor color = index == d->searchCurrent ? currentSearchColor : searchColor;
-				color.setAlpha(index == d->searchCurrent ? 220 : 120);
-				const int x1 = qRound(xAt(match->start));
-				const int x2 = qRound(xAt(match->start + match->length));
-				painter.fillRect(x1, y, x2 - x1, lineHeight, color);
+			// Найденные совпадения — только на видимых строках.
+			if (!d->searchMatches.isEmpty() && i >= d->searchMatches.first().line) {
+				auto match = std::lower_bound(d->searchMatches.cbegin(),
+					d->searchMatches.cend(), i,
+					[](const SearchMatch& value, int line) { return value.line < line; });
+				for (; match != d->searchMatches.cend() && match->line == i; ++match) {
+					const int from = qMax(match->start, segmentStart);
+					const int to = qMin(match->start + match->length, segmentEnd);
+					if (to <= from) {
+						continue;
+					}
+					const int index = static_cast<int>(match - d->searchMatches.cbegin());
+					QColor color = index == d->searchCurrent
+						? currentSearchColor : searchColor;
+					color.setAlpha(index == d->searchCurrent ? 220 : 120);
+					const int x1 = qRound(xAt(from));
+					const int x2 = qRound(xAt(to));
+					painter.fillRect(gutter - horizontalOffset + x1, y,
+						x2 - x1, visualHeight, color);
+				}
 			}
-		}
 
-		// Выделение мышью/клавиатурой.
-		if (hasSelection && i >= startLine && i <= endLine) {
-			const int from = i == startLine ? startColumn : 0;
-			const int to = i == endLine ? endColumn : text.size();
-			if (to > from) {
-				QColor color = selectionColor;
-				color.setAlpha(170);
-				const int x1 = qRound(xAt(from));
-				const int x2 = qRound(xAt(to));
-				painter.fillRect(x1, y, x2 - x1, lineHeight, color);
+			// Выделение мышью/клавиатурой.
+			if (hasSelection && i >= startLine && i <= endLine) {
+				const int selectedFrom = i == startLine ? startColumn : 0;
+				const int selectedTo = i == endLine ? endColumn : text.size();
+				const int from = qMax(selectedFrom, segmentStart);
+				const int to = qMin(selectedTo, segmentEnd);
+				if (to > from) {
+					QColor color = selectionColor;
+					color.setAlpha(170);
+					const int x1 = qRound(xAt(from));
+					const int x2 = qRound(xAt(to));
+					painter.fillRect(gutter - horizontalOffset + x1, y,
+						x2 - x1, visualHeight, color);
+				}
 			}
-		}
 
-		painter.setPen(palette().text().color());
-		textLayout.draw(&painter, QPointF(0, y));
-	}
-
-	if (hasFocus() && d->ready) {
-		const int cursorY = (d->cursorLine - first) * lineHeight;
-		if (cursorY >= 0 && cursorY < viewport()->height()) {
-			QTextLayout cursorLayout(d->lineAt(d->cursorLine), painter.font());
-			d->configureLayout(cursorLayout);
-			const QTextLine cursorLine = cursorLayout.lineAt(0);
-			const qreal cursorX = cursorLine.isValid()
-				? cursorLine.cursorToX(d->cursorColumn) : 0.0;
 			painter.setPen(palette().text().color());
-			painter.drawLine(QPointF(cursorX, cursorY),
-				QPointF(cursorX, cursorY + lineHeight));
+			textLine.draw(&painter, QPointF(gutter - horizontalOffset, y));
+
+			if (hasFocus() && d->ready && i == d->cursorLine
+				&& d->cursorColumn >= segmentStart
+				&& (d->cursorColumn < segmentEnd
+					|| (visual + 1 == visualCount && d->cursorColumn == segmentEnd))) {
+				const qreal cursorX = xAt(d->cursorColumn);				painter.setPen(palette().text().color());
+				painter.drawLine(QPointF(gutter - horizontalOffset + cursorX, y),
+					QPointF(gutter - horizontalOffset + cursorX, y + visualHeight));
+			}
+
+			if (firstVisual && gutter > 0) {
+				painter.setPen(palette().placeholderText().color());
+				painter.drawText(QRectF(0, y, gutter - 8, visualHeight),
+					Qt::AlignRight | Qt::AlignVCenter, QString::number(i + 1));
+				firstVisual = false;
+			}
+
+			y += visualHeight;
 		}
 	}
 
@@ -1049,6 +1321,19 @@ void PagedTextEditor::scrollContentsBy(int dx, int dy) {
 	viewport()->update();
 }
 
+void PagedTextEditor::wheelEvent(QWheelEvent* event) {
+	if (event->modifiers() & Qt::ControlModifier) {
+		const int delta = event->angleDelta().y();
+		if (delta != 0) {
+			setFontSize(qMax(1, fontSize() + (delta > 0 ? 1 : -1)));
+		}
+		event->accept();
+		return;
+	}
+
+	QAbstractScrollArea::wheelEvent(event);
+}
+
 void PagedTextEditor::mousePressEvent(QMouseEvent* event) {
 	if (event->button() != Qt::LeftButton || !d->ready) {
 		QAbstractScrollArea::mousePressEvent(event);
@@ -1056,10 +1341,33 @@ void PagedTextEditor::mousePressEvent(QMouseEvent* event) {
 	}
 
 	setFocus(Qt::MouseFocusReason);
-	const int lineHeight = d->lineHeight();
-	const int line = qBound(0, verticalScrollBar()->value()
-		+ int(event->position().y()) / lineHeight, qMax(0, d->lines - 1));
-	const int column = d->columnAt(line, int(event->position().x()));
+	const int gutter = d->gutterWidth();
+	const int clickX = int(event->position().x());
+	const int clickY = int(event->position().y());
+
+	// Клик по номеру строки выделяет строку целиком.
+	if (clickX < gutter) {
+		const int line = d->logicalLineAtY(clickY);
+		d->selecting = false;
+		d->anchorLine = line;
+		d->anchorColumn = 0;
+		d->cursorLine = line;
+		d->cursorColumn = d->lineAt(line).size();
+		d->searchSelectionActive = false;
+		d->ensureCursorVisible();
+		d->updateCurrentForCursor();
+		viewport()->update();
+		emit cursorPositionChanged(line, 0);
+		event->accept();
+		return;
+	}
+
+	int line = 0;
+	int column = 0;
+	if (!d->positionAt(clickX, clickY, line, column)) {
+		event->accept();
+		return;
+	}
 
 	if (event->modifiers() & Qt::ShiftModifier) {
 		setCursorPosition(line, column, true);
@@ -1077,8 +1385,14 @@ void PagedTextEditor::mouseMoveEvent(QMouseEvent* event) {
 		return;
 	}
 
-	const int lineHeight = d->lineHeight();
-	int line = verticalScrollBar()->value() + int(event->position().y()) / lineHeight;
+	int line = 0;
+	int column = 0;
+	if (!d->positionAt(int(event->position().x()), int(event->position().y()),
+		line, column)) {
+		QAbstractScrollArea::mouseMoveEvent(event);
+		return;
+	}
+
 	if (event->position().y() < 0 && verticalScrollBar()->value() > 0) {
 		verticalScrollBar()->setValue(verticalScrollBar()->value() - 1);
 	}
@@ -1086,8 +1400,6 @@ void PagedTextEditor::mouseMoveEvent(QMouseEvent* event) {
 		verticalScrollBar()->setValue(verticalScrollBar()->value() + 1);
 	}
 
-	line = qBound(0, line, qMax(0, d->lines - 1));
-	const int column = d->columnAt(line, int(event->position().x()));
 	setCursorPosition(line, column, true);
 	event->accept();
 }
@@ -1107,11 +1419,15 @@ void PagedTextEditor::mouseDoubleClickEvent(QMouseEvent* event) {
 		return character.isLetterOrNumber() || character == QLatin1Char('_');
 	};
 
-	const int lineHeight = d->lineHeight();
-	const int line = qBound(0, verticalScrollBar()->value()
-		+ int(event->position().y()) / lineHeight, qMax(0, d->lines - 1));
+	int line = 0;
+	int column = 0;
+	if (!d->positionAt(int(event->position().x()), int(event->position().y()),
+		line, column)) {
+		event->accept();
+		return;
+	}
 	QString text = d->lineAt(line);
-	int start = qMin(d->columnAt(line, int(event->position().x())), text.size());
+	int start = qMin(column, text.size());
 	int end = start;
 
 	while (start > 0 && isWord(text.at(start - 1))) {
@@ -1165,14 +1481,10 @@ void PagedTextEditor::keyPressEvent(QKeyEvent* event) {
 
 	switch (event->key()) {
 	case Qt::Key_Up:
-		setCursorPosition(d->cursorLine - 1,
-			qMin(d->cursorColumn, d->lineAt(qMax(0, d->cursorLine - 1)).size()),
-			shift);
+		d->moveCursorVertically(-1, shift);
 		return;
 	case Qt::Key_Down:
-		setCursorPosition(d->cursorLine + 1,
-			qMin(d->cursorColumn, d->lineAt(qMin(d->lines - 1,
-				d->cursorLine + 1)).size()), shift);
+		d->moveCursorVertically(1, shift);
 		return;
 	case Qt::Key_PageUp:
 		setCursorPosition(d->cursorLine - pageStep, d->cursorColumn, shift);

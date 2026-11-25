@@ -1,5 +1,5 @@
-#include "Content/TextEditorModule/widgets/code_editor_search_panel.h"
-#include "Content/TextEditorModule/widgets/search_bar.h"
+#include "Libs/BaseWidgets/editor/widgets/code_editor_search_panel.h"
+#include "Libs/BaseWidgets/editor/widgets/search_bar.h"
 
 #include <QFutureWatcher>
 #include <QPlainTextEdit>

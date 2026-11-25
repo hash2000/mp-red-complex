@@ -1,12 +1,14 @@
 #include "Content/TextEditorModule/documents/paged_text_document.h"
-#include "Content/TextEditorModule/widgets/paged_text_editor.h"
+#include "Libs/BaseWidgets/editor/widgets/paged_text_editor.h"
 
 #include <QFile>
 #include <QFileInfo>
 #include <QScrollBar>
+#include <QApplication>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTextCodec>
+#include <QWheelEvent>
 #include <QtTest/QtTest>
 
 class TestPagedTextEditor : public QObject {
@@ -19,6 +21,9 @@ private slots:
 	void searchCountsInBackground();
 	void searchFindsAfterTabs();
 	void exposesSearchProperties();
+	void fontSizeAndWordWrap();
+	void gutterClickSelectsLine();
+	void switchFileUpdatesTitle();
 	void reopensInAnotherEncoding();
 	void reportsUnsupportedEncoding();
 };
@@ -187,6 +192,100 @@ void TestPagedTextEditor::exposesSearchProperties() {
 	QCOMPARE(groups.first().id, QStringLiteral("search"));
 	QCOMPARE(groups.first().title, QStringLiteral("Параметры поиска"));
 	QVERIFY(groups.first().editor);
+}
+
+void TestPagedTextEditor::fontSizeAndWordWrap() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto path = dir.filePath(QStringLiteral("wrap.txt"));
+	QFile file(path);
+	QVERIFY(file.open(QIODevice::WriteOnly));
+	file.write("short\nvery long line that should be wrapped when word wrap is enabled");
+	file.close();
+
+	PagedTextEditor editor;
+	editor.resize(320, 300);
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+
+	QVERIFY(!editor.wordWrap());
+	editor.setWordWrap(true);
+	QVERIFY(editor.wordWrap());
+	QCOMPARE(editor.lineCount(), 2);
+
+	const int size = editor.fontSize();
+	QWheelEvent wheel(QPointF(10, 10), QPointF(10, 10), QPoint(),
+		QPoint(0, 120), Qt::NoButton, Qt::ControlModifier,
+		Qt::NoScrollPhase, false);
+	QApplication::sendEvent(editor.viewport(), &wheel);
+	QCOMPARE(editor.fontSize(), size + 1);
+	editor.setWordWrap(false);
+	QVERIFY(!editor.wordWrap());
+
+	QVERIFY(editor.lineNumbersVisible());
+	editor.setLineNumbersVisible(false);
+	QVERIFY(!editor.lineNumbersVisible());
+	editor.setLineNumbersVisible(true);
+	QVERIFY(editor.lineNumbersVisible());
+}
+
+void TestPagedTextEditor::gutterClickSelectsLine() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto path = dir.filePath(QStringLiteral("gutter.txt"));
+	const QString longLine = QStringLiteral(
+		"first line that is long enough to wrap into several visual rows when narrow");
+	QFile file(path);
+	QVERIFY(file.open(QIODevice::WriteOnly));
+	file.write((longLine + "\nsecond line\n").toUtf8());
+	file.close();
+
+	PagedTextEditor editor;
+	editor.resize(220, 300);
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+	editor.setWordWrap(true);
+
+	QTest::mouseClick(editor.viewport(), Qt::LeftButton, Qt::NoModifier,
+		QPoint(3, 4));
+	QCOMPARE(editor.selectedText(), longLine);
+	QCOMPARE(editor.cursorLine(), 0);
+
+	// Клик по второй экранной строке переноса должен попадать в её колонку,
+	// а не в начало логической строки.
+	QTest::mouseClick(editor.viewport(), Qt::LeftButton, Qt::NoModifier,
+		QPoint(80, 20));
+	QCOMPARE(editor.cursorLine(), 0);
+	QVERIFY(editor.cursorColumn() > 10);
+
+	// Стрелки вверх/вниз ходят по экранным строкам переноса.
+	editor.setCursorPosition(0, 30);
+	QCOMPARE(editor.cursorVisualRow(), 1);
+	QTest::keyClick(&editor, Qt::Key_Up);
+	QCOMPARE(editor.cursorLine(), 0);
+	QCOMPARE(editor.cursorVisualRow(), 0);
+	QTest::keyClick(&editor, Qt::Key_Down);
+	QCOMPARE(editor.cursorLine(), 0);
+	QCOMPARE(editor.cursorVisualRow(), 1);
+}
+
+void TestPagedTextEditor::switchFileUpdatesTitle() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto first = dir.filePath(QStringLiteral("first.log"));
+	const auto second = dir.filePath(QStringLiteral("second.log"));
+	for (const auto& path : { first, second }) {
+		QFile file(path);
+		QVERIFY(file.open(QIODevice::WriteOnly));
+		file.write("line\n");
+	}
+
+	PagedTextDocument document;
+	document.openFile(first);
+	QCOMPARE(document.title(), QStringLiteral("first.log"));
+
+	document.openFile(second);
+	QCOMPARE(document.title(), QStringLiteral("second.log"));
 }
 
 void TestPagedTextEditor::reopensInAnotherEncoding() {

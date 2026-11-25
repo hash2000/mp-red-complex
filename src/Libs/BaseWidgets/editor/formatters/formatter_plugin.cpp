@@ -1,4 +1,4 @@
-#include "Content/TextEditorModule/formatters/formatter_plugin.h"
+#include "Libs/BaseWidgets/editor/formatters/formatter_plugin.h"
 #include <QFutureWatcher>
 #include <QtConcurrent>
 

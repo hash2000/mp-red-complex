@@ -1,9 +1,9 @@
 // Стенд для измерений производительности редактора кода.
 // Не входит в набор штатных тестов: собирается отдельной целью.
-#include "Content/TextEditorModule/formatters/formatter_plugin_manager.h"
-#include "Content/TextEditorModule/highlights/highlighter.h"
-#include "Content/TextEditorModule/highlights/highlighter_plugin_manager.h"
-#include "Content/TextEditorModule/widgets/code_editor_widget.h"
+#include "Libs/BaseWidgets/editor/formatters/formatter_plugin_manager.h"
+#include "Libs/BaseWidgets/editor/highlights/highlighter.h"
+#include "Libs/BaseWidgets/editor/highlights/highlighter_plugin_manager.h"
+#include "Libs/BaseWidgets/editor/widgets/code_editor_widget.h"
 #include "Libs/Resources/resources.h"
 
 #include <QApplication>

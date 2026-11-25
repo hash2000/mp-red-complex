@@ -1,8 +1,9 @@
 #include "Content/TextEditorModule/documents/paged_text_document.h"
-#include "Content/TextEditorModule/widgets/code_editor_widget.h"
-#include "Content/TextEditorModule/widgets/encoding_dialog.h"
-#include "Content/TextEditorModule/widgets/paged_text_editor.h"
-#include "Content/TextEditorModule/widgets/search_bar.h"
+#include "Libs/BaseWidgets/editor/widgets/code_editor_widget.h"
+#include "Libs/BaseWidgets/editor/widgets/editor_settings_builder.h"
+#include "Libs/BaseWidgets/editor/widgets/encoding_dialog.h"
+#include "Libs/BaseWidgets/editor/widgets/paged_text_editor.h"
+#include "Libs/BaseWidgets/editor/widgets/search_bar.h"
 #include "Libs/BaseWidgets/ribbon/document_ribbon.h"
 #include "Libs/BaseWidgets/ribbon/ribbon_button.h"
 
@@ -37,6 +38,9 @@ struct PagedTextDocument::Private {
 	QLabel* cursorLabel = nullptr;
 	QLabel* encodingLabel = nullptr;
 	QCheckBox* caseSensitiveCheck = nullptr;
+	QCheckBox* lineNumbersCheck = nullptr;
+	QComboBox* fontSizeCombo = nullptr;
+	QComboBox* wordWrapCombo = nullptr;
 
 	QString path;
 
@@ -44,6 +48,8 @@ struct PagedTextDocument::Private {
 	QWidget* createSearchBar();
 	void setSearchVisible(bool visible);
 	void syncEncodingLabel();
+	void syncFontSize(int size);
+	void syncWordWrap(bool enabled);
 	void showEncodingDialog();
 };
 
@@ -77,6 +83,7 @@ void PagedTextDocument::Private::createRibbon() {
 	connect(searchButton, &RibbonButton::toggled, q, [this](bool checked) {
 		setSearchVisible(checked);
 	});
+
 
 	connect(ribbon, &DocumentRibbon::propertiesRequested, q,
 		[this](const QString& groupId) {
@@ -145,6 +152,35 @@ void PagedTextDocument::Private::syncEncodingLabel() {
 	encodingLabel->setText(title);
 }
 
+void PagedTextDocument::Private::syncFontSize(int size) {
+	if (!fontSizeCombo) {
+		return;
+	}
+
+	int index = fontSizeCombo->findData(size);
+	if (index < 0) {
+		int insertAt = 0;
+		for (int i = 0; i < fontSizeCombo->count(); i++) {
+			if (fontSizeCombo->itemData(i).toInt() < size) {
+				insertAt = i + 1;
+			}
+		}
+		fontSizeCombo->insertItem(insertAt, QString::number(size), size);
+		index = insertAt;
+	}
+
+	const QSignalBlocker blocker(fontSizeCombo);
+	fontSizeCombo->setCurrentIndex(index);
+}
+
+void PagedTextDocument::Private::syncWordWrap(bool enabled) {
+	if (wordWrapCombo) {
+		const QSignalBlocker blocker(wordWrapCombo);
+		wordWrapCombo->setCurrentIndex(wordWrapCombo->findData(enabled ? 1 : 0));
+	}
+}
+
+
 void PagedTextDocument::Private::showEncodingDialog() {
 	const QString hint = path.isEmpty()
 		? PagedTextDocument::tr("Файл не задан.")
@@ -189,6 +225,9 @@ PagedTextDocument::PagedTextDocument(QWidget* parent)
 			if (d->statusLabel) {
 				d->statusLabel->setText(success ? tr("Готово") : errorMessage);
 			}
+			if (success && !d->path.isEmpty()) {
+				setTitle(QFileInfo(d->path).fileName());
+			}
 		});
 	connect(d->editor, &PagedTextEditor::cursorPositionChanged, this,
 		[this](int line, int column) {
@@ -212,6 +251,19 @@ PagedTextDocument::PagedTextDocument(QWidget* parent)
 		[this](int current, int total) {
 			if (d->search) {
 				d->search->setCounter(current, total);
+			}
+		});
+	connect(d->editor, &PagedTextEditor::fontSizeChanged, this, [this](int size) {
+		d->syncFontSize(size);
+	});
+	connect(d->editor, &PagedTextEditor::wordWrapChanged, this, [this](bool enabled) {
+		d->syncWordWrap(enabled);
+	});
+	connect(d->editor, &PagedTextEditor::lineNumbersVisibleChanged, this,
+		[this](bool visible) {
+			if (d->lineNumbersCheck) {
+				const QSignalBlocker blocker(d->lineNumbersCheck);
+				d->lineNumbersCheck->setChecked(visible);
 			}
 		});
 
@@ -257,6 +309,25 @@ QWidget* PagedTextDocument::createPropertiesEditor(QWidget* parent) {
 	form->addRow(tr("Файл:"), pathLabel);
 	form->addRow(tr("Строк:"), d->linesLabel);
 	form->addRow(tr("Кодировка:"), encodingRow);
+
+	// Общие параметры редактора строит единый билдер: одинаковые подписи,
+	// глифы и внешний вид у редактора кода и просмотрщика.
+	EditorSettingsBuilder settings(widget);
+	d->fontSizeCombo = settings.addFontSizeRow(form, d->editor->fontSize(),
+		[this](int size) {
+			d->editor->setFontSize(size);
+		});
+	d->wordWrapCombo = settings.addLineWrapRow(form,
+		d->editor->wordWrap() ? 1 : 0, /*allowAuto*/ false,
+		[this](int value) {
+			d->editor->setWordWrap(value == 1);
+		});
+	d->lineNumbersCheck = settings.addLineNumbersRow(form,
+		QStringLiteral("PagedLineNumbers"), d->editor->lineNumbersVisible(),
+		[this](bool checked) {
+			d->editor->setLineNumbersVisible(checked);
+		});
+
 	form->addRow(tr("Курсор:"), d->cursorLabel);
 	form->addRow(tr("Состояние:"), d->statusLabel);
 	form->addRow(tr("Режим:"), new QLabel(tr("Просмотр (прототип)"), widget));

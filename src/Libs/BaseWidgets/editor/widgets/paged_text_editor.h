@@ -6,6 +6,8 @@
 
 #include <memory>
 
+class QWheelEvent;
+
 /// Прототип виртуального редактора для очень больших файлов.
 ///
 /// В памяти держится только индекс начал строк и несколько страниц текста;
@@ -37,6 +39,8 @@ public:
 	/// Позиция курсора: строка и колонка (в символах, с нуля).
 	int cursorLine() const;
 	int cursorColumn() const;
+	/// Номер экранной строки внутри логической (с учётом WordWrap).
+	int cursorVisualRow() const;
 	void setCursorPosition(int line, int column, bool keepAnchor = false);
 	void selectAll();
 	/// Выделенный текст (многострочный — через '\n').
@@ -46,6 +50,13 @@ public:
 	QString encoding() const;
 	/// Переоткрыть текущий файл в другой кодировке.
 	void setEncoding(const QString& encoding);
+
+	int fontSize() const;
+	void setFontSize(int size);
+	bool wordWrap() const;
+	void setWordWrap(bool enabled);
+	bool lineNumbersVisible() const;
+	void setLineNumbersVisible(bool visible);
 
 	/// Поиск по строкам: счётчик считается в фоне, подсвечиваются
 	/// только видимые вхождения.
@@ -65,6 +76,9 @@ signals:
 	void cursorPositionChanged(int line, int column);
 	void searchCountChanged(int matches);
 	void searchCurrentChanged(int current, int total);
+	void fontSizeChanged(int size);
+	void wordWrapChanged(bool enabled);
+	void lineNumbersVisibleChanged(bool visible);
 
 protected:
 	void paintEvent(QPaintEvent* event) override;
@@ -75,6 +89,7 @@ protected:
 	void mouseMoveEvent(QMouseEvent* event) override;
 	void mouseReleaseEvent(QMouseEvent* event) override;
 	void mouseDoubleClickEvent(QMouseEvent* event) override;
+	void wheelEvent(QWheelEvent* event) override;
 
 private:
 	struct Private;

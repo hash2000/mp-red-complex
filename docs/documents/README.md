@@ -434,10 +434,10 @@ tabs:
   default: "#3c3c3c"            # необязательный цвет для всех вкладок
   defaultGlyph: "📄"             # необязательный глиф для всех вкладок
   colors:
-    Content.CodeEditor.CodeEditorDocument: "#61afef"  # полное имя класса
+    Content.TextEditor.CodeEditor: "#61afef"  # полное имя класса
     code-editor: "#61afef"                            # xtype
   glyphs:
-    Content.CodeEditor.CodeEditorDocument: "📝"
+    Content.TextEditor.CodeEditor: "📝"
     code-editor: "📝"
 ```
 

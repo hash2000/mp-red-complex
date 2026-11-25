@@ -1,10 +1,10 @@
 #include "Content/TextEditorModule/documents/code_editor_document.h"
 #include "Content/TextEditorModule/documents/code_editor_document_metadata.h"
-#include "Content/TextEditorModule/formatters/formatter_plugin.h"
-#include "Content/TextEditorModule/formatters/formatter_plugin_manager.h"
-#include "Content/TextEditorModule/highlights/highlighter_plugin_manager.h"
-#include "Content/TextEditorModule/widgets/code_editor_search_panel.h"
-#include "Content/TextEditorModule/widgets/code_editor_widget.h"
+#include "Libs/BaseWidgets/editor/formatters/formatter_plugin.h"
+#include "Libs/BaseWidgets/editor/formatters/formatter_plugin_manager.h"
+#include "Libs/BaseWidgets/editor/highlights/highlighter_plugin_manager.h"
+#include "Libs/BaseWidgets/editor/widgets/code_editor_search_panel.h"
+#include "Libs/BaseWidgets/editor/widgets/code_editor_widget.h"
 #include "Libs/BaseWidgets/properties/properties_list_widget.h"
 #include "Libs/BaseWidgets/ribbon/document_ribbon.h"
 #include "Libs/BaseWidgets/ribbon/ribbon_button.h"
@@ -535,14 +535,14 @@ void TestCodeEditorSearch::documentMetadataDeclaresPath() {
 void TestCodeEditorSearch::newDocumentDialogShowsCodeEditorPath() {
 	TestCommandController controller;
 	auto* registry = controller.widgets();
-	registry->registerFactory({ QStringLiteral("Content.CodeEditor.CodeEditorDocument"),
+	registry->registerFactory({ QStringLiteral("Content.TextEditor.CodeEditor"),
 		QStringLiteral("code-editor"), /*singletone*/ false,
 		QStringLiteral("Редактор кода") },
 		[](const QString&, const WidgetBuildHandler&) -> QWidget* {
 			return nullptr;
 		});
 	registry->registerDocumentMetadata(
-		QStringLiteral("Content.CodeEditor.CodeEditorDocument"),
+		QStringLiteral("Content.TextEditor.CodeEditor"),
 		std::make_unique<CodeEditorDocumentMetadata>());
 
 	NewDocumentDialog dialog(registry, controller.globalContext());
@@ -1279,7 +1279,7 @@ void TestCodeEditorSearch::lineWrapComboControlsWrap() {
 	QWidget* properties = document.createPropertiesEditor(&host);
 	QVERIFY(properties);
 
-	auto* combo = properties->findChild<QComboBox*>(QStringLiteral("CodeEditorLineWrapCombo"));
+	auto* combo = properties->findChild<QComboBox*>(QStringLiteral("EditorLineWrapCombo"));
 	QVERIFY(combo);
 	QCOMPARE(combo->count(), 3);
 

@@ -318,15 +318,15 @@ void TestDocumentTabs::documentTabThemeFromConfigurations() {
 	const auto theme = DocumentTabTheme::loadFromThemeDirectory(themeDir);
 
 	QVERIFY(!theme.isEmpty());
-	QVERIFY(theme.colorFor("Content.CodeEditor.CodeEditorDocument", "code-editor").isValid());
+	QVERIFY(theme.colorFor("Content.TextEditor.CodeEditor", "code-editor").isValid());
 	QVERIFY(theme.colorFor(QString(), "code-editor").isValid());
 	QVERIFY(theme.colorFor("System.Documents.SystemOptions", QString()).isValid());
 
 	// Глифы задаются тем же способом: по классу и по xtype.
-	QCOMPARE(theme.glyphFor("Content.CodeEditor.CodeEditorDocument", "code-editor"), QString("📝"));
+	QCOMPARE(theme.glyphFor("Content.TextEditor.CodeEditor", "code-editor"), QString("📝"));
 	QCOMPARE(theme.glyphFor(QString(), "code-editor"), QString("📝"));
 	QCOMPARE(theme.glyphFor("System.Documents.SystemOptions", QString()), QString("⚙"));
-	QCOMPARE(theme.glyphFor("Content.SystemRouter.SystemRouterTreeDocument", QString()), QString("🗂"));
+	QCOMPARE(theme.glyphFor("Content.SystemRouter.SystemRouterTree", QString()), QString("🗂"));
 
 	// Неизвестный документ остаётся в цвете темы и с глифом по умолчанию:
 	// default/defaultGlyph в эталонной теме не заданы.

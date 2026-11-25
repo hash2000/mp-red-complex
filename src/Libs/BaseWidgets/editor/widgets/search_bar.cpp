@@ -1,4 +1,4 @@
-#include "Content/TextEditorModule/widgets/search_bar.h"
+#include "Libs/BaseWidgets/editor/widgets/search_bar.h"
 
 #include <QEvent>
 #include <QGuiApplication>

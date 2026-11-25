@@ -1,6 +1,6 @@
-#include "Content/TextEditorModule/highlights/highlighter_plugin_manager.h"
-#include "Content/TextEditorModule/language_info.h"
-#include "Content/TextEditorModule/highlights/theme_highlighter_plugin.h"
+#include "Libs/BaseWidgets/editor/highlights/highlighter_plugin_manager.h"
+#include "Libs/BaseWidgets/editor/language_info.h"
+#include "Libs/BaseWidgets/editor/highlights/theme_highlighter_plugin.h"
 #include "Libs/Resources/resources.h"
 
 #include <QDebug>

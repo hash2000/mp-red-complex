@@ -1,5 +1,5 @@
-#include "Content/TextEditorModule/widgets/encoding_dialog.h"
-#include "Content/TextEditorModule/widgets/code_editor_widget.h"
+#include "Libs/BaseWidgets/editor/widgets/encoding_dialog.h"
+#include "Libs/BaseWidgets/editor/widgets/code_editor_widget.h"
 
 #include <QComboBox>
 #include <QCompleter>

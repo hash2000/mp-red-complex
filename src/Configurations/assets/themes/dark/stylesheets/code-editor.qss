@@ -47,9 +47,12 @@ QToolButton#TextEditorSearchButton {
 QToolButton#TextEditorSearchButton:hover { background-color: #3e3e42; }
 QToolButton#TextEditorSearchButton:pressed { background-color: #094771; }
 
-/* Параметры документа в панели «Свойства»: язык и размер шрифта. */
+/* Параметры документа в панели «Свойства»: язык, шрифт, перенос строк. */
 QComboBox#CodeEditorLanguageCombo,
-QComboBox#CodeEditorFontSizeCombo {
+QComboBox#CodeEditorFontSizeCombo,
+QComboBox#CodeEditorLineWrapCombo,
+QComboBox#EditorFontSizeCombo,
+QComboBox#EditorLineWrapCombo {
   background-color: #1e1e1e;
   color: #d4d4d4;
   border: 1px solid #3e3e42;
@@ -58,4 +61,7 @@ QComboBox#CodeEditorFontSizeCombo {
   min-height: 22px;
 }
 QComboBox#CodeEditorLanguageCombo::drop-down,
-QComboBox#CodeEditorFontSizeCombo::drop-down { border: none; width: 16px; }
+QComboBox#CodeEditorFontSizeCombo::drop-down,
+QComboBox#CodeEditorLineWrapCombo::drop-down,
+QComboBox#EditorFontSizeCombo::drop-down,
+QComboBox#EditorLineWrapCombo::drop-down { border: none; width: 16px; }

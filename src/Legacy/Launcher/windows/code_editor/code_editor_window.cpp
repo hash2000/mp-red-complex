@@ -1,9 +1,9 @@
 #include "Launcher/windows/code_editor/code_editor_window.h"
-#include "Content/TextEditorModule/widgets/code_editor_widget.h"
+#include "Libs/BaseWidgets/editor/widgets/code_editor_widget.h"
 #include "Launcher/app_controller.h"
 #include "Libs/Engine/scripting/command_context.h"
-#include "Content/TextEditorModule/formatters/formatter_plugin_manager.h"
-#include "Content/TextEditorModule/highlights/highlighter_plugin_manager.h"
+#include "Libs/BaseWidgets/editor/formatters/formatter_plugin_manager.h"
+#include "Libs/BaseWidgets/editor/highlights/highlighter_plugin_manager.h"
 
 #include "Libs/Engine/services/services_registry.h"
 

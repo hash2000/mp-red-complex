@@ -247,3 +247,14 @@ QTabBar#BottomTabs::tab { background:transparent; color:#9d9d9d; padding:4px 12p
                           border:none; border-top:2px solid transparent; }
 QTabBar#BottomTabs::tab:selected { color:#ffffff; border-top:2px solid #7160e8; background:#1f1f1f; }
 QTabBar#BottomTabs::tab:hover { color:#ffffff; }
+
+/* ---------- Чекбоксы ---------- */
+QCheckBox { color:#d4d4d4; spacing:6px; }
+QCheckBox::indicator {
+  width:14px; height:14px;
+  border:1px solid #6b6b6b; border-radius:2px;
+  background:#1e1e1e;
+}
+QCheckBox::indicator:hover { border-color:#1177bb; }
+QCheckBox::indicator:checked { background:#1177bb; border-color:#1177bb; }
+QCheckBox::indicator:disabled { border-color:#3e3e42; background:#252526; }

@@ -1,11 +1,12 @@
 #include "Content/TextEditorModule/documents/code_editor_document.h"
-#include "Content/TextEditorModule/widgets/code_editor_widget.h"
-#include "Content/TextEditorModule/widgets/code_editor_search_panel.h"
-#include "Content/TextEditorModule/widgets/encoding_dialog.h"
-#include "Content/TextEditorModule/language_info.h"
-#include "Content/TextEditorModule/highlights/highlighter_plugin.h"
-#include "Content/TextEditorModule/highlights/highlighter_plugin_manager.h"
-#include "Content/TextEditorModule/formatters/formatter_plugin_manager.h"
+#include "Libs/BaseWidgets/editor/widgets/code_editor_widget.h"
+#include "Libs/BaseWidgets/editor/widgets/code_editor_search_panel.h"
+#include "Libs/BaseWidgets/editor/widgets/encoding_dialog.h"
+#include "Libs/BaseWidgets/editor/widgets/editor_settings_builder.h"
+#include "Libs/BaseWidgets/editor/language_info.h"
+#include "Libs/BaseWidgets/editor/highlights/highlighter_plugin.h"
+#include "Libs/BaseWidgets/editor/highlights/highlighter_plugin_manager.h"
+#include "Libs/BaseWidgets/editor/formatters/formatter_plugin_manager.h"
 #include "Libs/BaseWidgets/properties/properties_list_widget.h"
 #include "Libs/BaseWidgets/ribbon/document_ribbon.h"
 #include "Libs/BaseWidgets/ribbon/ribbon_button.h"
@@ -38,8 +39,6 @@
 #include <algorithm>
 
 namespace {
-constexpr int kFontSizeComboWidth = 76;
-
 /// Идентификаторы свойств поиска в группе «Параметры поиска».
 const QString kSearchRegularExpression = QStringLiteral("search.regex");
 const QString kSearchSimplifiedExpression = QStringLiteral("search.simplified");
@@ -95,7 +94,6 @@ public:
 	void applySearchProperty(const QString& id, bool enabled);
 	void setSearchOption(CodeEditorSearchPanel::Option option, bool enabled);
 
-	void setupFontSizes();
 	void setupLanguages();
 	void syncLanguageCombo();
 	void syncFontSizeCombo(int size);
@@ -338,25 +336,6 @@ void CodeEditorDocument::Private::applySearchProperty(const QString& id, bool en
 	if (searchProperties) {
 		searchProperties->setProperties(searchPropertyData());
 	}
-}
-
-void CodeEditorDocument::Private::setupFontSizes() {
-	if (!fontSizeCombo || !editor) {
-		return;
-	}
-
-	const QList<int> sizes = {
-		6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 48, 72
-	};
-
-	const QSignalBlocker blocker(fontSizeCombo);
-	fontSizeCombo->clear();
-	for (const int size : sizes) {
-		fontSizeCombo->addItem(QString::number(size), size);
-	}
-
-	const int index = fontSizeCombo->findData(editor->fontSize());
-	fontSizeCombo->setCurrentIndex(index >= 0 ? index : fontSizeCombo->findData(10));
 }
 
 void CodeEditorDocument::Private::setupLanguages() {
@@ -934,19 +913,6 @@ QWidget* CodeEditorDocument::createPropertiesEditor(QWidget* parent) {
 			d->syncLanguageCombo();
 		});
 
-	auto* fontSizeCombo = new QComboBox(widget);
-	fontSizeCombo->setObjectName(QStringLiteral("CodeEditorFontSizeCombo"));
-	fontSizeCombo->setToolTip(tr("Размер шрифта редактора"));
-	fontSizeCombo->setFixedWidth(kFontSizeComboWidth);
-	d->fontSizeCombo = fontSizeCombo;
-	d->setupFontSizes();
-	connect(fontSizeCombo, &QComboBox::currentIndexChanged, this,
-		[this, fontSizeCombo](int index) {
-			if (index >= 0) {
-				d->editor->setFontSize(fontSizeCombo->itemData(index).toInt());
-			}
-		});
-
 	// Текущая кодировка и кнопка выбора: сам выбор — в отдельном диалоге,
 	// где можно переоткрыть файл или пересохранить его в новой кодировке.
 	auto* encodingRow = new QWidget(widget);
@@ -970,28 +936,20 @@ QWidget* CodeEditorDocument::createPropertiesEditor(QWidget* parent) {
 			encodingLabel->setText(d->encodingTitle(encoding));
 		});
 
-	auto* lineWrapCombo = new QComboBox(widget);
-	lineWrapCombo->setObjectName(QStringLiteral("CodeEditorLineWrapCombo"));
-	lineWrapCombo->setToolTip(tr("Перенос строк. «Авто» включает перенос только для строк длиннее "
-		"%1 символов. «Включён» переносит всегда, «Выключен» — не переносит вовсе: "
-		"на длинных строках редактор при этом может заметно тормозить")
-		.arg(CodeEditorWidget::autoWrapLineLimit()));
-	lineWrapCombo->addItem(tr("Авто (длинные строки)"),
-		static_cast<int>(CodeEditorWidget::LineWrapPolicy::Auto));
-	lineWrapCombo->addItem(tr("Включён"),
-		static_cast<int>(CodeEditorWidget::LineWrapPolicy::On));
-	lineWrapCombo->addItem(tr("Выключен"),
-		static_cast<int>(CodeEditorWidget::LineWrapPolicy::Off));
-	lineWrapCombo->setCurrentIndex(lineWrapCombo->findData(
-		static_cast<int>(d->editor->lineWrapPolicy())));
-	connect(lineWrapCombo, &QComboBox::currentIndexChanged, this,
-		[this, lineWrapCombo](int index) {
-			if (index < 0) {
-				return;
-			}
+	form->insertRow(0, tr("Файл:"), pathLabel);
+	form->addRow(tr("Язык:"), languageCombo);
+	form->addRow(tr("Кодировка:"), encodingRow);
 
-			const auto policy = static_cast<CodeEditorWidget::LineWrapPolicy>(
-				lineWrapCombo->itemData(index).toInt());
+	// Общие параметры редактора (шрифт, перенос) строит общий билдер.
+	EditorSettingsBuilder settings(widget);
+	d->fontSizeCombo = settings.addFontSizeRow(form, d->editor->fontSize(),
+		[this](int size) {
+			d->editor->setFontSize(size);
+		});
+	settings.addLineWrapRow(form,
+		static_cast<int>(d->editor->lineWrapPolicy()), /*allowAuto*/ true,
+		[this](int value) {
+			const auto policy = static_cast<CodeEditorWidget::LineWrapPolicy>(value);
 			d->editor->setLineWrapPolicy(policy);
 
 			// Выбор пользователя важнее: перенос не включаем насильно,
@@ -1004,12 +962,6 @@ QWidget* CodeEditorDocument::createPropertiesEditor(QWidget* parent) {
 					.arg(CodeEditorWidget::autoWrapLineLimit()));
 			}
 		});
-
-	form->insertRow(0, tr("Файл:"), pathLabel);
-	form->addRow(tr("Язык:"), languageCombo);
-	form->addRow(tr("Кодировка:"), encodingRow);
-	form->addRow(tr("Размер шрифта:"), fontSizeCombo);
-	form->addRow(tr("Перенос строк:"), lineWrapCombo);
 	return widget;
 }
 

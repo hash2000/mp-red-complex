@@ -1,4 +1,4 @@
-#include "Content/TextEditorModule/highlights/theme_highlighter_plugin.h"
+#include "Libs/BaseWidgets/editor/highlights/theme_highlighter_plugin.h"
 
 #include <yaml-cpp/yaml.h>
 

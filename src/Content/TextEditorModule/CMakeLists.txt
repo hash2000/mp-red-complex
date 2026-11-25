@@ -10,7 +10,6 @@ file(GLOB_RECURSE SRCS ${TextEditorModule-Sources}/*.cpp)
 # исходников цели, а GLOB выше перечисляет только .cpp.
 set(TextEditorModule-Headers
 	${TextEditorModule-Sources}/documents/paged_text_document.h
-	${TextEditorModule-Sources}/widgets/search_bar.h
 )
 
 qt_add_library(RedComplexTextEditorModule STATIC
@@ -32,5 +31,6 @@ target_link_libraries(RedComplexTextEditorModule
 
 		yaml-cpp::yaml-cpp
 
+		RedComplexBaseWidgets
 		RedComplexEngine
 )

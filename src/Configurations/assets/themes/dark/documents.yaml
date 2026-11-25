@@ -20,33 +20,33 @@ tabs:
     system-options: "#8a7ae8"
 
     # Редактор кода
-    Content.CodeEditor.CodeEditorDocument: "#61afef"
+    Content.TextEditor.CodeEditor: "#61afef"
     code-editor: "#61afef"
-    Content.CodeEditor.PagedTextDocument: "#61afef"
-    paged-text-viewer: "#61afef"
+    Content.TextEditor.PagedText: "#61afef"
+    large-text-viewer: "#61afef"
 
     # SystemRouter
-    Content.SystemRouter.SystemRouterTreeDocument: "#e06c75"
+    Content.SystemRouter.SystemRouterTree: "#e06c75"
     system-router: "#e06c75"
-    Content.SystemRouter.SystemRouterNodePropertiesDocument: "#c678dd"
+    Content.SystemRouter.SystemRouterNodeProperties: "#c678dd"
     system-router-node-properties: "#c678dd"
 
     # DatabaseModule
-    Content.Database.DatabaseBackupDocument: "#4ec9b0"
+    Content.Database.DatabaseBackup: "#4ec9b0"
     database-backup: "#4ec9b0"
 
     # FetchApi
-    Content.FetchApi.FetchApiDocument: "#98c379"
+    Content.FetchApi.FetchApi: "#98c379"
     fetch-api: "#98c379"
-    Content.FetchApi.FetchQueriesTreeDocument: "#56b6c2"
+    Content.FetchApi.FetchQueriesTree: "#56b6c2"
     fetch-api-queries-tree: "#56b6c2"
 
     # Пользователи
-    Content.Users.LoginDocument: "#d19a66"
+    Content.Users.Login: "#d19a66"
     user-login: "#d19a66"
-    Content.Users.RegisterDocument: "#d19a66"
+    Content.Users.Register: "#d19a66"
     user-register: "#d19a66"
-    Content.Users.UserDocument: "#e5c07b"
+    Content.Users.User: "#e5c07b"
     user-profile: "#e5c07b"
 
     # Панели оболочки
@@ -68,33 +68,33 @@ tabs:
     system-options: "⚙"
 
     # Редактор кода
-    Content.CodeEditor.CodeEditorDocument: "📝"
+    Content.TextEditor.CodeEditor: "📝"
     code-editor: "📝"
-    Content.CodeEditor.PagedTextDocument: "📝"
-    paged-text-viewer: "📝"
+    Content.TextEditor.PagedText: "📝"
+    large-text-viewer: "📝"
 
     # SystemRouter
-    Content.SystemRouter.SystemRouterTreeDocument: "🗂"
+    Content.SystemRouter.SystemRouterTree: "🗂"
     system-router: "🗂"
-    Content.SystemRouter.SystemRouterNodePropertiesDocument: "🛠"
+    Content.SystemRouter.SystemRouterNodeProperties: "🛠"
     system-router-node-properties: "🛠"
 
     # DatabaseModule
-    Content.Database.DatabaseBackupDocument: "💾"
+    Content.Database.DatabaseBackup: "💾"
     database-backup: "💾"
 
     # FetchApi
-    Content.FetchApi.FetchApiDocument: "🌐"
+    Content.FetchApi.FetchApi: "🌐"
     fetch-api: "🌐"
-    Content.FetchApi.FetchQueriesTreeDocument: "🌳"
+    Content.FetchApi.FetchQueriesTree: "🌳"
     fetch-api-queries-tree: "🌳"
 
     # Пользователи
-    Content.Users.LoginDocument: "🔑"
+    Content.Users.Login: "🔑"
     user-login: "🔑"
-    Content.Users.RegisterDocument: "📝"
+    Content.Users.Register: "📝"
     user-register: "📝"
-    Content.Users.UserDocument: "👤"
+    Content.Users.User: "👤"
     user-profile: "👤"
 
     # Панели оболочки

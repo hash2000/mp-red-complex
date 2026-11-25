@@ -96,7 +96,7 @@
 
 ## 5. Документ и виджет
 
-Тип документа: `Content.Database.DatabaseBackupDocument`, xtype
+Тип документа: `Content.Database.DatabaseBackup`, xtype
 `database-backup`, синглтон.
 
 ```text
