@@ -1,4 +1,5 @@
 #include "Libs/Engine/ui/main_window.h"
+#include "Libs/BaseWidgets/widgets/background_tasks_indicator.h"
 #include "Libs/Engine/ui/activity_bar.h"
 #include "Libs/Engine/ui/bottom_panel.h"
 #include "Libs/Engine/ui/doc_area.h"
@@ -190,6 +191,7 @@ void MainWindow::Private::buildUi() {
 
 	// Статус-бар
 	q->statusBar()->addWidget(new QLabel(MainWindow::tr("Готово")));
+	q->statusBar()->addPermanentWidget(new BackgroundTasksIndicator(q));
 	statusDoc = new QLabel;
 	q->statusBar()->addPermanentWidget(statusDoc);
 

@@ -1,4 +1,5 @@
 #include "Content/TextEditorModule/documents/paged_text_document.h"
+#include "Libs/Base/background_task_registry.h"
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor.h"
 
 #include <QFile>
@@ -24,8 +25,9 @@ private slots:
 	void exposesSearchProperties();
 	void fontSizeAndWordWrap();
 	void gutterClickSelectsLine();
-	void longLineLoadsInChunks();
+	void longLineLoadsHorizontally();
 	void shiftSelectionCrossesLines();
+	void searchReportsBackgroundProgress();
 	void switchFileUpdatesTitle();
 	void reopensInAnotherEncoding();
 	void reportsUnsupportedEncoding();
@@ -303,7 +305,7 @@ void TestPagedTextEditor::gutterClickSelectsLine() {
 	QCOMPARE(editor.cursorVisualRow(), 1);
 }
 
-void TestPagedTextEditor::longLineLoadsInChunks() {
+void TestPagedTextEditor::longLineLoadsHorizontally() {
 	QTemporaryDir dir;
 	QVERIFY(dir.isValid());
 	const auto path = dir.filePath(QStringLiteral("longline.txt"));
@@ -322,14 +324,10 @@ void TestPagedTextEditor::longLineLoadsInChunks() {
 	QCOMPARE(editor.lineText(0).size(), 5000);
 	QVERIFY(editor.displayedLineText(0).size() < longLine.size());
 
-	editor.grab();
-	const QRect button = editor.loadMoreButtonRect(0);
-	QVERIFY(button.isValid());
-
+	QVERIFY(editor.horizontalScrollBar()->maximum() > 0);
 	const int before = editor.displayedLineText(0).size();
-	QTest::mouseClick(editor.viewport(), Qt::LeftButton, Qt::NoModifier,
-		button.center());
-	QVERIFY(editor.displayedLineText(0).size() > before);
+	editor.horizontalScrollBar()->setValue(editor.horizontalScrollBar()->maximum());
+	QTRY_VERIFY(editor.displayedLineText(0).size() > before);
 	QCOMPARE(editor.lineText(0).size(), 5000);
 }
 
@@ -359,6 +357,33 @@ void TestPagedTextEditor::shiftSelectionCrossesLines() {
 	QCOMPARE(editor.cursorLine(), 0);
 	QCOMPARE(editor.cursorColumn(), 3);
 	QCOMPARE(editor.selectedText(), QStringLiteral("one"));
+}
+
+void TestPagedTextEditor::searchReportsBackgroundProgress() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto path = dir.filePath(QStringLiteral("background-search.txt"));
+
+	QStringList lines;
+	for (int i = 0; i < 20000; i++) {
+		lines.append(makeLine(i));
+	}
+	QFile file(path);
+	QVERIFY(file.open(QIODevice::WriteOnly));
+	file.write(lines.join(QLatin1Char('\n')).toUtf8());
+	file.close();
+
+	PagedTextEditor editor;
+	editor.resize(500, 300);
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 15000);
+
+	QSignalSpy progress(&editor, &PagedTextEditor::searchProgressChanged);
+	editor.setSearchQuery(QStringLiteral("quick"));
+	QVERIFY(BackgroundTaskRegistry::instance().taskCount() > 0);
+	QTRY_VERIFY_WITH_TIMEOUT(editor.searchMatchCount() > 0, 15000);
+	QTRY_COMPARE_WITH_TIMEOUT(BackgroundTaskRegistry::instance().taskCount(), 0, 15000);
+	QVERIFY(progress.count() > 0);
 }
 
 void TestPagedTextEditor::switchFileUpdatesTitle() {

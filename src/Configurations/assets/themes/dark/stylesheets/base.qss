@@ -258,3 +258,6 @@ QCheckBox::indicator {
 QCheckBox::indicator:hover { border-color:#1177bb; }
 QCheckBox::indicator:checked { background:#1177bb; border-color:#1177bb; }
 QCheckBox::indicator:disabled { border-color:#3e3e42; background:#252526; }
+
+/* ---------- Индикатор фоновых задач ---------- */
+QLabel#BackgroundTasksIndicatorLabel { color:#d4d4d4; padding:0px 6px; }

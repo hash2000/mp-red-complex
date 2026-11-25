@@ -247,6 +247,12 @@ PagedTextDocument::PagedTextDocument(QWidget* parent)
 		}
 		d->search->setCounter(d->editor->currentSearchIndex(), count);
 	});
+	connect(d->editor, &PagedTextEditor::searchProgressChanged, this,
+		[this](int count) {
+			if (d->search) {
+				d->search->setCounter(-1, count);
+			}
+		});
 	connect(d->editor, &PagedTextEditor::searchCurrentChanged, this,
 		[this](int current, int total) {
 			if (d->search) {

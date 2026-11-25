@@ -8,7 +8,10 @@ file(GLOB_RECURSE SRCS ${Base-Sources}/*.cpp)
 
 qt_add_library(RedComplexBase STATIC
 	${SRCS}
+	${Base-Sources}/background_task_registry.h
 )
+
+set_target_properties(RedComplexBase PROPERTIES CMAKE_AUTOMOC ON)
 
 target_include_directories(RedComplexBase PRIVATE
 	${SODIUM_INCLUDE_DIRS}

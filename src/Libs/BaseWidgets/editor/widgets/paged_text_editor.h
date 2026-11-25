@@ -8,11 +8,14 @@
 
 class QWheelEvent;
 
-/// Прототип виртуального редактора для очень больших файлов.
+/// Виртуальный редактор для очень больших файлов.
 ///
 /// В памяти держится только индекс начал строк и несколько страниц текста;
-/// остальное читается с диска по мере прокрутки. Пока режим только для
-/// просмотра: правка, выделение и поиск появятся следующими шагами.
+/// остальное читается с диска по мере прокрутки. Функциональные блоки:
+/// PagedFileIndexer/PagedLineCache — файл и страницы, PagedLineChunks — длинные
+/// строки, TextLayout — экранные строки и позиция курсора, PagedTextRenderer —
+/// отрисовка, PagedSearch — фоновый поиск. Редактирование и многокурсорность —
+/// следующий этап; они добавляются поверх этих классов.
 class PagedTextEditor : public QAbstractScrollArea {
 	Q_OBJECT
 public:
@@ -42,9 +45,8 @@ public:
 	/// Номер экранной строки внутри логической (с учётом WordWrap).
 	int cursorVisualRow() const;
 	bool isCursorVisible() const;
-	/// Отображаемая часть строки (с учётом «Загрузить ещё…»).
+	/// Отображаемая часть строки (с учётом кусочной загрузки).
 	QString displayedLineText(int line) const;
-	QRect loadMoreButtonRect(int line) const;
 	void setCursorPosition(int line, int column, bool keepAnchor = false);
 	void selectAll();
 	/// Выделенный текст (многострочный — через '\n').
@@ -79,6 +81,8 @@ signals:
 	void lineCountChanged(int lines);
 	void cursorPositionChanged(int line, int column);
 	void searchCountChanged(int matches);
+	/// Промежуточное количество найденных совпадений во время фонового поиска.
+	void searchProgressChanged(int matches);
 	void searchCurrentChanged(int current, int total);
 	void fontSizeChanged(int size);
 	void wordWrapChanged(bool enabled);
