@@ -19,6 +19,7 @@ private slots:
 	void opensLargeFileInBackground();
 	void selectionAndCursor();
 	void searchCountsInBackground();
+	void searchJumpWithWordWrapKeepsMatchVisible();
 	void searchFindsAfterTabs();
 	void exposesSearchProperties();
 	void fontSizeAndWordWrap();
@@ -147,6 +148,37 @@ void TestPagedTextEditor::searchCountsInBackground() {
 
 	editor.setSearchQuery(QString());
 	QCOMPARE(editor.searchMatchCount(), 0);
+}
+
+void TestPagedTextEditor::searchJumpWithWordWrapKeepsMatchVisible() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto path = dir.filePath(QStringLiteral("wrap-search.txt"));
+
+	QStringList lines;
+	for (int i = 0; i < 40; i++) {
+		lines.append(QStringLiteral("line %1 with a very long prefix before needle "
+			"and some trailing text after it").arg(i));
+	}
+	QFile file(path);
+	QVERIFY(file.open(QIODevice::WriteOnly));
+	file.write(lines.join(QLatin1Char('\n')).toUtf8());
+	file.close();
+
+	PagedTextEditor editor;
+	editor.resize(260, 240);
+	editor.setWordWrap(true);
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+
+	editor.setSearchQuery(QStringLiteral("needle"));
+	QTRY_COMPARE_WITH_TIMEOUT(editor.searchMatchCount(), 40, 10000);
+
+	for (int i = 0; i < 12; i++) {
+		editor.searchNext();
+		QVERIFY2(editor.isCursorVisible(),
+			qPrintable(QStringLiteral("match %1 is outside the viewport").arg(i)));
+	}
 }
 
 void TestPagedTextEditor::searchFindsAfterTabs() {

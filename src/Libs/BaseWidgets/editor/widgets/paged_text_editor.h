@@ -41,6 +41,7 @@ public:
 	int cursorColumn() const;
 	/// Номер экранной строки внутри логической (с учётом WordWrap).
 	int cursorVisualRow() const;
+	bool isCursorVisible() const;
 	void setCursorPosition(int line, int column, bool keepAnchor = false);
 	void selectAll();
 	/// Выделенный текст (многострочный — через '\n').

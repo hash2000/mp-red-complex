@@ -220,6 +220,7 @@ struct PagedTextEditor::Private {
 	bool searching = false;
 	bool searchSelectionActive = false;
 	bool searchCaseSensitive = false;
+	int rowOffsetPx = 0;
 	QFutureWatcher<SearchOutcome>* searchWatcher = nullptr;
 	std::shared_ptr<std::atomic_bool> searchCancel;
 	quint64 searchGeneration = 0;
@@ -243,6 +244,7 @@ struct PagedTextEditor::Private {
 	int logicalLineAtY(int y) const;
 	bool positionAt(int x, int y, int& line, int& column) const;
 	void ensureCursorVisible();
+	bool cursorRowGeometry(int line, int& y, int& height) const;
 	void selectMatch(int index);
 	void updateCurrentForCursor();
 	void moveCursorVertically(int delta, bool keepAnchor);
@@ -428,7 +430,7 @@ int PagedTextEditor::Private::logicalLineAtY(int y) const {
 	}
 
 	const int first = q->verticalScrollBar()->value();
-	int top = 0;
+	int top = -rowOffsetPx;
 	for (int i = first; i < lines; i++) {
 		QTextLayout layout(lineAt(i), q->font());
 		configureLayout(layout);
@@ -458,7 +460,7 @@ bool PagedTextEditor::Private::positionAt(int x, int y, int& line, int& column) 
 	const int gutter = gutterWidth();
 	const qreal contentX = x - gutter
 		+ (wrapLines ? 0 : q->horizontalScrollBar()->value());
-	int top = 0;
+	int top = -rowOffsetPx;
 	for (int i = first; i < lines; i++) {
 		const QString text = lineAt(i);
 		QTextLayout layout(text, q->font());
@@ -484,14 +486,78 @@ bool PagedTextEditor::Private::positionAt(int x, int y, int& line, int& column) 
 }
 
 void PagedTextEditor::Private::ensureCursorVisible() {
+	if (!ready || lines <= 0) {
+		return;
+	}
+
 	auto* vertical = q->verticalScrollBar();
+	int cursorY = 0;
+	int cursorHeight = 0;
+	if (!cursorRowGeometry(cursorLine, cursorY, cursorHeight)) {
+		return;
+	}
+
+	const int viewportHeight = q->viewport()->height();
 	const int pageStep = qMax(1, vertical->pageStep());
-	if (cursorLine < vertical->value()) {
+	if (cursorLine < vertical->value()
+		|| cursorLine >= vertical->value() + pageStep) {
+		// Далёкий переход не считаем построчно: сразу ставим строку
+		// началом области и при необходимости прокручиваем внутри неё.
 		vertical->setValue(cursorLine);
+		rowOffsetPx = qMax(0, cursorY + cursorHeight - viewportHeight);
+		if (cursorY < rowOffsetPx) {
+			rowOffsetPx = cursorY;
+		}
+		return;
 	}
-	else if (cursorLine >= vertical->value() + pageStep) {
-		vertical->setValue(cursorLine - pageStep + 2);
+
+	// Экранная позиция строки курсора относительно текущей прокрутки.
+	int visibleY = -rowOffsetPx + cursorY;
+	int previousHeight = 0;
+	for (int i = vertical->value(); i < cursorLine; i++) {
+		QTextLayout layout(lineAt(i), q->font());
+		configureLayout(layout);
+		for (int visual = 0; visual < layout.lineCount(); visual++) {
+			previousHeight += qMax(1, qCeil(layout.lineAt(visual).height()));
+		}
 	}
+	visibleY += previousHeight;
+
+	if (visibleY >= 0 && visibleY + cursorHeight <= viewportHeight) {
+		return;
+	}
+
+	// Строку с найденным фрагментом ставим началом видимой области, а
+	// внутри неё оставляем нужную экранную строку.
+	vertical->setValue(cursorLine);
+	rowOffsetPx = qMax(0, cursorY + cursorHeight - viewportHeight);
+	if (cursorY < rowOffsetPx) {
+		rowOffsetPx = cursorY;
+	}
+}
+
+bool PagedTextEditor::Private::cursorRowGeometry(int line, int& y, int& height) const {
+	if (line < 0 || line >= lines) {
+		return false;
+	}
+
+	QTextLayout layout(lineAt(line), q->font());
+	configureLayout(layout);
+	int top = 0;
+	for (int visual = 0; visual < layout.lineCount(); visual++) {
+		const QTextLine textLine = layout.lineAt(visual);
+		const int rowHeight = qMax(1, qCeil(textLine.height()));
+		const int end = textLine.textStart() + textLine.textLength();
+		if (cursorColumn >= textLine.textStart()
+			&& (cursorColumn < end
+				|| (visual + 1 == layout.lineCount() && cursorColumn == end))) {
+			y = top;
+			height = rowHeight;
+			return true;
+		}
+		top += rowHeight;
+	}
+	return false;
 }
 
 void PagedTextEditor::Private::moveCursorVertically(int delta, bool keepAnchor) {
@@ -692,7 +758,6 @@ PagedTextEditor::PagedTextEditor(QWidget* parent)
 		if (!d) {
 			return;
 		}
-
 		d->searching = false;
 		const SearchOutcome outcome = d->searchWatcher->result();
 		if (d->searchActiveGeneration != d->searchGeneration || outcome.cancelled) {
@@ -717,6 +782,10 @@ PagedTextEditor::PagedTextEditor(QWidget* parent)
 
 		viewport()->update();
 		emit searchCountChanged(d->searchTotal);
+	});
+
+	connect(verticalScrollBar(), &QScrollBar::valueChanged, this, [this] {
+		d->rowOffsetPx = 0;
 	});
 
 	d->updateScrollBars();
@@ -750,6 +819,7 @@ void PagedTextEditor::openFile(const QString& path, const QString& encoding) {
 	d->maxLineLength = 0;
 	d->fileSize = 0;
 	d->lineStarts.clear();
+	d->rowOffsetPx = 0;
 	d->path = path;
 	d->encodingName = encoding;
 	d->codec = QTextCodec::codecForName(encoding.toLatin1());
@@ -870,6 +940,30 @@ int PagedTextEditor::cursorVisualRow() const {
 	return 0;
 }
 
+bool PagedTextEditor::isCursorVisible() const {
+	if (!d->ready) {
+		return false;
+	}
+
+	int cursorY = 0;
+	int cursorHeight = 0;
+	if (!d->cursorRowGeometry(d->cursorLine, cursorY, cursorHeight)) {
+		return false;
+	}
+
+	int visibleY = -d->rowOffsetPx + cursorY;
+	for (int i = verticalScrollBar()->value(); i < d->cursorLine; i++) {
+		QTextLayout layout(d->lineAt(i), font());
+		d->configureLayout(layout);
+		for (int visual = 0; visual < layout.lineCount(); visual++) {
+			visibleY += qMax(1, qCeil(layout.lineAt(visual).height()));
+		}
+	}
+
+	return visibleY >= 0
+		&& visibleY + cursorHeight <= viewport()->height();
+}
+
 void PagedTextEditor::setCursorPosition(int line, int column, bool keepAnchor) {
 	if (!d->ready) {
 		return;
@@ -961,6 +1055,7 @@ void PagedTextEditor::setFontSize(int size) {
 	QFont current = font();
 	current.setPointSize(size);
 	setFont(current);
+	d->rowOffsetPx = 0;
 	d->updateScrollBars();
 	verticalScrollBar()->setValue(qMin(first, verticalScrollBar()->maximum()));
 	viewport()->update();
@@ -976,6 +1071,7 @@ bool PagedTextEditor::wordWrap() const {
 
 	const int first = verticalScrollBar()->value();
 	d->wrapLines = enabled;
+	d->rowOffsetPx = 0;
 	setHorizontalScrollBarPolicy(enabled ? Qt::ScrollBarAlwaysOff : Qt::ScrollBarAsNeeded);
 	d->updateScrollBars();
 	verticalScrollBar()->setValue(qMin(first, verticalScrollBar()->maximum()));
@@ -1192,7 +1288,7 @@ void PagedTextEditor::paintEvent(QPaintEvent* event) {
 	const bool highlightToken = !token.isEmpty() && token.size() >= 2;
 
 	painter.save();
-	int y = 0;
+	int y = -d->rowOffsetPx;
 	for (int i = first; i < d->lines && y < viewportHeight; i++) {
 		QString text = d->lineAt(i);
 		if (text.endsWith(QLatin1Char('\r'))) {
