@@ -1,5 +1,6 @@
 #pragma once
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_search.h"
+#include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_text_highlighter.h"
 
 #include <QFont>
 #include <QHash>
@@ -40,6 +41,7 @@ struct PagedTextPaintModel {
 
 	std::function<QString(int)> rawLine;
 	std::function<QString(int)> displayLine;
+	std::function<QVector<PagedTextSpan>(int)> highlightSpans;
 };
 
 /// Отрисовка текста, выделения, поиска и gutter.

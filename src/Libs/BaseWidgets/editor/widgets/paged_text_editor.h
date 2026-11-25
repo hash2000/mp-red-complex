@@ -7,6 +7,10 @@
 #include <memory>
 
 class QWheelEvent;
+class FormatterPlugin;
+class FormatterPluginManager;
+class HighlightingPlugin;
+class HighlightingPluginManager;
 
 /// Виртуальный редактор для очень больших файлов.
 ///
@@ -57,6 +61,21 @@ public:
 	/// Переоткрыть текущий файл в другой кодировке.
 	void setEncoding(const QString& encoding);
 
+	void setHighlightingManager(HighlightingPluginManager* manager);
+	void setFormatterManager(FormatterPluginManager* manager);
+	/// Включить подсветку по плагину; nullptr — без подсветки.
+	bool setHighlightingPlugin(HighlightingPlugin* plugin);
+	HighlightingPlugin* highlightingPlugin() const;
+	bool isHighlightingEnabled() const;
+	void setHighlightingEnabled(bool enabled);
+
+	/// Доступен ли форматировщик для выбранного языка.
+	bool canFormat() const;
+	bool isFormatting() const;
+	/// Форматирование всего файла с записью результата обратно в файл.
+	bool formatDocument();
+	qint64 fileSize() const;
+
 	int fontSize() const;
 	void setFontSize(int size);
 	bool wordWrap() const;
@@ -87,6 +106,11 @@ signals:
 	void fontSizeChanged(int size);
 	void wordWrapChanged(bool enabled);
 	void lineNumbersVisibleChanged(bool visible);
+	void highlightingChanged();
+	void highlightingEnabledChanged(bool enabled);
+	void formattingStarted();
+	void formattingFinished(bool changed);
+	void formattingFailed(const QString& errorMessage);
 
 protected:
 	void paintEvent(QPaintEvent* event) override;

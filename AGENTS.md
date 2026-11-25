@@ -3,17 +3,20 @@
 RedComplex — это multiapp на C++20 с Qt6, модульной архитектурой и акцентом на extensibility. Текущая версия — modular multiapp, not a game, with pluggable modules, data libraries, and a shared engine layer.
 
 ## Языковые стандарты
+
 - Эталонная локаль - русская (ru)
 - Все комментарии и документация предпочтительно на русском языке
 
 ## Команды сборки
 
 ### Требования
+
 - CMake 4.1+
 - Компилятор с поддержкой C++20 (MSVC или GCC)
 - vcpkg для управления зависимостями
 
 ### Сборка проекта
+
 ```bash
 # Конфигурация с CMake (используя toolchain vcpkg)
 cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=[vcpkg-root]/scripts/buildsystems/vcpkg.cmake
@@ -36,6 +39,7 @@ cmake --build build --target Launcher
 ```
 
 ### Запуск приложений
+
 ```bash
 # Запуск Launcher
 ./build/{Configuration}/Launcher
@@ -49,8 +53,8 @@ cmake --build build --target Launcher
 Для запуска в отладочном режиме требуется указать переменную среды `QT_PLUGIN_PATH`, если для x64 windows, и проект собран через Clang, то
 `QT_PLUGIN_PATH`='build\x64-Clang-Debug\vcpkg_installed\x64-windows\debug\Qt6\plugins'
 
-
 ### Запуск тестов
+
 ```bash
 # Сборка тестов
 cmake --build build --target RunTests
@@ -72,11 +76,13 @@ ctest --output-on-failure
 ## Стандарты кода
 
 ### Общее
+
 - **Язык**: C++20
 - **Фреймворк Qt**: Qt6 (Core, Gui, Widgets, OpenGLWidgets)
 - **Зависимости**: EnTT (entity-component system), ZLIB
 
 ### Организация файлов
+
 - Заголовочные файлы: расширение `.h`
 - Файлы реализации: расширение `.cpp`
 - Использовать `#pragma once` для защиты заголовков (не `#ifndef`)
@@ -85,12 +91,13 @@ ctest --output-on-failure
 - Класс, который существует только для обслуживания другого класса, хранится в подкаталоге, названном по обслуживаемому классу: например `NewDocumentDialog` создан для `MainWindow` → `src/Libs/Engine/ui/main_window/new_document_dialog.h/cpp`. Когда класс перестаёт принадлежать одному конкретному классу и становится общим (например, в процессе рефакторинга), его переносят в общий каталог своего слоя.
 
 ### Виджеты и документы модулей
+
 - Самостоятельный виджет модуля хранится в `src/Content/{Module}/widgets/{widget_name.h/cpp}`; он не знает о документе и его состоянии.
 - Виджет, который открывается как документ и сохраняет состояние, оборачивается в `DocumentWidget`: обёртка-документ хранится в `src/Content/{Module}/documents/{document_name.h/cpp}` и ведёт путь, признак изменения, сохранение и реакции на изменение состояния.
 - Любой виджет, созданный `MainWindow::createWidget` в любой зоне, считается документом: если фабрика вернула не `DocumentWidget`, его оборачивает `DocumentWidgetStub`. Виджет без собственного класса-документа всё равно получает контекст `.documents.{id}` и участвует в общем дереве документов.
 
-
 ### Соглашения об именовании
+
 - **Классы**: `PascalCase` (например, `ApplicationController`)
 - **Интерфейсы**: `PascalCase` с префиксом `I` (например, `IInventoryRepository`)
 - **Реализации**: `PascalCase` с суффиксом `Impl` (например, `InventoryRepositoryJsonImpl`)
@@ -116,6 +123,7 @@ private:
 ```
 
 ### Форматирование
+
 - **Отступы**: 2 пробела (табы преобразуются в пробелы)
 - **Окончания строк**: CRLF (Windows)
 - **Фигурные скобки**: открывающая скобка на той же строке для функций/классов
@@ -129,6 +137,7 @@ for (int z = 0; z < 16; ++z) // Нет
 ```
 
 ### Импорты и предварительные объявления
+
 - Использовать предварительные объявления, чтобы избежать лишних включений в заголовках
 - Группировать включения по категориям:
   1. Соответствующий заголовок (в .cpp файлах)
@@ -152,6 +161,7 @@ public:
 ```
 
 ### Управление памятью
+
 - Использовать `std::unique_ptr` для эксклюзивного владения
 - Использовать `std::shared_ptr` для разделяемого владения
 - Использовать `std::make_unique<T>()` и `std::make_shared<T>()` для создания
@@ -174,6 +184,7 @@ MyClass::~MyClass() = default; // or implementation
 ```
 
 ### Типы и современный C++
+
 - Использовать `std::optional<T>` вместо нулевых указателей для nullable возвращаемых значений
 - Использовать `std::span` для представления массивов
 - Использовать range-based for циклы с `const auto&`
@@ -189,6 +200,7 @@ for (const auto& entry : entries) { }
 ```
 
 ### Обработка ошибок
+
 - Использовать исключения экономно с типами, производными от `std::exception`
 - Логировать ошибки с помощью `qWarning()` или `qInfo()`
 - Использовать `Q_UNUSED()` для намеренно неиспользуемых параметров
@@ -205,6 +217,7 @@ catch (std::exception& ex) {
 ```
 
 ### Qt-специфичные паттерны
+
 - Использовать макрос `Q_OBJECT` во всех классах, производных от QObject
 - Использовать сигналы/слоты для паттерна наблюдателя Qt
 - Использовать `QPointer<T>` для указателей на QObject, которые могут стать невалидными
@@ -212,6 +225,7 @@ catch (std::exception& ex) {
 - Использовать `QDir`, `QFileInfo` для файловых операций
 
 ### Логирование
+
 - `qDebug()` - отладочная информация
 - `qInfo()` - общая информация
 - `qWarning()` - предупреждения (некритические ошибки)
@@ -219,21 +233,23 @@ catch (std::exception& ex) {
 - `qFatal()` - фатальные ошибки (прерывание)
 
 ### Структура проекта
-* src/Content/{ModuleName} - модули системы, сейчас подключаются статически, в дальнейшем будет реализовываться система динамической подгрузки
-* src/Libs/Base - базовые, независимые классы и методы
-* src/Libs/BaseWidgets - базовые виджеты системы, в том числе виртуальный редактор (`editor/`: `CodeEditorWidget`, `PagedTextEditor`, подсветка и форматтеры)
-* src/Libs/DataFormat - legacy блок, сейчас тут модели и методы десериализации .dat файлов от игры fallout 2, в дальнейшем будут вынесены в отдельный модуль
-* src/Libs/DataStream - библиотека с базовыми методами для работы с бинарными данными, была сделана в связке с DataFormat, сейчас от неё ухожу, будет вынесена в отдельный модуль вместе с DataFormat
-* src/Libs/Engine - ядро системы, тут система работы со скриптами, командами, конфигурациями, виджеты главного окна, QApplication
-* src/Libs/Graphics - подразумевается, как библиотека с виджетами и классами для работы с графикой
-* src/Libs/Resources - библиотека по управлению и хранению глобальных ресурсов системы - переменные, директории, встроенная база данных
-* src/Configurations - базовая конфигурация системы, будет устанавливаться вместе с готовым приложением как эталонная. тут скрипты, и yaml файлы с описанием частей системы. подразумевается , что будет модифицироваться пользовательская копия конфигурации
-* src/Legacy - старые исходники, в них есть решения , которые будут возвращены в основной проект, после того как будет обновлена система загрузки приложения. не включена в цепочку компиляции.
-* src/externals - внешние зависимости, которых нет в vcpkg. при работе с зависимостями - vcpkg предпочтительнее, всегда стараться брать из него.
+
+- src/Content/{ModuleName} - модули системы, сейчас подключаются статически, в дальнейшем будет реализовываться система динамической подгрузки
+- src/Libs/Base - базовые, независимые классы и методы
+- src/Libs/BaseWidgets - базовые виджеты системы, в том числе виртуальный редактор (`editor/`: `CodeEditorWidget`, `PagedTextEditor`, подсветка и форматтеры)
+- src/Libs/DataFormat - legacy блок, сейчас тут модели и методы десериализации .dat файлов от игры fallout 2, в дальнейшем будут вынесены в отдельный модуль
+- src/Libs/DataStream - библиотека с базовыми методами для работы с бинарными данными, была сделана в связке с DataFormat, сейчас от неё ухожу, будет вынесена в отдельный модуль вместе с DataFormat
+- src/Libs/Engine - ядро системы, тут система работы со скриптами, командами, конфигурациями, виджеты главного окна, QApplication
+- src/Libs/Graphics - подразумевается, как библиотека с виджетами и классами для работы с графикой
+- src/Libs/Resources - библиотека по управлению и хранению глобальных ресурсов системы - переменные, директории, встроенная база данных
+- src/Configurations - базовая конфигурация системы, будет устанавливаться вместе с готовым приложением как эталонная. тут скрипты, и yaml файлы с описанием частей системы. подразумевается , что будет модифицироваться пользовательская копия конфигурации
+- src/Legacy - старые исходники, в них есть решения , которые будут возвращены в основной проект, после того как будет обновлена система загрузки приложения. не включена в цепочку компиляции.
+- src/externals - внешние зависимости, которых нет в vcpkg. при работе с зависимостями - vcpkg предпочтительнее, всегда стараться брать из него.
 
 ### Распространённые паттерны
 
 #### Соединения сигналов/слотов
+
 ```cpp
 connect(d->controller, &Controller::valueChanged,
         this, &MyClass::onValueChanged);
@@ -244,14 +260,17 @@ signals:
 ```
 
 #### Система свойств
+
 ```cpp
 Q_PROPERTY(int count READ count WRITE setCount NOTIFY countChanged)
 ```
 
 #### Модульное тестирование (Qt Test Framework)
+
 Тесты расположены в директории `tests/` и используют Qt Test Framework.
 
 **Структура тестового файла:**
+
 ```cpp
 #include <QtTest/QtTest>
 #include "ApplicationLayer/items/items_service.h"
@@ -282,6 +301,7 @@ QTEST_MAIN(TestMyClass)
 ```
 
 **Ключевые макросы тестов:**
+
 - `QVERIFY(condition)` — Проверить, что условие истинно
 - `QCOMPARE(actual, expected)` — Сравнить значения
 - `QTEST_MAIN(TestClass)` — Точка входа для тестов
@@ -355,6 +375,7 @@ Launcher              точка входа и композиция: main.cpp, A
 - Мёртвые контексты убирает `CommandContext::pruneDeadContexts()`: обход идёт от глобального контекста по всем вложенным, из реестров удаляются записи, чьи владельцы уже уничтожены (`std::weak_ptr::expired()`), возвращается число удалённых. `CommandController::init()` запускает фоновый поток `CommandContextCleanup` с `QTimer`: таймер живёт в фоновом потоке, а сама чистка выполняется в потоке контроллера через `Qt::QueuedConnection`, так как реестр принадлежит GUI-потоку. Период задаётся переменной `command.context.cleanupIntervalMs` (по умолчанию 30000 мс); поток останавливается в деструкторе контроллера.
 
 #### Парсер DSL
+
 - `SourceCursor` (`scripting/parser/source_cursor.*`) — курсор по исходнику: позиция, `SourceLocation`, пропуск пробелов и комментариев (`//`, `/* */`).
 - `IParser` (`parser/i_parser.h`) — `parse(SourceCursor&, std::optional<ParseError>&)` возвращает `IAstPtr` либо `nullptr` (не подошло или ошибка), `tokens()` отдаёт статические токены.
 - `IAst`/`AstBase` (`parser/i_ast.h`, `parser/base/ast_base.*`) — узел AST: параметры, типизированные дети (`setChild`/`children`) и локация.
@@ -463,6 +484,7 @@ Launcher              точка входа и композиция: main.cpp, A
 #### Ключевые компоненты
 
 **Запуск и команды**
+
 - `Application` (`Libs/Engine/application.*`) — `run()`, настройка Qt/OpenGL, `setupResources()`, `registerTypes()`, создание главного окна; фатальные ошибки — `qFatal()`.
 - `LauncherApplication` (`src/Launcher/main.cpp`) — метаданные приложения (`Hash2000` / `ru.hash2000` / `red-complex`) и сборка `ApplicationController` в `buildCommandController()`.
 - `ApplicationController` (`src/Launcher/app_controller.*`) — реализация `CommandController`: `CommandProcessor`, `Controllers`, ленивая `ServicesRegistry`; `initContext()` регистрирует `help`, `echo`, `documents`, `info-panels`, `side-panels`, `users`, `fetch-api`.
@@ -470,15 +492,18 @@ Launcher              точка входа и композиция: main.cpp, A
 - `CommandProcessor`, `CommandContext`, `ICommand`, `ParserCommand` — см. раздел «Команды и контексты».
 
 **Парсер**
+
 - `SourceCursor`, `IParser`, `IAst`/`AstBase` (`scripting/parser/`).
 - `parser/base/*`: `ParserValue`, `ParserNumber`, `ParserVariable`, `ParserAttributesCollection`, `ParserAttribute`, `ParserInclude`, `ParserBindings`, `ParserIdentifiersSpace`, `ParserPass`; `parser/commands/ParserCommand`.
 - `scripting/parser/README.md` — синтаксис DSL.
 
 **Сервисы**
+
 - `ServicesRegistry`, `IServicesFactory`/`LazyPtr` (`Libs/Engine/services/*`).
 - `Services`/`ServicesFactory` (`src/Launcher/services.*`) — единственная точка регистрации сервисов и провайдеров.
 
 **Ресурсы, профиль, БД**
+
 - `Resources`, `VariablesContext`, `DirectoriesContext` (`Libs/Resources`), `Profile`, `Profiles` (`Libs/Engine/profiles`, `Libs/Resources/profiles`).
 - `BootstrapManager`, `BootstrapConfig` (`Libs/Engine/scripting/bootstrap`).
 - `DatabasesService` (`Content/DatabaseModule/services/databases_service.*`).
@@ -486,25 +511,30 @@ Launcher              точка входа и композиция: main.cpp, A
 - Настройки хранилищ — `Configurations/stores/<store>.yaml`, список — `bootstrap.yaml` (`stores.items`); файлы миграций — `Configurations/stores/migrations/<store>`; детали в `src/Configurations/stores/README.md`.
 
 **Bootstrap и темы**
+
 - `BootstrapManager` (`scripting/bootstrap/bootstrap_manager.*`) — тема, палитра и `config()` (загруженный `bootstrap.yaml`); `BootstrapConfig::loadBootstrap()` (`bootstrap_config.h`).
 - `BootstrapContextBuilder` (`scripting/bootstrap/bootstrap_context_builder.*`) — контексты `.store.<name>` с переменными `path`, `encrypted`, `wal.checkInterval`, `wal.maxSizeMb` и списком `migrations`; режим хранилищ — `ReadOnly`, `reload()` идемпотентен и обновляет значения.
 - `ThemeManager`, `PaletteParser` (`Libs/Engine/themes/*`).
 
 **Декларативный UI**
+
 - `ClassManager` (`scripting/application/class_manager.*`) — загрузка `main.yaml`, разрешение `extends`/`requires`, слияние `content`, создание вьюпорта и панелей.
 - `WidgetsBuilder` (`src/Launcher/widgets_builder.*`) — регистрация нативных классов: `System.Viewport.MainForm`/`mainform`, `System.Panels.ConsolePanel`/`console`, `System.Panels.Properties`/`properties`, `System.Panels.Explorer`/`explorer`, `System.Panels.Panel`/`panel`, `Content.Users.*`/`user-login`/`user-register`/`user-profile`, `Content.FetchApi.*`/`fetch-api`/`fetch-api-queries-tree`, `Content.SystemRouter.SystemRouterTree`/`system-router`, `Content.SystemRouter.SystemRouterNodeProperties`/`system-router-node-properties`, `Content.TextEditor.CodeEditor`/`code-editor`, `Content.TextEditor.PagedText`/`large-text-viewer`, `Launcher.WarmupWidget`/`warmup`.
 - `WidgetRegistry` (`scripting/widgets/widget_registry.*`) — `registerFactory(WidgetTypeHandler{className, xtype, singletone[, title[, rule]]}, factory)`, `types()`/`typeInfo()` для списка типов и значений по умолчанию, `documentId(type, id)` для имени документа (у `singletone` — `xtype`), `registerDocumentMetadata(className, IDocumentMetadata)`/`documentMetadata(type)` для обязательных переменных типа (поиск по xtype или классу), `build(type, WidgetBuildHandler)` — возвращает `DocumentWidget*` (результат фабрики оборачивается в `DocumentWidgetStub`) и `buildWidget(type, handler)` — сырой виджет для вьюпорта; `WidgetBuildHandler` передаёт `name`, `title`, `parent`, `options`, `context`.
 
 **Оболочка**
+
 - `MainWindow`, `ActivityBar`, `SideHostPanel`, `DocumentTabsPanel`, `DocumentArea`, `DocumentWidget`, `DocumentWidgetStub`, `TextDocument`, `PropertiesPanel`, `BottomPanel`, `CommandConsole`, `WidgetRegistry`(`Libs/scripting/widgets/widget_registry.*`), `GlyphToolButton`, `NameSelectDialog`, `NewDocumentDialog` (`Libs/Engine/ui/main_window/*`).
 
 **Окна MDI (legacy), зоны и контроллеры**
+
 - `MdiChildWindow` (`Libs/Engine/mdi_child_window.*`), `MdiArea` (`Libs/BaseWidgets/mdi_area.*`).
 - `WindowsController` (`src/Launcher/controllers/windows_controller.*`), `WindowsBuilder` (`src/Launcher/windows_builder.*`), `Controllers` (`src/Launcher/controllers.*`) — legacy, не используются командами зон.
 - `ActionPanelController`, `ActionButtonConfig` (`src/Launcher/controllers/action_panel_controller.*`, `action_button_config.h`).
 - `WidgetZoneCommand` (`Libs/Engine/commands/widget_zone_command.*`); команды `documents`, `info-panels`, `side-panels`.
 
 **Модули**
+
 - ConsoleModule: `HelpCommand`, `EchoCommand` (`Content/ConsoleModule/commands`).
 - DatabaseModule: `DatabasesService` (настройки и миграции из контекстов `.store.<name>`, `databasePath`/`closeDatabase`/`verifyDatabaseFile`), `DatabaseBackupService` (`services/`, копии и восстановление файлов баз из `.store`), `DatabaseBackupWidget` (`widgets/`, список хранилищ и копий), `DatabaseBackupDocument` + `DatabaseBackupDocumentMetadata` (`documents/`, xtype `database-backup`, выбранное хранилище в переменной `store`), `LazyNodesDataProviderDb` (`data_providers/`, типовое дерево id/parent_id/name/data, чтение/запись `value_blob`), `DataBlobsProviderDb` (`data_providers/`, таблица `data_blobs`), тесты `TestDatabasesService`, `TestDatabaseBackup`, `TestLazyNodesDataProviderDb` (`src/Content/DatabaseModule/tests`).
 - UsersModule: `UsersService`, `UsersRegistryService`, `UsersRegistryDataProviderDb`, `User`/`UserData`/`UserView`, `LoginWidget`/`LoginDocument`, `RegisterWidget`/`RegisterDocument`, `UserWidget`/`UserDocument`, `crypto_extensions` (BIP-39-сид, соль, ключи БД).
@@ -518,6 +548,7 @@ Launcher              точка входа и композиция: main.cpp, A
 - Окна Launcher: `LoginWindow`, `UserWindow`, `WarmupWindow`/`WarmupWidget`, `CodeEditorWindow`, `FetchApiWindow`, `FetchApiQueriesTreeWindow` (`src/Launcher/windows/*`).
 
 **Библиотеки**
+
 - `Libs/Base`: `container_view.h` (`make_deref_view`), `exception.h`, `format.h`, `from.h`, `scoped_timer.h`, `crypto/security_buffer.h`, `crypto/bip_39.h`, `extensions/text_edit_extensions.h`.
 - `Libs/BaseWidgets`: `MdiArea`, `PropertiesListWidget` (`setProperties`/`addProperty`/`removeProperty`/`propertyIds`), `PropertiesGroupWidget` (`properties/properties_group_widget.*`: сворачиваемый раздел панели свойств с ленивым содержимым), `TabColorEditor` (`properties/tab_color_editor.*`: образец цвета, диалог выбора и сброс, сигнал `colorChanged`), `DocumentRibbon`/`RibbonButton` (`ribbon/`: лента документа и кнопка с значком свойств), `PropertyMime` (`properties/property_mime.h`: mime-типы свойств и выбор редактора), `KeyValueEditorWidget`, `FlowLayout`, `ClickableLabel`, lazy tree (`LazyTreeModel`, `LazyTreeView`, `LazyTreeWidget`, `LazyTreeBuilder`, `LazyTreeDataNode`, `ILazyNodesDataProvider`, `HighlightDelegate`, `LazyTreeNodeRole`, `LazyTreeNodeState`); поставщик БД — `LazyNodesDataProviderDb` в `Content/DatabaseModule/data_providers`.
 - `Libs/Graphics`: `BaseOpenGLWidget`, `Camera`, `ShaderProgram`, `UniformBuffer` + `FrameUniformBuffer`/`ViewMatricesUniformBuffer`, `TextureAtlas`, `UploadedTexture`, `TileRenderer`, `Chunk` + `ChunkDrawTileset`/`ChunkDrawBorder`/`ChunkDrawData`, `TextureRegion`, `TileData`, `PixmapExtensions`.
@@ -526,15 +557,15 @@ Launcher              точка входа и композиция: main.cpp, A
 - `src/externals/FastNoiseLite` — header-only генератор шума, не из vcpkg.
 
 **Вывод в консоль**
+
 - `ConsoleTable`, `ConsoleJson`, `ConsoleImage` (`Libs/Engine/console/*`); mime-константы `kCommandPrintStyle_Plane`/`kCommandPrintStyle_Table`/`kCommandPrintStyle_Json` (`command_controller.h`); классы стилей `info`, `error`, `success`, `warning`, `system`.
 
 **Цели сборки и тесты**
+
 - Цели: `Launcher`, `RedComplexBase`, `RedComplexBaseWidgets`, `RedComplexResources`, `RedComplexGraphics`, `RedComplexEngine`, `RedComplexDataStream`, `RedComplexDataFormat`, `RedComplexConsoleModule`, `RedComplexDatabaseModule`, `RedComplexUsersModule`, `RedComplexFetchApiModule`, `RedComplexMessagerModule`, `RedComplexSystemRouterModule`, `RedComplexTextEditorModule`.
 - Тесты: `TestEngine` (парсер, контексты, палитра — `tests/engine`), `TestUiZones` (зоны `MainWindow`, команды `documents`/`info-panels`/`side-panels`, контексты документов и копирование `application/x-mp-shared` — `tests/ui`), `TestClassManager` (загрузка `main.yaml`, `content.documents`/`delete`, эталонное описание `applications/singletone` — `tests/ui`), `TestHighlighters` (загрузка правил подсветки из темы — `tests/ui`), `TestCodeEditorSearch` (поиск, опции, переходы, снятие подсветки, режим `data` и сохранение — `tests/ui`), `TestLazyTreeView` и `TestLazyTreeWidget` (`tests/basewidgets`, ленивое дерево и его панель), `TestLazyNodesDataProviderDb` (CRUD/поиск/свойства в SQLite), `TestSystemRouter` (сервис, документ, mime-типы, кнопка code-editor и подстановка параметров), `TestSystemRouterCommandsDb` (миграции, `data_blobs`, value/value_blob, команды, сервис блоков, команды сохранения, вывода блоков и вывода узлов), `TestDatabasesService`, `TestDatabaseBackup` (копии и восстановление файлов баз из `.store`, шифрование, страховочные копии, виджет и документ), `TestItemsService` и `TestInventoriesService` (заготовки), агрегат `run_tests`; отдельной цели `RunTests` в `tests/CMakeLists.txt` нет.
 
-
 ## Ссылки на существующие скилы
-
 
 ## Рабочий процесс разработки
 

@@ -32,8 +32,19 @@ void PagedTextRenderer::paint(QPainter& painter, const PagedTextPaintModel& mode
 		const QString raw = model.rawLine ? model.rawLine(line) : QString();
 		const QString text = model.displayLine ? model.displayLine(line) : raw;
 
+		QVector<QTextLayout::FormatRange> formats;
+		if (model.highlightSpans) {
+			for (const PagedTextSpan& span : model.highlightSpans(line)) {
+				const int from = qBound(0, span.start, text.size());
+				const int to = qBound(0, span.start + span.length, text.size());
+				if (to > from) {
+					formats.append({ from, to - from, span.format });
+				}
+			}
+		}
+
 		TextLayout layout(text, model.font, model.wrapped,
-			qMax(1, viewportWidth - gutter - 8), TextLayout::kDefaultTabWidth);
+			qMax(1, viewportWidth - gutter - 8), TextLayout::kDefaultTabWidth, formats);
 		const int visualCount = qMax(1, layout.lineCount());
 		bool firstVisual = true;
 

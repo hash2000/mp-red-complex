@@ -288,8 +288,14 @@ void WidgetsBuilder::Private::registerAll() {
 	// читаются с диска, в памяти только индекс строк и кэш страниц.
 	registry->registerFactory({ "Content.TextEditor.PagedText", "large-text-editor",
 		/*singletone*/ false, QStringLiteral("Просмотр и редактирование больших файлов") },
-		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {
-			return new PagedTextDocument(handler.parent);
+		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
+			auto* services = servicesFor(type, handler);
+			auto* highlighter = requiredService<HighlightingPluginManager>(
+				services, type, "HighlightingPluginManager");
+			auto* formatter = requiredService<FormatterPluginManager>(
+				services, type, "FormatterPluginManager");
+			return highlighter && formatter
+				? new PagedTextDocument(highlighter, formatter, handler.parent) : nullptr;
 		});
 	registry->registerDocumentMetadata(QStringLiteral("Content.TextEditor.PagedText"),
 		std::make_unique<PagedTextDocumentMetadata>());

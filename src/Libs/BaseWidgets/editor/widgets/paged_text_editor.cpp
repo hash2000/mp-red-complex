@@ -1,10 +1,16 @@
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor.h"
 #include "Libs/Base/background_task_registry.h"
+#include "Libs/BaseWidgets/editor/formatters/formatter_plugin.h"
+#include "Libs/BaseWidgets/editor/formatters/formatter_plugin_manager.h"
+#include "Libs/BaseWidgets/editor/highlights/highlighter_plugin.h"
+#include "Libs/BaseWidgets/editor/highlights/highlighter_plugin_manager.h"
+#include "Libs/BaseWidgets/editor/language_info.h"
 #include "Libs/BaseWidgets/editor/layout/text_layout.h"
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_file_indexer.h"
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_line_cache.h"
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_line_chunks.h"
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_text_cursor.h"
+#include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_text_highlighter.h"
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_search.h"
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_text_renderer.h"
 
@@ -21,6 +27,7 @@
 #include <QPainter>
 #include <QResizeEvent>
 #include <QScrollBar>
+#include <QSaveFile>
 #include <QTextCodec>
 #include <QTextLine>
 #include <QWheelEvent>
@@ -59,6 +66,12 @@ struct PagedTextEditor::Private {
 
 	PagedLineCache cache;
 	PagedLineChunks chunks;
+	PagedTextHighlighter highlighter;
+	bool highlightingEnabled = true;
+	HighlightingPluginManager* highlightingManager = nullptr;
+	FormatterPluginManager* formatterManager = nullptr;
+	FormatterPlugin* currentFormatter = nullptr;
+	QString formatSource;
 
 	QFutureWatcher<PagedIndexResult>* watcher = nullptr;
 	std::shared_ptr<std::atomic_bool> cancelFlag;
@@ -89,6 +102,7 @@ struct PagedTextEditor::Private {
 	void clearPages();
 	QString indexTaskId() const;
 	QString searchTaskId() const;
+	QString formatTaskId() const;
 	QString lineAt(int line) const;
 	QString visibleText(int line) const;
 	int lineLimit(int line) const;
@@ -121,6 +135,10 @@ QString PagedTextEditor::Private::indexTaskId() const {
 
 QString PagedTextEditor::Private::searchTaskId() const {
 	return QStringLiteral("paged-search:%1").arg(quintptr(q), 0, 16);
+}
+
+QString PagedTextEditor::Private::formatTaskId() const {
+	return QStringLiteral("paged-format:%1").arg(quintptr(q), 0, 16);
 }
 
 QString PagedTextEditor::Private::lineAt(int line) const {
@@ -555,6 +573,12 @@ PagedTextEditor::PagedTextEditor(QWidget* parent)
 PagedTextEditor::~PagedTextEditor() {
 	BackgroundTaskRegistry::instance().endTask(d->indexTaskId());
 	BackgroundTaskRegistry::instance().endTask(d->searchTaskId());
+	if (d->currentFormatter) {
+		d->currentFormatter->stop();
+		d->currentFormatter->disconnect(this);
+		d->currentFormatter = nullptr;
+		BackgroundTaskRegistry::instance().endTask(d->formatTaskId());
+	}
 	if (d->cancelFlag) {
 		d->cancelFlag->store(true);
 	}
@@ -572,6 +596,12 @@ PagedTextEditor::~PagedTextEditor() {
 void PagedTextEditor::openFile(const QString& path, const QString& encoding) {
 	BackgroundTaskRegistry::instance().endTask(d->indexTaskId());
 	BackgroundTaskRegistry::instance().endTask(d->searchTaskId());
+	if (d->currentFormatter) {
+		d->currentFormatter->stop();
+		d->currentFormatter->disconnect(this);
+		d->currentFormatter = nullptr;
+		BackgroundTaskRegistry::instance().endTask(d->formatTaskId());
+	}
 	if (d->cancelFlag) {
 		d->cancelFlag->store(true);
 	}
@@ -591,6 +621,9 @@ void PagedTextEditor::openFile(const QString& path, const QString& encoding) {
 	d->codec = QTextCodec::codecForName(encoding.toLatin1());
 	if (!d->codec) {
 		d->codec = QTextCodec::codecForName("UTF-8");
+	}
+	if (d->highlightingManager) {
+		setHighlightingPlugin(d->highlightingManager->pluginForFile(path));
 	}
 
 	d->searchGeneration++;
@@ -642,6 +675,12 @@ void PagedTextEditor::openFile(const QString& path, const QString& encoding) {
 void PagedTextEditor::closeFile() {
 	BackgroundTaskRegistry::instance().endTask(d->indexTaskId());
 	BackgroundTaskRegistry::instance().endTask(d->searchTaskId());
+	if (d->currentFormatter) {
+		d->currentFormatter->stop();
+		d->currentFormatter->disconnect(this);
+		d->currentFormatter = nullptr;
+		BackgroundTaskRegistry::instance().endTask(d->formatTaskId());
+	}
 	if (d->cancelFlag) {
 		d->cancelFlag->store(true);
 	}
@@ -807,6 +846,147 @@ void PagedTextEditor::setEncoding(const QString& encoding) {
 	const int oldLine = verticalScrollBar()->value();
 	openFile(d->path, encoding);
 	d->restoreLine = oldLine;
+}
+
+void PagedTextEditor::setHighlightingManager(HighlightingPluginManager* manager) {
+	d->highlightingManager = manager;
+	if (manager && !d->path.isEmpty()) {
+		setHighlightingPlugin(manager->pluginForFile(d->path));
+	}
+}
+
+void PagedTextEditor::setFormatterManager(FormatterPluginManager* manager) {
+	d->formatterManager = manager;
+}
+
+bool PagedTextEditor::setHighlightingPlugin(HighlightingPlugin* plugin) {
+	if (d->highlighter.plugin() == plugin) {
+		return false;
+	}
+
+	d->highlighter.setPlugin(plugin);
+	const bool enabled = plugin != nullptr;
+	if (d->highlightingEnabled != enabled) {
+		d->highlightingEnabled = enabled;
+		emit highlightingEnabledChanged(enabled);
+	}
+	viewport()->update();
+	emit highlightingChanged();
+	return true;
+}
+
+HighlightingPlugin* PagedTextEditor::highlightingPlugin() const {
+	return d->highlighter.plugin();
+}
+
+bool PagedTextEditor::isHighlightingEnabled() const {
+	return d->highlightingEnabled && d->highlighter.plugin() != nullptr;
+}
+
+void PagedTextEditor::setHighlightingEnabled(bool enabled) {
+	if (d->highlightingEnabled == enabled) {
+		return;
+	}
+	d->highlightingEnabled = enabled;
+	viewport()->update();
+	emit highlightingEnabledChanged(enabled);
+}
+
+bool PagedTextEditor::canFormat() const {
+	if (!d->ready || d->currentFormatter || !d->formatterManager) {
+		return false;
+	}
+	const auto* plugin = d->highlighter.plugin();
+	return plugin != nullptr
+		&& d->formatterManager->formatter(plugin->languageInfo()) != nullptr;
+}
+
+bool PagedTextEditor::isFormatting() const {
+	return d->currentFormatter != nullptr;
+}
+
+bool PagedTextEditor::formatDocument() {
+	if (!canFormat()) {
+		return false;
+	}
+
+	QFile file(d->path);
+	if (!file.open(QIODevice::ReadOnly)) {
+		emit formattingFailed(tr("Не удалось открыть файл: %1").arg(d->path));
+		return false;
+	}
+
+	QTextCodec* codec = d->codec ? d->codec : QTextCodec::codecForName("UTF-8");
+	const QByteArray bytes = file.readAll();
+	file.close();
+	QString source = codec ? codec->toUnicode(bytes) : QString::fromUtf8(bytes);
+	if (source.startsWith(QChar(0xFEFF))) {
+		source.remove(0, 1);
+	}
+
+	auto* formatter = d->formatterManager->formatter(
+		d->highlighter.plugin()->languageInfo());
+	if (!formatter) {
+		return false;
+	}
+
+	d->currentFormatter = formatter;
+	d->formatSource = source;
+	BackgroundTaskRegistry::instance().beginTask(d->formatTaskId(),
+		tr("Форматирование файла"));
+
+	connect(formatter, &FormatterPlugin::formattingFinished, this,
+		[this, formatter, codec](const QString& formattedText) {
+			if (d->currentFormatter != formatter) {
+				return;
+			}
+			d->currentFormatter = nullptr;
+			formatter->disconnect(this);
+			BackgroundTaskRegistry::instance().endTask(d->formatTaskId());
+
+			const bool changed = formattedText != d->formatSource;
+			if (changed) {
+				QString output = formattedText;
+				if (d->formatSource.contains(QStringLiteral("\r\n"))) {
+					output.replace(QStringLiteral("\r\n"), QStringLiteral("\n"));
+					output.replace(QStringLiteral("\n"), QStringLiteral("\r\n"));
+				}
+
+				QSaveFile save(d->path);
+				if (!save.open(QIODevice::WriteOnly)
+					|| save.write(codec ? codec->fromUnicode(output)
+						: output.toUtf8()) < 0
+					|| !save.commit()) {
+					emit formattingFailed(tr("Не удалось записать файл: %1").arg(d->path));
+					return;
+				}
+
+				const int oldLine = verticalScrollBar()->value();
+				openFile(d->path, d->encodingName);
+				d->restoreLine = oldLine;
+			}
+
+			emit formattingFinished(changed);
+		});
+
+	connect(formatter, &FormatterPlugin::formattingFailed, this,
+		[this, formatter](const QString& errorMessage) {
+			if (d->currentFormatter != formatter) {
+				return;
+			}
+			d->currentFormatter = nullptr;
+			formatter->disconnect(this);
+			BackgroundTaskRegistry::instance().endTask(d->formatTaskId());
+			emit formattingFailed(errorMessage);
+		});
+
+	emit formattingStarted();
+	formatter->formatAsync(source);
+	return true;
+}
+
+qint64 PagedTextEditor::fileSize() const {
+	return d->fileSize;
 }
 
 int PagedTextEditor::fontSize() const {
@@ -1059,6 +1239,12 @@ void PagedTextEditor::paintEvent(QPaintEvent* event) {
 	model.currentSearch = d->searchCurrent;
 	model.rawLine = [this](int line) { return d->lineAt(line); };
 	model.displayLine = [this](int line) { return d->visibleText(line); };
+	model.highlightSpans = [this](int line) {
+		if (!d->highlightingEnabled) {
+			return QVector<PagedTextSpan>();
+		}
+		return d->highlighter.spansForLine(d->visibleText(line));
+	};
 
 	PagedTextRenderer::paint(painter, model);
 }

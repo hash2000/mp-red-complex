@@ -14,7 +14,8 @@ public:
 	static constexpr int kDefaultTabWidth = 2;
 
 	TextLayout(const QString& text, const QFont& font, bool wrapped,
-		int width, int tabWidth = kDefaultTabWidth);
+		int width, int tabWidth = kDefaultTabWidth,
+		const QVector<QTextLayout::FormatRange>& formats = {});
 
 	int lineCount() const;
 	QTextLine lineAt(int visualRow) const;
@@ -29,6 +30,10 @@ public:
 	qreal xForColumn(int column) const;
 	int columnAt(int visualRow, qreal x) const;
 	qreal naturalWidth(int visualRow) const;
+
+	/// Форматы подсветки в координатах строки. Вызывать после создания
+	/// раскладки и до отрисовки.
+	void setFormats(const QVector<QTextLayout::FormatRange>& formats);
 
 private:
 	QTextLayout layout;

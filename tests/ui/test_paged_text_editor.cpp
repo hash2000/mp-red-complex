@@ -1,6 +1,9 @@
 #include "Content/TextEditorModule/documents/paged_text_document.h"
 #include "Libs/Base/background_task_registry.h"
+#include "Libs/BaseWidgets/editor/highlights/highlighter_plugin.h"
+#include "Libs/BaseWidgets/editor/language_info.h"
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor.h"
+#include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_text_highlighter.h"
 
 #include <QFile>
 #include <QFileInfo>
@@ -27,6 +30,7 @@ private slots:
 	void gutterClickSelectsLine();
 	void longLineLoadsHorizontally();
 	void shiftSelectionCrossesLines();
+	void highlightingSpansByRules();
 	void searchReportsBackgroundProgress();
 	void switchFileUpdatesTitle();
 	void reopensInAnotherEncoding();
@@ -34,6 +38,28 @@ private slots:
 };
 
 namespace {
+
+class TestHighlightingPlugin : public HighlightingPlugin {
+public:
+	TestHighlightingPlugin() {
+		Rule rule;
+		rule.pattern = QRegularExpression(QStringLiteral("\\bfoo\\b"));
+		QTextCharFormat format;
+		format.setForeground(Qt::red);
+		rule.format = format;
+		addRule(rule);
+	}
+
+	LanguageInfo languageInfo() const override {
+		LanguageInfo info;
+		info.name = QStringLiteral("Test");
+		info.mimeType = QStringLiteral("text/x-test");
+		return info;
+	}
+
+	void install() override {
+	}
+};
 
 QString makeLine(int index) {
 	return QStringLiteral("line %1: quick brown fox jumps over the lazy dog")
@@ -224,10 +250,11 @@ void TestPagedTextEditor::searchFindsAfterTabs() {
 void TestPagedTextEditor::exposesSearchProperties() {
 	PagedTextDocument document;
 	const auto groups = document.createPropertyGroups(nullptr);
-	QCOMPARE(groups.size(), 1);
-	QCOMPARE(groups.first().id, QStringLiteral("search"));
-	QCOMPARE(groups.first().title, QStringLiteral("Параметры поиска"));
-	QVERIFY(groups.first().editor);
+	QCOMPARE(groups.size(), 2);
+	QCOMPARE(groups.at(0).id, QStringLiteral("info"));
+	QCOMPARE(groups.at(1).id, QStringLiteral("search"));
+	QCOMPARE(groups.at(1).title, QStringLiteral("Параметры поиска"));
+	QVERIFY(groups.at(1).editor);
 }
 
 void TestPagedTextEditor::fontSizeAndWordWrap() {
@@ -357,6 +384,24 @@ void TestPagedTextEditor::shiftSelectionCrossesLines() {
 	QCOMPARE(editor.cursorLine(), 0);
 	QCOMPARE(editor.cursorColumn(), 3);
 	QCOMPARE(editor.selectedText(), QStringLiteral("one"));
+}
+
+void TestPagedTextEditor::highlightingSpansByRules() {
+	TestHighlightingPlugin plugin;
+	PagedTextHighlighter highlighter;
+	highlighter.setPlugin(&plugin);
+
+	const auto spans = highlighter.spansForLine(QStringLiteral("foo bar foo"));
+	QCOMPARE(spans.size(), 2);
+	QCOMPARE(spans.at(0).start, 0);
+	QCOMPARE(spans.at(0).length, 3);
+	QCOMPARE(spans.at(1).start, 8);
+	QCOMPARE(spans.at(1).length, 3);
+
+	PagedTextEditor editor;
+	QVERIFY(editor.setHighlightingPlugin(&plugin));
+	QCOMPARE(editor.highlightingPlugin(), &plugin);
+	QVERIFY(!editor.setHighlightingPlugin(&plugin));
 }
 
 void TestPagedTextEditor::searchReportsBackgroundProgress() {

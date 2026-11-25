@@ -5,7 +5,7 @@
 #include <QtMath>
 
 TextLayout::TextLayout(const QString& text, const QFont& font, bool wrapped,
-	int width, int tabWidth)
+	int width, int tabWidth, const QVector<QTextLayout::FormatRange>& formats)
 	: layout(text, font) {
 	QTextOption option;
 	option.setWrapMode(wrapped ? QTextOption::WrapAtWordBoundaryOrAnywhere
@@ -13,6 +13,7 @@ TextLayout::TextLayout(const QString& text, const QFont& font, bool wrapped,
 	option.setTabStopDistance(
 		qMax<qreal>(1.0, QFontMetricsF(font).horizontalAdvance(QLatin1Char('M'))) * tabWidth);
 	layout.setTextOption(option);
+	layout.setFormats(formats);
 	layout.beginLayout();
 	while (true) {
 		QTextLine line = layout.createLine();
@@ -99,4 +100,8 @@ qreal TextLayout::naturalWidth(int visualRow) const {
 		return 0;
 	}
 	return layout.lineAt(visualRow).naturalTextWidth();
+}
+
+void TextLayout::setFormats(const QVector<QTextLayout::FormatRange>& formats) {
+	layout.setFormats(formats);
 }

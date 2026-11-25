@@ -52,6 +52,7 @@ QComboBox#CodeEditorLanguageCombo,
 QComboBox#CodeEditorFontSizeCombo,
 QComboBox#CodeEditorLineWrapCombo,
 QComboBox#EditorFontSizeCombo,
+QComboBox#PagedHighlightingCombo,
 QComboBox#EditorLineWrapCombo {
   background-color: #1e1e1e;
   color: #d4d4d4;
@@ -64,4 +65,5 @@ QComboBox#CodeEditorLanguageCombo::drop-down,
 QComboBox#CodeEditorFontSizeCombo::drop-down,
 QComboBox#CodeEditorLineWrapCombo::drop-down,
 QComboBox#EditorFontSizeCombo::drop-down,
+QComboBox#PagedHighlightingCombo::drop-down,
 QComboBox#EditorLineWrapCombo::drop-down { border: none; width: 16px; }

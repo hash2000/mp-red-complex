@@ -4,12 +4,17 @@
 
 #include <memory>
 
+class FormatterPluginManager;
+class HighlightingPluginManager;
+
 /// Документ-обёртка над виртуальным редактором больших файлов.
 /// Прототип: только просмотр, путь берётся из переменной контекста `path`.
 class PagedTextDocument : public DocumentWidget {
 	Q_OBJECT
 public:
 	explicit PagedTextDocument(QWidget* parent = nullptr);
+	PagedTextDocument(HighlightingPluginManager* highlighting,
+		FormatterPluginManager* formatters, QWidget* parent = nullptr);
 	~PagedTextDocument() override;
 
 	QWidget* createPropertiesEditor(QWidget* parent) override;

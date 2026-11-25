@@ -1,4 +1,8 @@
 #include "Content/TextEditorModule/documents/paged_text_document.h"
+#include "Libs/BaseWidgets/editor/formatters/formatter_plugin_manager.h"
+#include "Libs/BaseWidgets/editor/highlights/highlighter_plugin.h"
+#include "Libs/BaseWidgets/editor/highlights/highlighter_plugin_manager.h"
+#include "Libs/BaseWidgets/editor/language_info.h"
 #include "Libs/BaseWidgets/editor/widgets/code_editor_widget.h"
 #include "Libs/BaseWidgets/editor/widgets/editor_settings_builder.h"
 #include "Libs/BaseWidgets/editor/widgets/encoding_dialog.h"
@@ -18,17 +22,24 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMessageBox>
 #include <QPushButton>
 #include <QSignalBlocker>
 #include <QToolButton>
 #include <QVBoxLayout>
 #include <QWidget>
 
+#include <algorithm>
+
 struct PagedTextDocument::Private {
 	PagedTextDocument* q = nullptr;
 	PagedTextEditor* editor = nullptr;
 	DocumentRibbon* ribbon = nullptr;
 	RibbonButton* searchButton = nullptr;
+	RibbonButton* formatButton = nullptr;
+	RibbonButton* highlightButton = nullptr;
+	HighlightingPluginManager* highlighting = nullptr;
+	FormatterPluginManager* formatters = nullptr;
 
 	QWidget* searchBar = nullptr;
 	SearchBar* search = nullptr;
@@ -37,10 +48,13 @@ struct PagedTextDocument::Private {
 	QLabel* statusLabel = nullptr;
 	QLabel* cursorLabel = nullptr;
 	QLabel* encodingLabel = nullptr;
+	QLabel* maxLineLabel = nullptr;
+	QLabel* sizeLabel = nullptr;
 	QCheckBox* caseSensitiveCheck = nullptr;
 	QCheckBox* lineNumbersCheck = nullptr;
 	QComboBox* fontSizeCombo = nullptr;
 	QComboBox* wordWrapCombo = nullptr;
+	QComboBox* highlightingCombo = nullptr;
 
 	QString path;
 
@@ -50,6 +64,11 @@ struct PagedTextDocument::Private {
 	void syncEncodingLabel();
 	void syncFontSize(int size);
 	void syncWordWrap(bool enabled);
+	void syncHighlightingCombo();
+	void updateFormatButton();
+	void updateHighlightButton();
+	QWidget* createInfoWidget(QWidget* parent);
+	void formatDocument();
 	void showEncodingDialog();
 };
 
@@ -76,6 +95,23 @@ void PagedTextDocument::Private::createRibbon() {
 			}
 		});
 
+	auto* editGroup = ribbon->addGroup(PagedTextDocument::tr("Правка"));
+	formatButton = ribbon->addButton(editGroup, QStringLiteral("✨"),
+		PagedTextDocument::tr("Форматировать файл (результат записывается в файл)"));
+	formatButton->setObjectName(QStringLiteral("PagedFormatButton"));
+	connect(formatButton, &RibbonButton::clicked, q, [this] {
+		formatDocument();
+	});
+
+	highlightButton = ribbon->addButton(editGroup, QStringLiteral("🎨"),
+		PagedTextDocument::tr("Подсветка текста (включить/выключить)"));
+	highlightButton->setObjectName(QStringLiteral("PagedHighlightButton"));
+	highlightButton->setCheckable(true);
+	highlightButton->setChecked(editor->isHighlightingEnabled());
+	connect(highlightButton, &RibbonButton::toggled, q, [this](bool checked) {
+		editor->setHighlightingEnabled(checked);
+	});
+
 	auto* searchGroup = ribbon->addGroup(PagedTextDocument::tr("Поиск"));
 	searchButton = ribbon->addButton(searchGroup, QStringLiteral("🔍"),
 		PagedTextDocument::tr("Поиск (показать/скрыть)"), QStringLiteral("search"));
@@ -83,7 +119,6 @@ void PagedTextDocument::Private::createRibbon() {
 	connect(searchButton, &RibbonButton::toggled, q, [this](bool checked) {
 		setSearchVisible(checked);
 	});
-
 
 	connect(ribbon, &DocumentRibbon::propertiesRequested, q,
 		[this](const QString& groupId) {
@@ -135,6 +170,75 @@ void PagedTextDocument::Private::setSearchVisible(bool visible) {
 		const QSignalBlocker blocker(searchButton);
 		searchButton->setChecked(false);
 	}
+}
+
+void PagedTextDocument::Private::syncHighlightingCombo() {
+	if (!highlightingCombo) {
+		return;
+	}
+
+	const auto* current = editor->highlightingPlugin();
+	const QSignalBlocker blocker(highlightingCombo);
+	if (!current) {
+		highlightingCombo->setCurrentIndex(-1);
+		return;
+	}
+	for (int i = 0; i < highlightingCombo->count(); i++) {
+		const auto pointer = reinterpret_cast<HighlightingPlugin*>(
+			highlightingCombo->itemData(i).value<qulonglong>());
+		if (pointer == current) {
+			highlightingCombo->setCurrentIndex(i);
+			return;
+		}
+	}
+	highlightingCombo->setCurrentIndex(-1);
+}
+
+void PagedTextDocument::Private::updateFormatButton() {
+	if (formatButton) {
+		formatButton->setEnabled(!editor->isFormatting());
+	}
+}
+
+void PagedTextDocument::Private::updateHighlightButton() {
+	if (!highlightButton) {
+		return;
+	}
+	const QSignalBlocker blocker(highlightButton);
+	highlightButton->setEnabled(editor->highlightingPlugin() != nullptr);
+	highlightButton->setChecked(editor->isHighlightingEnabled());
+}
+
+void PagedTextDocument::Private::formatDocument() {
+	if (!editor->canFormat()) {
+		QMessageBox::warning(q, PagedTextDocument::tr("Форматирование"),
+			PagedTextDocument::tr("Для текущего языка форматирование недоступно."));
+		return;
+	}
+
+	// Форматирование читает и перезаписывает файл целиком: для больших
+	// файлов предупреждаем до запуска.
+	constexpr qint64 kLargeFileBytes = 5 * 1024 * 1024;
+	if (editor->fileSize() > kLargeFileBytes) {
+		QMessageBox box(q);
+		box.setIcon(QMessageBox::Warning);
+		box.setWindowTitle(PagedTextDocument::tr("Форматирование"));
+		box.setText(PagedTextDocument::tr(
+			"Файл имеет размер %1 МБ. Форматирование прочитает его целиком "
+			"и может занять заметное время.")
+			.arg(QString::number(editor->fileSize() / (1024.0 * 1024.0), 'f', 1)));
+		box.setInformativeText(PagedTextDocument::tr("Продолжить?"));
+		auto* ok = box.addButton(PagedTextDocument::tr("Ok"), QMessageBox::AcceptRole);
+		auto* cancel = box.addButton(PagedTextDocument::tr("Отмена"),
+			QMessageBox::RejectRole);
+		box.setDefaultButton(cancel);
+		box.exec();
+		if (box.clickedButton() != ok) {
+			return;
+		}
+	}
+
+	editor->formatDocument();
 }
 
 void PagedTextDocument::Private::syncEncodingLabel() {
@@ -201,15 +305,26 @@ void PagedTextDocument::Private::showEncodingDialog() {
 }
 
 PagedTextDocument::PagedTextDocument(QWidget* parent)
+	: PagedTextDocument(nullptr, nullptr, parent) {
+}
+
+PagedTextDocument::PagedTextDocument(HighlightingPluginManager* highlighting,
+	FormatterPluginManager* formatters, QWidget* parent)
 	: DocumentWidget(parent)
 	, d(std::make_unique<Private>()) {
 	d->q = this;
+	d->highlighting = highlighting;
+	d->formatters = formatters;
 	d->editor = new PagedTextEditor(this);
+	d->editor->setHighlightingManager(highlighting);
+	d->editor->setFormatterManager(formatters);
 
 	auto* layout = new QVBoxLayout(this);
 	layout->setContentsMargins(0, 0, 0, 0);
 	layout->setSpacing(0);
 	d->createRibbon();
+	d->updateHighlightButton();
+	d->updateFormatButton();
 	layout->addWidget(d->ribbon, 0);
 	d->searchBar = d->createSearchBar();
 	layout->addWidget(d->searchBar, 0);
@@ -228,6 +343,18 @@ PagedTextDocument::PagedTextDocument(QWidget* parent)
 			if (success && !d->path.isEmpty()) {
 				setTitle(QFileInfo(d->path).fileName());
 			}
+			if (d->linesLabel) {
+				d->linesLabel->setNum(d->editor->lineCount());
+			}
+			if (d->maxLineLabel) {
+				d->maxLineLabel->setNum(d->editor->maxLineLength());
+			}
+			if (d->sizeLabel) {
+				d->sizeLabel->setText(QStringLiteral("%1 МБ").arg(
+					QString::number(d->editor->fileSize() / (1024.0 * 1024.0), 'f', 1)));
+			}
+			d->updateFormatButton();
+			d->updateHighlightButton();
 		});
 	connect(d->editor, &PagedTextEditor::cursorPositionChanged, this,
 		[this](int line, int column) {
@@ -272,6 +399,35 @@ PagedTextDocument::PagedTextDocument(QWidget* parent)
 				d->lineNumbersCheck->setChecked(visible);
 			}
 		});
+	connect(d->editor, &PagedTextEditor::highlightingChanged, this, [this] {
+		d->syncHighlightingCombo();
+		d->updateFormatButton();
+		d->updateHighlightButton();
+	});
+	connect(d->editor, &PagedTextEditor::highlightingEnabledChanged, this,
+		[this](bool) {
+			d->updateHighlightButton();
+		});
+	connect(d->editor, &PagedTextEditor::formattingStarted, this, [this] {
+		d->updateFormatButton();
+		if (d->statusLabel) {
+			d->statusLabel->setText(tr("Форматирование…"));
+		}
+	});
+	connect(d->editor, &PagedTextEditor::formattingFinished, this, [this](bool) {
+		d->updateFormatButton();
+		if (d->statusLabel) {
+			d->statusLabel->setText(tr("Готово"));
+		}
+	});
+	connect(d->editor, &PagedTextEditor::formattingFailed, this,
+		[this](const QString& errorMessage) {
+			d->updateFormatButton();
+			if (d->statusLabel) {
+				d->statusLabel->setText(errorMessage);
+			}
+			QMessageBox::warning(this, tr("Форматирование"), errorMessage);
+		});
 
 	setFocusProxy(d->editor);
 	setTitle(tr("Просмотр файла"));
@@ -287,12 +443,6 @@ QWidget* PagedTextDocument::createPropertiesEditor(QWidget* parent) {
 		d->path.isEmpty() ? tr("<не задан>") : QDir::toNativeSeparators(d->path), widget);
 	pathLabel->setWordWrap(true);
 	pathLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
-
-	d->linesLabel = new QLabel(QString::number(d->editor->lineCount()), widget);
-	d->statusLabel = new QLabel(d->editor->isIndexing() ? tr("Индексация…")
-		: tr("Готово"), widget);
-	d->cursorLabel = new QLabel(QStringLiteral("%1:%2")
-		.arg(d->editor->cursorLine() + 1).arg(d->editor->cursorColumn() + 1), widget);
 
 	d->encodingLabel = new QLabel(widget);
 	d->syncEncodingLabel();
@@ -312,8 +462,47 @@ QWidget* PagedTextDocument::createPropertiesEditor(QWidget* parent) {
 		d->showEncodingDialog();
 	});
 
+	if (d->highlighting) {
+		d->highlightingCombo = new QComboBox(widget);
+		d->highlightingCombo->setObjectName(QStringLiteral("PagedHighlightingCombo"));
+		d->highlightingCombo->setToolTip(tr("Язык подсветки документа"));
+
+		QList<QPair<QString, HighlightingPlugin*>> items;
+		for (auto* plugin : d->highlighting->allPlugins()) {
+			const auto info = plugin->languageInfo();
+			if (info.mimeType.isEmpty()) {
+				continue;
+			}
+			items.append({ info.name.isEmpty() ? info.mimeType : info.name, plugin });
+		}
+		std::sort(items.begin(), items.end(), [](const auto& left, const auto& right) {
+			return left.first.localeAwareCompare(right.first) < 0;
+		});
+		for (const auto& item : items) {
+			d->highlightingCombo->addItem(item.first,
+				QVariant::fromValue<qulonglong>(
+					static_cast<qulonglong>(reinterpret_cast<quintptr>(item.second))));
+		}
+
+		connect(d->highlightingCombo, &QComboBox::currentIndexChanged, this,
+			[this](int index) {
+				if (!d->highlightingCombo || index < 0) {
+					return;
+				}
+				auto* plugin = reinterpret_cast<HighlightingPlugin*>(
+					d->highlightingCombo->itemData(index).value<qulonglong>());
+				d->editor->setHighlightingPlugin(plugin);
+				d->editor->setHighlightingEnabled(plugin != nullptr);
+				d->updateHighlightButton();
+				d->updateFormatButton();
+			});
+		d->syncHighlightingCombo();
+	}
+
 	form->addRow(tr("Файл:"), pathLabel);
-	form->addRow(tr("Строк:"), d->linesLabel);
+	if (d->highlightingCombo) {
+		form->addRow(tr("Язык:"), d->highlightingCombo);
+	}
 	form->addRow(tr("Кодировка:"), encodingRow);
 
 	// Общие параметры редактора строит единый билдер: одинаковые подписи,
@@ -333,18 +522,41 @@ QWidget* PagedTextDocument::createPropertiesEditor(QWidget* parent) {
 		[this](bool checked) {
 			d->editor->setLineNumbersVisible(checked);
 		});
+	return widget;
+}
+QWidget* PagedTextDocument::Private::createInfoWidget(QWidget* parent) {
+	auto* widget = new QWidget(parent);
+	auto* form = new QFormLayout(widget);
+	form->setContentsMargins(0, 0, 0, 0);
 
-	form->addRow(tr("Курсор:"), d->cursorLabel);
-	form->addRow(tr("Состояние:"), d->statusLabel);
-	form->addRow(tr("Режим:"), new QLabel(tr("Просмотр (прототип)"), widget));
+	linesLabel = new QLabel(QString::number(editor->lineCount()), widget);
+	cursorLabel = new QLabel(QStringLiteral("%1:%2")
+		.arg(editor->cursorLine() + 1).arg(editor->cursorColumn() + 1), widget);
+	maxLineLabel = new QLabel(QString::number(editor->maxLineLength()), widget);
+	sizeLabel = new QLabel(QStringLiteral("%1 МБ")
+		.arg(QString::number(editor->fileSize() / (1024.0 * 1024.0), 'f', 1)), widget);
+	statusLabel = new QLabel(editor->isIndexing() ? PagedTextDocument::tr("Индексация…")
+		: PagedTextDocument::tr("Готово"), widget);
+
+	form->addRow(PagedTextDocument::tr("Строк:"), linesLabel);
+	form->addRow(PagedTextDocument::tr("Самая длинная строка:"), maxLineLabel);
+	form->addRow(PagedTextDocument::tr("Размер файла:"), sizeLabel);
+	form->addRow(PagedTextDocument::tr("Курсор:"), cursorLabel);
+	form->addRow(PagedTextDocument::tr("Состояние:"), statusLabel);
 	return widget;
 }
 
 QList<DocumentPropertyGroup> PagedTextDocument::createPropertyGroups(QWidget* parent) {
+	DocumentPropertyGroup info;
+	info.id = QStringLiteral("info");
+	info.title = tr("Информация о документе");
+	info.expanded = true;
+	info.editor = d->createInfoWidget(parent);
+
 	DocumentPropertyGroup search;
 	search.id = QStringLiteral("search");
 	search.title = tr("Параметры поиска");
-	search.expanded = true;
+	search.expanded = false;
 
 	auto* editor = new QWidget(parent);
 	auto* layout = new QVBoxLayout(editor);
@@ -367,7 +579,7 @@ QList<DocumentPropertyGroup> PagedTextDocument::createPropertyGroups(QWidget* pa
 	layout->addStretch();
 
 	search.editor = editor;
-	return { search };
+	return { info, search };
 }
 
 void PagedTextDocument::newFile() {
@@ -389,6 +601,8 @@ void PagedTextDocument::openFile(const QString& path) {
 	d->editor->openFile(path, d->editor->encoding().isEmpty()
 		? QStringLiteral("UTF-8") : d->editor->encoding());
 	d->syncEncodingLabel();
+	d->syncHighlightingCombo();
+	d->updateFormatButton();
 	emit propertiesChanged();
 }
 
