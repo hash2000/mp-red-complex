@@ -1,9 +1,15 @@
+#include "Content/TextEditorModule/documents/code_editor_document.h"
 #include "Content/TextEditorModule/documents/paged_text_document.h"
 #include "Libs/Base/background_task_registry.h"
 #include "Libs/BaseWidgets/editor/highlights/highlighter_plugin.h"
 #include "Libs/BaseWidgets/editor/language_info.h"
+#include "Libs/BaseWidgets/editor/widgets/code_editor_widget.h"
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor.h"
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_text_highlighter.h"
+#include "Libs/Engine/scripting/command_context.h"
+#include "Libs/Engine/scripting/command_controller.h"
+#include "Libs/Engine/scripting/system_options/system_option.h"
+#include "Libs/Engine/scripting/system_options/system_options_registry.h"
 
 #include <QClipboard>
 #include <QDir>
@@ -59,6 +65,12 @@ private slots:
 	void spilledBufferSaves();
 	void spillFileIsRemovedAutomatically();
 	void newDocumentSpillsLargeContent();
+	void globalTextOptionsApply();
+	void multiCursorManagement();
+	void ctrlDDuplicatesLine();
+	void copyAndCutWholeLine();
+	void blockSelectionWithShiftAlt();
+	void multiCursorPasteDistributesLines();
 };
 
 namespace {
@@ -118,6 +130,25 @@ QByteArray readAllBytes(const QString& path) {
 	}
 	return file.readAll();
 }
+
+/// Контроллер без команд и сервисов: нужен только глобальный контекст
+/// с системными параметрами.
+class TestCommandController : public CommandController {
+public:
+	TestCommandController() : CommandController(nullptr, nullptr) {}
+	~TestCommandController() override = default;
+
+	CommandProcessor* commandProcessor() const override {
+		return nullptr;
+	}
+	ServicesRegistry* services() const override {
+		return nullptr;
+	}
+
+private:
+	void initContext() override {
+	}
+};
 
 } // namespace
 
@@ -1178,6 +1209,259 @@ void TestPagedTextEditor::newDocumentSpillsLargeContent() {
 	QCOMPARE(editor.lineCount(), 3000);
 	QCOMPARE(editor.lineText(0), lines.at(0));
 	QCOMPARE(editor.lineText(2999), lines.at(2999));
+}
+
+void TestPagedTextEditor::globalTextOptionsApply() {
+	TestCommandController controller;
+	const QStringList names = controller.systemOptions()->optionNames();
+	QVERIFY(names.contains(QString::fromLatin1(SystemOptions::kDocumentsTextBufferLimit)));
+	QVERIFY(names.contains(QString::fromLatin1(SystemOptions::kDocumentsTextWordWrap)));
+	QVERIFY(names.contains(QString::fromLatin1(SystemOptions::kDocumentsTextFontSize)));
+	QVERIFY(names.contains(QString::fromLatin1(SystemOptions::kDocumentsTextFontFamily)));
+	QVERIFY(names.contains(QString::fromLatin1(SystemOptions::kDocumentsTextEncoding)));
+
+	auto global = controller.globalContext();
+	global->setVariable(QString::fromLatin1(SystemOptions::kDocumentsTextFontFamily),
+		QStringLiteral("Courier New"));
+	global->setVariable(QString::fromLatin1(SystemOptions::kDocumentsTextFontSize), 17);
+	global->setVariable(QString::fromLatin1(SystemOptions::kDocumentsTextWordWrap), true);
+	global->setVariable(QString::fromLatin1(SystemOptions::kDocumentsTextEncoding),
+		QStringLiteral("Windows-1251"));
+	global->setVariable(QString::fromLatin1(SystemOptions::kDocumentsTextBufferLimit), 1);
+
+	PagedTextDocument paged;
+	paged.setContext(global->createDocumentContext(QStringLiteral("paged-options")));
+	QCOMPARE(paged.editor()->font().pointSize(), 17);
+	QCOMPARE(paged.editor()->font().family(), QStringLiteral("Courier New"));
+	QVERIFY(paged.editor()->wordWrap());
+	QCOMPARE(paged.editor()->encoding(), QStringLiteral("Windows-1251"));
+	QCOMPARE(paged.editor()->memoryBudget(), qint64(1) * 1024 * 1024);
+
+	CodeEditorDocument code(nullptr, nullptr);
+	code.setContext(global->createDocumentContext(QStringLiteral("code-options")));
+	QCOMPARE(code.editor()->font().pointSize(), 17);
+	QCOMPARE(code.editor()->font().family(), QStringLiteral("Courier New"));
+	QCOMPARE(code.editor()->lineWrapPolicy(),
+		CodeEditorWidget::LineWrapPolicy::On);
+	QCOMPARE(code.editor()->encoding(), QStringLiteral("Windows-1251"));
+}
+
+void TestPagedTextEditor::multiCursorManagement() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto path = writeTextFile(dir.path(), QStringLiteral("cursors.txt"),
+		QByteArray("abc\ndef\nghi\n"));
+	QVERIFY(!path.isEmpty());
+
+	PagedTextEditor editor;
+	editor.resize(600, 400);
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+
+	editor.setCursorPosition(0, 1);
+	QCOMPARE(editor.cursorCount(), 1);
+	editor.addCursorAt(2, 0);
+	QCOMPARE(editor.cursorCount(), 2);
+	const QList<QPoint> positions = editor.cursorPositions();
+	QCOMPARE(positions.size(), 2);
+	QCOMPARE(positions.at(0), QPoint(0, 1));
+	QCOMPARE(positions.at(1), QPoint(2, 0));
+
+	// На одной строке второй курсор не появляется.
+	editor.addCursorAt(2, 2);
+	QCOMPARE(editor.cursorCount(), 2);
+
+	// Alt+клик по строке, где уже есть курсор, убирает его.
+	const int charWidth = editor.fontMetrics().horizontalAdvance(QLatin1Char('W'));
+	const int lineHeight = editor.fontMetrics().height();
+	const int gutter = editor.fontMetrics().horizontalAdvance(QLatin1Char('9')) * 2 + 14;
+	QTest::mouseClick(editor.viewport(), Qt::LeftButton, Qt::AltModifier,
+		QPoint(gutter + 2 * charWidth + 1, 2 * lineHeight + lineHeight / 2));
+	QCOMPARE(editor.cursorCount(), 1);
+
+	// Alt+клик по свободной строке добавляет курсор.
+	QTest::mouseClick(editor.viewport(), Qt::LeftButton, Qt::AltModifier,
+		QPoint(gutter + 1, lineHeight + lineHeight / 2));
+	QCOMPARE(editor.cursorCount(), 2);
+
+	// Обычный клик снова оставляет один курсор.
+	QTest::mouseClick(editor.viewport(), Qt::LeftButton, Qt::NoModifier,
+		QPoint(gutter + 1, lineHeight / 2));
+	QCOMPARE(editor.cursorCount(), 1);
+}
+
+void TestPagedTextEditor::ctrlDDuplicatesLine() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto path = writeTextFile(dir.path(), QStringLiteral("duplicate.txt"),
+		QByteArray("one\ntwo\n"));
+	QVERIFY(!path.isEmpty());
+
+	PagedTextEditor editor;
+	editor.resize(600, 400);
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+
+	editor.setCursorPosition(0, 1);
+	QTest::keyClick(&editor, Qt::Key_D, Qt::ControlModifier);
+	QCOMPARE(editor.lineCount(), 4);
+	QCOMPARE(editor.lineText(0), QStringLiteral("one"));
+	QCOMPARE(editor.lineText(1), QStringLiteral("one"));
+	QCOMPARE(editor.lineText(2), QStringLiteral("two"));
+	QCOMPARE(editor.cursorLine(), 1);
+
+	QVERIFY(editor.undo());
+	QCOMPARE(editor.lineCount(), 3);
+	QCOMPARE(editor.lineText(0), QStringLiteral("one"));
+	QCOMPARE(editor.lineText(1), QStringLiteral("two"));
+}
+
+void TestPagedTextEditor::copyAndCutWholeLine() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto path = writeTextFile(dir.path(), QStringLiteral("linecopy.txt"),
+		QByteArray("alpha\nbeta\n"));
+	QVERIFY(!path.isEmpty());
+
+	PagedTextEditor editor;
+	editor.resize(600, 400);
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+
+	// Без выделения копируется строка целиком.
+	editor.setCursorPosition(0, 2);
+	QTest::keyClick(&editor, Qt::Key_C, Qt::ControlModifier);
+	QCOMPARE(QGuiApplication::clipboard()->text(), QStringLiteral("alpha"));
+	QVERIFY(!editor.isModified());
+
+	// Вырезание без выделения удаляет строку целиком.
+	QTest::keyClick(&editor, Qt::Key_X, Qt::ControlModifier);
+	QCOMPARE(QGuiApplication::clipboard()->text(), QStringLiteral("alpha"));
+	QCOMPARE(editor.lineCount(), 2);
+	QCOMPARE(editor.lineText(0), QStringLiteral("beta"));
+	QCOMPARE(editor.cursorLine(), 0);
+	QCOMPARE(editor.cursorColumn(), 0);
+	QVERIFY(editor.isModified());
+
+	QVERIFY(editor.undo());
+	QCOMPARE(editor.lineCount(), 3);
+	QCOMPARE(editor.lineText(0), QStringLiteral("alpha"));
+
+	// Несколько курсоров без выделения: вырезаются все их строки.
+	editor.setCursorPosition(0, 0);
+	editor.addCursorAt(2, 0);
+	QCOMPARE(editor.cursorCount(), 2);
+	QTest::keyClick(&editor, Qt::Key_X, Qt::ControlModifier);
+	QCOMPARE(QGuiApplication::clipboard()->text(), QStringLiteral("alpha\n"));
+	QCOMPARE(editor.lineCount(), 1);
+	QCOMPARE(editor.lineText(0), QStringLiteral("beta"));
+
+	QVERIFY(editor.undo());
+	QCOMPARE(editor.lineCount(), 3);
+	QCOMPARE(editor.cursorCount(), 2);
+}
+
+void TestPagedTextEditor::blockSelectionWithShiftAlt() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto path = writeTextFile(dir.path(), QStringLiteral("block.txt"),
+		QByteArray("abc\ndef\nghi\n"));
+	QVERIFY(!path.isEmpty());
+
+	PagedTextEditor editor;
+	editor.resize(600, 400);
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+
+	// Shift+Alt+→/↓ — прямоугольник от курсора (0,1) до (2,2).
+	editor.setCursorPosition(0, 1);
+	QTest::keyClick(&editor, Qt::Key_Right, Qt::ShiftModifier | Qt::AltModifier);
+	QTest::keyClick(&editor, Qt::Key_Down, Qt::ShiftModifier | Qt::AltModifier);
+	QTest::keyClick(&editor, Qt::Key_Down, Qt::ShiftModifier | Qt::AltModifier);
+
+	QCOMPARE(editor.cursorCount(), 3);
+	const QList<QPoint> positions = editor.cursorPositions();
+	QCOMPARE(positions.at(0), QPoint(0, 2));
+	QCOMPARE(positions.at(1), QPoint(1, 2));
+	QCOMPARE(positions.at(2), QPoint(2, 2));
+
+	// Копируется прямоугольник: по одному символу с каждой строки.
+	QTest::keyClick(&editor, Qt::Key_C, Qt::ControlModifier);
+	QCOMPARE(QGuiApplication::clipboard()->text(), QStringLiteral("b\ne\nh"));
+
+	// Ввод заменяет выделение на каждой строке.
+	QTest::keyClicks(&editor, QStringLiteral("X"));
+	QCOMPARE(editor.lineText(0), QStringLiteral("aXc"));
+	QCOMPARE(editor.lineText(1), QStringLiteral("dXf"));
+	QCOMPARE(editor.lineText(2), QStringLiteral("gXi"));
+	QCOMPARE(editor.cursorCount(), 3);
+
+	// Одна отмена возвращает и текст, и набор курсоров.
+	QVERIFY(editor.undo());
+	QCOMPARE(editor.lineText(0), QStringLiteral("abc"));
+	QCOMPARE(editor.lineText(1), QStringLiteral("def"));
+	QCOMPARE(editor.lineText(2), QStringLiteral("ghi"));
+	QCOMPARE(editor.cursorCount(), 3);
+
+	// Мышью: Shift+Alt от курсора (0,0) до (2,3).
+	editor.setCursorPosition(0, 0);
+	const int charWidth = editor.fontMetrics().horizontalAdvance(QLatin1Char('W'));
+	const int lineHeight = editor.fontMetrics().height();
+	const int gutter = editor.fontMetrics().horizontalAdvance(QLatin1Char('9')) * 2 + 14;
+	const QPoint blockEnd(gutter + 3 * charWidth + 1,
+		2 * lineHeight + lineHeight / 2);
+	QTest::mousePress(editor.viewport(), Qt::LeftButton,
+		Qt::ShiftModifier | Qt::AltModifier, QPoint(gutter + 1, lineHeight / 2));
+	QTest::mouseMove(editor.viewport(), blockEnd);
+	QTest::mouseRelease(editor.viewport(), Qt::LeftButton,
+		Qt::ShiftModifier | Qt::AltModifier, blockEnd);
+
+	QCOMPARE(editor.cursorCount(), 3);
+	const QList<QPoint> mousePositions = editor.cursorPositions();
+	QCOMPARE(mousePositions.at(0), QPoint(0, 3));
+	QCOMPARE(mousePositions.at(1), QPoint(1, 3));
+	QCOMPARE(mousePositions.at(2), QPoint(2, 3));
+}
+
+void TestPagedTextEditor::multiCursorPasteDistributesLines() {
+	PagedTextEditor editor;
+	editor.resize(600, 400);
+	editor.newDocument();
+	QVERIFY(editor.insertText(QStringLiteral("one\ntwo\nthree")));
+	editor.setCursorPosition(0, 0);
+	editor.addCursorAt(1, 0);
+	editor.addCursorAt(2, 0);
+	QCOMPARE(editor.cursorCount(), 3);
+
+	// Строк в буфере больше, чем курсоров: лишние строки не вставляются.
+	QGuiApplication::clipboard()->setText(QStringLiteral("A\nB\nC\nD"));
+	QTest::keyClick(&editor, Qt::Key_V, Qt::ControlModifier);
+	QCOMPARE(editor.lineText(0), QStringLiteral("Aone"));
+	QCOMPARE(editor.lineText(1), QStringLiteral("Btwo"));
+	QCOMPARE(editor.lineText(2), QStringLiteral("Cthree"));
+
+	QVERIFY(editor.undo());
+	QCOMPARE(editor.lineText(0), QStringLiteral("one"));
+	QCOMPARE(editor.lineText(1), QStringLiteral("two"));
+	QCOMPARE(editor.lineText(2), QStringLiteral("three"));
+
+	// Строк меньше, чем курсоров: они идут по кругу.
+	QGuiApplication::clipboard()->setText(QStringLiteral("X\nY"));
+	QTest::keyClick(&editor, Qt::Key_V, Qt::ControlModifier);
+	QCOMPARE(editor.lineText(0), QStringLiteral("Xone"));
+	QCOMPARE(editor.lineText(1), QStringLiteral("Ytwo"));
+	QCOMPARE(editor.lineText(2), QStringLiteral("Xthree"));
+
+	// Backspace удаляет по символу у каждого курсора одной правкой.
+	QTest::keyClick(&editor, Qt::Key_Backspace);
+	QCOMPARE(editor.lineText(0), QStringLiteral("one"));
+	QCOMPARE(editor.lineText(1), QStringLiteral("two"));
+	QCOMPARE(editor.lineText(2), QStringLiteral("three"));
+
+	QVERIFY(editor.undo());
+	QCOMPARE(editor.lineText(0), QStringLiteral("Xone"));
+	QCOMPARE(editor.lineText(1), QStringLiteral("Ytwo"));
+	QCOMPARE(editor.lineText(2), QStringLiteral("Xthree"));
 }
 
 QTEST_MAIN(TestPagedTextEditor)

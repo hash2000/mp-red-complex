@@ -34,6 +34,7 @@
 #include <QResizeEvent>
 #include <QScrollBar>
 #include <QSaveFile>
+#include <QSet>
 #include <QTextCodec>
 #include <QTextLine>
 #include <QTimer>
@@ -106,7 +107,17 @@ struct PagedTextEditor::Private {
 	int cursorColumn = 0;
 	int anchorLine = 0;
 	int anchorColumn = 0;
+	/// Дополнительные курсоры (без основного): на каждой строке не больше
+	/// одного курсора. Основной хранится в полях выше.
+	QVector<PagedCursorState> extraCursors;
 	bool selecting = false;
+	/// Прямоугольное выделение Shift+Alt: начало области — верхний курсор.
+	bool blockActive = false;
+	bool blockSelecting = false;
+	int blockAnchorLine = 0;
+	int blockAnchorColumn = 0;
+	int blockActiveLine = 0;
+	int blockActiveColumn = 0;
 	int restoreLine = -1;
 	int restoreCursorLine = -1;
 	int restoreCursorColumn = 0;
@@ -153,19 +164,61 @@ struct PagedTextEditor::Private {
 	void moveCursorVertically(int delta, bool keepAnchor);
 
 	// Редактирование.
+	struct EditRange {
+		int startLine = 0;
+		int startColumn = 0;
+		int endLine = 0;
+		int endColumn = 0;
+		QString text;
+	};
+
 	bool canEdit() const;
 	void resetEditState();
 	bool replaceRange(int startLine, int startColumn, int endLine, int endColumn,
 		const QString& text, int mergeKind);
 	void syncModel();
 	void afterEdit();
-	void applyHistoryState(const PagedCursorState& cursor);
-	void setCursorFromState(const PagedCursorState& cursor);
+	void applyHistoryState(const PagedCursorState& cursor,
+		const QVector<PagedCursorState>& extraCursors);
 	void backspace();
 	void deleteForward();
 	void startSearch(const QString& query, bool jump);
 	void scheduleSearchRefresh();
 	void syncSpillState();
+
+	// Многокурсорный режим.
+	bool cursorHasSelection(const PagedCursorState& cursor) const;
+	PagedCursorState primaryState() const;
+	void setPrimaryState(const PagedCursorState& state);
+	QVector<PagedCursorState> allCursors() const;
+	QVector<PagedCursorState> orderedCursors() const;
+	bool anySelection() const;
+	void clearExtraCursors();
+	void applyCursorSet(const QVector<PagedCursorState>& cursors);
+	void toggleCursorAt(int line, int column);
+	QString selectionText(const PagedCursorState& cursor) const;
+	void normalizedCursor(const PagedCursorState& cursor, int& startLine,
+		int& startColumn, int& endLine, int& endColumn) const;
+	void mapCaretAfterEdit(const QVector<EditRange>& edits, int index,
+		int& line, int& column) const;
+	bool applyEdits(const QVector<EditRange>& edits,
+		const QVector<PagedCursorState>& caretsAfter, int mergeKind);
+	bool applyInsertionText(const QString& text, int mergeKind);
+	void applyInsertionForCursors(const QVector<QString>& texts);
+	QVector<PagedCursorState> caretSetForEdits(const QVector<EditRange>& edits) const;
+	bool lineDeleteRange(int line, int& startLine, int& startColumn,
+		int& endLine, int& endColumn) const;
+	void cutContent();
+	void duplicateCurrentLines();
+	void pasteAtCursors(const QString& text);
+	void moveAllCursorsByLine(int delta, bool keepAnchor, bool pageStep);
+	void moveAllCursorsByColumn(int delta, bool keepAnchor);
+	void moveAllCursorsToColumn(bool toEnd, bool keepAnchor);
+	void beginBlockSelection(int line, int column);
+	void updateBlockSelection(int line, int column);
+	void clearBlockState();
+	bool handleBlockKey(int key, int pageStep);
+	void paintCursors(PagedTextPaintModel& model) const;
 };
 
 void PagedTextEditor::Private::clearPages() {
@@ -238,7 +291,12 @@ int PagedTextEditor::Private::lineHeight() const {
 }
 
 bool PagedTextEditor::Private::hasSelection() const {
-	return cursorLine != anchorLine || cursorColumn != anchorColumn;
+	for (const PagedCursorState& cursor : extraCursors) {
+		if (cursorHasSelection(cursor)) {
+			return true;
+		}
+	}
+	return cursorHasSelection(primaryState());
 }
 
 void PagedTextEditor::Private::normalizedSelection(int& startLine, int& startColumn,
@@ -438,6 +496,8 @@ void PagedTextEditor::Private::selectMatch(int index) {
 		return;
 	}
 
+	clearExtraCursors();
+	clearBlockState();
 	searchCurrent = index;
 	searchSelectionActive = true;
 	const auto& match = searchMatches.at(index);
@@ -543,6 +603,887 @@ void PagedTextEditor::Private::syncSpillState() {
 	emit q->bufferSpilled(spilled);
 }
 
+PagedCursorState PagedTextEditor::Private::primaryState() const {
+	return { cursorLine, cursorColumn, anchorLine, anchorColumn };
+}
+
+void PagedTextEditor::Private::setPrimaryState(const PagedCursorState& state) {
+	cursorLine = state.line;
+	cursorColumn = state.column;
+	anchorLine = state.anchorLine;
+	anchorColumn = state.anchorColumn;
+}
+
+bool PagedTextEditor::Private::cursorHasSelection(
+	const PagedCursorState& cursor) const {
+	return cursor.line != cursor.anchorLine || cursor.column != cursor.anchorColumn;
+}
+
+QVector<PagedCursorState> PagedTextEditor::Private::allCursors() const {
+	QVector<PagedCursorState> result = extraCursors;
+	result.append(primaryState());
+	return result;
+}
+
+QVector<PagedCursorState> PagedTextEditor::Private::orderedCursors() const {
+	QVector<PagedCursorState> result = allCursors();
+	std::sort(result.begin(), result.end(),
+		[](const PagedCursorState& left, const PagedCursorState& right) {
+			if (left.line != right.line) {
+				return left.line < right.line;
+			}
+			return left.column < right.column;
+		});
+	return result;
+}
+
+bool PagedTextEditor::Private::anySelection() const {
+	for (const PagedCursorState& cursor : extraCursors) {
+		if (cursorHasSelection(cursor)) {
+			return true;
+		}
+	}
+	return cursorHasSelection(primaryState());
+}
+
+void PagedTextEditor::Private::clearExtraCursors() {
+	extraCursors.clear();
+}
+
+void PagedTextEditor::Private::normalizedCursor(const PagedCursorState& cursor,
+	int& startLine, int& startColumn, int& endLine, int& endColumn) const {
+	if (cursor.line < cursor.anchorLine
+		|| (cursor.line == cursor.anchorLine && cursor.column < cursor.anchorColumn)) {
+		startLine = cursor.line;
+		startColumn = cursor.column;
+		endLine = cursor.anchorLine;
+		endColumn = cursor.anchorColumn;
+		return;
+	}
+
+	startLine = cursor.anchorLine;
+	startColumn = cursor.anchorColumn;
+	endLine = cursor.line;
+	endColumn = cursor.column;
+}
+
+QString PagedTextEditor::Private::selectionText(
+	const PagedCursorState& cursor) const {
+	if (!cursorHasSelection(cursor)) {
+		return QString();
+	}
+
+	int startLine = 0;
+	int startColumn = 0;
+	int endLine = 0;
+	int endColumn = 0;
+	normalizedCursor(cursor, startLine, startColumn, endLine, endColumn);
+
+	QString result;
+	for (int line = startLine; line <= endLine; line++) {
+		const QString text = lineAt(line);
+		const int from = line == startLine ? startColumn : 0;
+		const int to = line == endLine ? endColumn : text.size();
+		result += text.mid(from, qMax(0, to - from));
+		if (line < endLine) {
+			result += QLatin1Char('\n');
+		}
+	}
+	return result;
+}
+
+void PagedTextEditor::Private::applyCursorSet(
+	const QVector<PagedCursorState>& cursors) {
+	if (!ready || cursors.isEmpty()) {
+		return;
+	}
+
+	const int total = qMax(1, buffer.lineCount());
+	const auto sanitize = [this, total](PagedCursorState cursor) {
+		cursor.line = qBound(0, cursor.line, total - 1);
+		cursor.column = qBound(0, cursor.column, lineAt(cursor.line).size());
+		cursor.anchorLine = qBound(0, cursor.anchorLine, total - 1);
+		cursor.anchorColumn = qBound(0, cursor.anchorColumn,
+			lineAt(cursor.anchorLine).size());
+		return cursor;
+	};
+
+	// Последний курсор набора — основной; на каждой строке остаётся только
+	// один курсор (этого требует и редактирование по строкам).
+	const PagedCursorState primary = sanitize(cursors.last());
+	QSet<int> usedLines;
+	usedLines.insert(primary.line);
+	QVector<PagedCursorState> extras;
+	for (int i = cursors.size() - 2; i >= 0; i--) {
+		PagedCursorState cursor = sanitize(cursors.at(i));
+		if (usedLines.contains(cursor.line)) {
+			continue;
+		}
+		usedLines.insert(cursor.line);
+		extras.prepend(cursor);
+	}
+
+	setPrimaryState(primary);
+	extraCursors = extras;
+	searchSelectionActive = false;
+}
+
+void PagedTextEditor::Private::toggleCursorAt(int line, int column) {
+	if (!ready || lines <= 0) {
+		return;
+	}
+
+	line = qBound(0, line, qMax(0, lines - 1));
+	column = qBound(0, column, lineAt(line).size());
+
+	// На строке уже есть курсор — Alt+клик его убирает.
+	for (int i = extraCursors.size() - 1; i >= 0; i--) {
+		if (extraCursors.at(i).line == line) {
+			extraCursors.removeAt(i);
+			clearBlockState();
+			ensureCursorVisible();
+			updateCurrentForCursor();
+			q->viewport()->update();
+			emit q->cursorPositionChanged(cursorLine, cursorColumn);
+			return;
+		}
+	}
+
+	if (cursorLine == line) {
+		// Убираем основной: основным становится последний дополнительный,
+		// а если курсоров больше нет — остаётся клик.
+		if (extraCursors.isEmpty()) {
+			setPrimaryState({ line, column, line, column });
+		}
+		else {
+			setPrimaryState(extraCursors.takeLast());
+		}
+		clearBlockState();
+		ensureCursorVisible();
+		updateCurrentForCursor();
+		q->viewport()->update();
+		emit q->cursorPositionChanged(cursorLine, cursorColumn);
+		return;
+	}
+
+	// Новый курсор становится основным, прежний уходит в дополнительные.
+	extraCursors.append(primaryState());
+	setPrimaryState({ line, column, line, column });
+	clearBlockState();
+	ensureCursorVisible();
+	updateCurrentForCursor();
+	q->viewport()->update();
+	emit q->cursorPositionChanged(cursorLine, cursorColumn);
+}
+
+void PagedTextEditor::Private::mapCaretAfterEdit(
+	const QVector<EditRange>& edits, int index, int& line, int& column) const {
+	const EditRange& edit = edits.at(index);
+
+	int deltaAbove = 0;
+	for (int i = 0; i < edits.size(); i++) {
+		if (i == index) {
+			continue;
+		}
+		const EditRange& other = edits.at(i);
+		const bool above = other.startLine < edit.startLine
+			|| (other.startLine == edit.startLine
+				&& other.startColumn < edit.startColumn);
+		if (!above) {
+			continue;
+		}
+		deltaAbove += other.text.count(QLatin1Char('\n'))
+			- (other.endLine - other.startLine);
+	}
+
+	if (edit.text.isEmpty()) {
+		line = edit.startLine + deltaAbove;
+		column = edit.startColumn;
+		return;
+	}
+
+	const QStringList parts = edit.text.split(QLatin1Char('\n'));
+	line = edit.startLine + deltaAbove + parts.size() - 1;
+	column = parts.size() == 1
+		? edit.startColumn + edit.text.size()
+		: parts.last().size();
+}
+
+QVector<PagedCursorState> PagedTextEditor::Private::caretSetForEdits(
+	const QVector<EditRange>& edits) const {
+	QVector<PagedCursorState> carets;
+	carets.reserve(edits.size());
+	for (int i = 0; i < edits.size(); i++) {
+		int line = 0;
+		int column = 0;
+		mapCaretAfterEdit(edits, i, line, column);
+		carets.append({ line, column, line, column });
+	}
+	return carets;
+}
+
+bool PagedTextEditor::Private::applyEdits(const QVector<EditRange>& sourceEdits,
+	const QVector<PagedCursorState>& caretsAfter, int mergeKind) {
+	if (!canEdit()) {
+		return false;
+	}
+
+	QVector<EditRange> edits;
+	edits.reserve(sourceEdits.size());
+	for (const EditRange& edit : sourceEdits) {
+		if (edit.startLine == edit.endLine && edit.startColumn == edit.endColumn
+			&& edit.text.isEmpty()) {
+			continue;
+		}
+		edits.append(edit);
+	}
+	if (edits.isEmpty()) {
+		return false;
+	}
+
+	// Курсоры не пересекаются по построению (на строке — один курсор), но
+	// нестандартное выделение может дать перекрывающиеся диапазоны. Такие
+	// правки объединяются (если это удаления) или отбрасываются, чтобы не
+	// удалить один и тот же текст дважды.
+	{
+		const auto lessPosition = [](int leftLine, int leftColumn,
+			int rightLine, int rightColumn) {
+			return leftLine < rightLine
+				|| (leftLine == rightLine && leftColumn < rightColumn);
+		};
+		QVector<int> sorted(edits.size());
+		for (int i = 0; i < edits.size(); i++) {
+			sorted[i] = i;
+		}
+		std::sort(sorted.begin(), sorted.end(), [&edits](int left, int right) {
+			const EditRange& a = edits.at(left);
+			const EditRange& b = edits.at(right);
+			if (a.startLine != b.startLine) {
+				return a.startLine < b.startLine;
+			}
+			return a.startColumn < b.startColumn;
+		});
+
+		QVector<EditRange> accepted;
+		for (const int index : sorted) {
+			const EditRange& edit = edits.at(index);
+			if (accepted.isEmpty()) {
+				accepted.append(edit);
+				continue;
+			}
+
+			EditRange& last = accepted.last();
+			if (!lessPosition(edit.startLine, edit.startColumn,
+				last.endLine, last.endColumn)) {
+				accepted.append(edit);
+				continue;
+			}
+
+			// Пересечение: удаления можно объединить, вставки — нет.
+			if (edit.text.isEmpty() && last.text.isEmpty()) {
+				if (lessPosition(last.endLine, last.endColumn,
+					edit.endLine, edit.endColumn)) {
+					last.endLine = edit.endLine;
+					last.endColumn = edit.endColumn;
+				}
+			}
+		}
+		edits = accepted;
+	}
+
+	// Страницы, которых касаются правки: снимки берутся один раз на страницу.
+	QVector<int> pages;
+	QSet<int> seenPages;
+	for (const EditRange& edit : edits) {
+		for (const int page : buffer.pagesForLines(edit.startLine, edit.endLine)) {
+			if (seenPages.contains(page)) {
+				continue;
+			}
+			seenPages.insert(page);
+			pages.append(page);
+		}
+	}
+	std::sort(pages.begin(), pages.end());
+
+	PagedEditRecord record;
+	record.before.reserve(pages.size());
+	for (const int page : pages) {
+		record.before.append({ page, buffer.pageSnapshot(page) });
+	}
+	record.cursorBefore = primaryState();
+	record.extraCursorsBefore = extraCursors;
+
+	// Правки применяются снизу вверх: координаты верхних от нижних не зависят.
+	QVector<int> order(edits.size());
+	for (int i = 0; i < edits.size(); i++) {
+		order[i] = i;
+	}
+	std::sort(order.begin(), order.end(), [&edits](int left, int right) {
+		const EditRange& a = edits.at(left);
+		const EditRange& b = edits.at(right);
+		if (a.startLine != b.startLine) {
+			return a.startLine > b.startLine;
+		}
+		return a.startColumn > b.startColumn;
+	});
+	for (const int index : order) {
+		const EditRange& edit = edits.at(index);
+		buffer.replace(edit.startLine, edit.startColumn, edit.endLine,
+			edit.endColumn, edit.text);
+	}
+
+	record.after.reserve(pages.size());
+	for (const int page : pages) {
+		record.after.append({ page, buffer.pageSnapshot(page) });
+	}
+
+	// Набор курсоров: последний — основной.
+	applyCursorSet(caretsAfter);
+	record.cursorAfter = primaryState();
+	record.extraCursorsAfter = extraCursors;
+	record.mergeKind = mergeKind;
+	record.stamp = QDateTime::currentMSecsSinceEpoch();
+	history.push(record, mergeKind != 0 && extraCursors.isEmpty()
+		&& caretsAfter.size() == 1);
+
+	bool structureChanged = false;
+	for (const EditRange& edit : edits) {
+		if (edit.text.contains(QLatin1Char('\n'))
+			|| edit.startLine != edit.endLine) {
+			structureChanged = true;
+			break;
+		}
+	}
+	if (structureChanged) {
+		chunks.clear();
+	}
+
+	clearBlockState();
+	afterEdit();
+	return true;
+}
+
+bool PagedTextEditor::Private::applyInsertionText(const QString& text,
+	int mergeKind) {
+	if (!canEdit() || text.isEmpty()) {
+		return false;
+	}
+
+	if (extraCursors.isEmpty()) {
+		int startLine = cursorLine;
+		int startColumn = cursorColumn;
+		int endLine = cursorLine;
+		int endColumn = cursorColumn;
+		if (hasSelection()) {
+			normalizedSelection(startLine, startColumn, endLine, endColumn);
+		}
+		return replaceRange(startLine, startColumn, endLine, endColumn,
+			text, mergeKind);
+	}
+
+	QVector<EditRange> edits;
+	for (const PagedCursorState& cursor : allCursors()) {
+		int startLine = cursor.line;
+		int startColumn = cursor.column;
+		int endLine = cursor.line;
+		int endColumn = cursor.column;
+		if (cursorHasSelection(cursor)) {
+			normalizedCursor(cursor, startLine, startColumn, endLine, endColumn);
+		}
+		edits.append({ startLine, startColumn, endLine, endColumn, text });
+	}
+
+	return applyEdits(edits, caretSetForEdits(edits), mergeKind);
+}
+
+void PagedTextEditor::Private::applyInsertionForCursors(
+	const QVector<QString>& texts) {
+	const QVector<PagedCursorState> cursors = allCursors();
+	if (texts.size() != cursors.size()) {
+		return;
+	}
+
+	QVector<EditRange> edits;
+	edits.reserve(texts.size());
+	for (int i = 0; i < cursors.size(); i++) {
+		const PagedCursorState& cursor = cursors.at(i);
+		int startLine = cursor.line;
+		int startColumn = cursor.column;
+		int endLine = cursor.line;
+		int endColumn = cursor.column;
+		if (cursorHasSelection(cursor)) {
+			normalizedCursor(cursor, startLine, startColumn, endLine, endColumn);
+		}
+		edits.append({ startLine, startColumn, endLine, endColumn, texts.at(i) });
+	}
+
+	applyEdits(edits, caretSetForEdits(edits), 0);
+}
+
+bool PagedTextEditor::Private::lineDeleteRange(int line, int& startLine,
+	int& startColumn, int& endLine, int& endColumn) const {
+	const int lineLength = lineAt(line).size();
+	if (line + 1 < lines) {
+		startLine = line;
+		startColumn = 0;
+		endLine = line + 1;
+		endColumn = 0;
+		return true;
+	}
+
+	if (line > 0) {
+		startLine = line - 1;
+		startColumn = lineAt(line - 1).size();
+		endLine = line;
+		endColumn = lineLength;
+		return true;
+	}
+
+	startLine = 0;
+	startColumn = 0;
+	endLine = 0;
+	endColumn = lineLength;
+	return lineLength > 0;
+}
+
+void PagedTextEditor::Private::cutContent() {
+	if (!canEdit()) {
+		return;
+	}
+
+	// В буфер попадают выделения, а при их отсутствии — строки целиком.
+	const QVector<PagedCursorState> ordered = orderedCursors();
+	QStringList clipboardParts;
+	for (const PagedCursorState& cursor : ordered) {
+		clipboardParts.append(cursorHasSelection(cursor)
+			? selectionText(cursor) : lineAt(cursor.line));
+	}
+	QGuiApplication::clipboard()->setText(clipboardParts.join(QLatin1Char('\n')));
+
+	const auto lessOrEqual = [](int leftLine, int leftColumn,
+		int rightLine, int rightColumn) {
+		return leftLine < rightLine
+			|| (leftLine == rightLine && leftColumn <= rightColumn);
+	};
+
+	QVector<EditRange> ranges;
+	QVector<QPair<int, int>> removalStarts;
+	for (const PagedCursorState& cursor : allCursors()) {
+		int startLine = 0;
+		int startColumn = 0;
+		int endLine = 0;
+		int endColumn = 0;
+		if (cursorHasSelection(cursor)) {
+			normalizedCursor(cursor, startLine, startColumn, endLine, endColumn);
+		}
+		else if (!lineDeleteRange(cursor.line, startLine, startColumn,
+			endLine, endColumn)) {
+			continue;
+		}
+
+		ranges.append({ startLine, startColumn, endLine, endColumn, QString() });
+		removalStarts.append({ startLine, startColumn });
+	}
+	if (ranges.isEmpty()) {
+		return;
+	}
+
+	// Пересекающиеся диапазоны (например, вырезание соседних последних
+	// строк) объединяются, чтобы не удалить один и тот же текст дважды.
+	std::sort(ranges.begin(), ranges.end(), [](const EditRange& left,
+		const EditRange& right) {
+		if (left.startLine != right.startLine) {
+			return left.startLine < right.startLine;
+		}
+		return left.startColumn < right.startColumn;
+	});
+	QVector<EditRange> merged;
+	for (const EditRange& range : ranges) {
+		if (merged.isEmpty()) {
+			merged.append(range);
+			continue;
+		}
+
+		EditRange& last = merged.last();
+		if (lessOrEqual(range.startLine, range.startColumn,
+			last.endLine, last.endColumn)) {
+			if (!lessOrEqual(range.endLine, range.endColumn,
+				last.endLine, last.endColumn)) {
+				last.endLine = range.endLine;
+				last.endColumn = range.endColumn;
+			}
+			continue;
+		}
+		merged.append(range);
+	}
+
+	// Каретка каждого курсора встаёт в начало его удаления (с поправкой на
+	// удалённые выше строки).
+	QVector<PagedCursorState> carets;
+	carets.reserve(removalStarts.size());
+	for (const auto& start : removalStarts) {
+		int removedLines = 0;
+		int line = start.first;
+		int column = start.second;
+		bool inside = false;
+		for (const EditRange& range : merged) {
+			if (lessOrEqual(line, column, range.startLine, range.startColumn)) {
+				break;
+			}
+			if (lessOrEqual(line, column, range.endLine, range.endColumn)) {
+				line = range.startLine - removedLines;
+				column = range.startColumn;
+				inside = true;
+				break;
+			}
+			removedLines += range.endLine - range.startLine;
+		}
+		if (!inside) {
+			line -= removedLines;
+		}
+		carets.append({ line, column, line, column });
+	}
+
+	applyEdits(merged, carets, 0);
+}
+
+void PagedTextEditor::Private::duplicateCurrentLines() {
+	if (!canEdit()) {
+		return;
+	}
+
+	const QVector<PagedCursorState> ordered = orderedCursors();
+	QVector<EditRange> edits;
+	edits.reserve(ordered.size());
+	for (const PagedCursorState& cursor : ordered) {
+		const QString text = lineAt(cursor.line);
+		const int lineLength = text.size();
+		// Вставка в конец строки: перевод строки и копия строки ниже.
+		edits.append({ cursor.line, lineLength, cursor.line, lineLength,
+			QStringLiteral("\n") + text });
+	}
+
+	applyEdits(edits, caretSetForEdits(edits), 0);
+}
+
+void PagedTextEditor::Private::pasteAtCursors(const QString& text) {
+	if (!canEdit() || text.isEmpty()) {
+		return;
+	}
+
+	if (extraCursors.isEmpty()) {
+		q->insertText(text);
+		return;
+	}
+
+	QString normalized = text;
+	normalized.replace(QStringLiteral("\r\n"), QStringLiteral("\n"));
+	normalized.replace(QLatin1Char('\r'), QLatin1Char('\n'));
+	const QStringList lines = normalized.split(QLatin1Char('\n'));
+
+	// Строки буфера распределяются по курсорам в текстовом порядке: если
+	// строк меньше, лишние курсоры получают строки по кругу; если больше —
+	// лишние строки не вставляются.
+	const QVector<PagedCursorState> ordered = orderedCursors();
+	QHash<int, int> rankByLine;
+	for (int i = 0; i < ordered.size(); i++) {
+		rankByLine.insert(ordered.at(i).line, i);
+	}
+
+	QVector<QString> texts;
+	const QVector<PagedCursorState> cursors = allCursors();
+	texts.reserve(cursors.size());
+	for (const PagedCursorState& cursor : cursors) {
+		const int rank = rankByLine.value(cursor.line, 0);
+		texts.append(rank < lines.size()
+			? lines.at(rank) : lines.at(rank % lines.size()));
+	}
+
+	applyInsertionForCursors(texts);
+}
+
+void PagedTextEditor::Private::moveAllCursorsByLine(int delta, bool keepAnchor,
+	bool pageStep) {
+	if (!ready) {
+		return;
+	}
+
+	clearBlockState();
+	const int step = pageStep
+		? qMax(1, q->viewport()->height() / qMax(1, lineHeight()) - 1) : 1;
+	const auto moveOne = [this, delta, step, keepAnchor](
+		const PagedCursorState& cursor) {
+		PagedCursorState result = cursor;
+		const int newLine = qBound(0, cursor.line + delta * step,
+			qMax(0, lines - 1));
+		const int newColumn = qMin(cursor.column, lineAt(newLine).size());
+		result.line = newLine;
+		result.column = newColumn;
+		if (!keepAnchor) {
+			result.anchorLine = newLine;
+			result.anchorColumn = newColumn;
+		}
+		else if (!cursorHasSelection(cursor)) {
+			result.anchorLine = cursor.line;
+			result.anchorColumn = cursor.column;
+		}
+		return result;
+	};
+
+	QVector<PagedCursorState> cursors;
+	cursors.reserve(extraCursors.size() + 1);
+	for (const PagedCursorState& cursor : extraCursors) {
+		cursors.append(moveOne(cursor));
+	}
+	cursors.append(moveOne(primaryState()));
+
+	applyCursorSet(cursors);
+	ensureCursorVisible();
+	updateCurrentForCursor();
+	q->viewport()->update();
+	emit q->cursorPositionChanged(cursorLine, cursorColumn);
+}
+
+void PagedTextEditor::Private::moveAllCursorsByColumn(int delta,
+	bool keepAnchor) {
+	if (!ready) {
+		return;
+	}
+
+	clearBlockState();
+	const auto moveOne = [this, delta, keepAnchor](
+		const PagedCursorState& cursor) {
+		PagedCursorState result = cursor;
+		if (delta > 0) {
+			if (cursor.column < lineAt(cursor.line).size()) {
+				result.column = cursor.column + 1;
+			}
+			else if (cursor.line + 1 < lines) {
+				result.line = cursor.line + 1;
+				result.column = 0;
+			}
+		}
+		else if (cursor.column > 0) {
+			result.column = cursor.column - 1;
+		}
+		else if (cursor.line > 0) {
+			result.line = cursor.line - 1;
+			result.column = lineAt(result.line).size();
+		}
+
+		if (!keepAnchor) {
+			result.anchorLine = result.line;
+			result.anchorColumn = result.column;
+		}
+		else if (!cursorHasSelection(cursor)) {
+			result.anchorLine = cursor.line;
+			result.anchorColumn = cursor.column;
+		}
+		return result;
+	};
+
+	QVector<PagedCursorState> cursors;
+	cursors.reserve(extraCursors.size() + 1);
+	for (const PagedCursorState& cursor : extraCursors) {
+		cursors.append(moveOne(cursor));
+	}
+	cursors.append(moveOne(primaryState()));
+
+	applyCursorSet(cursors);
+	ensureCursorVisible();
+	updateCurrentForCursor();
+	q->viewport()->update();
+	emit q->cursorPositionChanged(cursorLine, cursorColumn);
+}
+
+void PagedTextEditor::Private::moveAllCursorsToColumn(bool toEnd,
+	bool keepAnchor) {
+	if (!ready) {
+		return;
+	}
+
+	clearBlockState();
+	const auto moveOne = [this, toEnd, keepAnchor](
+		const PagedCursorState& cursor) {
+		PagedCursorState result = cursor;
+		result.column = toEnd ? lineAt(cursor.line).size() : 0;
+		if (!keepAnchor) {
+			result.anchorLine = result.line;
+			result.anchorColumn = result.column;
+		}
+		else if (!cursorHasSelection(cursor)) {
+			result.anchorLine = cursor.line;
+			result.anchorColumn = cursor.column;
+		}
+		return result;
+	};
+
+	QVector<PagedCursorState> cursors;
+	cursors.reserve(extraCursors.size() + 1);
+	for (const PagedCursorState& cursor : extraCursors) {
+		cursors.append(moveOne(cursor));
+	}
+	cursors.append(moveOne(primaryState()));
+
+	applyCursorSet(cursors);
+	ensureCursorVisible();
+	updateCurrentForCursor();
+	q->viewport()->update();
+	emit q->cursorPositionChanged(cursorLine, cursorColumn);
+}
+
+void PagedTextEditor::Private::beginBlockSelection(int line, int column) {
+	if (!ready || lines <= 0) {
+		return;
+	}
+
+	// Начало области — верхний курсор (если курсоров несколько).
+	const QVector<PagedCursorState> ordered = orderedCursors();
+	const PagedCursorState anchor = ordered.isEmpty()
+		? primaryState() : ordered.first();
+	blockAnchorLine = anchor.line;
+	blockAnchorColumn = anchor.column;
+	blockActive = true;
+	blockSelecting = true;
+	blockActiveLine = anchor.line;
+	blockActiveColumn = anchor.column;
+	updateBlockSelection(line, column);
+}
+
+void PagedTextEditor::Private::updateBlockSelection(int line, int column) {
+	if (!ready || !blockActive || lines <= 0) {
+		return;
+	}
+
+	line = qBound(0, line, qMax(0, lines - 1));
+	column = qBound(0, column, lineAt(line).size());
+	blockActiveLine = line;
+	blockActiveColumn = column;
+
+	const int firstLine = qMin(blockAnchorLine, line);
+	const int lastLine = qMax(blockAnchorLine, line);
+	const int minColumn = qMin(blockAnchorColumn, column);
+	const int maxColumn = qMax(blockAnchorColumn, column);
+
+	QVector<PagedCursorState> cursors;
+	cursors.reserve(lastLine - firstLine + 1);
+	for (int current = firstLine; current <= lastLine; current++) {
+		const int lineLength = lineAt(current).size();
+		if (current == line) {
+			cursors.append({ current, qBound(0, column, lineLength),
+				current, qBound(0, blockAnchorColumn, lineLength) });
+			continue;
+		}
+		cursors.append({ current, qBound(0, maxColumn, lineLength),
+			current, qBound(0, minColumn, lineLength) });
+	}
+
+	// Активная строка — основной курсор, поэтому ставим её в конец набора.
+	if (line != lastLine) {
+		const PagedCursorState primary = cursors.takeAt(line - firstLine);
+		cursors.append(primary);
+	}
+
+	applyCursorSet(cursors);
+	ensureCursorVisible();
+	updateCurrentForCursor();
+	q->viewport()->update();
+	emit q->cursorPositionChanged(cursorLine, cursorColumn);
+}
+
+void PagedTextEditor::Private::clearBlockState() {
+	blockActive = false;
+	blockSelecting = false;
+}
+
+bool PagedTextEditor::Private::handleBlockKey(int key, int pageStep) {
+	if (!ready || lines <= 0) {
+		return false;
+	}
+
+	int line = blockActiveLine;
+	int column = blockActiveColumn;
+	bool started = blockActive;
+	if (!started) {
+		// Начало области — текущий (верхний) курсор, активная точка — он же.
+		const QVector<PagedCursorState> ordered = orderedCursors();
+		const PagedCursorState anchor = ordered.isEmpty()
+			? primaryState() : ordered.first();
+		blockAnchorLine = anchor.line;
+		blockAnchorColumn = anchor.column;
+		line = anchor.line;
+		column = anchor.column;
+	}
+
+	switch (key) {
+	case Qt::Key_Up:
+		line--;
+		break;
+	case Qt::Key_Down:
+		line++;
+		break;
+	case Qt::Key_Left:
+		if (column > 0) {
+			column--;
+		}
+		else if (line > 0) {
+			line--;
+			column = lineAt(line).size();
+		}
+		break;
+	case Qt::Key_Right:
+		if (column < lineAt(line).size()) {
+			column++;
+		}
+		else if (line + 1 < lines) {
+			line++;
+			column = 0;
+		}
+		break;
+	case Qt::Key_Home:
+		column = 0;
+		break;
+	case Qt::Key_End:
+		column = lineAt(line).size();
+		break;
+	case Qt::Key_PageUp:
+		line -= pageStep;
+		break;
+	case Qt::Key_PageDown:
+		line += pageStep;
+		break;
+	default:
+		return false;
+	}
+
+	line = qBound(0, line, qMax(0, lines - 1));
+	column = qBound(0, column, lineAt(line).size());
+	blockActive = true;
+	blockActiveLine = line;
+	blockActiveColumn = column;
+	updateBlockSelection(line, column);
+	return true;
+}
+
+void PagedTextEditor::Private::paintCursors(PagedTextPaintModel& model) const {
+	const auto addCursor = [this, &model](const PagedCursorState& cursor) {
+		model.carets.append({ cursor.line, cursor.column });
+		int startLine = 0;
+		int startColumn = 0;
+		int endLine = 0;
+		int endColumn = 0;
+		normalizedCursor(cursor, startLine, startColumn, endLine, endColumn);
+		if (startLine != endLine || startColumn != endColumn) {
+			model.selections.append({ startLine, startColumn, endLine, endColumn });
+		}
+	};
+
+	for (const PagedCursorState& cursor : extraCursors) {
+		addCursor(cursor);
+	}
+	addCursor(primaryState());
+}
+
 void PagedTextEditor::Private::syncModel() {
 	const int newLines = buffer.lineCount();
 	const bool lineCountChanged = newLines != lines;
@@ -586,20 +1527,18 @@ void PagedTextEditor::Private::afterEdit() {
 	scheduleSearchRefresh();
 }
 
-void PagedTextEditor::Private::setCursorFromState(const PagedCursorState& state) {
-	lines = buffer.lineCount();
-	cursorLine = qBound(0, state.line, qMax(0, lines - 1));
-	cursorColumn = qBound(0, state.column, lineAt(cursorLine).size());
-	anchorLine = qBound(0, state.anchorLine, qMax(0, lines - 1));
-	anchorColumn = qBound(0, state.anchorColumn, lineAt(anchorLine).size());
-	searchSelectionActive = false;
-}
-
-void PagedTextEditor::Private::applyHistoryState(const PagedCursorState& cursor) {
+void PagedTextEditor::Private::applyHistoryState(const PagedCursorState& cursor,
+	const QVector<PagedCursorState>& extras) {
 	const int previousLines = lines;
+	lines = buffer.lineCount();
 	maxLineLength = buffer.maxLineLength();
 	chunks.clear();
-	setCursorFromState(cursor);
+
+	QVector<PagedCursorState> cursors = extras;
+	cursors.append(cursor);
+	applyCursorSet(cursors);
+	clearBlockState();
+
 	updateScrollBars();
 	ensureCursorVisible();
 	q->viewport()->update();
@@ -695,6 +1634,30 @@ void PagedTextEditor::Private::backspace() {
 		return;
 	}
 
+	if (!extraCursors.isEmpty()) {
+		if (hasSelection()) {
+			q->deleteSelection();
+			return;
+		}
+
+		QVector<EditRange> edits;
+		for (const PagedCursorState& cursor : allCursors()) {
+			if (cursor.column > 0) {
+				edits.append({ cursor.line, cursor.column - 1, cursor.line,
+					cursor.column, QString() });
+			}
+			else if (cursor.line > 0) {
+				edits.append({ cursor.line - 1,
+					static_cast<int>(lineAt(cursor.line - 1).size()),
+					cursor.line, 0, QString() });
+			}
+		}
+		if (!edits.isEmpty()) {
+			applyEdits(edits, caretSetForEdits(edits), kMergeBackspace);
+		}
+		return;
+	}
+
 	if (hasSelection()) {
 		q->deleteSelection();
 		return;
@@ -715,6 +1678,30 @@ void PagedTextEditor::Private::backspace() {
 
 void PagedTextEditor::Private::deleteForward() {
 	if (!canEdit()) {
+		return;
+	}
+
+	if (!extraCursors.isEmpty()) {
+		if (hasSelection()) {
+			q->deleteSelection();
+			return;
+		}
+
+		QVector<EditRange> edits;
+		for (const PagedCursorState& cursor : allCursors()) {
+			const int lineLength = lineAt(cursor.line).size();
+			if (cursor.column < lineLength) {
+				edits.append({ cursor.line, cursor.column, cursor.line,
+					cursor.column + 1, QString() });
+			}
+			else if (cursor.line + 1 < lines) {
+				edits.append({ cursor.line, cursor.column, cursor.line + 1,
+					0, QString() });
+			}
+		}
+		if (!edits.isEmpty()) {
+			applyEdits(edits, caretSetForEdits(edits), kMergeDelete);
+		}
 		return;
 	}
 
@@ -1207,6 +2194,8 @@ void PagedTextEditor::setCursorPosition(int line, int column, bool keepAnchor) {
 	const int lineLength = d->lineAt(line).size();
 	column = qBound(0, column, lineLength);
 
+	d->clearExtraCursors();
+	d->clearBlockState();
 	d->cursorLine = line;
 	d->cursorColumn = column;
 	d->searchSelectionActive = false;
@@ -1226,6 +2215,8 @@ void PagedTextEditor::selectAll() {
 		return;
 	}
 
+	d->clearExtraCursors();
+	d->clearBlockState();
 	d->anchorLine = 0;
 	d->anchorColumn = 0;
 	d->cursorLine = qMax(0, d->lines - 1);
@@ -1237,28 +2228,57 @@ void PagedTextEditor::selectAll() {
 	emit cursorPositionChanged(d->cursorLine, d->cursorColumn);
 }
 
-QString PagedTextEditor::selectedText() const {
-	if (!d->hasSelection() || !d->ready) {
-		return QString();
-	}
+int PagedTextEditor::cursorCount() const {
+	return 1 + d->extraCursors.size();
+}
 
-	int startLine = 0;
-	int startColumn = 0;
-	int endLine = 0;
-	int endColumn = 0;
-	d->normalizedSelection(startLine, startColumn, endLine, endColumn);
-
-	QString result;
-	for (int line = startLine; line <= endLine; line++) {
-		const QString text = d->lineAt(line);
-		const int from = line == startLine ? startColumn : 0;
-		const int to = line == endLine ? endColumn : text.size();
-		result += text.mid(from, qMax(0, to - from));
-		if (line < endLine) {
-			result += QLatin1Char('\n');
-		}
+QList<QPoint> PagedTextEditor::cursorPositions() const {
+	QList<QPoint> result;
+	const QVector<PagedCursorState> cursors = d->orderedCursors();
+	result.reserve(cursors.size());
+	for (const PagedCursorState& cursor : cursors) {
+		// QPoint(line, column): так позиция читается как «строка:колонка».
+		result.append(QPoint(cursor.line, cursor.column));
 	}
 	return result;
+}
+
+void PagedTextEditor::addCursorAt(int line, int column) {
+	if (!d->ready || d->lines <= 0) {
+		return;
+	}
+
+	line = qBound(0, line, qMax(0, d->lines - 1));
+	column = qBound(0, column, d->lineAt(line).size());
+	if (line == d->cursorLine) {
+		return;
+	}
+	for (const PagedCursorState& cursor : d->extraCursors) {
+		if (cursor.line == line) {
+			return;
+		}
+	}
+
+	d->extraCursors.append({ line, column, line, column });
+	d->clearBlockState();
+	viewport()->update();
+}
+
+void PagedTextEditor::clearExtraCursors() {
+	if (d->extraCursors.isEmpty()) {
+		return;
+	}
+
+	d->extraCursors.clear();
+	d->clearBlockState();
+	viewport()->update();
+}
+
+QString PagedTextEditor::selectedText() const {
+	if (!d->ready) {
+		return QString();
+	}
+	return d->selectionText(d->primaryState());
 }
 
 QString PagedTextEditor::encoding() const {
@@ -1392,7 +2412,7 @@ bool PagedTextEditor::undo() {
 	}
 	// Восстановленные страницы снова занимают память: держим её в пределе.
 	d->buffer.enforceMemoryBudget();
-	d->applyHistoryState(record.cursorBefore);
+	d->applyHistoryState(record.cursorBefore, record.extraCursorsBefore);
 	return true;
 }
 
@@ -1410,7 +2430,7 @@ bool PagedTextEditor::redo() {
 		d->buffer.restorePage(entry.first, entry.second);
 	}
 	d->buffer.enforceMemoryBudget();
-	d->applyHistoryState(record.cursorAfter);
+	d->applyHistoryState(record.cursorAfter, record.extraCursorsAfter);
 	return true;
 }
 
@@ -1423,23 +2443,37 @@ bool PagedTextEditor::insertText(const QString& text) {
 	normalized.replace(QStringLiteral("\r\n"), QStringLiteral("\n"));
 	normalized.replace(QLatin1Char('\r'), QLatin1Char('\n'));
 
-	int startLine = d->cursorLine;
-	int startColumn = d->cursorColumn;
-	int endLine = d->cursorLine;
-	int endColumn = d->cursorColumn;
-	if (d->hasSelection()) {
-		d->normalizedSelection(startLine, startColumn, endLine, endColumn);
-	}
-
 	// Один печатный символ склеивается с предыдущим набором в один шаг отмены.
-	const int mergeKind = normalized.size() == 1 ? kMergeInsert : 0;
-	return d->replaceRange(startLine, startColumn, endLine, endColumn,
-		normalized, mergeKind);
+	const int mergeKind = normalized.size() == 1 && normalized != QStringLiteral("\n")
+		? kMergeInsert : 0;
+	return d->applyInsertionText(normalized, mergeKind);
 }
 
 bool PagedTextEditor::deleteSelection() {
 	if (!d->canEdit()) {
 		return false;
+	}
+
+	if (!d->extraCursors.isEmpty()) {
+		if (d->anySelection()) {
+			QVector<Private::EditRange> edits;
+			for (const PagedCursorState& cursor : d->allCursors()) {
+				if (!d->cursorHasSelection(cursor)) {
+					continue;
+				}
+				int startLine = 0;
+				int startColumn = 0;
+				int endLine = 0;
+				int endColumn = 0;
+				d->normalizedCursor(cursor, startLine, startColumn, endLine, endColumn);
+				edits.append({ startLine, startColumn, endLine, endColumn, QString() });
+			}
+			return d->applyEdits(edits, d->caretSetForEdits(edits), 0);
+		}
+
+		// Нет выделения — удаляем символ справа у каждого курсора.
+		d->deleteForward();
+		return true;
 	}
 
 	int startLine = d->cursorLine;
@@ -1458,19 +2492,23 @@ void PagedTextEditor::copy() {
 		return;
 	}
 
-	QString text = selectedText();
-	if (text.isEmpty()) {
-		text = d->lineAt(d->cursorLine);
+	// Копируются выделения; если у курсора выделения нет — его строка
+	// целиком (так Ctrl+C на строке копирует строку).
+	QStringList parts;
+	const QVector<PagedCursorState> cursors = d->orderedCursors();
+	parts.reserve(cursors.size());
+	for (const PagedCursorState& cursor : cursors) {
+		parts.append(d->cursorHasSelection(cursor)
+			? d->selectionText(cursor) : d->lineAt(cursor.line));
 	}
-	QGuiApplication::clipboard()->setText(text);
+	QGuiApplication::clipboard()->setText(parts.join(QLatin1Char('\n')));
 }
 
 void PagedTextEditor::cut() {
-	if (!d->canEdit() || !d->hasSelection()) {
+	if (!d->canEdit()) {
 		return;
 	}
-	copy();
-	deleteSelection();
+	d->cutContent();
 }
 
 void PagedTextEditor::paste() {
@@ -1480,7 +2518,7 @@ void PagedTextEditor::paste() {
 
 	const QString text = QGuiApplication::clipboard()->text();
 	if (!text.isEmpty()) {
-		insertText(text);
+		d->pasteAtCursors(text);
 	}
 }
 
@@ -1835,13 +2873,7 @@ void PagedTextEditor::paintEvent(QPaintEvent* event) {
 	model.wrapped = d->wrapLines;
 	model.lineNumbers = d->showLineNumbers;
 	model.hasFocus = hasFocus();
-	model.cursorLine = d->cursorLine;
-	model.cursorColumn = d->cursorColumn;
-	model.hasSelection = d->hasSelection();
-	if (model.hasSelection) {
-		d->normalizedSelection(model.selectionStartLine, model.selectionStartColumn,
-			model.selectionEndLine, model.selectionEndColumn);
-	}
+	d->paintCursors(model);
 	model.token = d->selectedToken();
 	model.searchMatches = &d->searchMatches;
 	model.currentSearch = d->searchCurrent;
@@ -1891,11 +2923,15 @@ void PagedTextEditor::mousePressEvent(QMouseEvent* event) {
 	const int gutter = d->gutterWidth();
 	const int clickX = int(event->position().x());
 	const int clickY = int(event->position().y());
+	const bool alt = (event->modifiers() & Qt::AltModifier) != 0;
+	const bool shift = (event->modifiers() & Qt::ShiftModifier) != 0;
 
 	// Клик по номеру строки выделяет строку целиком.
-	if (clickX < gutter) {
+	if (clickX < gutter && !alt) {
 		const int line = d->logicalLineAtY(clickY);
 		d->selecting = false;
+		d->clearExtraCursors();
+		d->clearBlockState();
 		d->anchorLine = line;
 		d->anchorColumn = 0;
 		d->cursorLine = line;
@@ -1916,7 +2952,24 @@ void PagedTextEditor::mousePressEvent(QMouseEvent* event) {
 		return;
 	}
 
-	if (event->modifiers() & Qt::ShiftModifier) {
+	// Alt+клик добавляет или убирает курсор: на строке не больше одного.
+	if (alt && shift) {
+		d->beginBlockSelection(line, column);
+		event->accept();
+		return;
+	}
+	if (alt) {
+		d->selecting = false;
+		d->toggleCursorAt(line, column);
+		event->accept();
+		return;
+	}
+
+	if (shift) {
+		// Обычное выделение — у основного курсора; дополнительные убираем,
+		// чтобы выделения не пересекались.
+		d->clearExtraCursors();
+		d->clearBlockState();
 		setCursorPosition(line, column, true);
 	}
 	else {
@@ -1927,7 +2980,7 @@ void PagedTextEditor::mousePressEvent(QMouseEvent* event) {
 }
 
 void PagedTextEditor::mouseMoveEvent(QMouseEvent* event) {
-	if (!d->selecting || !d->ready) {
+	if (!d->ready) {
 		QAbstractScrollArea::mouseMoveEvent(event);
 		return;
 	}
@@ -1936,6 +2989,18 @@ void PagedTextEditor::mouseMoveEvent(QMouseEvent* event) {
 	int column = 0;
 	if (!d->positionAt(int(event->position().x()), int(event->position().y()),
 		line, column)) {
+		QAbstractScrollArea::mouseMoveEvent(event);
+		return;
+	}
+
+	// Прямоугольное выделение Shift+Alt тянется мышью.
+	if (d->blockSelecting) {
+		d->updateBlockSelection(line, column);
+		event->accept();
+		return;
+	}
+
+	if (!d->selecting) {
 		QAbstractScrollArea::mouseMoveEvent(event);
 		return;
 	}
@@ -1953,6 +3018,7 @@ void PagedTextEditor::mouseMoveEvent(QMouseEvent* event) {
 
 void PagedTextEditor::mouseReleaseEvent(QMouseEvent* event) {
 	d->selecting = false;
+	d->blockSelecting = false;
 	QAbstractScrollArea::mouseReleaseEvent(event);
 }
 
@@ -1985,6 +3051,8 @@ void PagedTextEditor::mouseDoubleClickEvent(QMouseEvent* event) {
 	}
 
 	if (start != end) {
+		d->clearExtraCursors();
+		d->clearBlockState();
 		d->anchorLine = line;
 		d->anchorColumn = end;
 		d->cursorLine = line;
@@ -2005,7 +3073,10 @@ void PagedTextEditor::keyPressEvent(QKeyEvent* event) {
 
 	const bool shift = (event->modifiers() & Qt::ShiftModifier) != 0;
 	const bool control = (event->modifiers() & Qt::ControlModifier) != 0;
+	const bool alt = (event->modifiers() & Qt::AltModifier) != 0;
 	const int lineLength = d->lineAt(d->cursorLine).size();
+	const int pageStep = qMax(1,
+		viewport()->height() / qMax(1, d->lineHeight()) - 1);
 
 	if (event->matches(QKeySequence::Undo)) {
 		undo();
@@ -2043,6 +3114,21 @@ void PagedTextEditor::keyPressEvent(QKeyEvent* event) {
 		return;
 	}
 
+	// Ctrl+D — дублировать строку (строки) ниже.
+	if (control && !alt && event->key() == Qt::Key_D) {
+		d->duplicateCurrentLines();
+		event->accept();
+		return;
+	}
+
+	// Shift+Alt + стрелки — прямоугольное выделение от верхнего курсора.
+	if (shift && alt) {
+		if (d->handleBlockKey(event->key(), pageStep)) {
+			event->accept();
+			return;
+		}
+	}
+
 	switch (event->key()) {
 	case Qt::Key_Backspace:
 		d->backspace();
@@ -2074,8 +3160,37 @@ void PagedTextEditor::keyPressEvent(QKeyEvent* event) {
 		return;
 	}
 
-	const int pageStep = qMax(1,
-		viewport()->height() / qMax(1, d->lineHeight()) - 1);
+	// Многокурсорный режим: стрелки двигают все курсоры.
+	if (!d->extraCursors.isEmpty()) {
+		switch (event->key()) {
+		case Qt::Key_Up:
+			d->moveAllCursorsByLine(-1, shift, false);
+			return;
+		case Qt::Key_Down:
+			d->moveAllCursorsByLine(1, shift, false);
+			return;
+		case Qt::Key_PageUp:
+			d->moveAllCursorsByLine(-1, shift, true);
+			return;
+		case Qt::Key_PageDown:
+			d->moveAllCursorsByLine(1, shift, true);
+			return;
+		case Qt::Key_Left:
+			d->moveAllCursorsByColumn(-1, shift);
+			return;
+		case Qt::Key_Right:
+			d->moveAllCursorsByColumn(1, shift);
+			return;
+		case Qt::Key_Home:
+			d->moveAllCursorsToColumn(false, shift);
+			return;
+		case Qt::Key_End:
+			d->moveAllCursorsToColumn(true, shift);
+			return;
+		default:
+			break;
+		}
+	}
 
 	switch (event->key()) {
 	case Qt::Key_Up:

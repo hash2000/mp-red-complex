@@ -21,8 +21,12 @@ struct PagedCursorState {
 struct PagedEditRecord {
 	QVector<QPair<int, PagedPageSnapshot>> before;
 	QVector<QPair<int, PagedPageSnapshot>> after;
+	/// Основной курсор (последний, к которому применялись действия).
 	PagedCursorState cursorBefore;
 	PagedCursorState cursorAfter;
+	/// Остальные курсоры многокурсорного режима (без основного).
+	QVector<PagedCursorState> extraCursorsBefore;
+	QVector<PagedCursorState> extraCursorsAfter;
 	/// Вид простой правки для склейки набора: 1 — вставка символа,
 	/// 2 — Backspace, 3 — Delete. 0 — не склеивается.
 	int mergeKind = 0;

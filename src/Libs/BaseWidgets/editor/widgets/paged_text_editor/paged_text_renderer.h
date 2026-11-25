@@ -13,6 +13,20 @@
 
 class QPainter;
 
+/// Каретка одного курсора.
+struct PagedTextCaret {
+	int line = 0;
+	int column = 0;
+};
+
+/// Выделение одного курсора (нормализованный диапазон).
+struct PagedTextSelection {
+	int startLine = 0;
+	int startColumn = 0;
+	int endLine = 0;
+	int endColumn = 0;
+};
+
 /// Всё, что нужно для отрисовки видимой области paged-редактора.
 struct PagedTextPaintModel {
 	QRect viewport;
@@ -27,13 +41,9 @@ struct PagedTextPaintModel {
 	bool lineNumbers = true;
 	bool hasFocus = false;
 
-	int cursorLine = 0;
-	int cursorColumn = 0;
-	bool hasSelection = false;
-	int selectionStartLine = 0;
-	int selectionStartColumn = 0;
-	int selectionEndLine = 0;
-	int selectionEndColumn = 0;
+	/// Курсоры и выделения многокурсорного режима.
+	QVector<PagedTextSelection> selections;
+	QVector<PagedTextCaret> carets;
 
 	QString token;
 	const QVector<PagedSearchMatch>* searchMatches = nullptr;

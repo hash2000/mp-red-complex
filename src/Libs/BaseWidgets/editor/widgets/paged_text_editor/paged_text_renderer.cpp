@@ -59,6 +59,20 @@ void PagedTextRenderer::paint(QPainter& painter, const PagedTextPaintModel& mode
 						Qt::AlignRight | Qt::AlignVCenter, QString::number(line + 1));
 					firstVisual = false;
 				}
+
+				// Пустая строка: каретка всё равно должна быть видна.
+				if (model.hasFocus) {
+					for (const PagedTextCaret& caret : model.carets) {
+						if (caret.line != line) {
+							continue;
+						}
+						painter.setPen(model.palette.text().color());
+						painter.drawLine(
+							QPointF(gutter - horizontalOffset, y),
+							QPointF(gutter - horizontalOffset, y + visualHeight));
+					}
+				}
+
 				y += visualHeight;
 				continue;
 			}
@@ -106,12 +120,15 @@ void PagedTextRenderer::paint(QPainter& painter, const PagedTextPaintModel& mode
 					x2 - x1, visualHeight, color);
 			}
 
-			if (model.hasSelection && line >= model.selectionStartLine
-				&& line <= model.selectionEndLine) {
-				const int selectedFrom = line == model.selectionStartLine
-					? model.selectionStartColumn : 0;
-				const int selectedTo = line == model.selectionEndLine
-					? model.selectionEndColumn : text.size();
+			for (const PagedTextSelection& selection : model.selections) {
+				if (line < selection.startLine || line > selection.endLine) {
+					continue;
+				}
+
+				const int selectedFrom = line == selection.startLine
+					? selection.startColumn : 0;
+				const int selectedTo = line == selection.endLine
+					? selection.endColumn : text.size();
 				const int from = qMax(selectedFrom, segmentStart);
 				const int to = qMin(selectedTo, segmentEnd);
 				if (to > from) {
@@ -127,16 +144,23 @@ void PagedTextRenderer::paint(QPainter& painter, const PagedTextPaintModel& mode
 			painter.setPen(model.palette.text().color());
 			textLine.draw(&painter, QPointF(gutter - horizontalOffset, y));
 
-			if (model.hasFocus && line == model.cursorLine
-				&& model.cursorColumn >= segmentStart
-				&& (model.cursorColumn < segmentEnd
-					|| (visual + 1 == visualCount
-						&& model.cursorColumn == segmentEnd))) {
-				const qreal cursorX = xAt(model.cursorColumn);
-				painter.setPen(model.palette.text().color());
-				painter.drawLine(
-					QPointF(gutter - horizontalOffset + cursorX, y),
-					QPointF(gutter - horizontalOffset + cursorX, y + visualHeight));
+			if (model.hasFocus) {
+				for (const PagedTextCaret& caret : model.carets) {
+					if (caret.line != line || caret.column < segmentStart) {
+						continue;
+					}
+					const bool atSegmentEnd = caret.column == segmentEnd
+						&& visual + 1 == visualCount;
+					if (caret.column >= segmentEnd && !atSegmentEnd) {
+						continue;
+					}
+
+					const qreal cursorX = xAt(caret.column);
+					painter.setPen(model.palette.text().color());
+					painter.drawLine(
+						QPointF(gutter - horizontalOffset + cursorX, y),
+						QPointF(gutter - horizontalOffset + cursorX, y + visualHeight));
+				}
 			}
 
 			if (firstVisual && gutter > 0 && model.lineNumbers) {

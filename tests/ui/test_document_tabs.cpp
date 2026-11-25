@@ -793,7 +793,8 @@ void TestDocumentTabs::systemOptionsDocumentEditsGlobalSettings() {
 	auto* properties = editor->findChild<PropertiesListWidget*>(
 		QStringLiteral("SystemOptionsProperties"));
 	QVERIFY(properties);
-	QCOMPARE(properties->propertyCount(), 1);
+	QCOMPARE(properties->propertyCount(),
+		controller.systemOptions()->optionNames().size());
 
 	auto* combo = editor->findChild<QComboBox*>();
 	QVERIFY(combo);

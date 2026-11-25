@@ -61,8 +61,12 @@ bool PagedEditHistory::push(PagedEditRecord record, bool allowMerge) {
 
 	if (allowMerge && !undoStack.isEmpty()) {
 		PagedEditRecord& top = undoStack.last();
+		// Склеивается только обычный набор одним курсором: многокурсорная
+		// правка восстанавливает набор курсоров целиком и не склеивается.
 		if (top.mergeKind != 0 && top.mergeKind == record.mergeKind
 			&& record.stamp - top.stamp <= kMergeWindowMs
+			&& top.extraCursorsBefore.isEmpty() && top.extraCursorsAfter.isEmpty()
+			&& record.extraCursorsBefore.isEmpty() && record.extraCursorsAfter.isEmpty()
 			&& samePages(top, record)
 			&& samePosition(top.cursorAfter, record.cursorBefore)) {
 			// Набор страниц тот же: «до» уже сохранено началом набора,

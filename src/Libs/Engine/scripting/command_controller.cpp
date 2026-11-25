@@ -128,6 +128,48 @@ void CommandController::Private::registerSystemOptions() {
 	// берутся из реестра правил, поэтому новое правило достаточно добавить
 	// в DocumentTabsOrderRegistry — настройка и UI настроек обновятся сами.
 	registerDocumentTabsOrderOption(*systemOptions);
+
+	// Глобальные параметры текстовых документов: из них документы берут
+	// значения по умолчанию при создании (редактор кода и виртуальный
+	// редактор больших файлов).
+	auto registerTextOption = [this](const char* name, const QString& title,
+		const QString& description, SystemOptionType type, const QVariant& value) {
+		SystemOption option;
+		option.name = QString::fromLatin1(name);
+		option.title = title;
+		option.description = description;
+		option.type = type;
+		option.defaultValue = value;
+		systemOptions->registerOption(option);
+	};
+
+	registerTextOption(SystemOptions::kDocumentsTextBufferLimit,
+		QStringLiteral("Предел буфера текста, МБ"),
+		QStringLiteral("Сколько памяти отводится под изменённые страницы "
+			"виртуального редактора больших файлов. При превышении страницы "
+			"выгружаются во временный файл. 0 — без предела."),
+		SystemOptionType::Integer, SystemOptions::kDocumentsTextBufferLimitDefaultMb);
+	registerTextOption(SystemOptions::kDocumentsTextWordWrap,
+		QStringLiteral("Перенос строк текста"),
+		QStringLiteral("Переносить длинные строки в редакторе кода и в "
+			"виртуальном редакторе больших файлов."),
+		SystemOptionType::Boolean, false);
+	registerTextOption(SystemOptions::kDocumentsTextFontSize,
+		QStringLiteral("Размер шрифта текста"),
+		QStringLiteral("Размер шрифта текстовых документов в пунктах. "
+			"0 — системный размер."),
+		SystemOptionType::Integer, 0);
+	registerTextOption(SystemOptions::kDocumentsTextFontFamily,
+		QStringLiteral("Шрифт текста"),
+		QStringLiteral("Семейство шрифта текстовых документов. "
+			"Пустая строка — системный моноширинный шрифт."),
+		SystemOptionType::Text, QString());
+	registerTextOption(SystemOptions::kDocumentsTextEncoding,
+		QStringLiteral("Кодировка текста"),
+		QStringLiteral("Кодировка чтения и записи текстовых документов "
+			"(имя кодека QTextCodec, например UTF-8 или Windows-1251)."),
+		SystemOptionType::Text,
+		QString::fromLatin1(SystemOptions::kDocumentsTextEncodingDefault));
 }
 
 void CommandController::init() {

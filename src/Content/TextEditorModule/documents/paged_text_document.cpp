@@ -1,4 +1,5 @@
 #include "Content/TextEditorModule/documents/paged_text_document.h"
+#include "Content/TextEditorModule/documents/text_document_options.h"
 #include "Libs/BaseWidgets/editor/formatters/formatter_plugin_manager.h"
 #include "Libs/BaseWidgets/editor/highlights/highlighter_plugin.h"
 #include "Libs/BaseWidgets/editor/highlights/highlighter_plugin_manager.h"
@@ -86,6 +87,9 @@ struct PagedTextDocument::Private {
 	void saveDocument();
 	/// Спросить подтверждение, если правки будут потеряны.
 	bool confirmDiscard();
+	/// Применить глобальные параметры текстовых документов как значения
+	/// по умолчанию (шрифт, перенос строк, кодировка, предел буфера).
+	void applyTextDefaults();
 	void showEncodingDialog();
 };
 
@@ -335,6 +339,31 @@ bool PagedTextDocument::Private::confirmDiscard() {
 			"Они будут потеряны. Продолжить?"),
 		QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
 	return answer == QMessageBox::Yes;
+}
+
+void PagedTextDocument::Private::applyTextDefaults() {
+	const TextDocumentOptions options = TextDocumentOptions::fromContext(q->context());
+
+	QFont font = editor->font();
+	if (!options.fontFamily.isEmpty()) {
+		font.setFamily(options.fontFamily);
+		editor->setFont(font);
+	}
+	if (options.fontSize > 0) {
+		editor->setFontSize(options.fontSize);
+	}
+
+	editor->setWordWrap(options.wordWrap);
+	editor->setMemoryBudget(qint64(options.bufferLimitMb) * 1024 * 1024);
+
+	if (!options.encoding.isEmpty()) {
+		editor->setEncoding(options.encoding);
+	}
+
+	syncWordWrap(editor->wordWrap());
+	syncFontSize(editor->fontSize());
+	syncEncodingLabel();
+	updateInfoLabels();
 }
 
 void PagedTextDocument::Private::formatDocument() {
@@ -858,6 +887,10 @@ void PagedTextDocument::refresh() {
 }
 
 void PagedTextDocument::onContextAttached() {
+	// Глобальные параметры текста — значения по умолчанию для нового
+	// документа: шрифт, перенос строк, кодировка и предел буфера.
+	d->applyTextDefaults();
+
 	const auto path = variable(QStringLiteral("path"), QString()).toString();
 	if (path.isEmpty()) {
 		return;

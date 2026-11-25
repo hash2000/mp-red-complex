@@ -1,4 +1,5 @@
 #include "Content/TextEditorModule/documents/code_editor_document.h"
+#include "Content/TextEditorModule/documents/text_document_options.h"
 #include "Libs/BaseWidgets/editor/widgets/code_editor_widget.h"
 #include "Libs/BaseWidgets/editor/widgets/code_editor_search_panel.h"
 #include "Libs/BaseWidgets/editor/widgets/encoding_dialog.h"
@@ -107,6 +108,9 @@ public:
 	void printInfo(const QString& message) const;
 	bool writeFile(const QString& path, const QString& text, QString* error) const;
 	void applyDataText(const QString& data);
+	/// Применить глобальные параметры текстовых документов как значения
+	/// по умолчанию (шрифт, перенос строк, кодировка).
+	void applyTextDefaults();
 };
 
 void CodeEditorDocument::Private::setupUi() {
@@ -502,6 +506,27 @@ void CodeEditorDocument::Private::applyDataText(const QString& data) {
 	q->setModified(false);
 }
 
+void CodeEditorDocument::Private::applyTextDefaults() {
+	const TextDocumentOptions options = TextDocumentOptions::fromContext(q->context());
+
+	QFont font = editor->font();
+	if (!options.fontFamily.isEmpty()) {
+		font.setFamily(options.fontFamily);
+	}
+	if (options.fontSize > 0) {
+		font.setPointSize(options.fontSize);
+	}
+	editor->setFont(font);
+
+	editor->setLineWrapPolicy(options.wordWrap
+		? CodeEditorWidget::LineWrapPolicy::On
+		: CodeEditorWidget::LineWrapPolicy::Off);
+
+	if (!options.encoding.isEmpty()) {
+		editor->setEncoding(options.encoding);
+	}
+}
+
 bool CodeEditorDocument::Private::applyDataEncoding(const QString& encoding) {
 	QTextCodec* target = QTextCodec::codecForName(encoding.toLatin1());
 	if (!target) {
@@ -795,6 +820,10 @@ void CodeEditorDocument::refresh() {
 }
 
 void CodeEditorDocument::onContextAttached() {
+	// Глобальные параметры текста — значения по умолчанию для нового
+	// документа: шрифт, перенос строк и кодировка применяются до чтения файла.
+	d->applyTextDefaults();
+
 	const auto path = variable(QStringLiteral("path"), QString()).toString();
 	const bool hasData = hasVariable(QStringLiteral("data"));
 	d->dataMode = hasData;
