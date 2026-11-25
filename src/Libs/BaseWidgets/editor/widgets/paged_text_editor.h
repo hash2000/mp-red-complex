@@ -42,6 +42,9 @@ public:
 	/// Номер экранной строки внутри логической (с учётом WordWrap).
 	int cursorVisualRow() const;
 	bool isCursorVisible() const;
+	/// Отображаемая часть строки (с учётом «Загрузить ещё…»).
+	QString displayedLineText(int line) const;
+	QRect loadMoreButtonRect(int line) const;
 	void setCursorPosition(int line, int column, bool keepAnchor = false);
 	void selectAll();
 	/// Выделенный текст (многострочный — через '\n').

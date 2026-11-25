@@ -24,6 +24,8 @@ private slots:
 	void exposesSearchProperties();
 	void fontSizeAndWordWrap();
 	void gutterClickSelectsLine();
+	void longLineLoadsInChunks();
+	void shiftSelectionCrossesLines();
 	void switchFileUpdatesTitle();
 	void reopensInAnotherEncoding();
 	void reportsUnsupportedEncoding();
@@ -299,6 +301,64 @@ void TestPagedTextEditor::gutterClickSelectsLine() {
 	QTest::keyClick(&editor, Qt::Key_Down);
 	QCOMPARE(editor.cursorLine(), 0);
 	QCOMPARE(editor.cursorVisualRow(), 1);
+}
+
+void TestPagedTextEditor::longLineLoadsInChunks() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto path = dir.filePath(QStringLiteral("longline.txt"));
+	const QString longLine(5000, QLatin1Char('x'));
+
+	QFile file(path);
+	QVERIFY(file.open(QIODevice::WriteOnly));
+	file.write(longLine.toUtf8());
+	file.close();
+
+	PagedTextEditor editor;
+	editor.resize(600, 300);
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+
+	QCOMPARE(editor.lineText(0).size(), 5000);
+	QVERIFY(editor.displayedLineText(0).size() < longLine.size());
+
+	editor.grab();
+	const QRect button = editor.loadMoreButtonRect(0);
+	QVERIFY(button.isValid());
+
+	const int before = editor.displayedLineText(0).size();
+	QTest::mouseClick(editor.viewport(), Qt::LeftButton, Qt::NoModifier,
+		button.center());
+	QVERIFY(editor.displayedLineText(0).size() > before);
+	QCOMPARE(editor.lineText(0).size(), 5000);
+}
+
+void TestPagedTextEditor::shiftSelectionCrossesLines() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto path = dir.filePath(QStringLiteral("shift.txt"));
+	QFile file(path);
+	QVERIFY(file.open(QIODevice::WriteOnly));
+	file.write("one\ntwo\n");
+	file.close();
+
+	PagedTextEditor editor;
+	editor.resize(400, 300);
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+
+	editor.setCursorPosition(0, 0);
+	for (int i = 0; i < 4; i++) {
+		QTest::keyClick(&editor, Qt::Key_Right, Qt::ShiftModifier);
+	}
+	QCOMPARE(editor.cursorLine(), 1);
+	QCOMPARE(editor.cursorColumn(), 0);
+	QCOMPARE(editor.selectedText(), QStringLiteral("one\n"));
+
+	QTest::keyClick(&editor, Qt::Key_Left, Qt::ShiftModifier);
+	QCOMPARE(editor.cursorLine(), 0);
+	QCOMPARE(editor.cursorColumn(), 3);
+	QCOMPARE(editor.selectedText(), QStringLiteral("one"));
 }
 
 void TestPagedTextEditor::switchFileUpdatesTitle() {
