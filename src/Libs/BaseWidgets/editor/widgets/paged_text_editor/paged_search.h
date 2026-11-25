@@ -1,5 +1,6 @@
 #pragma once
-#include <QByteArray>
+#include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_document_buffer.h"
+
 #include <QString>
 #include <QVector>
 
@@ -20,10 +21,11 @@ struct PagedSearchOutcome {
 	QVector<PagedSearchMatch> matches;
 };
 
-/// Построчный поиск по файлу. Страницы декодируются в фоне, поэтому
-/// счётчик не блокирует GUI. Многострочные шаблоны не поддержаны.
-PagedSearchOutcome runPagedLineSearch(const QString& path,
-	const QByteArray& encodingName, const QVector<qint64>& lineStarts,
-	qint64 fileSize, const QString& query, Qt::CaseSensitivity caseSensitivity,
+/// Построчный поиск по виртуальному буферу. Буфер передаётся по значению:
+/// это снимок документа, в котором неизменённые страницы по-прежнему читаются
+/// с диска, а изменённые берутся из памяти. Поэтому поиск не блокирует GUI
+/// и учитывает несохранённые правки. Многострочные шаблоны не поддержаны.
+PagedSearchOutcome runPagedLineSearch(PagedDocumentBuffer buffer,
+	const QString& query, Qt::CaseSensitivity caseSensitivity,
 	const std::shared_ptr<std::atomic_bool>& cancel,
 	const std::function<void(int)>& progress = {});

@@ -6,23 +6,29 @@
 #include "Libs/BaseWidgets/editor/highlights/highlighter_plugin_manager.h"
 #include "Libs/BaseWidgets/editor/language_info.h"
 #include "Libs/BaseWidgets/editor/layout/text_layout.h"
+#include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_document_buffer.h"
+#include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_edit_history.h"
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_file_indexer.h"
-#include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_line_cache.h"
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_line_chunks.h"
+#include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_search.h"
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_text_cursor.h"
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_text_highlighter.h"
-#include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_search.h"
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_text_renderer.h"
 
+#include <QAction>
 #include <QClipboard>
+#include <QContextMenuEvent>
+#include <QDateTime>
 #include <QFile>
 #include <QFontDatabase>
 #include <QFutureWatcher>
 #include <QGuiApplication>
 #include <QHash>
+#include <QInputMethodEvent>
 #include <QKeyEvent>
 #include <QKeySequence>
 #include <QList>
+#include <QMenu>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QResizeEvent>
@@ -30,6 +36,7 @@
 #include <QSaveFile>
 #include <QTextCodec>
 #include <QTextLine>
+#include <QTimer>
 #include <QWheelEvent>
 #include <QtConcurrent/QtConcurrentRun>
 #include <QtMath>
@@ -38,11 +45,21 @@
 #include <algorithm>
 #include <limits>
 #include <memory>
+#include <utility>
 
 namespace {
 
 /// Дополнительный отступ справа, чтобы последний символ не упирался в край.
 constexpr int kHorizontalMarginPx = 24;
+
+/// Виды простых правок, которые история склеивает в один шаг отмены.
+constexpr int kMergeInsert = 1;
+constexpr int kMergeBackspace = 2;
+constexpr int kMergeDelete = 3;
+
+/// Задержка перезапуска поиска после правки: не считаем весь файл на
+/// каждое нажатие клавиши.
+constexpr int kSearchRefreshDelayMs = 150;
 
 } // namespace
 
@@ -50,13 +67,14 @@ struct PagedTextEditor::Private {
 	PagedTextEditor* q = nullptr;
 
 	QString path;
-	QString encodingName;
+	QString encodingName = QStringLiteral("UTF-8");
 	QTextCodec* codec = nullptr;
 
 	bool indexing = false;
 	bool ready = false;
 	bool wrapLines = false;
 	bool showLineNumbers = true;
+	bool readOnly = false;
 	QString error;
 
 	int lines = 0;
@@ -64,7 +82,8 @@ struct PagedTextEditor::Private {
 	qint64 fileSize = 0;
 	QVector<qint64> lineStarts;
 
-	PagedLineCache cache;
+	PagedDocumentBuffer buffer;
+	PagedEditHistory history;
 	PagedLineChunks chunks;
 	PagedTextHighlighter highlighter;
 	bool highlightingEnabled = true;
@@ -72,6 +91,11 @@ struct PagedTextEditor::Private {
 	FormatterPluginManager* formatterManager = nullptr;
 	FormatterPlugin* currentFormatter = nullptr;
 	QString formatSource;
+
+	bool modified = false;
+	bool undoAvailable = false;
+	bool redoAvailable = false;
+	int spilledPages = 0;
 
 	QFutureWatcher<PagedIndexResult>* watcher = nullptr;
 	std::shared_ptr<std::atomic_bool> cancelFlag;
@@ -84,6 +108,8 @@ struct PagedTextEditor::Private {
 	int anchorColumn = 0;
 	bool selecting = false;
 	int restoreLine = -1;
+	int restoreCursorLine = -1;
+	int restoreCursorColumn = 0;
 
 	QString searchText;
 	QVector<PagedSearchMatch> searchMatches;
@@ -92,12 +118,14 @@ struct PagedTextEditor::Private {
 	bool searching = false;
 	bool searchSelectionActive = false;
 	bool searchCaseSensitive = false;
+	bool searchJumpOnFinish = true;
 	int rowOffsetPx = 0;
 	bool loadingMoreHorizontally = false;
 	QFutureWatcher<PagedSearchOutcome>* searchWatcher = nullptr;
 	std::shared_ptr<std::atomic_bool> searchCancel;
 	quint64 searchGeneration = 0;
 	quint64 searchActiveGeneration = 0;
+	QTimer* searchRefreshTimer = nullptr;
 
 	void clearPages();
 	QString indexTaskId() const;
@@ -123,10 +151,25 @@ struct PagedTextEditor::Private {
 	void selectMatch(int index);
 	void updateCurrentForCursor();
 	void moveCursorVertically(int delta, bool keepAnchor);
+
+	// Редактирование.
+	bool canEdit() const;
+	void resetEditState();
+	bool replaceRange(int startLine, int startColumn, int endLine, int endColumn,
+		const QString& text, int mergeKind);
+	void syncModel();
+	void afterEdit();
+	void applyHistoryState(const PagedCursorState& cursor);
+	void setCursorFromState(const PagedCursorState& cursor);
+	void backspace();
+	void deleteForward();
+	void startSearch(const QString& query, bool jump);
+	void scheduleSearchRefresh();
+	void syncSpillState();
 };
 
 void PagedTextEditor::Private::clearPages() {
-	cache.clear();
+	buffer.clear();
 }
 
 QString PagedTextEditor::Private::indexTaskId() const {
@@ -145,7 +188,7 @@ QString PagedTextEditor::Private::lineAt(int line) const {
 	if (!ready || line < 0 || line >= lines) {
 		return QString();
 	}
-	return cache.lineAt(line);
+	return buffer.lineAt(line);
 }
 
 QString PagedTextEditor::Private::visibleText(int line) const {
@@ -193,8 +236,6 @@ void PagedTextEditor::Private::maybeLoadMoreHorizontally() {
 int PagedTextEditor::Private::lineHeight() const {
 	return qMax(1, q->fontMetrics().height());
 }
-
-
 
 bool PagedTextEditor::Private::hasSelection() const {
 	return cursorLine != anchorLine || cursorColumn != anchorColumn;
@@ -391,6 +432,7 @@ void PagedTextEditor::Private::moveCursorVertically(int delta, bool keepAnchor) 
 		q->setCursorPosition(target.line, target.column, keepAnchor);
 	}
 }
+
 void PagedTextEditor::Private::selectMatch(int index) {
 	if (index < 0 || index >= searchMatches.size()) {
 		return;
@@ -442,7 +484,6 @@ void PagedTextEditor::Private::updateCurrentForCursor() {
 	}
 }
 
-
 void PagedTextEditor::Private::updateScrollBars() {
 	if (!q) {
 		return;
@@ -472,6 +513,288 @@ void PagedTextEditor::Private::updateScrollBars() {
 	horizontal->setRange(0, maxHorizontal);
 	horizontal->setPageStep(q->viewport()->width());
 	horizontal->setSingleStep(qMax(1, charWidth));
+}
+
+bool PagedTextEditor::Private::canEdit() const {
+	return ready && !indexing && !readOnly;
+}
+
+void PagedTextEditor::Private::resetEditState() {
+	if (modified) {
+		modified = false;
+		emit q->modifiedChanged(false);
+	}
+	if (undoAvailable) {
+		undoAvailable = false;
+		emit q->undoAvailableChanged(false);
+	}
+	if (redoAvailable) {
+		redoAvailable = false;
+		emit q->redoAvailableChanged(false);
+	}
+}
+
+void PagedTextEditor::Private::syncSpillState() {
+	const int spilled = buffer.spilledPageCount();
+	if (spilled == spilledPages) {
+		return;
+	}
+	spilledPages = spilled;
+	emit q->bufferSpilled(spilled);
+}
+
+void PagedTextEditor::Private::syncModel() {
+	const int newLines = buffer.lineCount();
+	const bool lineCountChanged = newLines != lines;
+	lines = newLines;
+	maxLineLength = buffer.maxLineLength();
+	if (lineCountChanged) {
+		chunks.clear();
+	}
+
+	updateScrollBars();
+	q->viewport()->update();
+	if (lineCountChanged) {
+		emit q->lineCountChanged(lines);
+	}
+
+	const bool newModified = buffer.hasChanges();
+	if (newModified != modified) {
+		modified = newModified;
+		emit q->modifiedChanged(modified);
+	}
+
+	const bool newUndo = history.canUndo();
+	if (newUndo != undoAvailable) {
+		undoAvailable = newUndo;
+		emit q->undoAvailableChanged(newUndo);
+	}
+
+	const bool newRedo = history.canRedo();
+	if (newRedo != redoAvailable) {
+		redoAvailable = newRedo;
+		emit q->redoAvailableChanged(newRedo);
+	}
+
+	syncSpillState();
+}
+
+void PagedTextEditor::Private::afterEdit() {
+	syncModel();
+	ensureCursorVisible();
+	emit q->cursorPositionChanged(cursorLine, cursorColumn);
+	scheduleSearchRefresh();
+}
+
+void PagedTextEditor::Private::setCursorFromState(const PagedCursorState& state) {
+	lines = buffer.lineCount();
+	cursorLine = qBound(0, state.line, qMax(0, lines - 1));
+	cursorColumn = qBound(0, state.column, lineAt(cursorLine).size());
+	anchorLine = qBound(0, state.anchorLine, qMax(0, lines - 1));
+	anchorColumn = qBound(0, state.anchorColumn, lineAt(anchorLine).size());
+	searchSelectionActive = false;
+}
+
+void PagedTextEditor::Private::applyHistoryState(const PagedCursorState& cursor) {
+	const int previousLines = lines;
+	maxLineLength = buffer.maxLineLength();
+	chunks.clear();
+	setCursorFromState(cursor);
+	updateScrollBars();
+	ensureCursorVisible();
+	q->viewport()->update();
+
+	if (lines != previousLines) {
+		emit q->lineCountChanged(lines);
+	}
+
+	const bool newModified = buffer.hasChanges();
+	if (newModified != modified) {
+		modified = newModified;
+		emit q->modifiedChanged(modified);
+	}
+
+	const bool newUndo = history.canUndo();
+	if (newUndo != undoAvailable) {
+		undoAvailable = newUndo;
+		emit q->undoAvailableChanged(newUndo);
+	}
+
+	const bool newRedo = history.canRedo();
+	if (newRedo != redoAvailable) {
+		redoAvailable = newRedo;
+		emit q->redoAvailableChanged(newRedo);
+	}
+
+	emit q->cursorPositionChanged(cursorLine, cursorColumn);
+	syncSpillState();
+	scheduleSearchRefresh();
+}
+
+bool PagedTextEditor::Private::replaceRange(int startLine, int startColumn,
+	int endLine, int endColumn, const QString& text, int mergeKind) {
+	if (!canEdit()) {
+		return false;
+	}
+
+	if (startLine > endLine || (startLine == endLine && startColumn > endColumn)) {
+		std::swap(startLine, endLine);
+		std::swap(startColumn, endColumn);
+	}
+
+	const QVector<int> pages = buffer.pagesForLines(startLine, endLine);
+	if (pages.isEmpty()) {
+		return false;
+	}
+
+	PagedEditRecord record;
+	record.before.reserve(pages.size());
+	for (const int page : pages) {
+		record.before.append({ page, buffer.pageSnapshot(page) });
+	}
+	record.cursorBefore = { cursorLine, cursorColumn, anchorLine, anchorColumn };
+
+	if (!buffer.replace(startLine, startColumn, endLine, endColumn, text)) {
+		return false;
+	}
+
+	record.after.reserve(pages.size());
+	for (const int page : pages) {
+		record.after.append({ page, buffer.pageSnapshot(page) });
+	}
+
+	// Курсор встаёт сразу за вставленным текстом.
+	const QStringList inserted = text.isEmpty()
+		? QStringList{ QString() } : text.split(QLatin1Char('\n'));
+	const int parts = inserted.size();
+	cursorLine = qBound(0, startLine + parts - 1, qMax(0, buffer.lineCount() - 1));
+	const int newColumn = parts == 1
+		? startColumn + inserted.first().size() : inserted.last().size();
+	cursorColumn = qBound(0, newColumn, buffer.lineAt(cursorLine).size());
+	anchorLine = cursorLine;
+	anchorColumn = cursorColumn;
+	searchSelectionActive = false;
+
+	record.cursorAfter = { cursorLine, cursorColumn, anchorLine, anchorColumn };
+	record.mergeKind = mergeKind;
+	record.stamp = QDateTime::currentMSecsSinceEpoch();
+
+	// Склейка нужна только для набора текста и посимвольного удаления.
+	history.push(record, mergeKind != 0);
+
+	if (text.contains(QLatin1Char('\n')) || startLine != endLine) {
+		chunks.clear();
+	}
+
+	afterEdit();
+	return true;
+}
+
+void PagedTextEditor::Private::backspace() {
+	if (!canEdit()) {
+		return;
+	}
+
+	if (hasSelection()) {
+		q->deleteSelection();
+		return;
+	}
+
+	if (cursorColumn > 0) {
+		replaceRange(cursorLine, cursorColumn - 1, cursorLine, cursorColumn,
+			QString(), kMergeBackspace);
+		return;
+	}
+
+	if (cursorLine > 0) {
+		const int previousLength = lineAt(cursorLine - 1).size();
+		replaceRange(cursorLine - 1, previousLength, cursorLine, 0,
+			QString(), kMergeBackspace);
+	}
+}
+
+void PagedTextEditor::Private::deleteForward() {
+	if (!canEdit()) {
+		return;
+	}
+
+	if (hasSelection()) {
+		q->deleteSelection();
+		return;
+	}
+
+	const int lineLength = lineAt(cursorLine).size();
+	if (cursorColumn < lineLength) {
+		replaceRange(cursorLine, cursorColumn, cursorLine, cursorColumn + 1,
+			QString(), kMergeDelete);
+		return;
+	}
+
+	if (cursorLine + 1 < lines) {
+		replaceRange(cursorLine, cursorColumn, cursorLine + 1, 0,
+			QString(), kMergeDelete);
+	}
+}
+
+void PagedTextEditor::Private::scheduleSearchRefresh() {
+	if (searchText.isEmpty() || !searchRefreshTimer) {
+		return;
+	}
+	searchRefreshTimer->start();
+}
+
+void PagedTextEditor::Private::startSearch(const QString& query, bool jump) {
+	searchText = query;
+	searchJumpOnFinish = jump;
+	searchGeneration++;
+	if (searchRefreshTimer) {
+		searchRefreshTimer->stop();
+	}
+	if (searchCancel) {
+		searchCancel->store(true);
+	}
+	searching = false;
+	searchMatches.clear();
+	searchTotal = 0;
+	searchCurrent = -1;
+	emit q->searchCurrentChanged(-1, 0);
+	q->viewport()->update();
+
+	if (!ready || query.isEmpty()) {
+		BackgroundTaskRegistry::instance().endTask(searchTaskId());
+		emit q->searchCountChanged(0);
+		return;
+	}
+
+	emit q->searchCountChanged(-1);
+	BackgroundTaskRegistry::instance().beginTask(searchTaskId(),
+		PagedTextEditor::tr("Поиск: %1").arg(query));
+	auto cancel = std::make_shared<std::atomic_bool>(false);
+	searchCancel = cancel;
+	searchActiveGeneration = searchGeneration;
+	searching = true;
+
+	// Снимок буфера: изменённые страницы берутся из памяти, неизменённые
+	// по-прежнему читаются с диска. Копия разделяет строки (copy-on-write),
+	// поэтому стоит недорого.
+	const PagedDocumentBuffer snapshot = buffer;
+	const Qt::CaseSensitivity caseSensitivity = searchCaseSensitive
+		? Qt::CaseSensitive : Qt::CaseInsensitive;
+	PagedTextEditor* widget = q;
+	searchWatcher->setFuture(QtConcurrent::run(
+		[snapshot, query, caseSensitivity, cancel, widget,
+			generation = searchGeneration] {
+			return runPagedLineSearch(snapshot, query, caseSensitivity, cancel,
+				[widget, generation](int total) {
+					QMetaObject::invokeMethod(widget,
+						[widget, generation, total] {
+							if (widget->d
+								&& generation == widget->d->searchGeneration) {
+								emit widget->searchProgressChanged(total);
+							}
+						}, Qt::QueuedConnection);
+				});
+		}));
 }
 
 PagedTextEditor::PagedTextEditor(QWidget* parent)
@@ -511,7 +834,8 @@ PagedTextEditor::PagedTextEditor(QWidget* parent)
 		d->lines = result.lineStarts.size();
 		d->maxLineLength = result.maxLineLength;
 		d->fileSize = result.fileSize;
-		d->cache.reset(d->path, d->encodingName.toLatin1(), d->lineStarts, d->fileSize);
+		d->buffer.reset(d->path, d->encodingName.toLatin1(),
+			d->lineStarts, d->fileSize, d->maxLineLength);
 		d->ready = true;
 		d->error.clear();
 		d->chunks.clear();
@@ -519,12 +843,24 @@ PagedTextEditor::PagedTextEditor(QWidget* parent)
 		verticalScrollBar()->setValue(d->restoreLine >= 0
 			? qMin(d->restoreLine, qMax(0, d->lines - 1)) : 0);
 		d->restoreLine = -1;
-		d->cursorLine = 0;
-		d->cursorColumn = 0;
-		d->anchorLine = 0;
-		d->anchorColumn = 0;
+		if (d->restoreCursorLine >= 0) {
+			d->cursorLine = qBound(0, d->restoreCursorLine, qMax(0, d->lines - 1));
+			d->cursorColumn = qBound(0, d->restoreCursorColumn,
+				d->lineAt(d->cursorLine).size());
+			d->anchorLine = d->cursorLine;
+			d->anchorColumn = d->cursorColumn;
+			d->restoreCursorLine = -1;
+			d->restoreCursorColumn = 0;
+		}
+		else {
+			d->cursorLine = 0;
+			d->cursorColumn = 0;
+			d->anchorLine = 0;
+			d->anchorColumn = 0;
+		}
 		viewport()->update();
 		emit lineCountChanged(d->lines);
+		emit cursorPositionChanged(d->cursorLine, d->cursorColumn);
 		emit indexingFinished(true, QString());
 	});
 
@@ -544,20 +880,36 @@ PagedTextEditor::PagedTextEditor(QWidget* parent)
 		d->searchTotal = outcome.total;
 		d->searchCurrent = -1;
 		if (!d->searchMatches.isEmpty()) {
-			int index = 0;
-			for (int i = 0; i < d->searchMatches.size(); i++) {
-				const auto& match = d->searchMatches.at(i);
-				if (match.line > d->cursorLine
-					|| (match.line == d->cursorLine && match.start >= d->cursorColumn)) {
-					index = i;
-					break;
+			if (d->searchJumpOnFinish) {
+				int index = 0;
+				for (int i = 0; i < d->searchMatches.size(); i++) {
+					const auto& match = d->searchMatches.at(i);
+					if (match.line > d->cursorLine
+						|| (match.line == d->cursorLine && match.start >= d->cursorColumn)) {
+						index = i;
+						break;
+					}
 				}
+				d->selectMatch(index);
 			}
-			d->selectMatch(index);
+			else {
+				// Поиск перезапущен после правки: курсор не переводим.
+				d->updateCurrentForCursor();
+			}
 		}
 
 		viewport()->update();
 		emit searchCountChanged(d->searchTotal);
+	});
+
+	d->searchRefreshTimer = new QTimer(this);
+	d->searchRefreshTimer->setSingleShot(true);
+	d->searchRefreshTimer->setInterval(kSearchRefreshDelayMs);
+	connect(d->searchRefreshTimer, &QTimer::timeout, this, [this] {
+		if (!d || d->searchText.isEmpty()) {
+			return;
+		}
+		d->startSearch(d->searchText, false);
 	});
 
 	connect(verticalScrollBar(), &QScrollBar::valueChanged, this, [this] {
@@ -568,6 +920,10 @@ PagedTextEditor::PagedTextEditor(QWidget* parent)
 	});
 
 	d->updateScrollBars();
+
+	// Редактор сразу пригоден для работы без файла: у документа «Без имени»
+	// есть одна пустая строка, и в неё можно печатать или вставлять текст.
+	newDocument();
 }
 
 PagedTextEditor::~PagedTextEditor() {
@@ -608,6 +964,7 @@ void PagedTextEditor::openFile(const QString& path, const QString& encoding) {
 	d->generation++;
 	d->clearPages();
 	d->chunks.clear();
+	d->history.clear();
 	d->ready = false;
 	d->indexing = false;
 	d->error.clear();
@@ -616,6 +973,12 @@ void PagedTextEditor::openFile(const QString& path, const QString& encoding) {
 	d->fileSize = 0;
 	d->lineStarts.clear();
 	d->rowOffsetPx = 0;
+	d->restoreLine = -1;
+	d->restoreCursorLine = -1;
+	d->restoreCursorColumn = 0;
+	if (d->searchRefreshTimer) {
+		d->searchRefreshTimer->stop();
+	}
 	d->path = path;
 	d->encodingName = encoding;
 	d->codec = QTextCodec::codecForName(encoding.toLatin1());
@@ -625,6 +988,8 @@ void PagedTextEditor::openFile(const QString& path, const QString& encoding) {
 	if (d->highlightingManager) {
 		setHighlightingPlugin(d->highlightingManager->pluginForFile(path));
 	}
+	d->resetEditState();
+	d->syncSpillState();
 
 	d->searchGeneration++;
 	if (d->searchCancel) {
@@ -687,6 +1052,7 @@ void PagedTextEditor::closeFile() {
 	d->generation++;
 	d->clearPages();
 	d->chunks.clear();
+	d->history.clear();
 	d->ready = false;
 	d->indexing = false;
 	d->path.clear();
@@ -694,9 +1060,66 @@ void PagedTextEditor::closeFile() {
 	d->lines = 0;
 	d->maxLineLength = 0;
 	d->fileSize = 0;
+	if (d->searchRefreshTimer) {
+		d->searchRefreshTimer->stop();
+	}
+	d->resetEditState();
+	d->syncSpillState();
 	d->updateScrollBars();
 	viewport()->update();
 	emit lineCountChanged(0);
+}
+
+void PagedTextEditor::newDocument() {
+	BackgroundTaskRegistry::instance().endTask(d->indexTaskId());
+	BackgroundTaskRegistry::instance().endTask(d->searchTaskId());
+	if (d->currentFormatter) {
+		d->currentFormatter->stop();
+		d->currentFormatter->disconnect(this);
+		d->currentFormatter = nullptr;
+		BackgroundTaskRegistry::instance().endTask(d->formatTaskId());
+	}
+	if (d->cancelFlag) {
+		d->cancelFlag->store(true);
+	}
+	d->generation++;
+	d->chunks.clear();
+	d->history.clear();
+	d->searchGeneration++;
+	if (d->searchRefreshTimer) {
+		d->searchRefreshTimer->stop();
+	}
+	if (d->searchCancel) {
+		d->searchCancel->store(true);
+	}
+	d->searching = false;
+	d->searchMatches.clear();
+	d->searchTotal = 0;
+	d->searchCurrent = -1;
+	d->buffer.resetEmpty(d->encodingName.toLatin1());
+	d->path.clear();
+	d->lineStarts = { 0 };
+	d->fileSize = 0;
+	d->lines = d->buffer.lineCount();
+	d->maxLineLength = 0;
+	d->indexing = false;
+	d->ready = true;
+	d->error.clear();
+	d->cursorLine = 0;
+	d->cursorColumn = 0;
+	d->anchorLine = 0;
+	d->anchorColumn = 0;
+	d->rowOffsetPx = 0;
+	d->restoreLine = -1;
+	d->restoreCursorLine = -1;
+	d->resetEditState();
+	d->updateScrollBars();
+	viewport()->update();
+	emit lineCountChanged(d->lines);
+	emit searchCountChanged(0);
+	emit searchCurrentChanged(-1, 0);
+	emit cursorPositionChanged(d->cursorLine, d->cursorColumn);
+	d->syncSpillState();
 }
 
 QString PagedTextEditor::filePath() const {
@@ -729,6 +1152,10 @@ int PagedTextEditor::cursorLine() const {
 
 int PagedTextEditor::cursorColumn() const {
 	return d->cursorColumn;
+}
+
+bool PagedTextEditor::hasSelection() const {
+	return d->hasSelection();
 }
 
 QString PagedTextEditor::displayedLineText(int line) const {
@@ -838,14 +1265,223 @@ QString PagedTextEditor::encoding() const {
 	return d->encodingName;
 }
 
-void PagedTextEditor::setEncoding(const QString& encoding) {
-	if (encoding.isEmpty() || encoding == d->encodingName || d->path.isEmpty()) {
-		return;
+bool PagedTextEditor::setEncoding(const QString& encoding) {
+	if (encoding.isEmpty() || encoding == d->encodingName) {
+		return false;
+	}
+
+	// Перечитать файл можно только без несохранённых правок: иначе они
+	// пропали бы вместе со страницами в памяти.
+	if (d->buffer.hasChanges()) {
+		return false;
+	}
+
+	if (d->path.isEmpty()) {
+		d->encodingName = encoding;
+		d->buffer.resetEmpty(encoding.toLatin1());
+		return true;
 	}
 
 	const int oldLine = verticalScrollBar()->value();
+	const int oldCursorLine = d->cursorLine;
+	const int oldCursorColumn = d->cursorColumn;
 	openFile(d->path, encoding);
 	d->restoreLine = oldLine;
+	d->restoreCursorLine = oldCursorLine;
+	d->restoreCursorColumn = oldCursorColumn;
+	return true;
+}
+
+bool PagedTextEditor::isReadOnly() const {
+	return d->readOnly;
+}
+
+void PagedTextEditor::setReadOnly(bool readOnly) {
+	d->readOnly = readOnly;
+}
+
+bool PagedTextEditor::isModified() const {
+	return d->buffer.hasChanges();
+}
+
+int PagedTextEditor::modifiedPageCount() const {
+	return d->buffer.dirtyPageCount();
+}
+
+void PagedTextEditor::setMemoryBudget(qint64 bytes) {
+	d->buffer.setMemoryBudget(bytes);
+	d->syncSpillState();
+}
+
+qint64 PagedTextEditor::memoryBudget() const {
+	return d->buffer.memoryBudget();
+}
+
+qint64 PagedTextEditor::bufferedBytes() const {
+	return d->buffer.bufferedBytes();
+}
+
+int PagedTextEditor::spilledPageCount() const {
+	return d->buffer.spilledPageCount();
+}
+
+QString PagedTextEditor::spillFilePath() const {
+	return d->buffer.spillFilePath();
+}
+
+bool PagedTextEditor::save() {
+	if (d->path.isEmpty()) {
+		emit saved(QString(), false, tr("Документ не имеет пути для сохранения"));
+		return false;
+	}
+	return saveAs(d->path);
+}
+
+bool PagedTextEditor::saveAs(const QString& path) {
+	if (path.isEmpty()) {
+		emit saved(path, false, tr("Не задан путь для сохранения"));
+		return false;
+	}
+	if (!d->ready || d->indexing) {
+		emit saved(path, false, tr("Файл ещё не прочитан"));
+		return false;
+	}
+
+	QString error;
+	if (!d->buffer.saveTo(path, &error)) {
+		emit saved(path, false, error);
+		return false;
+	}
+
+	// После записи файл переиндексируется: индекс строк и страницы строятся
+	// заново, а курсор и прокрутка сохраняются.
+	const int oldLine = verticalScrollBar()->value();
+	const int oldCursorLine = d->cursorLine;
+	const int oldCursorColumn = d->cursorColumn;
+	if (d->searchRefreshTimer) {
+		d->searchRefreshTimer->stop();
+	}
+	openFile(path, d->encodingName);
+	d->restoreLine = oldLine;
+	d->restoreCursorLine = oldCursorLine;
+	d->restoreCursorColumn = oldCursorColumn;
+	emit saved(path, true, QString());
+	return true;
+}
+
+bool PagedTextEditor::canUndo() const {
+	return d->history.canUndo();
+}
+
+bool PagedTextEditor::canRedo() const {
+	return d->history.canRedo();
+}
+
+bool PagedTextEditor::undo() {
+	if (!d->canEdit()) {
+		return false;
+	}
+
+	PagedEditRecord record;
+	if (!d->history.takeUndo(record)) {
+		return false;
+	}
+
+	for (const auto& entry : record.before) {
+		d->buffer.restorePage(entry.first, entry.second);
+	}
+	// Восстановленные страницы снова занимают память: держим её в пределе.
+	d->buffer.enforceMemoryBudget();
+	d->applyHistoryState(record.cursorBefore);
+	return true;
+}
+
+bool PagedTextEditor::redo() {
+	if (!d->canEdit()) {
+		return false;
+	}
+
+	PagedEditRecord record;
+	if (!d->history.takeRedo(record)) {
+		return false;
+	}
+
+	for (const auto& entry : record.after) {
+		d->buffer.restorePage(entry.first, entry.second);
+	}
+	d->buffer.enforceMemoryBudget();
+	d->applyHistoryState(record.cursorAfter);
+	return true;
+}
+
+bool PagedTextEditor::insertText(const QString& text) {
+	if (text.isEmpty() || !d->canEdit()) {
+		return false;
+	}
+
+	QString normalized = text;
+	normalized.replace(QStringLiteral("\r\n"), QStringLiteral("\n"));
+	normalized.replace(QLatin1Char('\r'), QLatin1Char('\n'));
+
+	int startLine = d->cursorLine;
+	int startColumn = d->cursorColumn;
+	int endLine = d->cursorLine;
+	int endColumn = d->cursorColumn;
+	if (d->hasSelection()) {
+		d->normalizedSelection(startLine, startColumn, endLine, endColumn);
+	}
+
+	// Один печатный символ склеивается с предыдущим набором в один шаг отмены.
+	const int mergeKind = normalized.size() == 1 ? kMergeInsert : 0;
+	return d->replaceRange(startLine, startColumn, endLine, endColumn,
+		normalized, mergeKind);
+}
+
+bool PagedTextEditor::deleteSelection() {
+	if (!d->canEdit()) {
+		return false;
+	}
+
+	int startLine = d->cursorLine;
+	int startColumn = d->cursorColumn;
+	int endLine = d->cursorLine;
+	int endColumn = d->cursorColumn;
+	if (d->hasSelection()) {
+		d->normalizedSelection(startLine, startColumn, endLine, endColumn);
+	}
+	return d->replaceRange(startLine, startColumn, endLine, endColumn,
+		QString(), 0);
+}
+
+void PagedTextEditor::copy() {
+	if (!d->ready) {
+		return;
+	}
+
+	QString text = selectedText();
+	if (text.isEmpty()) {
+		text = d->lineAt(d->cursorLine);
+	}
+	QGuiApplication::clipboard()->setText(text);
+}
+
+void PagedTextEditor::cut() {
+	if (!d->canEdit() || !d->hasSelection()) {
+		return;
+	}
+	copy();
+	deleteSelection();
+}
+
+void PagedTextEditor::paste() {
+	if (!d->canEdit()) {
+		return;
+	}
+
+	const QString text = QGuiApplication::clipboard()->text();
+	if (!text.isEmpty()) {
+		insertText(text);
+	}
 }
 
 void PagedTextEditor::setHighlightingManager(HighlightingPluginManager* manager) {
@@ -910,6 +1546,14 @@ bool PagedTextEditor::formatDocument() {
 		return false;
 	}
 
+	// Форматирование читает и перезаписывает файл целиком: правки из памяти
+	// при этом потерялись бы, поэтому сначала нужно сохранить документ.
+	if (isModified()) {
+		emit formattingFailed(tr("Есть несохранённые изменения: сохраните файл "
+			"перед форматированием"));
+		return false;
+	}
+
 	QFile file(d->path);
 	if (!file.open(QIODevice::ReadOnly)) {
 		emit formattingFailed(tr("Не удалось открыть файл: %1").arg(d->path));
@@ -962,8 +1606,12 @@ bool PagedTextEditor::formatDocument() {
 				}
 
 				const int oldLine = verticalScrollBar()->value();
+				const int oldCursorLine = d->cursorLine;
+				const int oldCursorColumn = d->cursorColumn;
 				openFile(d->path, d->encodingName);
 				d->restoreLine = oldLine;
+				d->restoreCursorLine = oldCursorLine;
+				d->restoreCursorColumn = oldCursorColumn;
 			}
 
 			emit formattingFinished(changed);
@@ -1012,7 +1660,9 @@ void PagedTextEditor::setFontSize(int size) {
 
 bool PagedTextEditor::wordWrap() const {
 	return d->wrapLines;
-}void PagedTextEditor::setWordWrap(bool enabled) {
+}
+
+void PagedTextEditor::setWordWrap(bool enabled) {
 	if (d->wrapLines == enabled) {
 		return;
 	}
@@ -1045,49 +1695,7 @@ void PagedTextEditor::setLineNumbersVisible(bool visible) {
 }
 
 void PagedTextEditor::setSearchQuery(const QString& query) {
-	d->searchText = query;
-	d->searchGeneration++;
-	if (d->searchCancel) {
-		d->searchCancel->store(true);
-	}
-	d->searching = false;
-	d->searchMatches.clear();
-	d->searchTotal = 0;
-	d->searchCurrent = -1;
-	emit searchCurrentChanged(-1, 0);
-	viewport()->update();
-
-	if (!d->ready || query.isEmpty()) {
-		BackgroundTaskRegistry::instance().endTask(d->searchTaskId());
-		emit searchCountChanged(0);
-		return;
-	}
-
-	emit searchCountChanged(-1);
-	BackgroundTaskRegistry::instance().beginTask(d->searchTaskId(),
-		tr("Поиск: %1").arg(query));
-	auto cancel = std::make_shared<std::atomic_bool>(false);
-	d->searchCancel = cancel;
-	d->searchActiveGeneration = d->searchGeneration;
-	d->searching = true;
-
-	d->searchWatcher->setFuture(QtConcurrent::run(
-		[path = d->path, encoding = d->encodingName.toLatin1(),
-			starts = d->lineStarts, size = d->fileSize, query,
-			caseSensitivity = d->searchCaseSensitive ? Qt::CaseSensitive
-				: Qt::CaseInsensitive, cancel,
-			this, generation = d->searchGeneration] {
-			return runPagedLineSearch(path, encoding, starts, size, query,
-				caseSensitivity, cancel,
-				[this, generation](int total) {
-					QMetaObject::invokeMethod(this,
-						[this, generation, total] {
-							if (d && generation == d->searchGeneration) {
-								emit searchProgressChanged(total);
-							}
-						}, Qt::QueuedConnection);
-				});
-		}));
+	d->startSearch(query, true);
 }
 
 void PagedTextEditor::setSearchCaseSensitive(bool enabled) {
@@ -1097,7 +1705,7 @@ void PagedTextEditor::setSearchCaseSensitive(bool enabled) {
 
 	d->searchCaseSensitive = enabled;
 	if (!d->searchText.isEmpty()) {
-		setSearchQuery(d->searchText);
+		d->startSearch(d->searchText, true);
 	}
 }
 
@@ -1248,6 +1856,7 @@ void PagedTextEditor::paintEvent(QPaintEvent* event) {
 
 	PagedTextRenderer::paint(painter, model);
 }
+
 void PagedTextEditor::resizeEvent(QResizeEvent* event) {
 	QAbstractScrollArea::resizeEvent(event);
 	d->updateScrollBars();
@@ -1398,18 +2007,69 @@ void PagedTextEditor::keyPressEvent(QKeyEvent* event) {
 	const bool control = (event->modifiers() & Qt::ControlModifier) != 0;
 	const int lineLength = d->lineAt(d->cursorLine).size();
 
+	if (event->matches(QKeySequence::Undo)) {
+		undo();
+		event->accept();
+		return;
+	}
+
+	if (event->matches(QKeySequence::Redo)) {
+		redo();
+		event->accept();
+		return;
+	}
+
+	if (event->matches(QKeySequence::Cut)) {
+		cut();
+		event->accept();
+		return;
+	}
+
 	if (event->matches(QKeySequence::Copy)) {
-		QString text = selectedText();
-		if (text.isEmpty()) {
-			text = d->lineAt(d->cursorLine);
-		}
-		QGuiApplication::clipboard()->setText(text);
+		copy();
+		event->accept();
+		return;
+	}
+
+	if (event->matches(QKeySequence::Paste)) {
+		paste();
 		event->accept();
 		return;
 	}
 
 	if (event->matches(QKeySequence::SelectAll)) {
 		selectAll();
+		event->accept();
+		return;
+	}
+
+	switch (event->key()) {
+	case Qt::Key_Backspace:
+		d->backspace();
+		event->accept();
+		return;
+	case Qt::Key_Delete:
+		d->deleteForward();
+		event->accept();
+		return;
+	case Qt::Key_Return:
+	case Qt::Key_Enter:
+		insertText(QStringLiteral("\n"));
+		event->accept();
+		return;
+	case Qt::Key_Tab:
+		insertText(QStringLiteral("\t"));
+		event->accept();
+		return;
+	default:
+		break;
+	}
+
+	// Обычный ввод текста: раскладка уже преобразовала нажатие в символ.
+	const QString typed = event->text();
+	if (!typed.isEmpty() && typed.at(0).isPrint()
+		&& !(event->modifiers() & (Qt::ControlModifier | Qt::AltModifier))) {
+		insertText(typed);
 		event->accept();
 		return;
 	}
@@ -1459,4 +2119,53 @@ void PagedTextEditor::keyPressEvent(QKeyEvent* event) {
 	}
 
 	QAbstractScrollArea::keyPressEvent(event);
+}
+
+void PagedTextEditor::inputMethodEvent(QInputMethodEvent* event) {
+	if (!d->canEdit() || event->commitString().isEmpty()) {
+		QAbstractScrollArea::inputMethodEvent(event);
+		return;
+	}
+
+	insertText(event->commitString());
+	event->accept();
+}
+
+void PagedTextEditor::contextMenuEvent(QContextMenuEvent* event) {
+	QMenu menu(this);
+	QAction* undoAction = menu.addAction(tr("Отменить"));
+	undoAction->setEnabled(canUndo() && !isReadOnly());
+	QAction* redoAction = menu.addAction(tr("Повторить"));
+	redoAction->setEnabled(canRedo() && !isReadOnly());
+	menu.addSeparator();
+	QAction* cutAction = menu.addAction(tr("Вырезать"));
+	cutAction->setEnabled(!isReadOnly() && d->hasSelection());
+	QAction* copyAction = menu.addAction(tr("Копировать"));
+	copyAction->setEnabled(d->ready);
+	QAction* pasteAction = menu.addAction(tr("Вставить"));
+	pasteAction->setEnabled(!isReadOnly() && !QGuiApplication::clipboard()->text().isEmpty());
+	menu.addSeparator();
+	QAction* selectAllAction = menu.addAction(tr("Выделить всё"));
+	selectAllAction->setEnabled(d->ready);
+
+	QAction* chosen = menu.exec(event->globalPos());
+	if (chosen == undoAction) {
+		undo();
+	}
+	else if (chosen == redoAction) {
+		redo();
+	}
+	else if (chosen == cutAction) {
+		cut();
+	}
+	else if (chosen == copyAction) {
+		copy();
+	}
+	else if (chosen == pasteAction) {
+		paste();
+	}
+	else if (chosen == selectAllAction) {
+		selectAll();
+	}
+	event->accept();
 }

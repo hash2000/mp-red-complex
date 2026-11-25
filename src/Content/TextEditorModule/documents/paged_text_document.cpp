@@ -10,6 +10,7 @@
 #include "Libs/BaseWidgets/editor/widgets/search_bar.h"
 #include "Libs/BaseWidgets/ribbon/document_ribbon.h"
 #include "Libs/BaseWidgets/ribbon/ribbon_button.h"
+#include "Libs/Engine/scripting/command_context.h"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -25,6 +26,7 @@
 #include <QMessageBox>
 #include <QPushButton>
 #include <QSignalBlocker>
+#include <QSpinBox>
 #include <QToolButton>
 #include <QVBoxLayout>
 #include <QWidget>
@@ -38,6 +40,12 @@ struct PagedTextDocument::Private {
 	RibbonButton* searchButton = nullptr;
 	RibbonButton* formatButton = nullptr;
 	RibbonButton* highlightButton = nullptr;
+	RibbonButton* saveButton = nullptr;
+	RibbonButton* undoButton = nullptr;
+	RibbonButton* redoButton = nullptr;
+	RibbonButton* cutButton = nullptr;
+	RibbonButton* copyButton = nullptr;
+	RibbonButton* pasteButton = nullptr;
 	HighlightingPluginManager* highlighting = nullptr;
 	FormatterPluginManager* formatters = nullptr;
 
@@ -50,6 +58,9 @@ struct PagedTextDocument::Private {
 	QLabel* encodingLabel = nullptr;
 	QLabel* maxLineLabel = nullptr;
 	QLabel* sizeLabel = nullptr;
+	QLabel* dirtyPagesLabel = nullptr;
+	QLabel* bufferLabel = nullptr;
+	QLabel* spilledLabel = nullptr;
 	QCheckBox* caseSensitiveCheck = nullptr;
 	QCheckBox* lineNumbersCheck = nullptr;
 	QComboBox* fontSizeCombo = nullptr;
@@ -67,8 +78,14 @@ struct PagedTextDocument::Private {
 	void syncHighlightingCombo();
 	void updateFormatButton();
 	void updateHighlightButton();
+	/// Доступность кнопок правки (сохранение, отмена, повтор, выделение).
+	void updateEditButtons();
+	void updateInfoLabels();
 	QWidget* createInfoWidget(QWidget* parent);
 	void formatDocument();
+	void saveDocument();
+	/// Спросить подтверждение, если правки будут потеряны.
+	bool confirmDiscard();
 	void showEncodingDialog();
 };
 
@@ -78,24 +95,63 @@ void PagedTextDocument::Private::createRibbon() {
 	auto* fileGroup = ribbon->addGroup(PagedTextDocument::tr("Файл"));
 	connect(ribbon->addButton(fileGroup, QStringLiteral("🗋"), PagedTextDocument::tr("Новый файл")),
 		&RibbonButton::clicked, q, [this] {
-			q->newFile();
+			if (confirmDiscard()) {
+				q->newFile();
+			}
 		});
 	connect(ribbon->addButton(fileGroup, QStringLiteral("📂"), PagedTextDocument::tr("Открыть файл")),
 		&RibbonButton::clicked, q, [this] {
 			const auto path = QFileDialog::getOpenFileName(q, PagedTextDocument::tr("Открыть файл"),
 				QDir::currentPath(), PagedTextDocument::tr("Все файлы (*.*)"));
-			if (!path.isEmpty()) {
+			if (!path.isEmpty() && confirmDiscard()) {
 				q->openFile(path);
 			}
 		});
 	connect(ribbon->addButton(fileGroup, QStringLiteral("⟳"), PagedTextDocument::tr("Перечитать файл")),
 		&RibbonButton::clicked, q, [this] {
-			if (!path.isEmpty()) {
+			if (!path.isEmpty() && confirmDiscard()) {
 				q->openFile(path);
 			}
 		});
+	saveButton = ribbon->addButton(fileGroup, QStringLiteral("💾"),
+		PagedTextDocument::tr("Сохранить файл"));
+	saveButton->setObjectName(QStringLiteral("PagedSaveButton"));
+	connect(saveButton, &RibbonButton::clicked, q, [this] {
+		saveDocument();
+	});
 
 	auto* editGroup = ribbon->addGroup(PagedTextDocument::tr("Правка"));
+	undoButton = ribbon->addButton(editGroup, QStringLiteral("↶"),
+		PagedTextDocument::tr("Отменить правку"));
+	undoButton->setObjectName(QStringLiteral("PagedUndoButton"));
+	connect(undoButton, &RibbonButton::clicked, q, [this] {
+		editor->undo();
+	});
+	redoButton = ribbon->addButton(editGroup, QStringLiteral("↷"),
+		PagedTextDocument::tr("Повторить отменённую правку"));
+	redoButton->setObjectName(QStringLiteral("PagedRedoButton"));
+	connect(redoButton, &RibbonButton::clicked, q, [this] {
+		editor->redo();
+	});
+	cutButton = ribbon->addButton(editGroup, QStringLiteral("✂️"),
+		PagedTextDocument::tr("Вырезать выделенное в буфер обмена"));
+	cutButton->setObjectName(QStringLiteral("PagedCutButton"));
+	connect(cutButton, &RibbonButton::clicked, q, [this] {
+		editor->cut();
+	});
+	copyButton = ribbon->addButton(editGroup, QStringLiteral("⧉"),
+		PagedTextDocument::tr("Копировать выделенное в буфер обмена"));
+	copyButton->setObjectName(QStringLiteral("PagedCopyButton"));
+	connect(copyButton, &RibbonButton::clicked, q, [this] {
+		editor->copy();
+	});
+	pasteButton = ribbon->addButton(editGroup, QStringLiteral("📋"),
+		PagedTextDocument::tr("Вставить из буфера обмена"));
+	pasteButton->setObjectName(QStringLiteral("PagedPasteButton"));
+	connect(pasteButton, &RibbonButton::clicked, q, [this] {
+		editor->paste();
+	});
+
 	formatButton = ribbon->addButton(editGroup, QStringLiteral("✨"),
 		PagedTextDocument::tr("Форматировать файл (результат записывается в файл)"));
 	formatButton->setObjectName(QStringLiteral("PagedFormatButton"));
@@ -209,6 +265,78 @@ void PagedTextDocument::Private::updateHighlightButton() {
 	highlightButton->setChecked(editor->isHighlightingEnabled());
 }
 
+void PagedTextDocument::Private::updateEditButtons() {
+	const bool readOnly = editor->isReadOnly();
+	const bool ready = editor->lineCount() > 0;
+	const bool hasSelection = editor->hasSelection();
+
+	if (saveButton) {
+		saveButton->setEnabled(editor->isModified());
+	}
+	if (undoButton) {
+		undoButton->setEnabled(editor->canUndo() && !readOnly);
+	}
+	if (redoButton) {
+		redoButton->setEnabled(editor->canRedo() && !readOnly);
+	}
+	if (cutButton) {
+		cutButton->setEnabled(ready && !readOnly && hasSelection);
+	}
+	if (copyButton) {
+		copyButton->setEnabled(ready);
+	}
+	if (pasteButton) {
+		pasteButton->setEnabled(ready && !readOnly);
+	}
+}
+
+void PagedTextDocument::Private::updateInfoLabels() {
+	if (linesLabel) {
+		linesLabel->setNum(editor->lineCount());
+	}
+	if (dirtyPagesLabel) {
+		dirtyPagesLabel->setNum(editor->modifiedPageCount());
+	}
+	if (maxLineLabel) {
+		maxLineLabel->setNum(editor->maxLineLength());
+	}
+	if (bufferLabel) {
+		const auto megabytes = [](qint64 bytes) {
+			return QString::number(bytes / (1024.0 * 1024.0), 'f', 1);
+		};
+		const QString limit = editor->memoryBudget() > 0
+			? QStringLiteral("%1 МБ").arg(megabytes(editor->memoryBudget()))
+			: PagedTextDocument::tr("без предела");
+		bufferLabel->setText(QStringLiteral("%1 / %2")
+			.arg(megabytes(editor->bufferedBytes()), limit));
+	}
+	if (spilledLabel) {
+		spilledLabel->setNum(editor->spilledPageCount());
+	}
+	if (statusLabel && !editor->isIndexing()) {
+		statusLabel->setText(editor->isModified()
+			? PagedTextDocument::tr("Есть несохранённые изменения")
+			: PagedTextDocument::tr("Готово"));
+	}
+}
+
+void PagedTextDocument::Private::saveDocument() {
+	q->save();
+}
+
+bool PagedTextDocument::Private::confirmDiscard() {
+	if (!editor->isModified()) {
+		return true;
+	}
+
+	const auto answer = QMessageBox::question(q,
+		PagedTextDocument::tr("Несохранённые изменения"),
+		PagedTextDocument::tr("В документе есть несохранённые изменения. "
+			"Они будут потеряны. Продолжить?"),
+		QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+	return answer == QMessageBox::Yes;
+}
+
 void PagedTextDocument::Private::formatDocument() {
 	if (!editor->canFormat()) {
 		QMessageBox::warning(q, PagedTextDocument::tr("Форматирование"),
@@ -300,6 +428,13 @@ void PagedTextDocument::Private::showEncodingDialog() {
 		return;
 	}
 
+	if (editor->isModified()) {
+		QMessageBox::warning(q, PagedTextDocument::tr("Кодировка"),
+			PagedTextDocument::tr("Есть несохранённые изменения: сохраните файл, "
+				"чтобы переоткрыть его в другой кодировке."));
+		return;
+	}
+
 	editor->setEncoding(encoding);
 	syncEncodingLabel();
 }
@@ -325,6 +460,7 @@ PagedTextDocument::PagedTextDocument(HighlightingPluginManager* highlighting,
 	d->createRibbon();
 	d->updateHighlightButton();
 	d->updateFormatButton();
+	d->updateEditButtons();
 	layout->addWidget(d->ribbon, 0);
 	d->searchBar = d->createSearchBar();
 	layout->addWidget(d->searchBar, 0);
@@ -355,6 +491,8 @@ PagedTextDocument::PagedTextDocument(HighlightingPluginManager* highlighting,
 			}
 			d->updateFormatButton();
 			d->updateHighlightButton();
+			d->updateEditButtons();
+			d->updateInfoLabels();
 		});
 	connect(d->editor, &PagedTextEditor::cursorPositionChanged, this,
 		[this](int line, int column) {
@@ -362,7 +500,35 @@ PagedTextDocument::PagedTextDocument(HighlightingPluginManager* highlighting,
 				d->cursorLabel->setText(QStringLiteral("%1:%2")
 					.arg(line + 1).arg(column + 1));
 			}
+			// Кнопки «Вырезать»/«Копировать» зависят от выделения.
+			d->updateEditButtons();
 		});
+	connect(d->editor, &PagedTextEditor::modifiedChanged, this, [this](bool modified) {
+		setModified(modified);
+		d->updateEditButtons();
+		d->updateInfoLabels();
+	});
+	connect(d->editor, &PagedTextEditor::undoAvailableChanged, this, [this](bool) {
+		d->updateEditButtons();
+	});
+	connect(d->editor, &PagedTextEditor::redoAvailableChanged, this, [this](bool) {
+		d->updateEditButtons();
+	});
+	connect(d->editor, &PagedTextEditor::saved, this,
+		[this](const QString&, bool success, const QString& errorMessage) {
+			if (!success) {
+				QMessageBox::warning(this, tr("Сохранение файла"), errorMessage);
+			}
+			d->updateEditButtons();
+			emit propertiesChanged();
+		});
+	connect(d->editor, &PagedTextEditor::bufferSpilled, this, [this](int pages) {
+		d->updateInfoLabels();
+		if (d->statusLabel && pages > 0) {
+			d->statusLabel->setText(tr("Буфер выгружен во временный файл: %1 стр.")
+				.arg(pages));
+		}
+	});
 	connect(d->editor, &PagedTextEditor::searchCountChanged, this, [this](int count) {
 		if (!d->search) {
 			return;
@@ -430,10 +596,14 @@ PagedTextDocument::PagedTextDocument(HighlightingPluginManager* highlighting,
 		});
 
 	setFocusProxy(d->editor);
-	setTitle(tr("Просмотр файла"));
+	setTitle(tr("Без имени"));
 }
 
 PagedTextDocument::~PagedTextDocument() = default;
+
+PagedTextEditor* PagedTextDocument::editor() const {
+	return d->editor;
+}
 
 QWidget* PagedTextDocument::createPropertiesEditor(QWidget* parent) {
 	auto* widget = new QWidget(parent);
@@ -522,6 +692,25 @@ QWidget* PagedTextDocument::createPropertiesEditor(QWidget* parent) {
 		[this](bool checked) {
 			d->editor->setLineNumbersVisible(checked);
 		});
+
+	// Предел памяти под изменённые страницы: при превышении они уходят во
+	// временный файл в системном каталоге temp.
+	auto* bufferLimit = new QSpinBox(widget);
+	bufferLimit->setObjectName(QStringLiteral("PagedBufferLimit"));
+	bufferLimit->setRange(0, 65536);
+	bufferLimit->setSpecialValueText(tr("без предела"));
+	bufferLimit->setSuffix(tr(" МБ"));
+	bufferLimit->setToolTip(tr("Сколько памяти отводится под изменённые страницы. "
+		"При превышении они выгружаются во временный файл, который удаляется "
+		"вместе с документом"));
+	bufferLimit->setValue(d->editor->memoryBudget() > 0
+		? int(d->editor->memoryBudget() / (1024 * 1024)) : 0);
+	connect(bufferLimit, &QSpinBox::valueChanged, this, [this](int megabytes) {
+		d->editor->setMemoryBudget(megabytes <= 0
+			? 0 : qint64(megabytes) * 1024 * 1024);
+		d->updateInfoLabels();
+	});
+	form->addRow(tr("Предел буфера:"), bufferLimit);
 	return widget;
 }
 QWidget* PagedTextDocument::Private::createInfoWidget(QWidget* parent) {
@@ -537,12 +726,19 @@ QWidget* PagedTextDocument::Private::createInfoWidget(QWidget* parent) {
 		.arg(QString::number(editor->fileSize() / (1024.0 * 1024.0), 'f', 1)), widget);
 	statusLabel = new QLabel(editor->isIndexing() ? PagedTextDocument::tr("Индексация…")
 		: PagedTextDocument::tr("Готово"), widget);
+	dirtyPagesLabel = new QLabel(QString::number(editor->modifiedPageCount()), widget);
+	bufferLabel = new QLabel(widget);
+	spilledLabel = new QLabel(QString::number(editor->spilledPageCount()), widget);
 
 	form->addRow(PagedTextDocument::tr("Строк:"), linesLabel);
 	form->addRow(PagedTextDocument::tr("Самая длинная строка:"), maxLineLabel);
 	form->addRow(PagedTextDocument::tr("Размер файла:"), sizeLabel);
 	form->addRow(PagedTextDocument::tr("Курсор:"), cursorLabel);
+	form->addRow(PagedTextDocument::tr("Изменённых страниц:"), dirtyPagesLabel);
+	form->addRow(PagedTextDocument::tr("Буфер памяти:"), bufferLabel);
+	form->addRow(PagedTextDocument::tr("Во временном файле:"), spilledLabel);
 	form->addRow(PagedTextDocument::tr("Состояние:"), statusLabel);
+	updateInfoLabels();
 	return widget;
 }
 
@@ -585,8 +781,14 @@ QList<DocumentPropertyGroup> PagedTextDocument::createPropertyGroups(QWidget* pa
 void PagedTextDocument::newFile() {
 	d->path.clear();
 	setVariable(QStringLiteral("path"), QString());
-	d->editor->closeFile();
-	setTitle(tr("Просмотр файла"));
+	d->editor->newDocument();
+	setTitle(tr("Без имени"));
+	setModified(false);
+	d->syncEncodingLabel();
+	d->updateFormatButton();
+	d->updateHighlightButton();
+	d->updateEditButtons();
+	d->updateInfoLabels();
 	emit propertiesChanged();
 }
 
@@ -603,13 +805,56 @@ void PagedTextDocument::openFile(const QString& path) {
 	d->syncEncodingLabel();
 	d->syncHighlightingCombo();
 	d->updateFormatButton();
+	d->updateEditButtons();
 	emit propertiesChanged();
 }
 
-void PagedTextDocument::refresh() {
-	if (!d->path.isEmpty() && !d->editor->isIndexing()) {
-		d->editor->openFile(d->path, d->editor->encoding());
+bool PagedTextDocument::save() {
+	QString path = d->path;
+	if (path.isEmpty()) {
+		path = QFileDialog::getSaveFileName(this, tr("Сохранить файл"),
+			QDir::current().filePath(title() + QStringLiteral(".txt")),
+			tr("Все файлы (*.*)"));
+		if (path.isEmpty()) {
+			return false;
+		}
 	}
+
+	// Запись выполняет редактор: он владеет изменёнными страницами.
+	// При ошибке он сообщает об этом сигналом saved().
+	if (!d->editor->saveAs(path)) {
+		return false;
+	}
+
+	d->path = path;
+	setVariable(QStringLiteral("path"), path);
+	setTitle(QFileInfo(path).fileName());
+	setModified(false);
+	d->syncEncodingLabel();
+	d->updateEditButtons();
+	d->updateInfoLabels();
+	emit propertiesChanged();
+
+	if (auto context = this->context()) {
+		context->fireEvent(CommandContext::documentSaveCompleteEvent());
+	}
+	return true;
+}
+
+void PagedTextDocument::refresh() {
+	if (d->path.isEmpty() || d->editor->isIndexing()) {
+		return;
+	}
+
+	// Перечитывание файла потеряло бы несохранённые правки.
+	if (d->editor->isModified()) {
+		if (d->statusLabel) {
+			d->statusLabel->setText(tr("Есть несохранённые изменения"));
+		}
+		return;
+	}
+
+	d->editor->openFile(d->path, d->editor->encoding());
 }
 
 void PagedTextDocument::onContextAttached() {
@@ -628,6 +873,11 @@ void PagedTextDocument::onContextVariableChanged(const QString& name, const QVar
 
 	const auto path = value.toString();
 	if (path == d->path) {
+		return;
+	}
+
+	if (path.isEmpty()) {
+		newFile();
 		return;
 	}
 

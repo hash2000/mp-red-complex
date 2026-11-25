@@ -5,8 +5,11 @@
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor.h"
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_text_highlighter.h"
 
+#include <QClipboard>
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QGuiApplication>
 #include <QScrollBar>
 #include <QApplication>
 #include <QSignalSpy>
@@ -35,6 +38,27 @@ private slots:
 	void switchFileUpdatesTitle();
 	void reopensInAnotherEncoding();
 	void reportsUnsupportedEncoding();
+	void insertTextAndUndo();
+	void enterAndBackspaceChangeLines();
+	void pasteFromClipboard();
+	void cutCopiesToClipboard();
+	void typingMergesIntoOneUndoStep();
+	void modifiedPagesMap();
+	void saveWritesModifications();
+	void saveKeepsCrlf();
+	void saveKeepsBom();
+	void saveAsCreatesFile();
+	void undoRestoresAcrossPageBoundary();
+	void deleteAllPagesAndUndo();
+	void readOnlyBlocksEditing();
+	void searchReflectsEdits();
+	void documentTracksModificationAndSaves();
+	void startsEditableWithoutFile();
+	void documentStartsEditableWithoutFile();
+	void spillsDirtyPagesToTemporaryFile();
+	void spilledBufferSaves();
+	void spillFileIsRemovedAutomatically();
+	void newDocumentSpillsLargeContent();
 };
 
 namespace {
@@ -64,6 +88,35 @@ public:
 QString makeLine(int index) {
 	return QStringLiteral("line %1: quick brown fox jumps over the lazy dog")
 		.arg(index, 6, 10, QLatin1Char('0'));
+}
+
+QStringList makeLines(int count) {
+	QStringList lines;
+	lines.reserve(count);
+	for (int i = 0; i < count; i++) {
+		lines.append(makeLine(i));
+	}
+	return lines;
+}
+
+QString writeTextFile(const QString& dirPath, const QString& name,
+	const QByteArray& data) {
+	const QString path = QDir(dirPath).filePath(name);
+	QFile file(path);
+	if (!file.open(QIODevice::WriteOnly)) {
+		return QString();
+	}
+	file.write(data);
+	file.close();
+	return path;
+}
+
+QByteArray readAllBytes(const QString& path) {
+	QFile file(path);
+	if (!file.open(QIODevice::ReadOnly)) {
+		return {};
+	}
+	return file.readAll();
 }
 
 } // namespace
@@ -494,6 +547,637 @@ void TestPagedTextEditor::reportsUnsupportedEncoding() {
 	QCOMPARE(finished.first().at(0).toBool(), false);
 	QVERIFY(!finished.first().at(1).toString().isEmpty());
 	QCOMPARE(editor.lineCount(), 0);
+}
+
+void TestPagedTextEditor::insertTextAndUndo() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto path = writeTextFile(dir.path(), QStringLiteral("edit.txt"),
+		QByteArray("alpha beta\ngamma\n"));
+	QVERIFY(!path.isEmpty());
+
+	PagedTextEditor editor;
+	editor.resize(800, 400);
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+
+	QVERIFY(!editor.isModified());
+	QCOMPARE(editor.modifiedPageCount(), 0);
+
+	editor.setCursorPosition(0, 5);
+	QVERIFY(editor.insertText(QStringLiteral(" X")));
+	QCOMPARE(editor.lineText(0), QStringLiteral("alpha X beta"));
+	QCOMPARE(editor.cursorColumn(), 7);
+	QVERIFY(editor.isModified());
+	QCOMPARE(editor.modifiedPageCount(), 1);
+
+	QVERIFY(editor.canUndo());
+	QVERIFY(editor.undo());
+	QCOMPARE(editor.lineText(0), QStringLiteral("alpha beta"));
+	QVERIFY(!editor.isModified());
+	QCOMPARE(editor.modifiedPageCount(), 0);
+	QCOMPARE(editor.cursorLine(), 0);
+	QCOMPARE(editor.cursorColumn(), 5);
+
+	QVERIFY(editor.canRedo());
+	QVERIFY(editor.redo());
+	QCOMPARE(editor.lineText(0), QStringLiteral("alpha X beta"));
+	QVERIFY(editor.isModified());
+}
+
+void TestPagedTextEditor::enterAndBackspaceChangeLines() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto path = writeTextFile(dir.path(), QStringLiteral("lines.txt"),
+		QByteArray("one\ntwo\n"));
+	QVERIFY(!path.isEmpty());
+
+	PagedTextEditor editor;
+	editor.resize(600, 400);
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+	QCOMPARE(editor.lineCount(), 3);
+
+	editor.setCursorPosition(0, 3);
+	QTest::keyClick(&editor, Qt::Key_Return);
+	QCOMPARE(editor.lineCount(), 4);
+	QCOMPARE(editor.cursorLine(), 1);
+	QCOMPARE(editor.lineText(0), QStringLiteral("one"));
+	QCOMPARE(editor.lineText(1), QString());
+
+	QTest::keyClicks(&editor, QStringLiteral("hi"));
+	QCOMPARE(editor.lineText(1), QStringLiteral("hi"));
+
+	QTest::keyClick(&editor, Qt::Key_Backspace);
+	QCOMPARE(editor.lineText(1), QStringLiteral("h"));
+	QTest::keyClick(&editor, Qt::Key_Backspace);
+	QCOMPARE(editor.lineText(1), QString());
+	QTest::keyClick(&editor, Qt::Key_Backspace);
+	QCOMPARE(editor.lineCount(), 3);
+	QCOMPARE(editor.lineText(0), QStringLiteral("one"));
+	QCOMPARE(editor.cursorLine(), 0);
+	QCOMPARE(editor.cursorColumn(), 3);
+
+	// Delete в конце строки убирает перевод строки и склеивает строки.
+	QTest::keyClick(&editor, Qt::Key_Delete);
+	QCOMPARE(editor.lineCount(), 2);
+	QCOMPARE(editor.lineText(0), QStringLiteral("onetwo"));
+}
+
+void TestPagedTextEditor::pasteFromClipboard() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto path = writeTextFile(dir.path(), QStringLiteral("paste.txt"),
+		QByteArray("start\n"));
+	QVERIFY(!path.isEmpty());
+
+	PagedTextEditor editor;
+	editor.resize(600, 400);
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+
+	// Буфер обмена может содержать CRLF: в модели всегда '\n'.
+	QGuiApplication::clipboard()->setText(QStringLiteral("A\r\nB\nC"));
+	editor.setCursorPosition(0, 0);
+	QTest::keyClick(&editor, Qt::Key_V, Qt::ControlModifier);
+
+	QCOMPARE(editor.lineCount(), 4);
+	QCOMPARE(editor.lineText(0), QStringLiteral("A"));
+	QCOMPARE(editor.lineText(1), QStringLiteral("B"));
+	QCOMPARE(editor.lineText(2), QStringLiteral("Cstart"));
+	QCOMPARE(editor.lineText(3), QString());
+	QVERIFY(editor.isModified());
+
+	QVERIFY(editor.undo());
+	QCOMPARE(editor.lineCount(), 2);
+	QCOMPARE(editor.lineText(0), QStringLiteral("start"));
+
+	// Вставка методом редактора работает так же, как Ctrl+V.
+	QVERIFY(editor.insertText(QStringLiteral("xy")));
+	QCOMPARE(editor.lineText(0), QStringLiteral("xystart"));
+}
+
+void TestPagedTextEditor::cutCopiesToClipboard() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto path = writeTextFile(dir.path(), QStringLiteral("cut.txt"),
+		QByteArray("cut me\n"));
+	QVERIFY(!path.isEmpty());
+
+	PagedTextEditor editor;
+	editor.resize(600, 400);
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+
+	editor.setCursorPosition(0, 0);
+	editor.setCursorPosition(0, 3, true);
+	QVERIFY(editor.hasSelection());
+	QTest::keyClick(&editor, Qt::Key_X, Qt::ControlModifier);
+	QCOMPARE(QGuiApplication::clipboard()->text(), QStringLiteral("cut"));
+	QCOMPARE(editor.lineText(0), QStringLiteral(" me"));
+	QVERIFY(editor.isModified());
+
+	// Копирование текст не меняет.
+	editor.setCursorPosition(0, 0);
+	editor.setCursorPosition(0, 3, true);
+	QTest::keyClick(&editor, Qt::Key_C, Qt::ControlModifier);
+	QCOMPARE(QGuiApplication::clipboard()->text(), QStringLiteral(" me"));
+	QCOMPARE(editor.lineText(0), QStringLiteral(" me"));
+}
+
+void TestPagedTextEditor::typingMergesIntoOneUndoStep() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto path = writeTextFile(dir.path(), QStringLiteral("typed.txt"),
+		QByteArray("abc\n"));
+	QVERIFY(!path.isEmpty());
+
+	PagedTextEditor editor;
+	editor.resize(600, 400);
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+
+	editor.setCursorPosition(0, 3);
+	QTest::keyClicks(&editor, QStringLiteral("xyz"));
+	QCOMPARE(editor.lineText(0), QStringLiteral("abcxyz"));
+
+	QVERIFY(editor.undo());
+	QCOMPARE(editor.lineText(0), QStringLiteral("abc"));
+	QVERIFY(!editor.canUndo());
+	QCOMPARE(editor.cursorColumn(), 3);
+
+	QVERIFY(editor.redo());
+	QCOMPARE(editor.lineText(0), QStringLiteral("abcxyz"));
+}
+
+void TestPagedTextEditor::modifiedPagesMap() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const QStringList lines = makeLines(6000);
+	const auto path = writeTextFile(dir.path(), QStringLiteral("pages.txt"),
+		lines.join(QLatin1Char('\n')).toUtf8());
+	QVERIFY(!path.isEmpty());
+
+	PagedTextEditor editor;
+	editor.resize(600, 400);
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+	QCOMPARE(editor.lineCount(), 6000);
+
+	// Правка строки 10 держит в памяти только первую страницу.
+	editor.setCursorPosition(10, 0);
+	QVERIFY(editor.insertText(QStringLiteral(">")));
+	QCOMPARE(editor.lineText(10), QStringLiteral(">") + lines.at(10));
+	QCOMPARE(editor.modifiedPageCount(), 1);
+	// Незатронутая страница по-прежнему читается с диска.
+	QCOMPARE(editor.lineText(3500), lines.at(3500));
+
+	editor.setCursorPosition(4100, 0);
+	QVERIFY(editor.insertText(QStringLiteral("<")));
+	QCOMPARE(editor.modifiedPageCount(), 2);
+	QCOMPARE(editor.lineText(4100), QStringLiteral("<") + lines.at(4100));
+
+	QVERIFY(editor.undo());
+	QCOMPARE(editor.modifiedPageCount(), 1);
+	QVERIFY(editor.undo());
+	QCOMPARE(editor.modifiedPageCount(), 0);
+	QCOMPARE(editor.lineText(10), lines.at(10));
+	QVERIFY(!editor.isModified());
+}
+
+void TestPagedTextEditor::saveWritesModifications() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const int count = 6000;
+	const QStringList lines = makeLines(count);
+	const auto path = writeTextFile(dir.path(), QStringLiteral("save.txt"),
+		lines.join(QLatin1Char('\n')).toUtf8());
+	QVERIFY(!path.isEmpty());
+
+	PagedTextEditor editor;
+	editor.resize(600, 400);
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+
+	editor.setCursorPosition(0, 0);
+	QVERIFY(editor.insertText(QStringLiteral("HEAD ")));
+	editor.setCursorPosition(4100, 0);
+	QVERIFY(editor.insertText(QStringLiteral(">")));
+	editor.setCursorPosition(5000, 0);
+	QVERIFY(editor.insertText(QStringLiteral("NEW\n")));
+	QCOMPARE(editor.lineCount(), count + 1);
+
+	QVERIFY(editor.save());
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 15000);
+	QVERIFY(!editor.isModified());
+	QCOMPARE(editor.modifiedPageCount(), 0);
+	QCOMPARE(editor.lineCount(), count + 1);
+	QCOMPARE(editor.lineText(0), QStringLiteral("HEAD ") + lines.at(0));
+	QCOMPARE(editor.lineText(4100), QStringLiteral(">") + lines.at(4100));
+	QCOMPARE(editor.lineText(5000), QStringLiteral("NEW"));
+	QCOMPARE(editor.lineText(5001), lines.at(5000));
+
+	const QList<QByteArray> savedLines = readAllBytes(path).split('\n');
+	QCOMPARE(int(savedLines.size()), count + 1);
+	QCOMPARE(QString::fromUtf8(savedLines.at(0)), QStringLiteral("HEAD ") + lines.at(0));
+	QCOMPARE(QString::fromUtf8(savedLines.at(5000)), QStringLiteral("NEW"));
+	QCOMPARE(QString::fromUtf8(savedLines.at(5001)), lines.at(5000));
+}
+
+void TestPagedTextEditor::saveKeepsCrlf() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto path = writeTextFile(dir.path(), QStringLiteral("crlf.txt"),
+		QByteArray("first\r\nsecond\r\n"));
+	QVERIFY(!path.isEmpty());
+
+	PagedTextEditor editor;
+	editor.resize(600, 400);
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+	QCOMPARE(editor.lineText(0), QStringLiteral("first"));
+
+	editor.setCursorPosition(0, 0);
+	QVERIFY(editor.insertText(QStringLiteral(">")));
+	QVERIFY(editor.save());
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+
+	// Неизменённая часть и переводы строк остались прежними.
+	QCOMPARE(readAllBytes(path), QByteArray(">first\r\nsecond\r\n"));
+}
+
+void TestPagedTextEditor::saveKeepsBom() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto path = writeTextFile(dir.path(), QStringLiteral("bom.txt"),
+		QByteArray("\xEF\xBB\xBF") + QByteArray("bom\n"));
+	QVERIFY(!path.isEmpty());
+
+	PagedTextEditor editor;
+	editor.resize(600, 400);
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+	// BOM не попадает в текст строки.
+	QCOMPARE(editor.lineText(0), QStringLiteral("bom"));
+
+	editor.setCursorPosition(0, 0);
+	QVERIFY(editor.insertText(QStringLiteral(">")));
+	QVERIFY(editor.save());
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+
+	const QByteArray saved = readAllBytes(path);
+	QVERIFY(saved.startsWith(QByteArray("\xEF\xBB\xBF")));
+	QCOMPARE(saved.mid(3), QByteArray(">bom\n"));
+}
+
+void TestPagedTextEditor::saveAsCreatesFile() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+
+	PagedTextEditor editor;
+	editor.resize(600, 400);
+	editor.newDocument();
+	QCOMPARE(editor.lineCount(), 1);
+	QVERIFY(!editor.isModified());
+
+	QVERIFY(editor.insertText(QStringLiteral("hello\nworld")));
+	QCOMPARE(editor.lineCount(), 2);
+	QVERIFY(editor.isModified());
+
+	const auto path = dir.filePath(QStringLiteral("created.txt"));
+	QVERIFY(editor.saveAs(path));
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+
+	QVERIFY(!editor.isModified());
+	QCOMPARE(editor.filePath(), path);
+#ifdef Q_OS_WIN
+	// У нового файла нет исходного перевода строки: берётся платформенный.
+	QCOMPARE(readAllBytes(path), QByteArray("hello\r\nworld"));
+#else
+	QCOMPARE(readAllBytes(path), QByteArray("hello\nworld"));
+#endif
+	QCOMPARE(editor.lineText(0), QStringLiteral("hello"));
+	QCOMPARE(editor.lineText(1), QStringLiteral("world"));
+}
+
+void TestPagedTextEditor::undoRestoresAcrossPageBoundary() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const int count = 5000;
+	const QStringList lines = makeLines(count);
+	const auto path = writeTextFile(dir.path(), QStringLiteral("boundary.txt"),
+		lines.join(QLatin1Char('\n')).toUtf8());
+	QVERIFY(!path.isEmpty());
+
+	PagedTextEditor editor;
+	editor.resize(600, 400);
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+
+	editor.setCursorPosition(1995, 0);
+	editor.setCursorPosition(2005, 0, true);
+	QVERIFY(editor.insertText(QStringLiteral("X")));
+
+	QCOMPARE(editor.lineCount(), count - 10);
+	QCOMPARE(editor.lineText(1995), QStringLiteral("X") + lines.at(2005));
+	QCOMPARE(editor.lineText(1996), lines.at(2006));
+
+	QVERIFY(editor.undo());
+	QCOMPARE(editor.lineCount(), count);
+	QCOMPARE(editor.lineText(1995), lines.at(1995));
+	QCOMPARE(editor.lineText(2004), lines.at(2004));
+	QCOMPARE(editor.lineText(2005), lines.at(2005));
+	QCOMPARE(editor.cursorLine(), 2005);
+	QCOMPARE(editor.cursorColumn(), 0);
+	QVERIFY(!editor.isModified());
+
+	QVERIFY(editor.redo());
+	QCOMPARE(editor.lineCount(), count - 10);
+	QCOMPARE(editor.lineText(1995), QStringLiteral("X") + lines.at(2005));
+}
+
+void TestPagedTextEditor::deleteAllPagesAndUndo() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const int count = 6000;
+	const QStringList lines = makeLines(count);
+	const auto path = writeTextFile(dir.path(), QStringLiteral("deleteall.txt"),
+		lines.join(QLatin1Char('\n')).toUtf8());
+	QVERIFY(!path.isEmpty());
+
+	PagedTextEditor editor;
+	editor.resize(600, 400);
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+
+	editor.selectAll();
+	QVERIFY(editor.deleteSelection());
+	QCOMPARE(editor.lineCount(), 1);
+	QCOMPARE(editor.lineText(0), QString());
+	QVERIFY(editor.isModified());
+	QCOMPARE(editor.modifiedPageCount(), 3);
+
+	// Отмена большого удаления не хранит текст: страницы снова читаются
+	// из файла.
+	QVERIFY(editor.undo());
+	QCOMPARE(editor.lineCount(), count);
+	QCOMPARE(editor.lineText(0), lines.at(0));
+	QCOMPARE(editor.lineText(count - 1), lines.at(count - 1));
+	QVERIFY(!editor.isModified());
+	QCOMPARE(editor.modifiedPageCount(), 0);
+
+	QVERIFY(editor.redo());
+	QCOMPARE(editor.lineCount(), 1);
+}
+
+void TestPagedTextEditor::readOnlyBlocksEditing() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto path = writeTextFile(dir.path(), QStringLiteral("readonly.txt"),
+		QByteArray("readonly\n"));
+	QVERIFY(!path.isEmpty());
+
+	PagedTextEditor editor;
+	editor.resize(600, 400);
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+
+	editor.setReadOnly(true);
+	QVERIFY(!editor.insertText(QStringLiteral("x")));
+	QTest::keyClicks(&editor, QStringLiteral("abc"));
+	QTest::keyClick(&editor, Qt::Key_Backspace);
+	QCOMPARE(editor.lineText(0), QStringLiteral("readonly"));
+	QVERIFY(!editor.isModified());
+
+	editor.setReadOnly(false);
+	QVERIFY(editor.insertText(QStringLiteral("x")));
+	QCOMPARE(editor.lineText(0), QStringLiteral("xreadonly"));
+}
+
+void TestPagedTextEditor::searchReflectsEdits() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	QStringList lines;
+	for (int i = 0; i < 40; i++) {
+		lines.append(QStringLiteral("needle %1").arg(i));
+	}
+	const auto path = writeTextFile(dir.path(), QStringLiteral("searchedit.txt"),
+		lines.join(QLatin1Char('\n')).toUtf8());
+	QVERIFY(!path.isEmpty());
+
+	PagedTextEditor editor;
+	editor.resize(600, 400);
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+
+	editor.setSearchQuery(QStringLiteral("needle"));
+	QTRY_COMPARE_WITH_TIMEOUT(editor.searchMatchCount(), 40, 15000);
+
+	// Заменяем первое совпадение: поиск пересчитывается в фоне и не
+	// переводит курсор на найденное.
+	editor.setCursorPosition(0, 0);
+	editor.setCursorPosition(0, 6, true);
+	QVERIFY(editor.insertText(QStringLiteral("hay")));
+	QCOMPARE(editor.cursorColumn(), 3);
+	QTRY_COMPARE_WITH_TIMEOUT(editor.searchMatchCount(), 39, 15000);
+	QCOMPARE(editor.cursorLine(), 0);
+	QCOMPARE(editor.cursorColumn(), 3);
+}
+
+void TestPagedTextEditor::documentTracksModificationAndSaves() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto path = writeTextFile(dir.path(), QStringLiteral("document.txt"),
+		QByteArray("doc\n"));
+	QVERIFY(!path.isEmpty());
+
+	PagedTextDocument document;
+	document.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!document.editor()->isIndexing(), 10000);
+	QVERIFY(!document.isModified());
+	QCOMPARE(document.title(), QFileInfo(path).fileName());
+
+	document.editor()->setCursorPosition(0, 0);
+	QVERIFY(document.editor()->insertText(QStringLiteral("new ")));
+	QVERIFY(document.isModified());
+
+	QVERIFY(document.save());
+	QTRY_VERIFY_WITH_TIMEOUT(!document.editor()->isIndexing(), 15000);
+	QVERIFY(!document.isModified());
+	QCOMPARE(document.title(), QFileInfo(path).fileName());
+	QCOMPARE(document.editor()->filePath(), path);
+	QCOMPARE(readAllBytes(path), QByteArray("new doc\n"));
+}
+
+void TestPagedTextEditor::startsEditableWithoutFile() {
+	PagedTextEditor editor;
+	editor.resize(600, 400);
+
+	// Документ без файла — это одна пустая строка, а не пустой просмотрщик.
+	QCOMPARE(editor.lineCount(), 1);
+	QVERIFY(!editor.isIndexing());
+	QVERIFY(!editor.isModified());
+	QCOMPARE(editor.filePath(), QString());
+
+	QVERIFY(editor.insertText(QStringLiteral("hello\nworld")));
+	QCOMPARE(editor.lineCount(), 2);
+	QCOMPARE(editor.lineText(0), QStringLiteral("hello"));
+	QCOMPARE(editor.lineText(1), QStringLiteral("world"));
+	QVERIFY(editor.isModified());
+
+	// Enter, Backspace и буфер обмена работают так же, как с файлом.
+	editor.setCursorPosition(1, 5);
+	QTest::keyClick(&editor, Qt::Key_Return);
+	QCOMPARE(editor.lineCount(), 3);
+	QTest::keyClick(&editor, Qt::Key_Backspace);
+	QCOMPARE(editor.lineCount(), 2);
+
+	QGuiApplication::clipboard()->setText(QStringLiteral("!"));
+	editor.setCursorPosition(0, 0);
+	QTest::keyClick(&editor, Qt::Key_V, Qt::ControlModifier);
+	QCOMPARE(editor.lineText(0), QStringLiteral("!hello"));
+
+	QVERIFY(editor.undo());
+	QCOMPARE(editor.lineText(0), QStringLiteral("hello"));
+}
+
+void TestPagedTextEditor::documentStartsEditableWithoutFile() {
+	PagedTextDocument document;
+	QVERIFY(document.editor() != nullptr);
+	QCOMPARE(document.editor()->lineCount(), 1);
+	QCOMPARE(document.title(), QStringLiteral("Без имени"));
+
+	document.editor()->setCursorPosition(0, 0);
+	QVERIFY(document.editor()->insertText(QStringLiteral("документ")));
+	QCOMPARE(document.editor()->lineText(0), QStringLiteral("документ"));
+	QVERIFY(document.isModified());
+
+	QVERIFY(document.editor()->undo());
+	QVERIFY(!document.isModified());
+}
+
+void TestPagedTextEditor::spillsDirtyPagesToTemporaryFile() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const int count = 5000;
+	const QStringList lines = makeLines(count);
+	const auto path = writeTextFile(dir.path(), QStringLiteral("spill.txt"),
+		lines.join(QLatin1Char('\n')).toUtf8());
+	QVERIFY(!path.isEmpty());
+
+	PagedTextEditor editor;
+	editor.resize(600, 400);
+	editor.setMemoryBudget(32 * 1024);
+	QCOMPARE(editor.memoryBudget(), qint64(32 * 1024));
+
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+
+	editor.setCursorPosition(10, 0);
+	QVERIFY(editor.insertText(QStringLiteral("A")));
+	QCOMPARE(editor.lineText(10), QStringLiteral("A") + lines.at(10));
+	QVERIFY2(editor.spilledPageCount() > 0,
+		"изменённая страница должна уйти во временный файл");
+
+	const QString spillPath = editor.spillFilePath();
+	QVERIFY(!spillPath.isEmpty());
+	QVERIFY(QFile::exists(spillPath));
+	// В памяти — страницы, а не весь файл.
+	QVERIFY(editor.bufferedBytes() < 2 * 1024 * 1024);
+
+	// Вторая правка страницы, которая уже лежит в файле подкачки.
+	QVERIFY(editor.insertText(QStringLiteral("BC")));
+	QCOMPARE(editor.lineText(10), QStringLiteral("ABC") + lines.at(10));
+	QCOMPARE(editor.modifiedPageCount(), 1);
+
+	// Снимки для отмены читаются из файла подкачки.
+	QVERIFY(editor.undo());
+	QCOMPARE(editor.lineText(10), QStringLiteral("A") + lines.at(10));
+	QVERIFY(editor.undo());
+	QCOMPARE(editor.lineText(10), lines.at(10));
+	QVERIFY(!editor.isModified());
+	QCOMPARE(editor.spilledPageCount(), 0);
+
+	// Незатронутая страница по-прежнему читается из файла.
+	QCOMPARE(editor.lineText(4500), lines.at(4500));
+}
+
+void TestPagedTextEditor::spilledBufferSaves() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const int count = 5000;
+	const QStringList lines = makeLines(count);
+	const auto path = writeTextFile(dir.path(), QStringLiteral("spillsave.txt"),
+		lines.join(QLatin1Char('\n')).toUtf8());
+	QVERIFY(!path.isEmpty());
+
+	PagedTextEditor editor;
+	editor.resize(600, 400);
+	editor.setMemoryBudget(16 * 1024);
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+
+	editor.setCursorPosition(10, 0);
+	QVERIFY(editor.insertText(QStringLiteral("A")));
+	editor.setCursorPosition(3100, 0);
+	QVERIFY(editor.insertText(QStringLiteral("B")));
+	QVERIFY(editor.spilledPageCount() >= 2);
+
+	// Сохранение читает выгруженные страницы из файла подкачки.
+	QVERIFY(editor.save());
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 15000);
+	QVERIFY(!editor.isModified());
+	QCOMPARE(editor.lineText(10), QStringLiteral("A") + lines.at(10));
+	QCOMPARE(editor.lineText(3100), QStringLiteral("B") + lines.at(3100));
+	QVERIFY(editor.spillFilePath().isEmpty());
+
+	const QList<QByteArray> savedLines = readAllBytes(path).split('\n');
+	QCOMPARE(QString::fromUtf8(savedLines.at(10)), QStringLiteral("A") + lines.at(10));
+	QCOMPARE(QString::fromUtf8(savedLines.at(3100)), QStringLiteral("B") + lines.at(3100));
+}
+
+void TestPagedTextEditor::spillFileIsRemovedAutomatically() {
+	QString spillPath;
+	{
+		PagedTextEditor editor;
+		editor.resize(600, 400);
+		editor.setMemoryBudget(16 * 1024);
+		editor.newDocument();
+		QVERIFY(editor.insertText(QString(64 * 1024, QLatin1Char('x'))));
+		spillPath = editor.spillFilePath();
+		QVERIFY(!spillPath.isEmpty());
+		QVERIFY(QFile::exists(spillPath));
+	}
+
+	// Файл подкачки удаляется вместе с редактором (QTemporaryFile).
+	QVERIFY(!QFile::exists(spillPath));
+}
+
+void TestPagedTextEditor::newDocumentSpillsLargeContent() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const QStringList lines = makeLines(3000);
+
+	PagedTextEditor editor;
+	editor.resize(600, 400);
+	editor.setMemoryBudget(64 * 1024);
+	editor.newDocument();
+
+	// Без файла всё содержимое — изменённые страницы: большая вставка
+	// должна уйти в файл подкачки, а не остаться в памяти.
+	QVERIFY(editor.insertText(lines.join(QLatin1Char('\n'))));
+	QCOMPARE(editor.lineCount(), 3000);
+	QVERIFY(editor.spilledPageCount() > 0);
+	QVERIFY(!editor.spillFilePath().isEmpty());
+	QVERIFY(editor.bufferedBytes() < 2 * 1024 * 1024);
+
+	const auto path = dir.filePath(QStringLiteral("from-buffer.txt"));
+	QVERIFY(editor.saveAs(path));
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 15000);
+	QVERIFY(!editor.isModified());
+	QCOMPARE(editor.lineCount(), 3000);
+	QCOMPARE(editor.lineText(0), lines.at(0));
+	QCOMPARE(editor.lineText(2999), lines.at(2999));
 }
 
 QTEST_MAIN(TestPagedTextEditor)

@@ -6,9 +6,14 @@
 
 class FormatterPluginManager;
 class HighlightingPluginManager;
+class PagedTextEditor;
 
 /// Документ-обёртка над виртуальным редактором больших файлов.
-/// Прототип: только просмотр, путь берётся из переменной контекста `path`.
+/// Путь берётся из переменной контекста `path`; без пути это документ
+/// «Без имени» с полноценным редактируемым буфером. Документ умеет
+/// редактировать текст, вставлять из буфера обмена, отменять правки и
+/// сохранять файл: изменённые страницы держатся в памяти (при превышении
+/// предела выгружаются во временный файл), неизменённые читаются из файла.
 class PagedTextDocument : public DocumentWidget {
 	Q_OBJECT
 public:
@@ -17,9 +22,12 @@ public:
 		FormatterPluginManager* formatters, QWidget* parent = nullptr);
 	~PagedTextDocument() override;
 
+	PagedTextEditor* editor() const;
+
 	QWidget* createPropertiesEditor(QWidget* parent) override;
 	QList<DocumentPropertyGroup> createPropertyGroups(QWidget* parent) override;
 	void refresh() override;
+	bool save() override;
 
 	/// Открыть файл и записать путь в контекст документа.
 	void openFile(const QString& path);
