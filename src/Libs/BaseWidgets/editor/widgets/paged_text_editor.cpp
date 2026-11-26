@@ -6,14 +6,14 @@
 #include "Libs/BaseWidgets/editor/highlights/highlighter_plugin.h"
 #include "Libs/BaseWidgets/editor/highlights/highlighter_plugin_manager.h"
 #include "Libs/BaseWidgets/editor/language_info.h"
-#include "Libs/BaseWidgets/editor/layout/text_layout.h"
+#include "Libs/DataStream/paged_text/text_layout.h"
 #include "Libs/BaseWidgets/editor/navigation/text_navigation.h"
-#include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_document_buffer.h"
-#include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_edit_history.h"
-#include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_file_indexer.h"
-#include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_line_chunks.h"
-#include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_search.h"
-#include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_text_cursor.h"
+#include "Libs/DataStream/paged_text/paged_document_buffer.h"
+#include "Libs/DataStream/paged_text/paged_edit_history.h"
+#include "Libs/DataStream/paged_text/paged_file_indexer.h"
+#include "Libs/DataStream/paged_text/paged_line_chunks.h"
+#include "Libs/DataStream/paged_text/paged_search.h"
+#include "Libs/DataStream/paged_text/paged_text_cursor.h"
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_text_highlighter.h"
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_text_renderer.h"
 
@@ -2601,9 +2601,14 @@ bool PagedTextEditor::saveAs(const QString& path) {
 	}
 
 	QString error;
-	const int convertTabs = d->saveTabMode == Extensions::TextEdit::TabMode::Spaces
-		? d->tabWidth : 0;
-	if (!d->buffer.saveTo(path, &error, convertTabs)) {
+	std::function<QString(const QString&)> lineTransform;
+	if (d->saveTabMode == Extensions::TextEdit::TabMode::Spaces) {
+		const int width = d->tabWidth;
+		lineTransform = [width](const QString& line) {
+			return Extensions::TextEdit::convertLeadingTabsToSpaces(line, width);
+		};
+	}
+	if (!d->buffer.saveTo(path, &error, lineTransform)) {
 		emit saved(path, false, error);
 		return false;
 	}

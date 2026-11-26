@@ -1,4 +1,4 @@
-#include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_search.h"
+#include "Libs/DataStream/paged_text/paged_search.h"
 
 PagedSearchOutcome runPagedLineSearch(PagedDocumentBuffer buffer,
 	const QString& query, Qt::CaseSensitivity caseSensitivity,

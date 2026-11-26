@@ -1,5 +1,4 @@
-#include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_document_buffer.h"
-#include "Libs/BaseWidgets/extensions/text_edit_extensions.h"
+#include "Libs/DataStream/paged_text/paged_document_buffer.h"
 
 #include <QDataStream>
 #include <QDir>
@@ -799,9 +798,9 @@ bool PagedDocumentBuffer::spillPage(int pageIndex) const {
 }
 
 bool PagedDocumentBuffer::saveTo(const QString& targetPath, QString* error,
-	int convertTabsToSpaces) const {
-	if (convertTabsToSpaces > 0) {
-		return saveWithIndentConversion(targetPath, error, convertTabsToSpaces);
+	const std::function<QString(const QString&)>& lineTransform) const {
+	if (lineTransform) {
+		return saveWithTransform(targetPath, error, lineTransform);
 	}
 
 	if (targetPath.isEmpty()) {
@@ -951,8 +950,15 @@ bool PagedDocumentBuffer::saveTo(const QString& targetPath, QString* error,
 	return true;
 }
 
-bool PagedDocumentBuffer::saveWithIndentConversion(const QString& targetPath,
-	QString* error, int spaces) const {
+bool PagedDocumentBuffer::saveWithTransform(const QString& targetPath,
+	QString* error,
+	const std::function<QString(const QString&)>& lineTransform) const {
+	if (!lineTransform) {
+		if (error) {
+			*error = QStringLiteral("Не задано преобразование строк");
+		}
+		return false;
+	}
 	if (targetPath.isEmpty()) {
 		if (error) {
 			*error = QStringLiteral("Не задан путь для сохранения");
@@ -991,8 +997,7 @@ bool PagedDocumentBuffer::saveWithIndentConversion(const QString& targetPath,
 
 	const QByteArray newline = codec->fromUnicode(defaultNewline);
 	for (int line = 0; line < totalLines && !failed; line++) {
-		const QString converted = Extensions::TextEdit::convertLeadingTabsToSpaces(
-			lineAt(line), spaces);
+		const QString converted = lineTransform(lineAt(line));
 		const QByteArray encoded = codec->fromUnicode(converted);
 		if (output.write(encoded) != encoded.size()) {
 			failed = true;

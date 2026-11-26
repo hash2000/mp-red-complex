@@ -1,4 +1,4 @@
-#include "Libs/BaseWidgets/editor/layout/text_layout.h"
+#include "Libs/DataStream/paged_text/text_layout.h"
 
 #include <QFontMetricsF>
 #include <QTextOption>

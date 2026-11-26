@@ -1,6 +1,6 @@
 #pragma once
-#include "Libs/BaseWidgets/editor/layout/text_layout.h"
-#include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_search.h"
+#include "Libs/DataStream/paged_text/text_layout.h"
+#include "Libs/DataStream/paged_text/paged_search.h"
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_text_highlighter.h"
 
 #include <QFont>

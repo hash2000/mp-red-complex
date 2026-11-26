@@ -1,4 +1,4 @@
-#include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_edit_history.h"
+#include "Libs/DataStream/paged_text/paged_edit_history.h"
 
 void PagedEditHistory::clear() {
 	undoStack.clear();

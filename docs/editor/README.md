@@ -147,6 +147,10 @@
 (в том числе `pointSize`) участвуют в расчёте геометрии строк — клик мышью
 попадает в правильную строку и колонку при разных размерах шрифта.
 
+Выделение в `PagedTextRenderer` рисуется **после** текста и его подсветки
+полупрозрачным слоем: фон правила подсветки (например, у вложенного блока)
+больше не может скрыть выделенный текст, а буквы остаются читаемыми.
+
 ## История правок
 
 `PagedEditHistory` хранит снимки только затронутых страниц:
@@ -208,13 +212,20 @@
 ## Классы
 
 - `src/Libs/BaseWidgets/editor/widgets/paged_text_editor.h/.cpp` —
-  `PagedTextEditor`.
-- `.../paged_text_editor/paged_document_buffer.h/.cpp` — модель и запись файла.
-- `.../paged_text_editor/paged_edit_history.h/.cpp` — история правок.
-- `.../paged_text_editor/paged_file_indexer.h/.cpp` — индексация строк.
-- `.../paged_text_editor/paged_line_chunks.h/.cpp` — кусочная загрузка
+  `PagedTextEditor`; модель виртуального буфера, история, индексатор,
+  чанки, поиск, `TextLayout` и `PagedTextCursor` вынесены в
+  `src/Libs/DataStream/paged_text/` и могут использоваться другими
+  виджетами, модулями и командами.
+- `src/Libs/DataStream/paged_text/paged_document_buffer.h/.cpp` — модель
+  и запись файла.
+- `src/Libs/DataStream/paged_text/paged_edit_history.h/.cpp` — история правок.
+- `src/Libs/DataStream/paged_text/paged_file_indexer.h/.cpp` — индексация строк.
+- `src/Libs/DataStream/paged_text/paged_line_chunks.h/.cpp` — кусочная загрузка
   длинных строк.
-- `.../paged_text_editor/paged_search.h/.cpp` — построчный поиск.
+- `src/Libs/DataStream/paged_text/paged_search.h/.cpp` — построчный поиск.
+- `src/Libs/DataStream/paged_text/text_layout.h/.cpp` — раскладка строки.
+- `src/Libs/DataStream/paged_text/paged_text_cursor.h/.cpp` — перемещение
+  курсора по экранным строкам.
 - `.../editor/navigation/text_navigation.h/.cpp` — стратегии
   `Ctrl+Left/Right` и их реестр.
 - `src/Libs/BaseWidgets/extensions/text_edit_extensions.h/.cpp` — общие

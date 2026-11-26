@@ -1,5 +1,5 @@
-#include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_text_cursor.h"
-#include "Libs/BaseWidgets/editor/layout/text_layout.h"
+#include "Libs/DataStream/paged_text/paged_text_cursor.h"
+#include "Libs/DataStream/paged_text/text_layout.h"
 
 #include <QtGlobal>
 

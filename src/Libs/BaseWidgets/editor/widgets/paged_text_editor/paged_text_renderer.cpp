@@ -1,5 +1,5 @@
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_text_renderer.h"
-#include "Libs/BaseWidgets/editor/layout/text_layout.h"
+#include "Libs/DataStream/paged_text/text_layout.h"
 
 #include <QFontMetrics>
 #include <QPainter>
@@ -120,6 +120,11 @@ void PagedTextRenderer::paint(QPainter& painter, const PagedTextPaintModel& mode
 					x2 - x1, visualHeight, color);
 			}
 
+			painter.setPen(model.palette.text().color());
+			textLine.draw(&painter, QPointF(gutter - horizontalOffset, y));
+
+			// Выделение рисуется поверх текста и подсветки: формат подсветки
+			// может иметь собственный фон, который иначе перекрыл бы выделение.
 			for (const PagedTextSelection& selection : model.selections) {
 				if (line < selection.startLine || line > selection.endLine) {
 					continue;
@@ -133,16 +138,13 @@ void PagedTextRenderer::paint(QPainter& painter, const PagedTextPaintModel& mode
 				const int to = qMin(selectedTo, segmentEnd);
 				if (to > from) {
 					QColor color = selectionColor;
-					color.setAlpha(170);
+					color.setAlpha(120);
 					const int x1 = qRound(xAt(from));
 					const int x2 = qRound(xAt(to));
 					painter.fillRect(gutter - horizontalOffset + x1, y,
 						x2 - x1, visualHeight, color);
 				}
 			}
-
-			painter.setPen(model.palette.text().color());
-			textLine.draw(&painter, QPointF(gutter - horizontalOffset, y));
 
 			if (model.hasFocus) {
 				for (const PagedTextCaret& caret : model.carets) {

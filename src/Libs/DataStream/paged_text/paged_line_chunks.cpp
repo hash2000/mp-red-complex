@@ -1,4 +1,4 @@
-#include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_line_chunks.h"
+#include "Libs/DataStream/paged_text/paged_line_chunks.h"
 
 #include <QtGlobal>
 

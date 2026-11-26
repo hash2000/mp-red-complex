@@ -8,13 +8,63 @@
 #include "Libs/Resources/resources.h"
 #include <QSurfaceFormat>
 #include <QApplication>
+#include <QAbstractNativeEventFilter>
+#include <QColor>
+#include <QPalette>
 #include <QStyle>
 #include <QStyleFactory>
 #include <QStyleHints>
 #include <QScreen>
 #include <QFont>
 #include <QSettings>
+#include <QTimer>
 #include <QWidget>
+
+#include <memory>
+
+#ifdef Q_OS_WIN
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
+
+namespace {
+
+#ifdef Q_OS_WIN
+/// Windows до первого кадра Qt очищает клиентскую область окна системной
+/// белой кистью. Перехватываем WM_ERASEBKGND и заливаем её цветом темы,
+/// поэтому даже самый первый кадр не бывает белым.
+class ThemedEraseFilter final : public QAbstractNativeEventFilter {
+public:
+	ThemedEraseFilter(WId window, const QColor& color)
+		: window(window), color(color) {
+	}
+
+	bool nativeEventFilter(const QByteArray&, void* message, qintptr*) override {
+		auto* msg = static_cast<MSG*>(message);
+		if (msg->message != WM_ERASEBKGND
+			|| msg->hwnd != reinterpret_cast<HWND>(window)) {
+			return false;
+		}
+
+		HDC dc = reinterpret_cast<HDC>(msg->wParam);
+		RECT rect{};
+		if (GetClientRect(msg->hwnd, &rect)) {
+			HBRUSH brush = CreateSolidBrush(RGB(color.red(), color.green(), color.blue()));
+			FillRect(dc, &rect, brush);
+			DeleteObject(brush);
+		}
+		return true;
+	}
+
+private:
+	WId window = 0;
+	QColor color;
+};
+#endif
+
+} // namespace
 
 class Application::Private {
 public:
@@ -79,10 +129,26 @@ int Application::Private::tryRun(int& argc, char** argv) {
 	}
 
 	viewport->resize(1400, 900);
+	// Тема уже применена к qApp, но нативное окно Windows до первого кадра
+	// успевает показать системный белый фон. Перехватываем стирание фона и
+	// заливаем его цветом темы — белая вспышка не появляется вообще.
+#ifdef Q_OS_WIN
+	auto eraseFilter = std::make_unique<ThemedEraseFilter>(
+		viewport->winId(), QApplication::palette().color(QPalette::Window));
+	qApp->installNativeEventFilter(eraseFilter.get());
+	// После первого кадра Qt сам рисует фон; фильтр нужен только на старте.
+	QTimer::singleShot(1000, viewport.get(), [filter = eraseFilter.get()] {
+		qApp->removeNativeEventFilter(filter);
+	});
+#endif
 	viewport->show();
 
 	qDebug() << "Start application";
-	return QApplication::exec();
+	const int result = QApplication::exec();
+#ifdef Q_OS_WIN
+	qApp->removeNativeEventFilter(eraseFilter.get());
+#endif
+	return result;
 }
 
 void Application::Private::setupQt() {

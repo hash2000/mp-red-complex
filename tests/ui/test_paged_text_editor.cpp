@@ -4,11 +4,12 @@
 #include "Libs/BaseWidgets/editor/highlights/highlighter_plugin.h"
 #include "Libs/BaseWidgets/editor/highlights/highlighter_plugin_manager.h"
 #include "Libs/BaseWidgets/editor/language_info.h"
-#include "Libs/BaseWidgets/editor/layout/text_layout.h"
+#include "Libs/DataStream/paged_text/text_layout.h"
 #include "Libs/BaseWidgets/editor/navigation/text_navigation.h"
 #include "Libs/BaseWidgets/editor/widgets/code_editor_widget.h"
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor.h"
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_text_highlighter.h"
+#include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_text_renderer.h"
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/scripting/command_controller.h"
 #include "Libs/Engine/scripting/system_options/system_option.h"
@@ -21,8 +22,10 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QGuiApplication>
+#include <QImage>
 #include <QLabel>
 #include <QLineEdit>
+#include <QPainter>
 #include <QScrollBar>
 #include <QApplication>
 #include <QSignalSpy>
@@ -87,6 +90,7 @@ private slots:
 	void tabKeepsFocusAndIndents();
 	void codeEditorNavigationAndTabs();
 	void editorMouseDetails();
+	void selectionStaysVisibleOverHighlight();
 	void embeddedHighlightingMatchesCodeEditor();
 	void htmlEmbeddedBlocks();
 	void documentsReactToModifications();
@@ -1781,6 +1785,42 @@ void TestPagedTextEditor::editorMouseDetails() {
 	QCOMPARE(editor.cursorLine(), editor.lineCount() - 1);
 	QCOMPARE(editor.cursorColumn(),
 		editor.lineText(editor.lineCount() - 1).size());
+}
+
+void TestPagedTextEditor::selectionStaysVisibleOverHighlight() {
+	QImage image(120, 40, QImage::Format_ARGB32_Premultiplied);
+	image.fill(Qt::black);
+	QPainter painter(&image);
+
+	PagedTextPaintModel model;
+	model.viewport = image.rect();
+	model.palette.setColor(QPalette::Base, Qt::black);
+	model.palette.setColor(QPalette::Text, Qt::white);
+	model.palette.setColor(QPalette::Highlight, Qt::red);
+	model.font = QFont(QStringLiteral("Consolas"));
+	model.font.setPointSize(12);
+	model.lineCount = 1;
+	model.gutterWidth = 0;
+	model.lineNumbers = false;
+	model.wrapped = false;
+	model.displayLine = [](int) { return QStringLiteral("    "); };
+	model.rawLine = model.displayLine;
+
+	// Подсветка заливает строку синим фоном — выделение обязано быть поверх.
+	QTextCharFormat highlight;
+	highlight.setBackground(QColor(0, 0, 180));
+	model.highlightSpans = [highlight](int) {
+		return QVector<PagedTextSpan>{ { 0, 4, highlight } };
+	};
+	model.selections.append({ 0, 0, 0, 1 });
+
+	PagedTextRenderer::paint(painter, model);
+	painter.end();
+
+	const QColor selected = image.pixelColor(4, 8);
+	QVERIFY2(selected.red() > 40,
+		qPrintable(QStringLiteral("выделение скрыто подсветкой: %1")
+			.arg(selected.name())));
 }
 
 void TestPagedTextEditor::embeddedHighlightingMatchesCodeEditor() {

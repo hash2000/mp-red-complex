@@ -1,5 +1,5 @@
 #pragma once
-#include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_document_buffer.h"
+#include "Libs/DataStream/paged_text/paged_document_buffer.h"
 
 #include <QString>
 #include <QVector>

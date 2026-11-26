@@ -5,6 +5,7 @@
 #include <QStringList>
 #include <QVector>
 
+#include <functional>
 #include <memory>
 
 class PagedSpillStore;
@@ -97,10 +98,11 @@ public:
 	/// с диска байт в байт, изменённые — кодируются и разделяются тем же
 	/// переводом строки, что был в файле. Возвращает false и заполняет
 	/// `error` при ошибке записи.
-	/// @param convertTabsToSpaces если > 0, ведущие табы всех строк
-	/// записываются пробелами (по указанному числу); при 0 — как есть.
+	/// @param lineTransform если задан, каждая строка пропускается через него
+	/// перед кодированием (например, замена ведущих табов пробелами);
+	/// в этом случае файл переписывается построчно целиком.
 	bool saveTo(const QString& targetPath, QString* error,
-		int convertTabsToSpaces = 0) const;
+		const std::function<QString(const QString&)>& lineTransform = {}) const;
 
 private:
 	struct Page {
@@ -138,9 +140,9 @@ private:
 	void detectFileFacts(const QString& filePath);
 	bool spillPage(int page) const;
 	void enforceMemoryBudget(int protectedPage) const;
-	/// Полная перезапись с заменой ведущих табов пробелами.
-	bool saveWithIndentConversion(const QString& targetPath, QString* error,
-		int spaces) const;
+	/// Полная перезапись с преобразованием каждой строки.
+	bool saveWithTransform(const QString& targetPath, QString* error,
+		const std::function<QString(const QString&)>& lineTransform) const;
 
 	mutable QVector<Page> pages;
 	mutable QVector<int> prefix;
