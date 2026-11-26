@@ -19,6 +19,11 @@ define:
     - Views.FetchApi
 
   content:
+    - documents:
+        content:
+          - xtype: text-editor
+            name: text-editor
+
     - bottombar:
         default: console
         content:

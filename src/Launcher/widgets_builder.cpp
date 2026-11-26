@@ -286,7 +286,7 @@ void WidgetsBuilder::Private::registerAll() {
 
 	// Прототип виртуального редактора для очень больших файлов: страницы
 	// читаются с диска, в памяти только индекс строк и кэш страниц.
-	registry->registerFactory({ "Content.TextEditor.PagedText", "large-text-editor",
+	registry->registerFactory({ "Content.TextEditor.PagedText", "text-editor",
 		/*singletone*/ false, QStringLiteral("Просмотр и редактирование больших файлов") },
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* services = servicesFor(type, handler);
