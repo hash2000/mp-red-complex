@@ -17,11 +17,19 @@ public:
 	void removeButton(const QString& id);
 	void setActive(const QString& id); // пустая строка — ни одна не активна
 
+	/// Кнопка сворачивания панели кнопок (yaml: sidebar collapsable).
+	/// false — кнопка скрыта, панель кнопок остаётся развёрнутой.
+	void setPinVisible(bool visible);
+	bool isPinVisible() const;
+
 	void setAutoHide(bool on); // true — свернуть в полоску, раскрывать по hover
 	bool autoHide() const;
 
 signals:
 	void pinToggled(bool pinned);
+	/// Панель кнопок развернулась/свернулась: и по кнопке, и по autohide
+	/// (наведение/уход мыши).
+	void expandedChanged(bool expanded);
 	void buttonClicked(const QString& id);
 
 protected:

@@ -26,6 +26,7 @@ struct ActivityBar::Private {
 	QTimer collapseTimer;
 
 	void setExpanded(ActivityBar* q, bool e) {
+		const bool changed = expanded != e;
 		expanded = e;
 		content->setVisible(e);
 		q->setFixedWidth(e ? kExpandedWidth : kCollapsedWidth);
@@ -34,6 +35,9 @@ struct ActivityBar::Private {
 		q->style()->unpolish(q);
 		q->style()->polish(q);
 		q->update();
+		if (changed) {
+			emit q->expandedChanged(e);
+		}
 	}
 };
 
@@ -112,6 +116,18 @@ void ActivityBar::setActive(const QString& id) {
 	for (auto it = d->buttons.cbegin(); it != d->buttons.cend(); it++)
 		if (it.value()->isCheckable())
 			it.value()->setChecked(it.key() == id);
+}
+
+void ActivityBar::setPinVisible(bool visible) {
+	d->pinButton->setVisible(visible);
+	if (!visible) {
+		// Без кнопки сворачивания панель должна оставаться развёрнутой.
+		setAutoHide(false);
+	}
+}
+
+bool ActivityBar::isPinVisible() const {
+	return !d->pinButton->isHidden();
 }
 
 void ActivityBar::setAutoHide(bool on) {

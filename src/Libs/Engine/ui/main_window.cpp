@@ -30,8 +30,10 @@
 #include <QPointer>
 #include <QScopeGuard>
 #include <QSet>
+#include <QShowEvent>
 #include <QSplitter>
 #include <QThread>
+#include <QTimer>
 #include <QVBoxLayout>
 #include <QStatusBar>
 #include <QTableWidget>
@@ -103,6 +105,8 @@ struct MainWindow::Private {
 	int lastBottomHeight = 220;
 	int lastTabsWidth = 220;
 	bool documentTabsVisible = true;
+	/// Боковая панель была видна до сворачивания ActivityBar (autohide).
+	bool sideVisibleBeforeAutoHide = false;
 
 	void buildUi();
 	void buildMenus();
@@ -125,6 +129,7 @@ struct MainWindow::Private {
 	void openSystemOptions();
 	void openFile(const QString& path);
 	void toggleBottom();
+	void resizeBottomPanel(int desiredHeight);
 	void updateWindowTitle(DocumentWidget* doc);
 };
 
@@ -216,11 +221,11 @@ void MainWindow::Private::buildMenus() {
 
 	viewMenu = q->menuBar()->addMenu(MainWindow::tr("&Вид"));
 	sidePanelsSeparator = viewMenu->addSeparator();   // сюда будут вставляться панели
-	if (bottom) {
+	if (bottom && options.bottomClosable) {
 		viewMenu->addAction(MainWindow::tr("Нижняя панель"), QKeySequence(Qt::CTRL | Qt::Key_J),
 			q, [this] { toggleBottom(); });
 	}
-	if (activity) {
+	if (activity && options.sideCollapsable) {
 		viewMenu->addSeparator();
 		pinAction = viewMenu->addAction(MainWindow::tr("📌 Закрепить панель кнопок"));
 		pinAction->setCheckable(true);
@@ -281,6 +286,30 @@ void MainWindow::Private::wireSignals() {
 			}
 			q->toggleSidePanel(id);
 		});
+
+		// При autohide панель кнопок сворачивается в полоску — вместе с ней
+		// скрываем боковые панели. При разворачивании возвращаем панель,
+		// если она была видна до сворачивания.
+		QObject::connect(activity, &ActivityBar::expandedChanged, q, [this](bool expanded) {
+			if (!side) {
+				return;
+			}
+
+			if (!expanded) {
+				if (!side->isHidden()) {
+					sideVisibleBeforeAutoHide = true;
+					q->hideSidePanel();
+				}
+				return;
+			}
+
+			if (sideVisibleBeforeAutoHide) {
+				sideVisibleBeforeAutoHide = false;
+				if (!side->currentPanel().isEmpty()) {
+					q->showSidePanel(side->currentPanel());
+				}
+			}
+		});
 	}
 	if (side) {
 		QObject::connect(side, &SideHostPanel::closeRequested, q, [this] { q->hideSidePanel(); });
@@ -288,16 +317,12 @@ void MainWindow::Private::wireSignals() {
 
 	if (bottom) {
 		// Нижняя панель
-		QObject::connect(bottom, &BottomPanel::closeRequested, bottom, &QWidget::hide);
+		QObject::connect(bottom, &BottomPanel::closeRequested, bottom, [this] {
+			if (options.bottomClosable)
+				bottom->hide();
+		});
 		QObject::connect(bottom, &BottomPanel::collapsedChanged, q, [this](bool collapsed) {
-			const auto s = centerSplitter->sizes();
-			const auto total = s.value(0) + s.value(1);
-			const auto height = collapsed ? QWIDGETSIZE_MAX : lastBottomHeight;
-			const int panelHeight = collapsed
-				? bottom->height() // уже равна высоте заголовка
-				: lastBottomHeight; // вернуть прежнюю высоту
-
-			centerSplitter->setSizes({ total - panelHeight, panelHeight });
+			resizeBottomPanel(collapsed ? bottom->collapsedHeight() : lastBottomHeight);
 		});
 	}
 
@@ -307,8 +332,9 @@ void MainWindow::Private::wireSignals() {
 			lastSideWidth = side->width();
 	});
 	QObject::connect(centerSplitter, &QSplitter::splitterMoved, q, [this] {
-		if (bottom && bottom->isVisible() && !bottom->isCollapsed())
+		if (bottom && bottom->isVisible() && !bottom->isCollapsed()) {
 			lastBottomHeight = bottom->height();
+		}
 	});
 }
 
@@ -319,6 +345,44 @@ void MainWindow::buildDefaultPanels() {
 
 	d->activity->addButton(QStringLiteral("settings"), QStringLiteral("⚙"), MainWindow::tr("Настройки"),
 		ActivityBar::Position::Bottom, /*checkable*/ true);
+}
+
+void MainWindow::applyZoneOptions() {
+	if (d->bottom) {
+		d->bottom->setClosable(d->options.bottomClosable);
+		d->bottom->setCollapsable(d->options.bottomCollapsable);
+		// collapsable: false — панели свёрнуты, кнопки сворачивания нет;
+		// развернуть можно кликом по вкладке, обратно свернуть уже нельзя.
+		// autohide сворачивает содержимое до полоски вкладок и раскрывает
+		// панель при наведении.
+		const bool autoHide = d->options.bottomAutoHide && d->options.bottomCollapsable;
+		const bool collapsed = d->options.bottomCollapsed || !d->options.bottomCollapsable;
+		d->bottom->setCollapsed(collapsed);
+		d->bottom->setAutoHide(autoHide);
+	}
+
+	if (!d->side) {
+		return;
+	}
+
+	// Кнопка сворачивания панели кнопок: false — её нет и панель развёрнута.
+	const bool autoHide = d->options.sideAutoHide && d->options.sideCollapsable;
+	if (d->activity) {
+		d->activity->setAutoHide(autoHide);
+		d->activity->setPinVisible(d->options.sideCollapsable);
+	}
+
+	const bool showSidePanels = !d->options.sideCollapsable
+		|| (!d->options.sideCollapsed && !autoHide);
+	if (!showSidePanels) {
+		d->side->hide();
+		if (d->activity) {
+			d->activity->setActive(QString());
+		}
+	}
+	else if (!d->side->currentPanel().isEmpty() && !d->side->isVisible()) {
+		showSidePanel(d->side->currentPanel());
+	}
 }
 
 // ------------------------------------------------------------------ actions
@@ -425,6 +489,28 @@ void MainWindow::Private::toggleBottom() {
 	}
 }
 
+void MainWindow::Private::resizeBottomPanel(int desiredHeight) {
+	// До первого показа окна QSplitter ещё не разложен: sizes() возвращает
+	// условные значения (например, 14 и 14), и пересчёт дал бы бессмысленные
+	// размеры. После показа высоту ограничивает maximumHeight панели.
+	if (!q->isVisible() || !centerSplitter->isVisible()) {
+		return;
+	}
+
+	const auto s = centerSplitter->sizes();
+	if (s.size() < 2) {
+		return;
+	}
+
+	const int total = s.value(0) + s.value(1);
+	if (total <= 0) {
+		return;
+	}
+
+	const int panelHeight = qBound(0, desiredHeight, total);
+	centerSplitter->setSizes({ total - panelHeight, panelHeight });
+}
+
 void MainWindow::Private::updateWindowTitle(DocumentWidget* doc) {
 	const QString app = QStringLiteral("StudioShell");
 	q->setWindowTitle(doc ? doc->title() + QStringLiteral(" — ") + app : app);
@@ -470,6 +556,13 @@ MainWindow::Options MainWindow::Options::fromBuildOptions(const QMap<QString, QV
 	Options options;
 	options.bottomPanel = !values.value(QStringLiteral("bottombar.delete"), false).toBool();
 	options.sidePanel = !values.value(QStringLiteral("sidebar.delete"), false).toBool();
+	options.bottomCollapsed = values.value(QStringLiteral("bottombar.collapsed"), false).toBool();
+	options.bottomCollapsable = values.value(QStringLiteral("bottombar.collapsable"), true).toBool();
+	options.bottomClosable = values.value(QStringLiteral("bottombar.closable"), true).toBool();
+	options.bottomAutoHide = values.value(QStringLiteral("bottombar.autohide"), false).toBool();
+	options.sideCollapsed = values.value(QStringLiteral("sidebar.collapsed"), false).toBool();
+	options.sideCollapsable = values.value(QStringLiteral("sidebar.collapsable"), true).toBool();
+	options.sideAutoHide = values.value(QStringLiteral("sidebar.autohide"), false).toBool();
 	return options;
 }
 
@@ -1095,6 +1188,23 @@ void MainWindow::showBottomPanel(const QString& id) {
 void MainWindow::log(const QString& message) {
 	if (d->output)
 		d->output->appendPlainText(QTime::currentTime().toString(QStringLiteral("HH:mm:ss  ")) + message);
+}
+
+void MainWindow::showEvent(QShowEvent* e) {
+	QMainWindow::showEvent(e);
+	// QSplitter хранит размеры, заданные до show(), и не пересчитывает их
+	// после изменения maximumHeight. Раскладываем нижнюю панель уже после
+	// первого показа окна.
+	QTimer::singleShot(0, this, [this] {
+		if (!d->bottom || !d->bottom->isVisible()) {
+			return;
+		}
+
+		const int desiredHeight = d->bottom->isCollapsed()
+			? d->bottom->collapsedHeight()
+			: d->lastBottomHeight;
+		d->resizeBottomPanel(desiredHeight);
+	});
 }
 
 void MainWindow::closeEvent(QCloseEvent* e) {

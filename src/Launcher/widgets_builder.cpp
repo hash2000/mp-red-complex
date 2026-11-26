@@ -116,7 +116,8 @@ void WidgetsBuilder::Private::registerAll() {
 
 	// Главное окно приложения. Панели создаются декларативно из yaml-описания,
 	// поэтому встроенные панели по умолчанию не собираются.
-	// Зоны, удалённые описанием (bottombar/sidebar delete: true), не создаются.
+	// Зоны, удалённые описанием (bottombar/sidebar delete: true), не создаются;
+	// начальное состояние зон (collapsed/collapsable/closable) применяет MainWindow.
 	registry->registerFactory({ kMainViewportClass, kMainViewportXtype, /*singletone*/ true,
 		QStringLiteral("Оболочка") },
 		[](const QString&, const WidgetBuildHandler& handler) -> QWidget* {

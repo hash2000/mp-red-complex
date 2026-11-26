@@ -239,6 +239,12 @@ QToolButton#ActivityButton { border:none; border-left:2px solid transparent; bac
 QToolButton#ActivityButton:hover   { color:#ffffff; }
 QToolButton#ActivityButton:checked { color:#ffffff; border-left:2px solid #7160e8; background:#252526; }
 
+/* Кнопка сворачивания панели кнопок. Глобальный padding QToolButton
+   (2px 6px) не оставляет места стрелке в кнопке шириной 14 px. */
+QToolButton#pinButton { padding:0px; border:none; }
+/* Маленькая кнопка автоскрытия в полоске вкладок BottomPanel. */
+QToolButton#bottomPinButton { padding:0px; border:none; }
+
 /* ---------- Боковая и нижняя панели ---------- */
 #SideHostPanel { background:#181818; }
 #BottomPanel   { background:#181818; border-top:1px solid #2b2b2b; }

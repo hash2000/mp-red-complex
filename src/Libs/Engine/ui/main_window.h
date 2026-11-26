@@ -11,6 +11,7 @@ class DocumentArea;
 class DocumentWidget;
 class CommandContext;
 class PropertiesPanel;
+class QShowEvent;
 
 
 class MainWindow : public QMainWindow {
@@ -23,9 +24,34 @@ public:
 		bool bottomPanel = true;   ///< bottombar
 		bool sidePanel = true;     ///< sidebar
 
+		/// bottombar.collapsed: панель свёрнута после загрузки
+		/// (по умолчанию false — как и раньше, панель развёрнута).
+		bool bottomCollapsed = false;
+		/// bottombar.collapsable: можно ли сворачивать/автоскрывать панель
+		/// (false — кнопка автоскрытия скрыта, панель свёрнута).
+		bool bottomCollapsable = true;
+		/// bottombar.closable: можно ли скрыть панель пунктом меню
+		/// (false — нет пункта «Нижняя панель» (Ctrl+J) в меню «Вид»).
+		bool bottomClosable = true;
+		/// bottombar.autohide: панель свёрнута в горизонтальную полоску
+		/// после загрузки и раскрывается при наведении.
+		bool bottomAutoHide = false;
+		/// sidebar.collapsed: боковые панели скрыты после загрузки
+		/// (по умолчанию false — как и раньше, панель видна).
+		bool sideCollapsed = false;
+		/// sidebar.collapsable: можно ли автоскрывать панель кнопок
+		/// (false — кнопка автоскрытия скрыта, панель развёрнута).
+		bool sideCollapsable = true;
+		/// sidebar.autohide: панель кнопок свёрнута после загрузки
+		/// (вместе с ней скрыты боковые панели; раскрытие — по наведению).
+		bool sideAutoHide = false;
+
 		/// Разбирает декларативные параметры построения виджета
 		/// (WidgetBuildHandler::options): ключи "bottombar.delete"/"sidebar.delete",
-		/// по умолчанию false.
+		/// "bottombar.collapsed"/"bottombar.collapsable"/"bottombar.closable"/
+		/// "bottombar.autohide",
+		/// "sidebar.collapsed"/"sidebar.collapsable"/"sidebar.autohide";
+		/// отсутствующие — значения по умолчанию.
 		static Options fromBuildOptions(const QMap<QString, QVariant>& values);
 	};
 
@@ -114,10 +140,16 @@ public:
 
 	void buildDefaultPanels();
 
+	/// Применяет начальное состояние зон из описания приложения:
+	/// свёрнутость, доступность сворачивания (для bottombar — и закрытия).
+	/// Вызывается после наполнения зон (ClassManager), до buildDefaultPanels().
+	void applyZoneOptions();
+
 	void log(const QString& message);
 
 protected:
 	void closeEvent(QCloseEvent* e) override;
+	void showEvent(QShowEvent* e) override;
 
 private:
 	struct Private;

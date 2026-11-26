@@ -301,6 +301,7 @@ QWidget* ClassManager::Private::buildViewport(Declaration& declaration) {
 			window->setWindowTitle(QStringLiteral("Red Complex (mp)"));
 		}
 
+		window->applyZoneOptions();
 		window->buildDefaultPanels();
 	}
 
@@ -424,8 +425,11 @@ void ClassManager::Private::applyDocuments(MainWindow* window, const YAML::Node&
 	}
 }
 
-/// Флаги зон оболочки из content вьюпорта: "bottombar.delete" и "sidebar.delete".
-/// Ключи совпадают с именами в описании; читает их MainWindow::Options::fromBuildOptions().
+/// Флаги зон оболочки из content вьюпорта: "bottombar.delete"/"sidebar.delete",
+/// "bottombar.collapsed"/"bottombar.collapsable"/"bottombar.closable"/
+/// "bottombar.autohide" и "sidebar.collapsed"/"sidebar.collapsable"/
+/// "sidebar.autohide". Ключи совпадают с именами в описании; читает их
+/// MainWindow::Options::fromBuildOptions().
 QVariantMap ClassManager::Private::zoneOptions(const YAML::Node& content) const {
 	QVariantMap options;
 
@@ -444,10 +448,24 @@ QVariantMap ClassManager::Private::zoneOptions(const YAML::Node& content) const 
 			continue;
 		}
 
-		if (blockName == QLatin1String("bottombar") || blockName == QLatin1String("sidebar")) {
-			if (const auto remove = nodeBool(body, "delete")) {
-				options[blockName + QStringLiteral(".delete")] = *remove;
+		auto put = [&options, &blockName](const YAML::Node& node, const char* key) {
+			if (const auto value = nodeBool(node, key)) {
+				options[blockName + QLatin1Char('.') + QLatin1String(key)] = *value;
 			}
+		};
+
+		if (blockName == QLatin1String("bottombar")) {
+			put(body, "delete");
+			put(body, "collapsed");
+			put(body, "collapsable");
+			put(body, "closable");
+			put(body, "autohide");
+		}
+		else if (blockName == QLatin1String("sidebar")) {
+			put(body, "delete");
+			put(body, "collapsed");
+			put(body, "collapsable");
+			put(body, "autohide");
 		}
 	}
 
