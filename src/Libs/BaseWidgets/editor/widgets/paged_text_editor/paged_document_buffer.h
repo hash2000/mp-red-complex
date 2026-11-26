@@ -97,7 +97,10 @@ public:
 	/// с диска байт в байт, изменённые — кодируются и разделяются тем же
 	/// переводом строки, что был в файле. Возвращает false и заполняет
 	/// `error` при ошибке записи.
-	bool saveTo(const QString& targetPath, QString* error) const;
+	/// @param convertTabsToSpaces если > 0, ведущие табы всех строк
+	/// записываются пробелами (по указанному числу); при 0 — как есть.
+	bool saveTo(const QString& targetPath, QString* error,
+		int convertTabsToSpaces = 0) const;
 
 private:
 	struct Page {
@@ -135,6 +138,9 @@ private:
 	void detectFileFacts(const QString& filePath);
 	bool spillPage(int page) const;
 	void enforceMemoryBudget(int protectedPage) const;
+	/// Полная перезапись с заменой ведущих табов пробелами.
+	bool saveWithIndentConversion(const QString& targetPath, QString* error,
+		int spaces) const;
 
 	mutable QVector<Page> pages;
 	mutable QVector<int> prefix;

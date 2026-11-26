@@ -1,5 +1,4 @@
 #include "Libs/BaseWidgets/properties/properties_group_widget.h"
-#include "Libs/BaseWidgets/properties/properties_group_widget.h"
 #include "Libs/BaseWidgets/properties/properties_list_widget.h"
 #include "Libs/BaseWidgets/properties/tab_color_editor.h"
 #include "Libs/Engine/scripting/command_context.h"
@@ -11,6 +10,7 @@
 #include "Libs/Engine/ui/main_window.h"
 #include "Libs/Engine/ui/properties_panel.h"
 
+#include <QCheckBox>
 #include <QClipboard>
 #include <QCoreApplication>
 #include <QFormLayout>
@@ -239,6 +239,15 @@ void TestPropertiesPanel::revealsTabPropertiesGroup() {
 
 	// Редактор цвета вкладки живёт в группе «Свойства вкладки».
 	QVERIFY(panel.findChild<TabColorEditor*>(QStringLiteral("DocumentColorEditor")));
+
+	// Галочка «Изменён» отражает состояние документа в реальном времени.
+	auto* modified = panel.findChild<QCheckBox*>();
+	QVERIFY(modified);
+	QVERIFY(!modified->isChecked());
+	document.setModified(true);
+	QVERIFY(modified->isChecked());
+	document.setModified(false);
+	QVERIFY(!modified->isChecked());
 }
 
 void TestPropertiesPanel::contextVariablesAreLazy() {
@@ -270,6 +279,7 @@ void TestPropertiesPanel::contextVariablesAreLazy() {
 
 void TestPropertiesPanel::showsContextVariables() {
 	TestCommandController controller;
+	controller.initSystemContexts();
 	auto context = controller.globalContext()->createDocumentContext(QStringLiteral("notes"));
 
 	DocumentWidget document;
@@ -297,6 +307,16 @@ void TestPropertiesPanel::showsContextVariables() {
 	QVERIFY(ids.contains(QStringLiteral("xtype")));
 	QVERIFY(ids.contains(QStringLiteral("path")));
 	QVERIFY(ids.contains(QStringLiteral("zoom")));
+
+	// Сначала переменные текущего контекста, затем унаследованные.
+	const int inherited = ids.indexOf(QStringLiteral("documents.tabs.order"));
+	QVERIFY(inherited >= 0);
+	for (const auto& own : { QStringLiteral("title"), QStringLiteral("xtype"),
+		QStringLiteral("path"), QStringLiteral("zoom") }) {
+		const int index = ids.indexOf(own);
+		QVERIFY(index >= 0);
+		QVERIFY(index < inherited);
+	}
 
 	auto* pathEditor = findPropertyEditor<QLineEdit>(variables, QStringLiteral("path"));
 	QVERIFY(pathEditor);

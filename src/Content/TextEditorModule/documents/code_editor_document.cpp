@@ -5,6 +5,7 @@
 #include "Libs/BaseWidgets/editor/widgets/encoding_dialog.h"
 #include "Libs/BaseWidgets/editor/widgets/editor_settings_builder.h"
 #include "Libs/BaseWidgets/editor/language_info.h"
+#include "Libs/BaseWidgets/editor/navigation/text_navigation.h"
 #include "Libs/BaseWidgets/editor/highlights/highlighter_plugin.h"
 #include "Libs/BaseWidgets/editor/highlights/highlighter_plugin_manager.h"
 #include "Libs/BaseWidgets/editor/formatters/formatter_plugin_manager.h"
@@ -73,6 +74,12 @@ public:
 	bool dataMode = false;
 	bool dataFromFile = false;
 	bool settingPath = false;
+
+	/// Параметры отступов: ширина Tab и стратегия сохранения.
+	int tabWidth = 2;
+	Extensions::TextEdit::TabMode tabSaveMode = Extensions::TextEdit::TabMode::Spaces;
+	/// Реестр стратегий Ctrl+Left/Right: редактор держит только указатель.
+	TextNavigationStrategyRegistry navigationStrategies;
 
 	void setupUi();
 	QWidget* createRibbon();
@@ -522,6 +529,12 @@ void CodeEditorDocument::Private::applyTextDefaults() {
 		? CodeEditorWidget::LineWrapPolicy::On
 		: CodeEditorWidget::LineWrapPolicy::Off);
 
+	tabWidth = options.tabSpaces;
+	tabSaveMode = options.tabSave;
+	editor->setTabWidth(options.tabSpaces);
+	editor->setTabMode(options.tabEdit);
+	editor->setNavigationStrategy(navigationStrategies.strategy(options.navigation));
+
 	if (!options.encoding.isEmpty()) {
 		editor->setEncoding(options.encoding);
 	}
@@ -719,7 +732,9 @@ bool CodeEditorDocument::openFile(const QString& path) {
 }
 
 bool CodeEditorDocument::save() {
-	const auto text = d->editor->toPlainText();
+	const QString rawText = d->editor->toPlainText();
+	const QString text = Extensions::TextEdit::textForSave(rawText,
+		d->tabWidth, d->tabSaveMode);
 	QString path = d->path;
 
 	// В режиме data файл не обязателен: данные сохраняются в контекст.

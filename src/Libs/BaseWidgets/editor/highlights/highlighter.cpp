@@ -20,7 +20,12 @@ public:
 
 	HighlightingPluginManager* pluginManager = nullptr;
 	HighlightingPlugin* plugin = nullptr;
-	HighlightingPlugin* embeddedSyntaxPlugin = nullptr;
+
+	/// Состояние вложенного блока: внутри ли мы и на каком языке содержимое.
+	/// Пустой язык — блок без вложенной подсветки: строки внутри него
+	/// подсвечиваются правилами базового плагина.
+	bool insideEmbedded = false;
+	QString embeddedLanguage;
 
 	bool lazy = false;
 	/// Подсветка включена: false — форматы сняты и правила не выполняются.
@@ -57,7 +62,8 @@ bool Highlighter::setLanguage(const QString& language) {
 	}
 
 	d->plugin = plugin;
-	d->embeddedSyntaxPlugin = nullptr;
+	d->insideEmbedded = false;
+	d->embeddedLanguage.clear();
 
 	// После смены языка старые форматы не должны оставаться: в ленивом
 	// режиме rehighlight() покрасит только видимые строки.
@@ -83,7 +89,8 @@ bool Highlighter::setContentType(const QString& type) {
 	}
 
 	d->plugin = plugin;
-	d->embeddedSyntaxPlugin = nullptr;
+	d->insideEmbedded = false;
+	d->embeddedLanguage.clear();
 	clearFormats();
 	if (!d->enabled) {
 		return plugin != nullptr;
@@ -162,7 +169,8 @@ void Highlighter::refreshVisibleBlocks() {
 
 	// Состояние вложенных блоков за пределами видимой области неизвестно:
 	// начинаем с чистого состояния на первой видимой строке.
-	d->embeddedSyntaxPlugin = nullptr;
+	d->insideEmbedded = false;
+	d->embeddedLanguage.clear();
 
 	QTextBlock block = doc->findBlockByNumber(d->visibleFirst);
 	for (int number = d->visibleFirst; block.isValid() && number <= last;
@@ -195,6 +203,8 @@ void Highlighter::clearFormats() {
 
 	d->refreshedFirst = -1;
 	d->refreshedLast = -1;
+	d->insideEmbedded = false;
+	d->embeddedLanguage.clear();
 }
 
 void Highlighter::highlightBlock(const QString& text) {
@@ -222,41 +232,56 @@ void Highlighter::highlightBlock(const QString& text) {
 		return;
 	}
 
+	struct EmbeddedMatch {
+		int start = 0;
+		int length = 0;
+		QTextCharFormat format;
+		bool startOfBlock = false;
+		QString language;
+	};
+
+	QVector<EmbeddedMatch> matches;
 	if (d->plugin->hasEmbeddedRules()) {
-		bool handled = false;
 		d->plugin->visitEmbeddedMatches(text,
-			[this, &handled](qsizetype start, qsizetype length,
+			[&matches](qsizetype start, qsizetype length,
 				const QTextCharFormat& format, int,
 				HighlightingPlugin::HighlightingMatch::Type type,
 				const QString& language) {
-				// Как и раньше, для строки учитывается только первое совпадение.
-				if (handled) {
-					return;
-				}
-				handled = true;
-				setFormat(static_cast<int>(start), static_cast<int>(length), format);
-
-				const bool isStart = type == HighlightingPlugin::HighlightingMatch::Type::Start;
-				if (isStart && !d->embeddedSyntaxPlugin) {
-					const QString embeddedLanguage = language.isEmpty()
-						? QStringLiteral("bash") : language;
-					d->embeddedSyntaxPlugin =
-						d->pluginManager->pluginForLanguage(embeddedLanguage);
-				}
-				else if (!isStart) {
-					d->embeddedSyntaxPlugin = nullptr;
-				}
+				matches.append({ static_cast<int>(start),
+					static_cast<int>(length), format,
+					type == HighlightingPlugin::HighlightingMatch::Type::Start,
+					language });
 			});
-
-		if (handled) {
-			return;
-		}
 	}
 
-	HighlightingPlugin* plugin = d->embeddedSyntaxPlugin
-		? d->embeddedSyntaxPlugin : d->plugin;
-	plugin->visitMatches(text,
+	// Строку внутри вложенного блока подсвечиваем языком этого блока; если
+	// язык не задан (например, тег HTML), остаются правила базового плагина.
+	HighlightingPlugin* contentPlugin = d->plugin;
+	if (d->insideEmbedded && !d->embeddedLanguage.isEmpty() && d->pluginManager) {
+		if (HighlightingPlugin* embedded =
+			d->pluginManager->pluginForLanguage(d->embeddedLanguage)) {
+			contentPlugin = embedded;
+		}
+	}
+	contentPlugin->visitMatches(text,
 		[this](qsizetype start, qsizetype length, const QTextCharFormat& format, int) {
 			setFormat(static_cast<int>(start), static_cast<int>(length), format);
 		});
+
+	// Форматы start/end накладываются последними: они важнее подсветки
+	// содержимого. Обрабатываются все совпадения строки, а не только первое:
+	// так подсвечиваются и однострочные блоки, и закрывающий тег.
+	for (const EmbeddedMatch& match : matches) {
+		if (match.length > 0) {
+			setFormat(match.start, match.length, match.format);
+		}
+		if (match.startOfBlock) {
+			d->insideEmbedded = true;
+			d->embeddedLanguage = match.language;
+		}
+		else {
+			d->insideEmbedded = false;
+			d->embeddedLanguage.clear();
+		}
+	}
 }

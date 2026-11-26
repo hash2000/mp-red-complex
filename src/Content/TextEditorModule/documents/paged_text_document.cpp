@@ -4,6 +4,7 @@
 #include "Libs/BaseWidgets/editor/highlights/highlighter_plugin.h"
 #include "Libs/BaseWidgets/editor/highlights/highlighter_plugin_manager.h"
 #include "Libs/BaseWidgets/editor/language_info.h"
+#include "Libs/BaseWidgets/editor/navigation/text_navigation.h"
 #include "Libs/BaseWidgets/editor/widgets/code_editor_widget.h"
 #include "Libs/BaseWidgets/editor/widgets/editor_settings_builder.h"
 #include "Libs/BaseWidgets/editor/widgets/encoding_dialog.h"
@@ -69,6 +70,10 @@ struct PagedTextDocument::Private {
 	QComboBox* highlightingCombo = nullptr;
 
 	QString path;
+
+	/// Реестр стратегий Ctrl+Left/Right: хранит экземпляр стратегии, пока
+	/// жив документ, — редактор держит только указатель.
+	TextNavigationStrategyRegistry navigationStrategies;
 
 	void createRibbon();
 	QWidget* createSearchBar();
@@ -355,6 +360,11 @@ void PagedTextDocument::Private::applyTextDefaults() {
 
 	editor->setWordWrap(options.wordWrap);
 	editor->setMemoryBudget(qint64(options.bufferLimitMb) * 1024 * 1024);
+	editor->setTabWidth(options.tabSpaces);
+	editor->setTabMode(options.tabEdit);
+	editor->setSaveTabMode(options.tabSave);
+	editor->setNavigationStrategy(
+		navigationStrategies.strategy(options.navigation));
 
 	if (!options.encoding.isEmpty()) {
 		editor->setEncoding(options.encoding);

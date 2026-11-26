@@ -1,6 +1,10 @@
 #pragma once
+#include "Libs/BaseWidgets/editor/layout/text_layout.h"
+
 #include <QFont>
 #include <QString>
+#include <QTextLayout>
+#include <QVector>
 
 #include <functional>
 
@@ -25,5 +29,7 @@ class PagedTextCursor {
 public:
 	static PagedTextPosition moveVertical(const PagedTextPosition& position,
 		int delta, const std::function<QString(int)>& lineText,
-		const QFont& font, bool wrapped, int layoutWidth, int lineCount);
+		const QFont& font, bool wrapped, int layoutWidth, int lineCount,
+		int tabWidth = TextLayout::kDefaultTabWidth,
+		const std::function<QVector<QTextLayout::FormatRange>(int)>& lineFormats = {});
 };

@@ -5,12 +5,14 @@
 #include "Libs/BaseWidgets/editor/highlights/highlighter_plugin_manager.h"
 #include "Libs/BaseWidgets/editor/formatters/formatter_plugin_manager.h"
 #include "Libs/BaseWidgets/editor/formatters/formatter_plugin.h"
+#include "Libs/BaseWidgets/editor/navigation/text_navigation.h"
 #include "Libs/DataStream/file_reader.h"
-#include "Libs/Base/extensions/text_edit_extensions.h"
+#include "Libs/BaseWidgets/extensions/text_edit_extensions.h"
 
 #include <QFileInfo>
 #include <QFont>
 #include <QFontDatabase>
+#include <QKeyEvent>
 #include <QPointer>
 #include <QScrollBar>
 #include <QTextBlock>
@@ -74,6 +76,12 @@ public:
 	/// Кодировка чтения/записи файла (имя кодека QTextCodec).
 	QString encoding = QStringLiteral("UTF-8");
 
+	/// Ширина отступа/табуляции и стратегия нажатия Tab.
+	int tabWidth = 2;
+	Extensions::TextEdit::TabMode tabMode = Extensions::TextEdit::TabMode::Spaces;
+	/// Подставляемая стратегия Ctrl+Left/Right.
+	const ITextNavigationStrategy* navigation = nullptr;
+
 	/// Режим переноса, выбранный пользователем, и фактическое состояние.
 	LineWrapPolicy wrapPolicy = LineWrapPolicy::Auto;
 	bool wrapped = false;
@@ -106,7 +114,7 @@ void CodeEditorWidget::Private::setupUI() {
 
 	highlighter = new Highlighter(pluginManager, q->document());
 	highlighter->setLanguage(QStringLiteral("txt"));
-	TextEdit::setTabDistance(q, 2);
+	TextEdit::setTabDistance(q, tabWidth);
 
 	// Компактные отступы документа: для текстового редактора они не нужны.
 	q->document()->setDocumentMargin(4);
@@ -614,6 +622,36 @@ void CodeEditorWidget::setFontSize(int size) {
 	emit fontSizeChanged(size);
 }
 
+int CodeEditorWidget::tabWidth() const {
+	return d->tabWidth;
+}
+
+void CodeEditorWidget::setTabWidth(int spaces) {
+	const int width = Extensions::TextEdit::normalizedTabWidth(spaces);
+	if (d->tabWidth == width) {
+		return;
+	}
+
+	d->tabWidth = width;
+	Extensions::TextEdit::setTabDistance(this, width);
+}
+
+Extensions::TextEdit::TabMode CodeEditorWidget::tabMode() const {
+	return d->tabMode;
+}
+
+void CodeEditorWidget::setTabMode(Extensions::TextEdit::TabMode mode) {
+	d->tabMode = mode;
+}
+
+const ITextNavigationStrategy* CodeEditorWidget::navigationStrategy() const {
+	return d->navigation;
+}
+
+void CodeEditorWidget::setNavigationStrategy(const ITextNavigationStrategy* strategy) {
+	d->navigation = strategy;
+}
+
 const HighlightingPlugin* CodeEditorWidget::highlightingPlugin() const {
 	return d->highlighter->plugin();
 }
@@ -791,6 +829,196 @@ void CodeEditorWidget::setText(const QString& text) {
 void CodeEditorWidget::resizeEvent(QResizeEvent* event) {
 	QPlainTextEdit::resizeEvent(event);
 	d->scheduleVisibleHighlight();
+}
+
+bool CodeEditorWidget::event(QEvent* event) {
+	// Tab — отступ в тексте, а не переход фокуса на следующий виджет.
+	if (event->type() == QEvent::KeyPress && !isReadOnly()) {
+		auto* key = static_cast<QKeyEvent*>(event);
+		if (key->key() == Qt::Key_Tab
+			&& (key->modifiers() & (Qt::ControlModifier | Qt::AltModifier
+				| Qt::MetaModifier)) == 0) {
+			keyPressEvent(key);
+			return true;
+		}
+	}
+
+	return QPlainTextEdit::event(event);
+}
+
+void CodeEditorWidget::keyPressEvent(QKeyEvent* event) {
+	const bool shift = (event->modifiers() & Qt::ShiftModifier) != 0;
+	const bool control = (event->modifiers() & Qt::ControlModifier) != 0;
+	const bool alt = (event->modifiers() & Qt::AltModifier) != 0;
+
+	if (control && !alt) {
+		const ITextNavigationStrategy& strategy = d->navigation
+			? *d->navigation : WordTextNavigationStrategy::instance();
+
+		switch (event->key()) {
+		case Qt::Key_Left:
+		case Qt::Key_Right: {
+			const int direction = event->key() == Qt::Key_Left ? -1 : 1;
+			QTextCursor cursor = textCursor();
+			if (cursor.hasSelection() && !shift) {
+				cursor.setPosition(direction < 0
+					? cursor.selectionStart() : cursor.selectionEnd());
+				setTextCursor(cursor);
+				event->accept();
+				return;
+			}
+
+			const QTextBlock block = cursor.block();
+			const int column = cursor.positionInBlock();
+			const int target = strategy.columnAfterMove(block.text(), column,
+				direction);
+			int position = -1;
+			if (target != column) {
+				position = block.position() + target;
+			}
+			else if (direction < 0 && block.previous().isValid()) {
+				const QTextBlock previous = block.previous();
+				position = previous.position() + previous.text().length();
+			}
+			else if (direction > 0 && block.next().isValid()) {
+				position = block.next().position();
+			}
+
+			if (position < 0) {
+				event->accept();
+				return;
+			}
+
+			cursor.setPosition(position, shift
+				? QTextCursor::KeepAnchor : QTextCursor::MoveAnchor);
+			setTextCursor(cursor);
+			event->accept();
+			return;
+		}
+		case Qt::Key_Backspace:
+		case Qt::Key_Delete: {
+			if (isReadOnly()) {
+				break;
+			}
+
+			const int direction = event->key() == Qt::Key_Backspace ? -1 : 1;
+			QTextCursor cursor = textCursor();
+			if (cursor.hasSelection()) {
+				cursor.removeSelectedText();
+				setTextCursor(cursor);
+				event->accept();
+				return;
+			}
+
+			const QTextBlock block = cursor.block();
+			const int column = cursor.positionInBlock();
+			const int target = strategy.columnAfterMove(block.text(), column,
+				direction);
+			int start = -1;
+			int end = -1;
+			if (direction < 0) {
+				if (target < column) {
+					start = block.position() + target;
+					end = block.position() + column;
+				}
+				else if (column == 0 && block.previous().isValid()) {
+					const QTextBlock previous = block.previous();
+					start = previous.position() + previous.text().length();
+					end = block.position();
+				}
+			}
+			else {
+				if (target > column) {
+					start = block.position() + column;
+					end = block.position() + target;
+				}
+				else if (column == block.text().length() && block.next().isValid()) {
+					start = block.position() + column;
+					end = block.next().position();
+				}
+			}
+
+			if (start < 0 || end <= start) {
+				event->accept();
+				return;
+			}
+
+			QTextCursor edit(document());
+			edit.setPosition(start);
+			edit.setPosition(end, QTextCursor::KeepAnchor);
+			edit.removeSelectedText();
+
+			QTextCursor result(document());
+			result.setPosition(start);
+			setTextCursor(result);
+			event->accept();
+			return;
+		}
+		case Qt::Key_Up:
+		case Qt::Key_Down: {
+			// Прокрутка на строку без перемещения курсора.
+			auto* bar = verticalScrollBar();
+			const int delta = event->key() == Qt::Key_Up ? -1 : 1;
+			bar->setValue(qBound(bar->minimum(), bar->value() + delta,
+				bar->maximum()));
+			event->accept();
+			return;
+		}
+		case Qt::Key_Return:
+		case Qt::Key_Enter: {
+			if (isReadOnly()) {
+				break;
+			}
+
+			// Строка выше текущей: курсор остаётся в своей строке.
+			QTextCursor cursor = textCursor();
+			const int blockStart = cursor.block().position();
+			const int column = cursor.positionInBlock();
+			QTextCursor insert(document());
+			insert.setPosition(blockStart);
+			insert.insertText(QStringLiteral("\n"));
+
+			QTextCursor target(document());
+			target.setPosition(blockStart + 1 + column);
+			setTextCursor(target);
+			event->accept();
+			return;
+		}
+		case Qt::Key_D: {
+			if (isReadOnly()) {
+				break;
+			}
+
+			// Ctrl+D — дублировать текущую строку ниже.
+			QTextCursor cursor = textCursor();
+			const QTextBlock block = cursor.block();
+			const QString text = block.text();
+			const int textLength = text.length();
+			QTextCursor insert(document());
+			insert.setPosition(block.position() + textLength);
+			insert.insertText(QStringLiteral("\n") + text);
+
+			QTextCursor target(document());
+			target.setPosition(block.position() + 2 * textLength + 1);
+			setTextCursor(target);
+			event->accept();
+			return;
+		}
+		default:
+			break;
+		}
+	}
+
+	if (event->key() == Qt::Key_Tab && !control && !alt && !isReadOnly()) {
+		QTextCursor cursor = textCursor();
+		cursor.insertText(Extensions::TextEdit::indentText(d->tabWidth,
+			d->tabMode));
+		setTextCursor(cursor);
+		event->accept();
+		return;
+	}
+
+	QPlainTextEdit::keyPressEvent(event);
 }
 
 void CodeEditorWidget::wheelEvent(QWheelEvent* event) {

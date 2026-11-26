@@ -1,4 +1,6 @@
 #pragma once
+#include "Libs/BaseWidgets/extensions/text_edit_extensions.h"
+
 #include <QAbstractScrollArea>
 #include <QByteArray>
 #include <QList>
@@ -15,6 +17,7 @@ class FormatterPlugin;
 class FormatterPluginManager;
 class HighlightingPlugin;
 class HighlightingPluginManager;
+class ITextNavigationStrategy;
 
 /// Виртуальный редактор для очень больших файлов.
 ///
@@ -163,6 +166,20 @@ public:
 	bool lineNumbersVisible() const;
 	void setLineNumbersVisible(bool visible);
 
+	/// Ширина отступа и табуляции в символах.
+	int tabWidth() const;
+	void setTabWidth(int spaces);
+	/// Что вставляет Tab: пробелы или '\t'.
+	Extensions::TextEdit::TabMode tabMode() const;
+	void setTabMode(Extensions::TextEdit::TabMode mode);
+	/// Как записывать ведущие табы при сохранении.
+	Extensions::TextEdit::TabMode saveTabMode() const;
+	void setSaveTabMode(Extensions::TextEdit::TabMode mode);
+
+	/// Стратегия Ctrl+Left/Right; nullptr — встроенная стратегия по словам.
+	const ITextNavigationStrategy* navigationStrategy() const;
+	void setNavigationStrategy(const ITextNavigationStrategy* strategy);
+
 	/// Поиск по строкам: счётчик считается в фоне, подсвечиваются
 	/// только видимые вхождения.
 	void setSearchQuery(const QString& query);
@@ -202,6 +219,7 @@ signals:
 	void saved(const QString& path, bool success, const QString& errorMessage);
 
 protected:
+	bool event(QEvent* event) override;
 	void paintEvent(QPaintEvent* event) override;
 	void resizeEvent(QResizeEvent* event) override;
 	void scrollContentsBy(int dx, int dy) override;

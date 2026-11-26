@@ -5,15 +5,21 @@
 
 PagedTextPosition PagedTextCursor::moveVertical(const PagedTextPosition& position,
 	int delta, const std::function<QString(int)>& lineText,
-	const QFont& font, bool wrapped, int layoutWidth, int lineCount) {
+	const QFont& font, bool wrapped, int layoutWidth, int lineCount,
+	int tabWidth, const std::function<QVector<QTextLayout::FormatRange>(int)>& lineFormats) {
 	if (delta == 0 || lineCount <= 0
 		|| position.line < 0 || position.line >= lineCount) {
 		return position;
 	}
 
+	const auto formatsFor = [&lineFormats](int line) {
+		return lineFormats ? lineFormats(line) : QVector<QTextLayout::FormatRange>();
+	};
+
 	const QString currentText = lineText(position.line);
 	const int currentColumn = qMin(position.column, currentText.size());
-	TextLayout layout(currentText, font, wrapped, layoutWidth);
+	TextLayout layout(currentText, font, wrapped, layoutWidth, tabWidth,
+		formatsFor(position.line));
 	if (layout.lineCount() <= 0) {
 		return position;
 	}
@@ -41,7 +47,8 @@ PagedTextPosition PagedTextCursor::moveVertical(const PagedTextPosition& positio
 		}
 	}
 
-	TextLayout targetLayout(lineText(targetLine), font, wrapped, layoutWidth);
+	TextLayout targetLayout(lineText(targetLine), font, wrapped, layoutWidth,
+		tabWidth, formatsFor(targetLine));
 	if (targetLayout.lineCount() <= 0) {
 		return position;
 	}

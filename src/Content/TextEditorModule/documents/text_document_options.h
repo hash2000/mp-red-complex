@@ -1,4 +1,6 @@
 #pragma once
+#include "Libs/BaseWidgets/extensions/text_edit_extensions.h"
+
 #include <QString>
 #include <memory>
 
@@ -21,6 +23,14 @@ struct TextDocumentOptions {
 	QString encoding;
 	/// Предел буфера виртуального редактора в мегабайтах; 0 — без предела.
 	int bufferLimitMb = 0;
+	/// Ширина отступа и табуляции в символах (Prettier tabWidth).
+	int tabSpaces = 2;
+	/// Что вставлять по Tab (Prettier useTabs).
+	Extensions::TextEdit::TabMode tabEdit = Extensions::TextEdit::TabMode::Spaces;
+	/// Как записывать ведущие табы при сохранении.
+	Extensions::TextEdit::TabMode tabSave = Extensions::TextEdit::TabMode::Spaces;
+	/// Идентификатор стратегии перемещения по токенам.
+	QString navigation = QStringLiteral("words");
 
 	static TextDocumentOptions fromContext(
 		const std::shared_ptr<CommandContext>& context);

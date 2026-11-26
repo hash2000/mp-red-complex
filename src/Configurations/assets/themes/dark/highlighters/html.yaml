@@ -86,11 +86,32 @@ rules:
     italic: true
 
 # Вложенные блоки: содержимое подсвечивается плагином указанного языка.
+# Для тегов без вложенного языка start/end всё равно подсвечиваются, а
+# строки между ними обрабатываются обычными правилами HTML (атрибуты).
 embeddedBlocks:
+  # Многострочный открывающий тег <script ...>: start — до имени тега,
+  # end — закрывающая скобка (может быть на другой строке).
+  - start: '<script\b(?![^>]*\btype\s*=)'
+    end: '>'
+    language: ''
+    priority: 22
+    foreground: "#569CD6"
+    bold: true
+
+  # То же для <style ...>.
+  - start: '<style\b'
+    end: '>'
+    language: ''
+    priority: 22
+    foreground: "#569CD6"
+    bold: true
+
   - start: '<script[^>]*\btype\s*=\s*[''"]application/json[''"][^>]*>'
     end: '</script>'
     language: json
     priority: 25
+    foreground: "#569CD6"
+    bold: true
     background: "#1E1E1E"
     options: [caseInsensitive]
 
@@ -98,4 +119,6 @@ embeddedBlocks:
     end: '</style>'
     language: css
     priority: 25
+    foreground: "#569CD6"
+    bold: true
     background: "#1E1E1E"

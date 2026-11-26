@@ -397,7 +397,11 @@ QWidget* DocumentWidget::createTabPropertiesEditor(QWidget* parent) {
 
 	auto* modified = new QCheckBox(w);
 	modified->setChecked(isModified());
-	modified->setEnabled(false);
+	// Галочка только показывает состояние. Disabled-стиль темы может скрывать
+	// отметку, поэтому оставляем её включённой, но прозрачной для мыши.
+	modified->setAttribute(Qt::WA_TransparentForMouseEvents, true);
+	modified->setFocusPolicy(Qt::NoFocus);
+	modified->setToolTip(tr("Признак несохранённых изменений (только чтение)"));
 	connect(this, &DocumentWidget::modifiedChanged, modified, &QCheckBox::setChecked);
 
 	auto* xtypeLabel = new QLabel(xtype().isEmpty() ? QStringLiteral("—") : xtype(), w);

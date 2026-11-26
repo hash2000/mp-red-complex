@@ -284,10 +284,10 @@ void WidgetsBuilder::Private::registerAll() {
 	registry->registerDocumentMetadata(QStringLiteral("Content.TextEditor.CodeEditor"),
 		std::make_unique<CodeEditorDocumentMetadata>());
 
-	// Прототип виртуального редактора для очень больших файлов: страницы
-	// читаются с диска, в памяти только индекс строк и кэш страниц.
+	// Текстовый редактор (text-edit): виртуальный редактор для больших
+	// файлов, страницы читаются с диска, в памяти только индекс строк и кэш.
 	registry->registerFactory({ "Content.TextEditor.PagedText", "text-editor",
-		/*singletone*/ false, QStringLiteral("Просмотр и редактирование больших файлов") },
+		/*singletone*/ false, QStringLiteral("Текстовый редактор") },
 		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
 			auto* services = servicesFor(type, handler);
 			auto* highlighter = requiredService<HighlightingPluginManager>(

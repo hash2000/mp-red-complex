@@ -3,7 +3,7 @@
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/scripting/command_processor.h"
 #include "Libs/Engine/scripting/command_controller.h"
-#include "Libs/Base/extensions/text_edit_extensions.h"
+#include "Libs/BaseWidgets/extensions/text_edit_extensions.h"
 #include "Libs/Resources/resources.h"
 
 #include <QFile>

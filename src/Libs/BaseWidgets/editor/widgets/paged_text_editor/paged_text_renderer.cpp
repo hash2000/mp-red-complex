@@ -44,7 +44,7 @@ void PagedTextRenderer::paint(QPainter& painter, const PagedTextPaintModel& mode
 		}
 
 		TextLayout layout(text, model.font, model.wrapped,
-			qMax(1, viewportWidth - gutter - 8), TextLayout::kDefaultTabWidth, formats);
+			qMax(1, viewportWidth - gutter - 8), model.tabWidth, formats);
 		const int visualCount = qMax(1, layout.lineCount());
 		bool firstVisual = true;
 

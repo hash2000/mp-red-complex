@@ -2,7 +2,10 @@
 #include "Content/TextEditorModule/documents/paged_text_document.h"
 #include "Libs/Base/background_task_registry.h"
 #include "Libs/BaseWidgets/editor/highlights/highlighter_plugin.h"
+#include "Libs/BaseWidgets/editor/highlights/highlighter_plugin_manager.h"
 #include "Libs/BaseWidgets/editor/language_info.h"
+#include "Libs/BaseWidgets/editor/layout/text_layout.h"
+#include "Libs/BaseWidgets/editor/navigation/text_navigation.h"
 #include "Libs/BaseWidgets/editor/widgets/code_editor_widget.h"
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor.h"
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_text_highlighter.h"
@@ -10,18 +13,27 @@
 #include "Libs/Engine/scripting/command_controller.h"
 #include "Libs/Engine/scripting/system_options/system_option.h"
 #include "Libs/Engine/scripting/system_options/system_options_registry.h"
+#include "Libs/Resources/resources.h"
 
+#include <QCheckBox>
 #include <QClipboard>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QGuiApplication>
+#include <QLabel>
+#include <QLineEdit>
 #include <QScrollBar>
 #include <QApplication>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QTextBlock>
 #include <QTextCodec>
+#include <QTextDocument>
+#include <QVBoxLayout>
+#include <QWidget>
 #include <QWheelEvent>
+#include <QtMath>
 #include <QtTest/QtTest>
 
 class TestPagedTextEditor : public QObject {
@@ -29,6 +41,7 @@ class TestPagedTextEditor : public QObject {
 
 private slots:
 	void initTestCase();
+	void cleanupTestCase();
 	void opensLargeFileInBackground();
 	void selectionAndCursor();
 	void searchCountsInBackground();
@@ -66,11 +79,28 @@ private slots:
 	void spillFileIsRemovedAutomatically();
 	void newDocumentSpillsLargeContent();
 	void globalTextOptionsApply();
+	void tabSettingsAndSaveConversion();
+	void tokenNavigationAndScrolling();
+	void ctrlEnterInsertsLineAbove();
+	void ctrlBackspaceDeleteByTokens();
+	void blockSelectionSkipsShortLines();
+	void tabKeepsFocusAndIndents();
+	void codeEditorNavigationAndTabs();
+	void editorMouseDetails();
+	void embeddedHighlightingMatchesCodeEditor();
+	void htmlEmbeddedBlocks();
+	void documentsReactToModifications();
 	void multiCursorManagement();
 	void ctrlDDuplicatesLine();
 	void copyAndCutWholeLine();
 	void blockSelectionWithShiftAlt();
 	void multiCursorPasteDistributesLines();
+
+private:
+	/// Невидимое окно-владелец: без видимого top-level окна OLE-буфер обмена
+	/// Windows иногда отказывает в OpenClipboard, и тесты копирования падают
+	/// в зависимости от того, запущено ли рядом приложение.
+	QWidget* clipboardOwner = nullptr;
 };
 
 namespace {
@@ -96,6 +126,160 @@ public:
 	void install() override {
 	}
 };
+
+/// Правило с крупным шрифтом: так Markdown-заголовки меняют высоту строки.
+class TestHeadingPlugin : public HighlightingPlugin {
+public:
+	TestHeadingPlugin() {
+		Rule rule;
+		rule.pattern = QRegularExpression(QStringLiteral("^# .*"));
+		rule.priority = 10;
+		QTextCharFormat format;
+		format.setFontPointSize(36);
+		format.setForeground(Qt::blue);
+		rule.format = format;
+		addRule(rule);
+	}
+
+	LanguageInfo languageInfo() const override {
+		LanguageInfo info;
+		info.name = QStringLiteral("TestMarkdown");
+		info.mimeType = QStringLiteral("text/x-test-markdown");
+		info.extensions = { QStringLiteral(".md") };
+		return info;
+	}
+
+	void install() override {
+	}
+};
+
+/// Markdown с вложенными блоками кода ```bash.
+class TestEmbeddedMarkdownPlugin : public HighlightingPlugin {
+public:
+	TestEmbeddedMarkdownPlugin() {
+		Rule heading;
+		heading.pattern = QRegularExpression(QStringLiteral("^# .*"));
+		heading.priority = 10;
+		QTextCharFormat red;
+		red.setForeground(Qt::red);
+		heading.format = red;
+		addRule(heading);
+
+		EmbeddedBlockRule fence;
+		fence.startPattern = QRegularExpression(QStringLiteral("^```(\\w+)$"));
+		fence.endPattern = QRegularExpression(QStringLiteral("^```$"));
+		fence.languageId = QStringLiteral("$1");
+		QTextCharFormat background;
+		background.setBackground(Qt::darkGray);
+		fence.format = background;
+		fence.priority = 5;
+		addEmbeddedBlockRule(fence);
+	}
+
+	LanguageInfo languageInfo() const override {
+		LanguageInfo info;
+		info.name = QStringLiteral("TestEmbeddedMarkdown");
+		info.mimeType = QStringLiteral("text/x-test-embedded-markdown");
+		info.extensions = { QStringLiteral(".emd") };
+		return info;
+	}
+
+	void install() override {
+	}
+};
+
+/// «Bash» для вложенных блоков: комментарий зелёный, а не красный заголовок.
+class TestBashPlugin : public HighlightingPlugin {
+public:
+	TestBashPlugin() {
+		Rule comment;
+		comment.pattern = QRegularExpression(QStringLiteral("^# .*"));
+		comment.priority = 10;
+		QTextCharFormat green;
+		green.setForeground(Qt::green);
+		comment.format = green;
+		addRule(comment);
+	}
+
+	LanguageInfo languageInfo() const override {
+		LanguageInfo info;
+		info.name = QStringLiteral("TestBash");
+		info.mimeType = QStringLiteral("text/x-test-bash");
+		info.extensions = { QStringLiteral(".bash") };
+		return info;
+	}
+
+	void install() override {
+	}
+};
+
+/// HTML: обычные теги/атрибуты и многострочный <script ...> без языка.
+class TestHtmlPlugin : public HighlightingPlugin {
+public:
+	TestHtmlPlugin() {
+		Rule tag;
+		tag.pattern = QRegularExpression(QStringLiteral("</?[\\w\\-]+[^>]*/?>"));
+		tag.priority = 10;
+		QTextCharFormat blue;
+		blue.setForeground(QColor(QStringLiteral("#569CD6")));
+		blue.setFontWeight(QFont::Bold);
+		tag.format = blue;
+		addRule(tag);
+
+		Rule attribute;
+		attribute.pattern = QRegularExpression(QStringLiteral("(?<=\\s)[\\w\\-]+(?=\\s*=)"));
+		attribute.priority = 15;
+		QTextCharFormat light;
+		light.setForeground(QColor(QStringLiteral("#9CDCFE")));
+		attribute.format = light;
+		addRule(attribute);
+
+		EmbeddedBlockRule script;
+		script.startPattern = QRegularExpression(QStringLiteral("<script\\b"));
+		script.endPattern = QRegularExpression(QStringLiteral(">"));
+		script.languageId = QString();
+		script.format = blue;
+		script.priority = 22;
+		addEmbeddedBlockRule(script);
+	}
+
+	LanguageInfo languageInfo() const override {
+		LanguageInfo info;
+		info.name = QStringLiteral("TestHtml");
+		info.mimeType = QStringLiteral("text/x-test-html");
+		info.extensions = { QStringLiteral(".html") };
+		return info;
+	}
+
+	void install() override {
+	}
+};
+
+/// Подставляемая стратегия: Ctrl+Left/Right прыгает к краю строки.
+class TestEdgeNavigationStrategy : public ITextNavigationStrategy {
+public:
+	QString id() const override {
+		return QStringLiteral("test-edges");
+	}
+	QString title() const override {
+		return QStringLiteral("К краям строки");
+	}
+	int columnAfterMove(const QString& line, int column, int direction) const override {
+		Q_UNUSED(column);
+		return direction < 0 ? 0 : line.size();
+	}
+};
+
+int editorGutterWidth(const PagedTextEditor& editor) {
+	const int digits = qMax(2, QString::number(qMax(1, editor.lineCount())).size());
+	return editor.fontMetrics().horizontalAdvance(QLatin1Char('9')) * digits + 14;
+}
+
+#ifdef Q_OS_WIN
+const QByteArray kTestNewline = QByteArrayLiteral("\r\n");
+#else
+const QByteArray kTestNewline = QByteArrayLiteral("\n");
+#endif
 
 QString makeLine(int index) {
 	return QStringLiteral("line %1: quick brown fox jumps over the lazy dog")
@@ -153,6 +337,16 @@ private:
 } // namespace
 
 void TestPagedTextEditor::initTestCase() {
+	clipboardOwner = new QWidget();
+	clipboardOwner->setWindowTitle(QStringLiteral("TestPagedTextEditor"));
+	clipboardOwner->resize(200, 100);
+	clipboardOwner->show();
+	QTest::qWait(50);
+}
+
+void TestPagedTextEditor::cleanupTestCase() {
+	delete clipboardOwner;
+	clipboardOwner = nullptr;
 }
 
 void TestPagedTextEditor::opensLargeFileInBackground() {
@@ -669,8 +863,10 @@ void TestPagedTextEditor::pasteFromClipboard() {
 
 	// Буфер обмена может содержать CRLF: в модели всегда '\n'.
 	QGuiApplication::clipboard()->setText(QStringLiteral("A\r\nB\nC"));
+	QTest::qWait(100);
 	editor.setCursorPosition(0, 0);
 	QTest::keyClick(&editor, Qt::Key_V, Qt::ControlModifier);
+	QTest::qWait(100);
 
 	QCOMPARE(editor.lineCount(), 4);
 	QCOMPARE(editor.lineText(0), QStringLiteral("A"));
@@ -704,6 +900,7 @@ void TestPagedTextEditor::cutCopiesToClipboard() {
 	editor.setCursorPosition(0, 3, true);
 	QVERIFY(editor.hasSelection());
 	QTest::keyClick(&editor, Qt::Key_X, Qt::ControlModifier);
+	QTest::qWait(100);
 	QCOMPARE(QGuiApplication::clipboard()->text(), QStringLiteral("cut"));
 	QCOMPARE(editor.lineText(0), QStringLiteral(" me"));
 	QVERIFY(editor.isModified());
@@ -712,6 +909,7 @@ void TestPagedTextEditor::cutCopiesToClipboard() {
 	editor.setCursorPosition(0, 0);
 	editor.setCursorPosition(0, 3, true);
 	QTest::keyClick(&editor, Qt::Key_C, Qt::ControlModifier);
+	QTest::qWait(100);
 	QCOMPARE(QGuiApplication::clipboard()->text(), QStringLiteral(" me"));
 	QCOMPARE(editor.lineText(0), QStringLiteral(" me"));
 }
@@ -1064,8 +1262,10 @@ void TestPagedTextEditor::startsEditableWithoutFile() {
 	QCOMPARE(editor.lineCount(), 2);
 
 	QGuiApplication::clipboard()->setText(QStringLiteral("!"));
+	QTest::qWait(100);
 	editor.setCursorPosition(0, 0);
 	QTest::keyClick(&editor, Qt::Key_V, Qt::ControlModifier);
+	QTest::qWait(100);
 	QCOMPARE(editor.lineText(0), QStringLiteral("!hello"));
 
 	QVERIFY(editor.undo());
@@ -1228,6 +1428,13 @@ void TestPagedTextEditor::globalTextOptionsApply() {
 	global->setVariable(QString::fromLatin1(SystemOptions::kDocumentsTextEncoding),
 		QStringLiteral("Windows-1251"));
 	global->setVariable(QString::fromLatin1(SystemOptions::kDocumentsTextBufferLimit), 1);
+	global->setVariable(QString::fromLatin1(SystemOptions::kDocumentsTextTabSpaces), 6);
+	global->setVariable(QString::fromLatin1(SystemOptions::kDocumentsTextTabEdit),
+		QStringLiteral("tabs"));
+	global->setVariable(QString::fromLatin1(SystemOptions::kDocumentsTextTabSave),
+		QStringLiteral("spaces"));
+	global->setVariable(QString::fromLatin1(SystemOptions::kDocumentsTextNavigation),
+		QStringLiteral("words"));
 
 	PagedTextDocument paged;
 	paged.setContext(global->createDocumentContext(QStringLiteral("paged-options")));
@@ -1236,6 +1443,11 @@ void TestPagedTextEditor::globalTextOptionsApply() {
 	QVERIFY(paged.editor()->wordWrap());
 	QCOMPARE(paged.editor()->encoding(), QStringLiteral("Windows-1251"));
 	QCOMPARE(paged.editor()->memoryBudget(), qint64(1) * 1024 * 1024);
+	QCOMPARE(paged.editor()->tabWidth(), 6);
+	QCOMPARE(paged.editor()->tabMode(), Extensions::TextEdit::TabMode::Tabs);
+	QCOMPARE(paged.editor()->saveTabMode(), Extensions::TextEdit::TabMode::Spaces);
+	QVERIFY(paged.editor()->navigationStrategy() != nullptr);
+	QCOMPARE(paged.editor()->navigationStrategy()->id(), QStringLiteral("words"));
 
 	CodeEditorDocument code(nullptr, nullptr);
 	code.setContext(global->createDocumentContext(QStringLiteral("code-options")));
@@ -1244,6 +1456,467 @@ void TestPagedTextEditor::globalTextOptionsApply() {
 	QCOMPARE(code.editor()->lineWrapPolicy(),
 		CodeEditorWidget::LineWrapPolicy::On);
 	QCOMPARE(code.editor()->encoding(), QStringLiteral("Windows-1251"));
+	QCOMPARE(code.editor()->tabWidth(), 6);
+	QCOMPARE(code.editor()->tabMode(), Extensions::TextEdit::TabMode::Tabs);
+	QCOMPARE(code.editor()->navigationStrategy()->id(), QStringLiteral("words"));
+}
+
+void TestPagedTextEditor::tabSettingsAndSaveConversion() {
+	PagedTextEditor editor;
+	editor.resize(400, 300);
+	editor.newDocument();
+
+	editor.setTabWidth(4);
+	editor.setTabMode(Extensions::TextEdit::TabMode::Spaces);
+	editor.setCursorPosition(0, 0);
+	QTest::keyClick(&editor, Qt::Key_Tab);
+	QCOMPARE(editor.lineText(0), QStringLiteral("    "));
+	QVERIFY(editor.insertText(QStringLiteral("abc")));
+	QCOMPARE(editor.lineText(0), QStringLiteral("    abc"));
+
+	editor.setTabMode(Extensions::TextEdit::TabMode::Tabs);
+	editor.setCursorPosition(0, 0);
+	QTest::keyClick(&editor, Qt::Key_Tab);
+	QCOMPARE(editor.lineText(0), QStringLiteral("\t    abc"));
+
+	// Сохранение: сначала как есть (табы), затем с заменой ведущих табов.
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const QString tabsPath = dir.filePath(QStringLiteral("tabs.txt"));
+	const QString spacesPath = dir.filePath(QStringLiteral("spaces.txt"));
+
+	PagedTextEditor saveEditor;
+	saveEditor.newDocument();
+	QVERIFY(saveEditor.insertText(QStringLiteral("a\n\tb")));
+	saveEditor.setTabWidth(2);
+	saveEditor.setSaveTabMode(Extensions::TextEdit::TabMode::Tabs);
+	QVERIFY(saveEditor.saveAs(tabsPath));
+	QTRY_VERIFY_WITH_TIMEOUT(!saveEditor.isIndexing(), 10000);
+	QByteArray expectedTabs = QByteArray("a") + kTestNewline + "\tb";
+	QCOMPARE(readAllBytes(tabsPath), expectedTabs);
+
+	saveEditor.setSaveTabMode(Extensions::TextEdit::TabMode::Spaces);
+	QVERIFY(saveEditor.saveAs(spacesPath));
+	QTRY_VERIFY_WITH_TIMEOUT(!saveEditor.isIndexing(), 10000);
+	QByteArray expectedSpaces = QByteArray("a") + kTestNewline + "  b";
+	QCOMPARE(readAllBytes(spacesPath), expectedSpaces);
+}
+
+void TestPagedTextEditor::tokenNavigationAndScrolling() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto path = writeTextFile(dir.path(), QStringLiteral("tokens.txt"),
+		QByteArray("foo bar  baz\nsecond line\n"));
+	QVERIFY(!path.isEmpty());
+
+	PagedTextEditor editor;
+	editor.resize(500, 300);
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+
+	// Ctrl+Left: от конца слова — к его началу; от пробелов — к концу
+	// предыдущего слова. Ctrl+Right — наоборот.
+	editor.setCursorPosition(0, 12);
+	QTest::keyClick(&editor, Qt::Key_Left, Qt::ControlModifier);
+	QCOMPARE(editor.cursorColumn(), 9);
+	QTest::keyClick(&editor, Qt::Key_Left, Qt::ControlModifier);
+	QCOMPARE(editor.cursorColumn(), 7);
+	QTest::keyClick(&editor, Qt::Key_Right, Qt::ControlModifier);
+	QCOMPARE(editor.cursorColumn(), 9);
+	QTest::keyClick(&editor, Qt::Key_Right, Qt::ControlModifier);
+	QCOMPARE(editor.cursorColumn(), 12);
+
+	// Стратегию можно заменить во время работы.
+	TestEdgeNavigationStrategy edges;
+	editor.setNavigationStrategy(&edges);
+	editor.setCursorPosition(1, 3);
+	QTest::keyClick(&editor, Qt::Key_Right, Qt::ControlModifier);
+	QCOMPARE(editor.cursorColumn(), 11);
+	QTest::keyClick(&editor, Qt::Key_Left, Qt::ControlModifier);
+	QCOMPARE(editor.cursorColumn(), 0);
+	editor.setNavigationStrategy(nullptr);
+
+	// Ctrl+Up/Down прокручивают экран, не перемещая курсор.
+	QTemporaryDir scrollDir;
+	QVERIFY(scrollDir.isValid());
+	QStringList lines;
+	for (int i = 0; i < 100; i++) {
+		lines.append(QStringLiteral("line %1").arg(i));
+	}
+	const auto scrollPath = writeTextFile(scrollDir.path(),
+		QStringLiteral("scroll.txt"), lines.join(QLatin1Char('\n')).toUtf8());
+	QVERIFY(!scrollPath.isEmpty());
+
+	PagedTextEditor scrolling;
+	scrolling.resize(400, 300);
+	scrolling.openFile(scrollPath);
+	QTRY_VERIFY_WITH_TIMEOUT(!scrolling.isIndexing(), 10000);
+	scrolling.setCursorPosition(10, 2);
+	scrolling.verticalScrollBar()->setValue(0);
+	QTest::keyClick(&scrolling, Qt::Key_Down, Qt::ControlModifier);
+	QCOMPARE(scrolling.verticalScrollBar()->value(), 1);
+	QCOMPARE(scrolling.cursorLine(), 10);
+	QCOMPARE(scrolling.cursorColumn(), 2);
+	QTest::keyClick(&scrolling, Qt::Key_Up, Qt::ControlModifier);
+	QCOMPARE(scrolling.verticalScrollBar()->value(), 0);
+	QCOMPARE(scrolling.cursorLine(), 10);
+}
+
+void TestPagedTextEditor::ctrlEnterInsertsLineAbove() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto path = writeTextFile(dir.path(), QStringLiteral("enter.txt"),
+		QByteArray("one\ntwo\n"));
+	QVERIFY(!path.isEmpty());
+
+	PagedTextEditor editor;
+	editor.resize(400, 300);
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+
+	editor.setCursorPosition(1, 2);
+	QTest::keyClick(&editor, Qt::Key_Return, Qt::ControlModifier);
+	QCOMPARE(editor.lineCount(), 4);
+	QCOMPARE(editor.lineText(0), QStringLiteral("one"));
+	QCOMPARE(editor.lineText(1), QString());
+	QCOMPARE(editor.lineText(2), QStringLiteral("two"));
+	QCOMPARE(editor.cursorLine(), 2);
+	QCOMPARE(editor.cursorColumn(), 2);
+
+	QVERIFY(editor.undo());
+	QCOMPARE(editor.lineCount(), 3);
+	QCOMPARE(editor.lineText(1), QStringLiteral("two"));
+}
+
+void TestPagedTextEditor::ctrlBackspaceDeleteByTokens() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto path = writeTextFile(dir.path(), QStringLiteral("delete-tokens.txt"),
+		QByteArray("one two three\nsecond\n"));
+	QVERIFY(!path.isEmpty());
+
+	PagedTextEditor editor;
+	editor.resize(500, 300);
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+
+	editor.setCursorPosition(0, 13);
+	QTest::keyClick(&editor, Qt::Key_Backspace, Qt::ControlModifier);
+	QCOMPARE(editor.lineText(0), QStringLiteral("one two "));
+	QCOMPARE(editor.cursorColumn(), 8);
+
+	QTest::keyClick(&editor, Qt::Key_Backspace, Qt::ControlModifier);
+	QCOMPARE(editor.lineText(0), QStringLiteral("one two"));
+	QCOMPARE(editor.cursorColumn(), 7);
+
+	// Ctrl+Delete в конце строки удаляет перевод строки.
+	QTest::keyClick(&editor, Qt::Key_Delete, Qt::ControlModifier);
+	QCOMPARE(editor.lineCount(), 2);
+	QCOMPARE(editor.lineText(0), QStringLiteral("one twosecond"));
+}
+
+void TestPagedTextEditor::blockSelectionSkipsShortLines() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto path = writeTextFile(dir.path(), QStringLiteral("block-short.txt"),
+		QByteArray("0123456789\n\n01234\n01234567\n0123456789A"));
+	QVERIFY(!path.isEmpty());
+
+	PagedTextEditor editor;
+	editor.resize(600, 400);
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+	QCOMPARE(editor.lineCount(), 5);
+
+	const int charWidth = editor.fontMetrics().horizontalAdvance(QLatin1Char('W'));
+	const int lineHeight = editor.fontMetrics().height();
+	const int gutter = editorGutterWidth(editor);
+
+	// Курсор стоит в 6-м символе первой строки; мышью тянем к 9-му
+	// символу пятой строки.
+	editor.setCursorPosition(0, 5);
+	QTest::mousePress(editor.viewport(), Qt::LeftButton,
+		Qt::ShiftModifier | Qt::AltModifier,
+		QPoint(gutter + 5 * charWidth + 1, lineHeight / 2));
+	QTest::mouseMove(editor.viewport(),
+		QPoint(gutter + 9 * charWidth + 1,
+			4 * lineHeight + lineHeight / 2));
+	QTest::mouseRelease(editor.viewport(), Qt::LeftButton,
+		Qt::ShiftModifier | Qt::AltModifier,
+		QPoint(gutter + 9 * charWidth + 1,
+			4 * lineHeight + lineHeight / 2));
+
+	QCOMPARE(editor.cursorCount(), 3);
+	const QList<QPoint> positions = editor.cursorPositions();
+	QCOMPARE(positions.at(0), QPoint(0, 9));
+	QCOMPARE(positions.at(1), QPoint(3, 8));
+	QCOMPARE(positions.at(2), QPoint(4, 9));
+
+	QTest::keyClick(&editor, Qt::Key_C, Qt::ControlModifier);
+	QTest::qWait(100);
+	QCOMPARE(QGuiApplication::clipboard()->text(),
+		QStringLiteral("5678\n567\n5678"));
+}
+
+void TestPagedTextEditor::tabKeepsFocusAndIndents() {
+	QWidget host;
+	host.resize(400, 300);
+	auto* layout = new QVBoxLayout(&host);
+	PagedTextEditor editor(&host);
+	QLineEdit other(&host);
+	layout->addWidget(&editor);
+	layout->addWidget(&other);
+
+	host.show();
+	host.activateWindow();
+	editor.setFocus();
+	QTRY_COMPARE(QApplication::focusWidget(), &editor);
+	editor.setTabWidth(4);
+	editor.setTabMode(Extensions::TextEdit::TabMode::Spaces);
+
+	QTest::keyClick(host.windowHandle(), Qt::Key_Tab);
+	QCOMPARE(QApplication::focusWidget(), &editor);
+	QCOMPARE(editor.lineText(0), QStringLiteral("    "));
+
+	// То же для редактора кода: Tab вставляет отступ, а не меняет фокус.
+	CodeEditorWidget codeEditor(nullptr, nullptr, &host);
+	layout->addWidget(&codeEditor);
+	codeEditor.setTabWidth(4);
+	codeEditor.setTabMode(Extensions::TextEdit::TabMode::Spaces);
+	codeEditor.setFocus();
+	QTRY_COMPARE(QApplication::focusWidget(), &codeEditor);
+	QTest::keyClick(host.windowHandle(), Qt::Key_Tab);
+	QCOMPARE(QApplication::focusWidget(), &codeEditor);
+	QVERIFY(codeEditor.toPlainText().startsWith(QStringLiteral("    ")));
+}
+
+void TestPagedTextEditor::codeEditorNavigationAndTabs() {
+	CodeEditorWidget editor(nullptr, nullptr);
+	editor.resize(500, 300);
+	editor.setTabWidth(4);
+	editor.setTabMode(Extensions::TextEdit::TabMode::Spaces);
+	editor.setText(QStringLiteral("foo bar  baz\nsecond line"));
+
+	QTextCursor cursor = editor.textCursor();
+	cursor.setPosition(12);
+	editor.setTextCursor(cursor);
+	QTest::keyClick(&editor, Qt::Key_Left, Qt::ControlModifier);
+	QCOMPARE(editor.textCursor().positionInBlock(), 9);
+	QTest::keyClick(&editor, Qt::Key_Left, Qt::ControlModifier);
+	QCOMPARE(editor.textCursor().positionInBlock(), 7);
+	QTest::keyClick(&editor, Qt::Key_Right, Qt::ControlModifier);
+	QCOMPARE(editor.textCursor().positionInBlock(), 9);
+
+	// Ctrl+Backspace/Delete удаляют по токенам, как и перемещение.
+	CodeEditorWidget deleteEditor(nullptr, nullptr);
+	deleteEditor.setText(QStringLiteral("one two"));
+	QTextCursor deleteCursor = deleteEditor.textCursor();
+	deleteCursor.movePosition(QTextCursor::End);
+	deleteEditor.setTextCursor(deleteCursor);
+	QTest::keyClick(&deleteEditor, Qt::Key_Backspace, Qt::ControlModifier);
+	QCOMPARE(deleteEditor.toPlainText(), QStringLiteral("one "));
+	QCOMPARE(deleteEditor.textCursor().positionInBlock(), 4);
+
+	// Tab вставляет выбранную стратегию отступа.
+	cursor = editor.textCursor();
+	cursor.setPosition(0);
+	editor.setTextCursor(cursor);
+	QTest::keyClick(&editor, Qt::Key_Tab);
+	QVERIFY(editor.toPlainText().startsWith(QStringLiteral("    foo")));
+
+	// Ctrl+Left/Right идут по токенам, Ctrl+Enter добавляет строку выше.
+	cursor = editor.textCursor();
+	const int secondLineStart = editor.document()->findBlockByNumber(1).position();
+	cursor.setPosition(secondLineStart + 2);
+	editor.setTextCursor(cursor);
+	QTest::keyClick(&editor, Qt::Key_Return, Qt::ControlModifier);
+	const QStringList lines = editor.toPlainText().split(QLatin1Char('\n'));
+	QCOMPARE(lines.size(), 3);
+	QCOMPARE(lines.at(1), QString());
+	QCOMPARE(lines.at(2), QStringLiteral("second line"));
+	QCOMPARE(editor.textCursor().blockNumber(), 2);
+}
+
+void TestPagedTextEditor::editorMouseDetails() {
+	QTemporaryDir dir;
+	QVERIFY(dir.isValid());
+	const auto path = writeTextFile(dir.path(), QStringLiteral("mouse.md"),
+		QByteArray("# Heading\nplain line\nthird\n"));
+	QVERIFY(!path.isEmpty());
+
+	PagedTextEditor editor;
+	editor.resize(600, 400);
+	editor.openFile(path);
+	QTRY_VERIFY_WITH_TIMEOUT(!editor.isIndexing(), 10000);
+
+	// Курсор мыши — «палочка» текстового редактора.
+	QCOMPARE(editor.viewport()->cursor().shape(), Qt::IBeamCursor);
+
+	// Заголовок рисуется крупным шрифтом: клик по второй строке должен
+	// учитывать реальную высоту первой, а не fontMetrics().
+	TestHeadingPlugin plugin;
+	QVERIFY(editor.setHighlightingPlugin(&plugin));
+	QVERIFY(editor.isHighlightingEnabled());
+
+	const int gutter = editorGutterWidth(editor);
+	const int width = qMax(1, editor.viewport()->width() - gutter - 8);
+	QTextCharFormat headingFormat;
+	headingFormat.setFontPointSize(36);
+	QVector<QTextLayout::FormatRange> formats;
+	formats.append({ 0, static_cast<int>(editor.lineText(0).size()),
+		headingFormat });
+	TextLayout heading(editor.lineText(0), editor.font(), false, width,
+		editor.tabWidth(), formats);
+	TextLayout plain(editor.lineText(1), editor.font(), false, width,
+		editor.tabWidth());
+	const int clickY = qCeil(heading.lineAt(0).height())
+		+ qCeil(plain.lineAt(0).height()) / 2;
+	QTest::mouseClick(editor.viewport(), Qt::LeftButton, Qt::NoModifier,
+		QPoint(gutter + 1, clickY));
+	QCOMPARE(editor.cursorLine(), 1);
+
+	// Клик ниже последней строки ставит курсор в её конец.
+	QTest::mouseClick(editor.viewport(), Qt::LeftButton, Qt::NoModifier,
+		QPoint(gutter + 1, editor.viewport()->height() - 4));
+	QCOMPARE(editor.cursorLine(), editor.lineCount() - 1);
+	QCOMPARE(editor.cursorColumn(),
+		editor.lineText(editor.lineCount() - 1).size());
+}
+
+void TestPagedTextEditor::embeddedHighlightingMatchesCodeEditor() {
+	Resources resources;
+	HighlightingPluginManager manager(&resources);
+	manager.registerPlugin(std::make_unique<TestEmbeddedMarkdownPlugin>());
+	manager.registerPlugin(std::make_unique<TestBashPlugin>());
+
+	HighlightingPlugin* markdown = manager.pluginForLanguage(QStringLiteral("emd"));
+	QVERIFY(markdown != nullptr);
+	QVERIFY(markdown->hasEmbeddedRules());
+
+	const QStringList lines = {
+		QStringLiteral("# Heading"),
+		QStringLiteral("```bash"),
+		QStringLiteral("# comment"),
+		QStringLiteral("```"),
+	};
+
+	PagedTextHighlighter highlighter;
+	highlighter.setPluginManager(&manager);
+	highlighter.setLineSource([&lines](int line) {
+		return line >= 0 && line < lines.size() ? lines.at(line) : QString();
+	});
+	highlighter.setLineCount(lines.size());
+	highlighter.setPlugin(markdown);
+
+	const auto heading = highlighter.spansForLine(0, lines.at(0));
+	QCOMPARE(heading.size(), 1);
+	QCOMPARE(heading.first().format.foreground().color(), QColor(Qt::red));
+
+	const auto fence = highlighter.spansForLine(1, lines.at(1));
+	QCOMPARE(fence.size(), 1);
+	QCOMPARE(fence.first().format.background().color(), QColor(Qt::darkGray));
+
+	// Внутри блока работает подсветка вложенного языка, а не Markdown.
+	const auto comment = highlighter.spansForLine(2, lines.at(2));
+	QCOMPARE(comment.size(), 1);
+	QCOMPARE(comment.first().format.foreground().color(), QColor(Qt::green));
+
+	const auto closing = highlighter.spansForLine(3, lines.at(3));
+	QCOMPARE(closing.size(), 1);
+	QCOMPARE(closing.first().format.background().color(), QColor(Qt::darkGray));
+
+	// После закрывающего блока снова действуют правила Markdown.
+	const auto outside = highlighter.spansForLine(4, QStringLiteral("# Again"));
+	QCOMPARE(outside.size(), 1);
+	QCOMPARE(outside.first().format.foreground().color(), QColor(Qt::red));
+}
+
+void TestPagedTextEditor::htmlEmbeddedBlocks() {
+	TestHtmlPlugin plugin;
+	PagedTextHighlighter highlighter;
+	highlighter.setPlugin(&plugin);
+
+	const QStringList lines = {
+		QStringLiteral("  <script"),
+		QStringLiteral("    src=\"/captcha\""),
+		QStringLiteral("  ></script>"),
+	};
+	highlighter.setLineSource([&lines](int line) {
+		return line >= 0 && line < lines.size() ? lines.at(line) : QString();
+	});
+	highlighter.setLineCount(lines.size());
+
+	const QColor tagColor(QStringLiteral("#569CD6"));
+	const auto hasSpan = [](const QVector<PagedTextSpan>& spans, int start, int length,
+		const QColor& color) {
+		for (const auto& span : spans) {
+			if (span.start == start && span.length == length
+				&& span.format.foreground().color() == color) {
+				return true;
+			}
+		}
+		return false;
+	};
+
+	// Многострочный открывающий тег: имя тега и закрывающая скобка
+	// подсвечиваются, хотя у блока нет вложенного языка.
+	const auto first = highlighter.spansForLine(0, lines.at(0));
+	QVERIFY(hasSpan(first, 2, 7, tagColor));
+
+	const auto attributes = highlighter.spansForLine(1, lines.at(1));
+	QVERIFY(!attributes.isEmpty());
+
+	const auto closing = highlighter.spansForLine(2, lines.at(2));
+	QVERIFY(hasSpan(closing, 2, 1, tagColor));
+	QVERIFY(hasSpan(closing, 3, 9, tagColor));
+
+	// Однострочный блок: start и end тоже подсвечиваются.
+	const QString oneLine = QStringLiteral("<script src=\"x\"></script>");
+	const auto inlineSpans = highlighter.spansForLine(oneLine);
+	QVERIFY(hasSpan(inlineSpans, 0, 7, tagColor));
+	QVERIFY(hasSpan(inlineSpans, oneLine.indexOf(QLatin1Char('>')), 1, tagColor));
+	QVERIFY(hasSpan(inlineSpans, oneLine.indexOf(QStringLiteral("</script>")),
+		9, tagColor));
+}
+
+void TestPagedTextEditor::documentsReactToModifications() {
+	TestCommandController controller;
+	controller.initSystemContexts();
+
+	PagedTextDocument paged;
+	auto pagedContext = controller.globalContext()->createDocumentContext(
+		QStringLiteral("modified-paged"));
+	paged.setContext(pagedContext);
+	paged.newFile();
+	QVERIFY(!paged.isModified());
+
+	QWidget* pagedTabEditor = paged.createTabPropertiesEditor(nullptr);
+	auto* pagedModifiedCheck = pagedTabEditor->findChild<QCheckBox*>();
+	QVERIFY(pagedModifiedCheck);
+	QVERIFY(!pagedModifiedCheck->isChecked());
+
+	QVERIFY(paged.editor()->insertText(QStringLiteral("text")));
+	QVERIFY(paged.isModified());
+	QCOMPARE(pagedContext->variable(QStringLiteral("modified")).toBool(), true);
+	QVERIFY(pagedModifiedCheck->isChecked());
+	delete pagedTabEditor;
+
+	CodeEditorDocument code(nullptr, nullptr);
+	auto codeContext = controller.globalContext()->createDocumentContext(
+		QStringLiteral("modified-code"));
+	code.setContext(codeContext);
+	QVERIFY(!code.isModified());
+
+	QWidget* codeTabEditor = code.createTabPropertiesEditor(nullptr);
+	auto* codeModifiedCheck = codeTabEditor->findChild<QCheckBox*>();
+	QVERIFY(codeModifiedCheck);
+	QVERIFY(!codeModifiedCheck->isChecked());
+
+	code.editor()->insertPlainText(QStringLiteral("text"));
+	QVERIFY(code.isModified());
+	QCOMPARE(codeContext->variable(QStringLiteral("modified")).toBool(), true);
+	QVERIFY(codeModifiedCheck->isChecked());
+	delete codeTabEditor;
 }
 
 void TestPagedTextEditor::multiCursorManagement() {
@@ -1331,11 +2004,13 @@ void TestPagedTextEditor::copyAndCutWholeLine() {
 	// Без выделения копируется строка целиком.
 	editor.setCursorPosition(0, 2);
 	QTest::keyClick(&editor, Qt::Key_C, Qt::ControlModifier);
+	QTest::qWait(100);
 	QCOMPARE(QGuiApplication::clipboard()->text(), QStringLiteral("alpha"));
 	QVERIFY(!editor.isModified());
 
 	// Вырезание без выделения удаляет строку целиком.
 	QTest::keyClick(&editor, Qt::Key_X, Qt::ControlModifier);
+	QTest::qWait(100);
 	QCOMPARE(QGuiApplication::clipboard()->text(), QStringLiteral("alpha"));
 	QCOMPARE(editor.lineCount(), 2);
 	QCOMPARE(editor.lineText(0), QStringLiteral("beta"));
@@ -1352,6 +2027,7 @@ void TestPagedTextEditor::copyAndCutWholeLine() {
 	editor.addCursorAt(2, 0);
 	QCOMPARE(editor.cursorCount(), 2);
 	QTest::keyClick(&editor, Qt::Key_X, Qt::ControlModifier);
+	QTest::qWait(100);
 	QCOMPARE(QGuiApplication::clipboard()->text(), QStringLiteral("alpha\n"));
 	QCOMPARE(editor.lineCount(), 1);
 	QCOMPARE(editor.lineText(0), QStringLiteral("beta"));
@@ -1387,6 +2063,7 @@ void TestPagedTextEditor::blockSelectionWithShiftAlt() {
 
 	// Копируется прямоугольник: по одному символу с каждой строки.
 	QTest::keyClick(&editor, Qt::Key_C, Qt::ControlModifier);
+	QTest::qWait(100);
 	QCOMPARE(QGuiApplication::clipboard()->text(), QStringLiteral("b\ne\nh"));
 
 	// Ввод заменяет выделение на каждой строке.
@@ -1435,7 +2112,9 @@ void TestPagedTextEditor::multiCursorPasteDistributesLines() {
 
 	// Строк в буфере больше, чем курсоров: лишние строки не вставляются.
 	QGuiApplication::clipboard()->setText(QStringLiteral("A\nB\nC\nD"));
+	QTest::qWait(100);
 	QTest::keyClick(&editor, Qt::Key_V, Qt::ControlModifier);
+	QTest::qWait(100);
 	QCOMPARE(editor.lineText(0), QStringLiteral("Aone"));
 	QCOMPARE(editor.lineText(1), QStringLiteral("Btwo"));
 	QCOMPARE(editor.lineText(2), QStringLiteral("Cthree"));
@@ -1447,7 +2126,9 @@ void TestPagedTextEditor::multiCursorPasteDistributesLines() {
 
 	// Строк меньше, чем курсоров: они идут по кругу.
 	QGuiApplication::clipboard()->setText(QStringLiteral("X\nY"));
+	QTest::qWait(100);
 	QTest::keyClick(&editor, Qt::Key_V, Qt::ControlModifier);
+	QTest::qWait(100);
 	QCOMPARE(editor.lineText(0), QStringLiteral("Xone"));
 	QCOMPARE(editor.lineText(1), QStringLiteral("Ytwo"));
 	QCOMPARE(editor.lineText(2), QStringLiteral("Xthree"));

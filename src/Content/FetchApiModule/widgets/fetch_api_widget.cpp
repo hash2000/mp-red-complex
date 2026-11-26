@@ -2,7 +2,7 @@
 #include "Content/FetchApiModule/models/fetch_opt.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
 
-#include "Libs/Base/extensions/text_edit_extensions.h"
+#include "Libs/BaseWidgets/extensions/text_edit_extensions.h"
 #include "Libs/BaseWidgets/key_value/key_value_editor_widget.h"
 
 #include <QComboBox>

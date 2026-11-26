@@ -2,10 +2,12 @@
 #include "Libs/Base/background_task_registry.h"
 #include "Libs/BaseWidgets/editor/formatters/formatter_plugin.h"
 #include "Libs/BaseWidgets/editor/formatters/formatter_plugin_manager.h"
+#include "Libs/BaseWidgets/editor/highlights/highlighter.h"
 #include "Libs/BaseWidgets/editor/highlights/highlighter_plugin.h"
 #include "Libs/BaseWidgets/editor/highlights/highlighter_plugin_manager.h"
 #include "Libs/BaseWidgets/editor/language_info.h"
 #include "Libs/BaseWidgets/editor/layout/text_layout.h"
+#include "Libs/BaseWidgets/editor/navigation/text_navigation.h"
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_document_buffer.h"
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_edit_history.h"
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_file_indexer.h"
@@ -93,6 +95,13 @@ struct PagedTextEditor::Private {
 	FormatterPlugin* currentFormatter = nullptr;
 	QString formatSource;
 
+	/// Ширина отступа/табуляции, стратегии Tab и сохранения.
+	int tabWidth = TextLayout::kDefaultTabWidth;
+	Extensions::TextEdit::TabMode tabMode = Extensions::TextEdit::TabMode::Spaces;
+	Extensions::TextEdit::TabMode saveTabMode = Extensions::TextEdit::TabMode::Spaces;
+	/// Подставляемая стратегия Ctrl+Left/Right (nullptr — по умолчанию).
+	const ITextNavigationStrategy* navigation = nullptr;
+
 	bool modified = false;
 	bool undoAvailable = false;
 	bool redoAvailable = false;
@@ -159,9 +168,16 @@ struct PagedTextEditor::Private {
 	bool positionAt(int x, int y, int& line, int& column) const;
 	void ensureCursorVisible();
 	bool cursorRowGeometry(int line, int& y, int& height) const;
+	const ITextNavigationStrategy& navigationStrategy() const;
+	QVector<QTextLayout::FormatRange> formatsForLine(int line) const;
+	TextLayout layoutForLine(int line, int width) const;
 	void selectMatch(int index);
 	void updateCurrentForCursor();
 	void moveCursorVertically(int delta, bool keepAnchor);
+	void moveCursorsByToken(int direction, bool keepAnchor);
+	void deleteByToken(int direction);
+	void insertLineAbove();
+	void scrollViewportByLine(int delta);
 
 	// Редактирование.
 	struct EditRange {
@@ -290,6 +306,33 @@ int PagedTextEditor::Private::lineHeight() const {
 	return qMax(1, q->fontMetrics().height());
 }
 
+const ITextNavigationStrategy& PagedTextEditor::Private::navigationStrategy() const {
+	return navigation ? *navigation : WordTextNavigationStrategy::instance();
+}
+
+QVector<QTextLayout::FormatRange> PagedTextEditor::Private::formatsForLine(
+	int line) const {
+	QVector<QTextLayout::FormatRange> ranges;
+	if (!highlightingEnabled) {
+		return ranges;
+	}
+
+	const QString text = visibleText(line);
+	for (const PagedTextSpan& span : highlighter.spansForLine(line, text)) {
+		const int from = qBound(0, span.start, text.size());
+		const int to = qBound(0, span.start + span.length, text.size());
+		if (to > from) {
+			ranges.append({ from, to - from, span.format });
+		}
+	}
+	return ranges;
+}
+
+TextLayout PagedTextEditor::Private::layoutForLine(int line, int width) const {
+	return TextLayout(visibleText(line), q->font(), wrapLines, width, tabWidth,
+		formatsForLine(line));
+}
+
 bool PagedTextEditor::Private::hasSelection() const {
 	for (const PagedCursorState& cursor : extraCursors) {
 		if (cursorHasSelection(cursor)) {
@@ -359,7 +402,7 @@ int PagedTextEditor::Private::logicalLineAtY(int y) const {
 	const int layoutWidth = qMax(1, q->viewport()->width() - gutterWidth() - 8);
 	int top = -rowOffsetPx;
 	for (int i = first; i < lines; i++) {
-		TextLayout layout(visibleText(i), q->font(), wrapLines, layoutWidth, TextLayout::kDefaultTabWidth);
+		TextLayout layout = layoutForLine(i, layoutWidth);
 		const int count = qMax(1, layout.lineCount());
 		for (int visual = 0; visual < count; visual++) {
 			const QTextLine textLine = layout.lineAt(visual);
@@ -390,7 +433,7 @@ bool PagedTextEditor::Private::positionAt(int x, int y, int& line, int& column) 
 	int top = -rowOffsetPx;
 	for (int i = first; i < lines; i++) {
 		const QString text = visibleText(i);
-		TextLayout layout(text, q->font(), wrapLines, layoutWidth, TextLayout::kDefaultTabWidth);
+		TextLayout layout = layoutForLine(i, layoutWidth);
 		int visual = 0;
 		int rowTop = 0;
 		int rowHeight = 0;
@@ -443,7 +486,7 @@ void PagedTextEditor::Private::ensureCursorVisible() {
 	int previousHeight = 0;
 	const int layoutWidth = qMax(1, q->viewport()->width() - gutterWidth() - 8);
 	for (int i = vertical->value(); i < cursorLine; i++) {
-		TextLayout layout(visibleText(i), q->font(), wrapLines, layoutWidth, TextLayout::kDefaultTabWidth);
+		TextLayout layout = layoutForLine(i, layoutWidth);
 		for (int visual = 0; visual < layout.lineCount(); visual++) {
 			previousHeight += qMax(1, qCeil(layout.lineAt(visual).height()));
 		}
@@ -471,7 +514,7 @@ bool PagedTextEditor::Private::cursorRowGeometry(int line, int& y, int& height) 
 	const QString text = visibleText(line);
 	const int column = qMin(cursorColumn, text.size());
 	const int layoutWidth = qMax(1, q->viewport()->width() - gutterWidth() - 8);
-	TextLayout layout(text, q->font(), wrapLines, layoutWidth, TextLayout::kDefaultTabWidth);
+	TextLayout layout = layoutForLine(line, layoutWidth);
 	int visual = 0;
 	return layout.rowForColumn(column, visual, y, height);
 }
@@ -485,10 +528,170 @@ void PagedTextEditor::Private::moveCursorVertically(int delta, bool keepAnchor) 
 	const PagedTextPosition target = PagedTextCursor::moveVertical(
 		{ cursorLine, cursorColumn }, delta,
 		[this](int line) { return visibleText(line); },
-		q->font(), wrapLines, layoutWidth, lines);
+		q->font(), wrapLines, layoutWidth, lines, tabWidth,
+		[this](int line) { return formatsForLine(line); });
 	if (target.line != cursorLine || target.column != cursorColumn) {
 		q->setCursorPosition(target.line, target.column, keepAnchor);
 	}
+}
+
+void PagedTextEditor::Private::moveCursorsByToken(int direction,
+	bool keepAnchor) {
+	if (!ready || lines <= 0 || direction == 0) {
+		return;
+	}
+
+	const ITextNavigationStrategy& strategy = navigationStrategy();
+	const auto moveOne = [this, &strategy, direction, keepAnchor](
+		const PagedCursorState& cursor) {
+		PagedCursorState result = cursor;
+
+		// Ctrl+Left/Right без Shift сначала сворачивает выделение к его краю.
+		if (cursorHasSelection(cursor) && !keepAnchor) {
+			int startLine = 0;
+			int startColumn = 0;
+			int endLine = 0;
+			int endColumn = 0;
+			normalizedCursor(cursor, startLine, startColumn, endLine, endColumn);
+			result.line = direction < 0 ? startLine : endLine;
+			result.column = direction < 0 ? startColumn : endColumn;
+			result.anchorLine = result.line;
+			result.anchorColumn = result.column;
+			return result;
+		}
+
+		const QString line = lineAt(cursor.line);
+		int column = strategy.columnAfterMove(line, cursor.column, direction);
+		int lineNumber = cursor.line;
+		if (column == cursor.column) {
+			// Дальше в этой строке двигаться некуда — переходим на соседнюю.
+			if (direction < 0 && cursor.line > 0) {
+				lineNumber--;
+				column = lineAt(lineNumber).size();
+			}
+			else if (direction > 0 && cursor.line + 1 < lines) {
+				lineNumber++;
+				column = 0;
+			}
+		}
+
+		result.line = lineNumber;
+		result.column = column;
+		if (!keepAnchor) {
+			result.anchorLine = lineNumber;
+			result.anchorColumn = column;
+		}
+		else if (!cursorHasSelection(cursor)) {
+			result.anchorLine = cursor.line;
+			result.anchorColumn = cursor.column;
+		}
+		return result;
+	};
+
+	QVector<PagedCursorState> cursors;
+	cursors.reserve(extraCursors.size() + 1);
+	for (const PagedCursorState& cursor : extraCursors) {
+		cursors.append(moveOne(cursor));
+	}
+	cursors.append(moveOne(primaryState()));
+
+	clearBlockState();
+	applyCursorSet(cursors);
+	ensureCursorVisible();
+	updateCurrentForCursor();
+	q->viewport()->update();
+	emit q->cursorPositionChanged(cursorLine, cursorColumn);
+}
+
+void PagedTextEditor::Private::deleteByToken(int direction) {
+	if (!canEdit() || lines <= 0 || direction == 0) {
+		return;
+	}
+
+	const ITextNavigationStrategy& strategy = navigationStrategy();
+	QVector<EditRange> edits;
+	for (const PagedCursorState& cursor : allCursors()) {
+		if (cursorHasSelection(cursor)) {
+			int startLine = 0;
+			int startColumn = 0;
+			int endLine = 0;
+			int endColumn = 0;
+			normalizedCursor(cursor, startLine, startColumn, endLine, endColumn);
+			edits.append({ startLine, startColumn, endLine, endColumn, QString() });
+			continue;
+		}
+
+		const QString line = lineAt(cursor.line);
+		const int column = qMin(cursor.column, line.size());
+		const int target = strategy.columnAfterMove(line, column, direction);
+		if (direction < 0) {
+			if (target < column) {
+				edits.append({ cursor.line, target, cursor.line, column, QString() });
+			}
+			else if (column == 0 && cursor.line > 0) {
+				edits.append({ cursor.line - 1,
+					static_cast<int>(lineAt(cursor.line - 1).size()),
+					cursor.line, 0, QString() });
+			}
+		}
+		else {
+			if (target > column) {
+				edits.append({ cursor.line, column, cursor.line, target, QString() });
+			}
+			else if (column == line.size() && cursor.line + 1 < lines) {
+				edits.append({ cursor.line, column, cursor.line + 1, 0, QString() });
+			}
+		}
+	}
+
+	if (!edits.isEmpty()) {
+		applyEdits(edits, caretSetForEdits(edits), 0);
+	}
+}
+
+void PagedTextEditor::Private::insertLineAbove() {
+	if (!ready || lines <= 0) {
+		return;
+	}
+
+	const QVector<PagedCursorState> cursors = allCursors();
+	QVector<EditRange> edits;
+	QVector<PagedCursorState> carets;
+	edits.reserve(cursors.size());
+	carets.reserve(cursors.size());
+	for (const PagedCursorState& cursor : cursors) {
+		const int column = qMin(cursor.column, lineAt(cursor.line).size());
+
+		// Новая строка добавляется выше каждой строки с курсором; сам курсор
+		// остаётся в своей строке, которая сдвигается вниз на число вставок
+		// в строках выше и на собственную вставку.
+		int above = 0;
+		for (const PagedCursorState& other : cursors) {
+			if (other.line < cursor.line) {
+				above++;
+			}
+		}
+
+		edits.append({ cursor.line, 0, cursor.line, 0, QStringLiteral("\n") });
+		carets.append({ cursor.line + 1 + above, column,
+			cursor.line + 1 + above, column });
+	}
+
+	applyEdits(edits, carets, 0);
+}
+
+void PagedTextEditor::Private::scrollViewportByLine(int delta) {
+	auto* vertical = q->verticalScrollBar();
+	if (!vertical || delta == 0) {
+		return;
+	}
+
+	const int value = qBound(vertical->minimum(), vertical->value() + delta,
+		vertical->maximum());
+	if (value != vertical->value()) {
+		vertical->setValue(value);
+	}
+	q->viewport()->update();
 }
 
 void PagedTextEditor::Private::selectMatch(int index) {
@@ -947,16 +1150,18 @@ bool PagedTextEditor::Private::applyEdits(const QVector<EditRange>& sourceEdits,
 		&& caretsAfter.size() == 1);
 
 	bool structureChanged = false;
+	int firstChangedLine = edits.first().startLine;
 	for (const EditRange& edit : edits) {
+		firstChangedLine = qMin(firstChangedLine, edit.startLine);
 		if (edit.text.contains(QLatin1Char('\n'))
 			|| edit.startLine != edit.endLine) {
 			structureChanged = true;
-			break;
 		}
 	}
 	if (structureChanged) {
 		chunks.clear();
 	}
+	highlighter.invalidateFrom(firstChangedLine);
 
 	clearBlockState();
 	afterEdit();
@@ -1367,21 +1572,36 @@ void PagedTextEditor::Private::updateBlockSelection(int line, int column) {
 
 	QVector<PagedCursorState> cursors;
 	cursors.reserve(lastLine - firstLine + 1);
+	int activeCursorIndex = -1;
 	for (int current = firstLine; current <= lastLine; current++) {
 		const int lineLength = lineAt(current).size();
+		const int from = qMin(minColumn, lineLength);
+		const int to = qMin(maxColumn, lineLength);
+		if (from >= to) {
+			// Строка короче выделенной области: курсор на неё не ставится.
+			continue;
+		}
+
 		if (current == line) {
+			activeCursorIndex = cursors.size();
 			cursors.append({ current, qBound(0, column, lineLength),
 				current, qBound(0, blockAnchorColumn, lineLength) });
 			continue;
 		}
-		cursors.append({ current, qBound(0, maxColumn, lineLength),
-			current, qBound(0, minColumn, lineLength) });
+		cursors.append({ current, to, current, from });
 	}
 
-	// Активная строка — основной курсор, поэтому ставим её в конец набора.
-	if (line != lastLine) {
-		const PagedCursorState primary = cursors.takeAt(line - firstLine);
-		cursors.append(primary);
+	if (cursors.isEmpty()) {
+		// Область не попала ни на одну строку: оставляем один курсор там,
+		// где была активная точка (без выделения).
+		const int lineLength = lineAt(line).size();
+		cursors.append({ line, qBound(0, column, lineLength),
+			line, qBound(0, column, lineLength) });
+	}
+	else if (activeCursorIndex >= 0
+		&& activeCursorIndex != cursors.size() - 1) {
+		// Активная строка — основной курсор, поэтому ставим её в конец набора.
+		cursors.append(cursors.takeAt(activeCursorIndex));
 	}
 
 	applyCursorSet(cursors);
@@ -1489,6 +1709,7 @@ void PagedTextEditor::Private::syncModel() {
 	const bool lineCountChanged = newLines != lines;
 	lines = newLines;
 	maxLineLength = buffer.maxLineLength();
+	highlighter.setLineCount(lines);
 	if (lineCountChanged) {
 		chunks.clear();
 	}
@@ -1533,6 +1754,8 @@ void PagedTextEditor::Private::applyHistoryState(const PagedCursorState& cursor,
 	lines = buffer.lineCount();
 	maxLineLength = buffer.maxLineLength();
 	chunks.clear();
+	highlighter.setLineCount(lines);
+	highlighter.invalidateAll();
 
 	QVector<PagedCursorState> cursors = extras;
 	cursors.append(cursor);
@@ -1596,6 +1819,7 @@ bool PagedTextEditor::Private::replaceRange(int startLine, int startColumn,
 	if (!buffer.replace(startLine, startColumn, endLine, endColumn, text)) {
 		return false;
 	}
+	highlighter.invalidateFrom(startLine);
 
 	record.after.reserve(pages.size());
 	for (const int page : pages) {
@@ -1793,6 +2017,9 @@ PagedTextEditor::PagedTextEditor(QWidget* parent)
 	setFocusPolicy(Qt::StrongFocus);
 	setFrameShape(QFrame::NoFrame);
 	viewport()->setAttribute(Qt::WA_OpaquePaintEvent, true);
+	// Как в обычном текстовом редакторе: над текстом — «палочка» ввода.
+	viewport()->setCursor(Qt::IBeamCursor);
+	d->highlighter.setLineSource([this](int line) { return d->lineAt(line); });
 
 	d->watcher = new QFutureWatcher<PagedIndexResult>(this);
 	connect(d->watcher, &QFutureWatcher<PagedIndexResult>::finished, this, [this] {
@@ -1821,6 +2048,8 @@ PagedTextEditor::PagedTextEditor(QWidget* parent)
 		d->lines = result.lineStarts.size();
 		d->maxLineLength = result.maxLineLength;
 		d->fileSize = result.fileSize;
+		d->highlighter.setLineCount(d->lines);
+		d->highlighter.invalidateAll();
 		d->buffer.reset(d->path, d->encodingName.toLatin1(),
 			d->lineStarts, d->fileSize, d->maxLineLength);
 		d->ready = true;
@@ -1959,6 +2188,8 @@ void PagedTextEditor::openFile(const QString& path, const QString& encoding) {
 	d->maxLineLength = 0;
 	d->fileSize = 0;
 	d->lineStarts.clear();
+	d->highlighter.setLineCount(0);
+	d->highlighter.invalidateAll();
 	d->rowOffsetPx = 0;
 	d->restoreLine = -1;
 	d->restoreCursorLine = -1;
@@ -2092,6 +2323,8 @@ void PagedTextEditor::newDocument() {
 	d->indexing = false;
 	d->ready = true;
 	d->error.clear();
+	d->highlighter.setLineCount(d->lines);
+	d->highlighter.invalidateAll();
 	d->cursorLine = 0;
 	d->cursorColumn = 0;
 	d->anchorLine = 0;
@@ -2157,7 +2390,7 @@ int PagedTextEditor::cursorVisualRow() const {
 	const QString text = d->visibleText(d->cursorLine);
 	const int column = qMin(d->cursorColumn, text.size());
 	const int layoutWidth = qMax(1, viewport()->width() - d->gutterWidth() - 8);
-	TextLayout layout(text, font(), d->wrapLines, layoutWidth, TextLayout::kDefaultTabWidth);
+	TextLayout layout = d->layoutForLine(d->cursorLine, layoutWidth);
 	return layout.visualRowForColumn(column);
 }
 
@@ -2175,7 +2408,7 @@ bool PagedTextEditor::isCursorVisible() const {
 	int visibleY = -d->rowOffsetPx + cursorY;
 	const int layoutWidth = qMax(1, viewport()->width() - d->gutterWidth() - 8);
 	for (int i = verticalScrollBar()->value(); i < d->cursorLine; i++) {
-		TextLayout layout(d->visibleText(i), font(), d->wrapLines, layoutWidth, TextLayout::kDefaultTabWidth);
+		TextLayout layout = d->layoutForLine(i, layoutWidth);
 		for (int visual = 0; visual < layout.lineCount(); visual++) {
 			visibleY += qMax(1, qCeil(layout.lineAt(visual).height()));
 		}
@@ -2368,7 +2601,9 @@ bool PagedTextEditor::saveAs(const QString& path) {
 	}
 
 	QString error;
-	if (!d->buffer.saveTo(path, &error)) {
+	const int convertTabs = d->saveTabMode == Extensions::TextEdit::TabMode::Spaces
+		? d->tabWidth : 0;
+	if (!d->buffer.saveTo(path, &error, convertTabs)) {
 		emit saved(path, false, error);
 		return false;
 	}
@@ -2524,6 +2759,7 @@ void PagedTextEditor::paste() {
 
 void PagedTextEditor::setHighlightingManager(HighlightingPluginManager* manager) {
 	d->highlightingManager = manager;
+	d->highlighter.setPluginManager(manager);
 	if (manager && !d->path.isEmpty()) {
 		setHighlightingPlugin(manager->pluginForFile(d->path));
 	}
@@ -2732,6 +2968,45 @@ void PagedTextEditor::setLineNumbersVisible(bool visible) {
 	emit lineNumbersVisibleChanged(visible);
 }
 
+int PagedTextEditor::tabWidth() const {
+	return d->tabWidth;
+}
+
+void PagedTextEditor::setTabWidth(int spaces) {
+	const int width = Extensions::TextEdit::normalizedTabWidth(spaces);
+	if (d->tabWidth == width) {
+		return;
+	}
+
+	d->tabWidth = width;
+	d->updateScrollBars();
+	viewport()->update();
+}
+
+Extensions::TextEdit::TabMode PagedTextEditor::tabMode() const {
+	return d->tabMode;
+}
+
+void PagedTextEditor::setTabMode(Extensions::TextEdit::TabMode mode) {
+	d->tabMode = mode;
+}
+
+Extensions::TextEdit::TabMode PagedTextEditor::saveTabMode() const {
+	return d->saveTabMode;
+}
+
+void PagedTextEditor::setSaveTabMode(Extensions::TextEdit::TabMode mode) {
+	d->saveTabMode = mode;
+}
+
+const ITextNavigationStrategy* PagedTextEditor::navigationStrategy() const {
+	return d->navigation;
+}
+
+void PagedTextEditor::setNavigationStrategy(const ITextNavigationStrategy* strategy) {
+	d->navigation = strategy;
+}
+
 void PagedTextEditor::setSearchQuery(const QString& query) {
 	d->startSearch(query, true);
 }
@@ -2842,6 +3117,21 @@ void PagedTextEditor::searchPrevious() {
 	d->selectMatch(index);
 }
 
+bool PagedTextEditor::event(QEvent* event) {
+	// Tab не должен уводить фокус на другой виджет: это отступ в тексте.
+	if (event->type() == QEvent::KeyPress && d->ready && !d->readOnly) {
+		auto* key = static_cast<QKeyEvent*>(event);
+		if (key->key() == Qt::Key_Tab
+			&& (key->modifiers() & (Qt::ControlModifier | Qt::AltModifier
+				| Qt::MetaModifier)) == 0) {
+			keyPressEvent(key);
+			return true;
+		}
+	}
+
+	return QAbstractScrollArea::event(event);
+}
+
 void PagedTextEditor::paintEvent(QPaintEvent* event) {
 	Q_UNUSED(event);
 	QPainter painter(viewport());
@@ -2870,6 +3160,7 @@ void PagedTextEditor::paintEvent(QPaintEvent* event) {
 	model.horizontalScroll = d->wrapLines ? 0 : horizontalScrollBar()->value();
 	model.rowOffsetPx = d->rowOffsetPx;
 	model.gutterWidth = d->gutterWidth();
+	model.tabWidth = d->tabWidth;
 	model.wrapped = d->wrapLines;
 	model.lineNumbers = d->showLineNumbers;
 	model.hasFocus = hasFocus();
@@ -2883,7 +3174,7 @@ void PagedTextEditor::paintEvent(QPaintEvent* event) {
 		if (!d->highlightingEnabled) {
 			return QVector<PagedTextSpan>();
 		}
-		return d->highlighter.spansForLine(d->visibleText(line));
+		return d->highlighter.spansForLine(line, d->visibleText(line));
 	};
 
 	PagedTextRenderer::paint(painter, model);
@@ -2948,6 +3239,12 @@ void PagedTextEditor::mousePressEvent(QMouseEvent* event) {
 	int line = 0;
 	int column = 0;
 	if (!d->positionAt(clickX, clickY, line, column)) {
+		// Щелчок ниже последней строки (пустое место под текстом) ставит
+		// курсор в конец последней строки, как в обычном редакторе.
+		if (clickY >= 0) {
+			const int lastLine = d->logicalLineAtY(clickY);
+			setCursorPosition(lastLine, d->lineAt(lastLine).size(), shift);
+		}
 		event->accept();
 		return;
 	}
@@ -3121,6 +3418,44 @@ void PagedTextEditor::keyPressEvent(QKeyEvent* event) {
 		return;
 	}
 
+	// Ctrl+Left/Right — переход по токенам, Ctrl+Up/Down — прокрутка на
+	// строку без перемещения курсора, Ctrl+Enter — строка выше текущей.
+	if (control && !alt) {
+		switch (event->key()) {
+		case Qt::Key_Left:
+			d->moveCursorsByToken(-1, shift);
+			event->accept();
+			return;
+		case Qt::Key_Right:
+			d->moveCursorsByToken(1, shift);
+			event->accept();
+			return;
+		case Qt::Key_Backspace:
+			d->deleteByToken(-1);
+			event->accept();
+			return;
+		case Qt::Key_Delete:
+			d->deleteByToken(1);
+			event->accept();
+			return;
+		case Qt::Key_Up:
+			d->scrollViewportByLine(-1);
+			event->accept();
+			return;
+		case Qt::Key_Down:
+			d->scrollViewportByLine(1);
+			event->accept();
+			return;
+		case Qt::Key_Return:
+		case Qt::Key_Enter:
+			d->insertLineAbove();
+			event->accept();
+			return;
+		default:
+			break;
+		}
+	}
+
 	// Shift+Alt + стрелки — прямоугольное выделение от верхнего курсора.
 	if (shift && alt) {
 		if (d->handleBlockKey(event->key(), pageStep)) {
@@ -3144,7 +3479,7 @@ void PagedTextEditor::keyPressEvent(QKeyEvent* event) {
 		event->accept();
 		return;
 	case Qt::Key_Tab:
-		insertText(QStringLiteral("\t"));
+		insertText(Extensions::TextEdit::indentText(d->tabWidth, d->tabMode));
 		event->accept();
 		return;
 	default:

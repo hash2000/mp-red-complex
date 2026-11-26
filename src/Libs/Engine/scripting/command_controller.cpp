@@ -6,6 +6,8 @@
 #include "Libs/Engine/console/console_table.h"
 #include "Libs/Engine/console/console_json.h"
 #include "Libs/Engine/scripting/widgets/widget_registry.h"
+#include "Libs/BaseWidgets/editor/navigation/text_navigation.h"
+#include "Libs/BaseWidgets/extensions/text_edit_extensions.h"
 #include "Libs/Engine/ui/doc_tab_panel/document_tabs_order.h"
 #include "Libs/Engine/ui/main_window.h"
 #include "Libs/Resources/resources.h"
@@ -143,6 +145,20 @@ void CommandController::Private::registerSystemOptions() {
 		systemOptions->registerOption(option);
 	};
 
+	auto registerTextEnumOption = [this](const char* name, const QString& title,
+		const QString& description, const QStringList& values,
+		const QStringList& valueTitles, const QString& value) {
+		SystemOption option;
+		option.name = QString::fromLatin1(name);
+		option.title = title;
+		option.description = description;
+		option.type = SystemOptionType::Enum;
+		option.values = values;
+		option.valueTitles = valueTitles;
+		option.defaultValue = value;
+		systemOptions->registerOption(option);
+	};
+
 	registerTextOption(SystemOptions::kDocumentsTextBufferLimit,
 		QStringLiteral("Предел буфера текста, МБ"),
 		QStringLiteral("Сколько памяти отводится под изменённые страницы "
@@ -170,6 +186,40 @@ void CommandController::Private::registerSystemOptions() {
 			"(имя кодека QTextCodec, например UTF-8 или Windows-1251)."),
 		SystemOptionType::Text,
 		QString::fromLatin1(SystemOptions::kDocumentsTextEncodingDefault));
+
+	// Отступы: ширина табуляции и стратегии при наборе Tab и при сохранении.
+	registerTextOption(SystemOptions::kDocumentsTextTabSpaces,
+		QStringLiteral("Ширина отступа, символов"),
+		QStringLiteral("Сколько пробелов ставится нажатием Tab и какому числу "
+			"символов равна табуляция."),
+		SystemOptionType::Integer, SystemOptions::kDocumentsTextTabSpacesDefault);
+	registerTextEnumOption(SystemOptions::kDocumentsTextTabEdit,
+		QStringLiteral("Tab при наборе"),
+		QStringLiteral("Вставлять пробелы или символ табуляции при нажатии Tab."),
+		Extensions::TextEdit::tabModeIds(), Extensions::TextEdit::tabModeTitles(),
+		QString::fromLatin1(SystemOptions::kDocumentsTextTabModeSpaces));
+	registerTextEnumOption(SystemOptions::kDocumentsTextTabSave,
+		QStringLiteral("Табы при сохранении"),
+		QStringLiteral("Как сохранять ведущие табуляции: пробелами "
+			"(по ширине отступа) или как есть."),
+		Extensions::TextEdit::tabModeIds(), Extensions::TextEdit::tabModeTitles(),
+		QString::fromLatin1(SystemOptions::kDocumentsTextTabModeSpaces));
+
+	// Стратегия перемещения по токенам (Ctrl+Left/Right): значения берутся
+	// из реестра стратегий, поэтому новая стратегия сама появится в настройках.
+	TextNavigationStrategyRegistry navigationStrategies;
+	QStringList navigationIds;
+	QStringList navigationTitles;
+	for (auto* strategy : navigationStrategies.strategies()) {
+		navigationIds << strategy->id();
+		navigationTitles << strategy->title();
+	}
+	registerTextEnumOption(SystemOptions::kDocumentsTextNavigation,
+		QStringLiteral("Перемещение по токенам"),
+		QStringLiteral("Стратегия Ctrl+Left/Right: по словам или по другому "
+			"правилу из реестра стратегий."),
+		navigationIds, navigationTitles,
+		QString::fromLatin1(SystemOptions::kDocumentsTextNavigationDefault));
 }
 
 void CommandController::init() {

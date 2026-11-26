@@ -32,5 +32,17 @@ TextDocumentOptions TextDocumentOptions::fromContext(
 	options.bufferLimitMb = qMax(0, optionValue(context,
 		SystemOptions::kDocumentsTextBufferLimit,
 		SystemOptions::kDocumentsTextBufferLimitDefaultMb).toInt());
+	options.tabSpaces = qMax(1, optionValue(context,
+		SystemOptions::kDocumentsTextTabSpaces,
+		SystemOptions::kDocumentsTextTabSpacesDefault).toInt());
+	options.tabEdit = Extensions::TextEdit::tabModeFromString(optionValue(context,
+		SystemOptions::kDocumentsTextTabEdit,
+		QString::fromLatin1(SystemOptions::kDocumentsTextTabModeSpaces)).toString());
+	options.tabSave = Extensions::TextEdit::tabModeFromString(optionValue(context,
+		SystemOptions::kDocumentsTextTabSave,
+		QString::fromLatin1(SystemOptions::kDocumentsTextTabModeSpaces)).toString());
+	options.navigation = optionValue(context,
+		SystemOptions::kDocumentsTextNavigation,
+		QString::fromLatin1(SystemOptions::kDocumentsTextNavigationDefault)).toString();
 	return options;
 }

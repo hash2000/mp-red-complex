@@ -1,4 +1,5 @@
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_document_buffer.h"
+#include "Libs/BaseWidgets/extensions/text_edit_extensions.h"
 
 #include <QDataStream>
 #include <QDir>
@@ -797,7 +798,12 @@ bool PagedDocumentBuffer::spillPage(int pageIndex) const {
 	return true;
 }
 
-bool PagedDocumentBuffer::saveTo(const QString& targetPath, QString* error) const {
+bool PagedDocumentBuffer::saveTo(const QString& targetPath, QString* error,
+	int convertTabsToSpaces) const {
+	if (convertTabsToSpaces > 0) {
+		return saveWithIndentConversion(targetPath, error, convertTabsToSpaces);
+	}
+
 	if (targetPath.isEmpty()) {
 		if (error) {
 			*error = QStringLiteral("Не задан путь для сохранения");
@@ -928,6 +934,75 @@ bool PagedDocumentBuffer::saveTo(const QString& targetPath, QString* error) cons
 	// Исходный файл нужно закрыть до commit(): QSaveFile переименовывает
 	// временный файл поверх целевого, а на Windows открытый файл этому мешает.
 	source.close();
+
+	if (!failed && !output.commit()) {
+		failed = true;
+	}
+
+	if (failed) {
+		if (error) {
+			*error = QStringLiteral("Не удалось записать файл: %1")
+				.arg(output.errorString());
+		}
+		output.cancelWriting();
+		return false;
+	}
+
+	return true;
+}
+
+bool PagedDocumentBuffer::saveWithIndentConversion(const QString& targetPath,
+	QString* error, int spaces) const {
+	if (targetPath.isEmpty()) {
+		if (error) {
+			*error = QStringLiteral("Не задан путь для сохранения");
+		}
+		return false;
+	}
+
+	QSaveFile output(targetPath);
+	if (!output.open(QIODevice::WriteOnly)) {
+		if (error) {
+			*error = QStringLiteral("Не удалось открыть файл для записи: %1")
+				.arg(output.errorString());
+		}
+		return false;
+	}
+
+	QTextCodec* codec = codecForName(codecName);
+	if (!codec) {
+		if (error) {
+			*error = QStringLiteral("Не удалось подобрать кодировку: %1")
+				.arg(QString::fromLatin1(codecName));
+		}
+		output.cancelWriting();
+		return false;
+	}
+
+	ensurePrefix();
+	const int totalLines = prefix.isEmpty() ? 0 : prefix.last();
+	bool failed = false;
+
+	if (bom && codecName == "UTF-8" && totalLines > 0) {
+		if (output.write("\xEF\xBB\xBF", 3) != 3) {
+			failed = true;
+		}
+	}
+
+	const QByteArray newline = codec->fromUnicode(defaultNewline);
+	for (int line = 0; line < totalLines && !failed; line++) {
+		const QString converted = Extensions::TextEdit::convertLeadingTabsToSpaces(
+			lineAt(line), spaces);
+		const QByteArray encoded = codec->fromUnicode(converted);
+		if (output.write(encoded) != encoded.size()) {
+			failed = true;
+			break;
+		}
+		if (line + 1 < totalLines && output.write(newline) != newline.size()) {
+			failed = true;
+			break;
+		}
+	}
 
 	if (!failed && !output.commit()) {
 		failed = true;

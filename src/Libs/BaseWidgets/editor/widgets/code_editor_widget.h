@@ -1,4 +1,6 @@
 #pragma once
+#include "Libs/BaseWidgets/extensions/text_edit_extensions.h"
+
 #include <QPlainTextEdit>
 #include <QWheelEvent>
 #include <memory>
@@ -6,6 +8,7 @@
 class HighlightingPlugin;
 class HighlightingPluginManager;
 class FormatterPluginManager;
+class ITextNavigationStrategy;
 
 /// Базовый редактор кода: подсветка текста по типу разметки и
 /// форматирование внешней утилитой.
@@ -96,6 +99,17 @@ public:
 	int fontSize() const;
 	void setFontSize(int size);
 
+	/// Ширина отступа и табуляции в символах.
+	int tabWidth() const;
+	void setTabWidth(int spaces);
+	/// Что вставляет Tab: пробелы или '\t'.
+	Extensions::TextEdit::TabMode tabMode() const;
+	void setTabMode(Extensions::TextEdit::TabMode mode);
+
+	/// Стратегия Ctrl+Left/Right; nullptr — встроенная стратегия по словам.
+	const ITextNavigationStrategy* navigationStrategy() const;
+	void setNavigationStrategy(const ITextNavigationStrategy* strategy);
+
 	/// Кодировка файла для чтения и сохранения.
 	struct EncodingInfo {
 		/// Имя кодека для QTextCodec (например, "Windows-1251").
@@ -114,8 +128,10 @@ public:
 	const HighlightingPlugin* highlightingPlugin() const;
 
 protected:
+	bool event(QEvent* event) override;
 	void wheelEvent(QWheelEvent* event) override;
 	void resizeEvent(QResizeEvent* event) override;
+	void keyPressEvent(QKeyEvent* event) override;
 
 signals:
 	void formattedFailed(const QString& errorMessage);

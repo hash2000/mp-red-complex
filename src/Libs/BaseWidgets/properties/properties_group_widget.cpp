@@ -2,8 +2,12 @@
 
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QPointer>
 #include <QPushButton>
+#include <QScrollArea>
+#include <QScrollBar>
 #include <QSignalBlocker>
+#include <QTimer>
 #include <QVBoxLayout>
 
 struct PropertiesGroupWidget::Private {
@@ -25,6 +29,22 @@ struct PropertiesGroupWidget::Private {
 	/// Создаёт ленивое содержимое, если группа раскрыта и оно ещё не создано.
 	void ensureContent();
 };
+
+namespace {
+
+/// Ближайшая прокручиваемая область: при раскрытии группы сохраняем её
+/// позицию, иначе QScrollArea успевает «дёрнуться» к началу.
+QScrollArea* enclosingScrollArea(QWidget* widget) {
+	for (QWidget* parent = widget ? widget->parentWidget() : nullptr; parent;
+		parent = parent->parentWidget()) {
+		if (auto* area = qobject_cast<QScrollArea*>(parent)) {
+			return area;
+		}
+	}
+	return nullptr;
+}
+
+} // namespace
 
 void PropertiesGroupWidget::Private::ensureContent() {
 	if (content || !factory) {
@@ -167,6 +187,11 @@ void PropertiesGroupWidget::setExpanded(bool expanded) {
 	const bool changed = d->expanded != expanded;
 	d->expanded = expanded;
 
+	// Раскрытие меняет высоту содержимого. QScrollArea при этом может
+	// пересчитать положение и «прыгнуть» в начало — сохраняем прокрутку.
+	QScrollArea* scroll = enclosingScrollArea(this);
+	const int scrollValue = scroll ? scroll->verticalScrollBar()->value() : 0;
+
 	if (d->header) {
 		// Программное изменение состояния не должно снова вызывать setExpanded().
 		const QSignalBlocker blocker(d->header);
@@ -188,6 +213,23 @@ void PropertiesGroupWidget::setExpanded(bool expanded) {
 	}
 
 	updateHeader();
+
+	if (scroll) {
+		if (QWidget* content = scroll->widget()) {
+			if (auto* layout = content->layout()) {
+				layout->activate();
+			}
+		}
+		scroll->verticalScrollBar()->setValue(scrollValue);
+
+		// Полная перестройка раскладки происходит в следующем цикле событий.
+		QPointer<QScrollArea> guard(scroll);
+		QTimer::singleShot(0, this, [guard, scrollValue] {
+			if (guard) {
+				guard->verticalScrollBar()->setValue(scrollValue);
+			}
+		});
+	}
 
 	if (changed) {
 		emit expandedChanged(expanded);

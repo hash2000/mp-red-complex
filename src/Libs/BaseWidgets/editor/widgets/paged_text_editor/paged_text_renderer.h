@@ -1,4 +1,5 @@
 #pragma once
+#include "Libs/BaseWidgets/editor/layout/text_layout.h"
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_search.h"
 #include "Libs/BaseWidgets/editor/widgets/paged_text_editor/paged_text_highlighter.h"
 
@@ -37,6 +38,7 @@ struct PagedTextPaintModel {
 	int horizontalScroll = 0;
 	int rowOffsetPx = 0;
 	int gutterWidth = 0;
+	int tabWidth = TextLayout::kDefaultTabWidth;
 	bool wrapped = false;
 	bool lineNumbers = true;
 	bool hasFocus = false;

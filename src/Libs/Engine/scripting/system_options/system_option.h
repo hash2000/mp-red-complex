@@ -26,6 +26,19 @@ constexpr const char* kDocumentsTextFontFamily = "documents.text.font.family";
 /// Кодировка чтения и записи файла (имя кодека QTextCodec).
 constexpr const char* kDocumentsTextEncoding = "documents.text.encoding";
 constexpr const char* kDocumentsTextEncodingDefault = "UTF-8";
+/// Размер отступа при нажатии Tab и ширина табуляции в символах.
+constexpr const char* kDocumentsTextTabSpaces = "documents.text.tab.spaces";
+constexpr int kDocumentsTextTabSpacesDefault = 2;
+/// Стратегия Tab при наборе: spaces — пробелы, tabs — символ '\t'.
+constexpr const char* kDocumentsTextTabEdit = "documents.text.tab.edit";
+/// Стратегия сохранения ведущих табов: spaces — пробелы, tabs — как есть.
+constexpr const char* kDocumentsTextTabSave = "documents.text.tab.save";
+constexpr const char* kDocumentsTextTabModeSpaces = "spaces";
+constexpr const char* kDocumentsTextTabModeTabs = "tabs";
+/// Стратегия перемещения по токенам (Ctrl+Left/Right): идентификатор из
+/// TextNavigationStrategyRegistry.
+constexpr const char* kDocumentsTextNavigation = "documents.text.navigation";
+constexpr const char* kDocumentsTextNavigationDefault = "words";
 } // namespace SystemOptions
 
 /// Тип значения системного параметра: по нему выбирается редактор в UI.

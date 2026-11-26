@@ -15,6 +15,7 @@
 #include <QLineEdit>
 #include <QPointer>
 #include <QScrollArea>
+#include <QSet>
 #include <QShowEvent>
 #include <QTimer>
 #include <QToolButton>
@@ -312,27 +313,66 @@ QList<PropertyData> PropertiesPanel::Private::contextProperties() const {
 		return result;
 	}
 
-	const auto own = context->ownVariables();
+	QSet<QString> seen;
+	const auto append = [this, &context, &result, &seen](
+		const std::shared_ptr<CommandContext>& source, bool own) {
+		if (!source) {
+			return;
+		}
+
+		const QVariantMap variables = source->ownVariables();
+		for (auto it = variables.cbegin(); it != variables.cend(); it++) {
+			if (seen.contains(it.key())) {
+				continue;
+			}
+			seen.insert(it.key());
+
+			PropertyData data;
+			data.id = it.key();
+			data.label = it.key();
+			data.type = PropertyType::Text;
+			data.value = variableValueText(it.value());
+			data.readOnly = true;
+
+			QStringList hints;
+			hints << (own
+				? PropertiesPanel::tr("собственная переменная")
+				: PropertiesPanel::tr("унаследована"));
+
+			const auto mimeType = context->variableMimeType(it.key());
+			if (!mimeType.isEmpty()) {
+				hints << mimeType;
+			}
+
+			data.tooltip = hints.join(QStringLiteral(", "));
+			result << data;
+		}
+	};
+
+	// Сначала собственные переменные текущего контекста, затем — по цепочке
+	// родителей, от ближайшего к глобальному.
+	append(context, true);
+	for (auto parent = context->parentContext(); parent;
+		parent = parent->parentContext()) {
+		append(parent, false);
+	}
+
+	// Значения, которые видны, но не являются собственными ни у одного
+	// контекста цепочки (например, подставленные interceptor'ом).
 	const auto visible = context->variables();
 	for (auto it = visible.cbegin(); it != visible.cend(); it++) {
+		if (seen.contains(it.key())) {
+			continue;
+		}
+		seen.insert(it.key());
+
 		PropertyData data;
 		data.id = it.key();
 		data.label = it.key();
 		data.type = PropertyType::Text;
 		data.value = variableValueText(it.value());
 		data.readOnly = true;
-
-		QStringList hints;
-		hints << (own.contains(it.key())
-			? PropertiesPanel::tr("собственная переменная")
-			: PropertiesPanel::tr("унаследована"));
-
-		const auto mimeType = context->variableMimeType(it.key());
-		if (!mimeType.isEmpty()) {
-			hints << mimeType;
-		}
-
-		data.tooltip = hints.join(QStringLiteral(", "));
+		data.tooltip = PropertiesPanel::tr("унаследована");
 		result << data;
 	}
 

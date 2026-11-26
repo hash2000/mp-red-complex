@@ -23,7 +23,7 @@ tabs:
     Content.TextEditor.CodeEditor: "#61afef"
     code-editor: "#61afef"
     Content.TextEditor.PagedText: "#61afef"
-    large-text-viewer: "#61afef"
+    text-editor: "#61afef"
 
     # SystemRouter
     Content.SystemRouter.SystemRouterTree: "#e06c75"
@@ -71,7 +71,7 @@ tabs:
     Content.TextEditor.CodeEditor: "📝"
     code-editor: "📝"
     Content.TextEditor.PagedText: "📝"
-    large-text-viewer: "📝"
+    text-editor: "📝"
 
     # SystemRouter
     Content.SystemRouter.SystemRouterTree: "🗂"

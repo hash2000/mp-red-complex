@@ -1,10 +1,16 @@
 #include "Libs/BaseWidgets/editor/highlights/highlighter_plugin.h"
 #include "Libs/BaseWidgets/editor/highlights/theme_highlighter_plugin.h"
+#include "Libs/BaseWidgets/editor/highlights/highlighter.h"
+#include "Libs/BaseWidgets/editor/highlights/highlighter_plugin_manager.h"
 #include "Libs/BaseWidgets/editor/language_info.h"
+#include "Libs/Resources/resources.h"
 
 #include <QDir>
 #include <QFile>
 #include <QTemporaryDir>
+#include <QTextBlock>
+#include <QTextDocument>
+#include <QTextLayout>
 #include <QtTest/QtTest>
 
 #include <memory>
@@ -40,6 +46,8 @@ private slots:
 	void themeDirectoryIsLoaded();
 	void jsonRulesComeFromTheme();
 	void markdownEmbeddedBlockIsParsed();
+	void htmlEmbeddedBlocksAreParsed();
+	void htmlEmbeddedBlocksHighlighted();
 	void pluginWithoutRulesIsStillLoaded();
 	void missingDirectoryLoadsNothing();
 };
@@ -103,6 +111,87 @@ void TestHighlighters::markdownEmbeddedBlockIsParsed() {
 	}
 	// Язык извлекается из первой группы захвата начала блока.
 	QVERIFY(languageResolved);
+}
+
+void TestHighlighters::htmlEmbeddedBlocksAreParsed() {
+	auto plugins = ThemeHighlighterPlugin::loadDirectory(themeHighlightersDir());
+	auto* html = findPlugin(plugins, QStringLiteral("text/html"));
+	QVERIFY(html);
+	QVERIFY(html->hasEmbeddedRules());
+
+	// Открывающий тег без type= подсвечивается как вложенный блок без языка.
+	const auto startMatches = html->matchesEmbeddedBlock(QStringLiteral("  <script"));
+	QVERIFY(!startMatches.empty());
+	bool genericStart = false;
+	for (const auto& match : startMatches) {
+		if (match.type == HighlightingPlugin::HighlightingMatch::Type::Start
+			&& match.language.isEmpty()) {
+			genericStart = true;
+		}
+	}
+	QVERIFY(genericStart);
+
+	const auto endMatches = html->matchesEmbeddedBlock(QStringLiteral("  >"));
+	QVERIFY(!endMatches.empty());
+
+	// У JSON-блока язык по-прежнему задан.
+	const auto jsonStart = html->matchesEmbeddedBlock(
+		QStringLiteral("<script type=\"application/json\">"));
+	bool jsonLanguage = false;
+	for (const auto& match : jsonStart) {
+		if (match.language == QStringLiteral("json")) {
+			jsonLanguage = true;
+		}
+	}
+	QVERIFY(jsonLanguage);
+}
+
+void TestHighlighters::htmlEmbeddedBlocksHighlighted() {
+	Resources resources;
+	resources.Directories.set(QStringLiteral("path.theme"),
+		QDir(themeHighlightersDir()).absoluteFilePath(QStringLiteral("..")));
+	HighlightingPluginManager manager(&resources);
+
+	QTextDocument document;
+	Highlighter highlighter(&manager, &document);
+	document.setPlainText(QStringLiteral(
+		"  <script\n    src=\"/captcha\"\n  ></script>"));
+	highlighter.setLanguage(QStringLiteral("html"));
+	highlighter.rehighlight();
+
+	const auto formats = [&document](int block) {
+		return document.findBlockByNumber(block).layout()->formats();
+	};
+
+	const QColor tagColor(QStringLiteral("#569CD6"));
+	const auto covers = [&tagColor](const QVector<QTextLayout::FormatRange>& ranges,
+		int start, int end) {
+		for (int position = start; position < end; position++) {
+			bool covered = false;
+			for (const auto& range : ranges) {
+				if (position >= range.start && position < range.start + range.length
+					&& range.format.foreground().color() == tagColor) {
+					covered = true;
+					break;
+				}
+			}
+			if (!covered) {
+				return false;
+			}
+		}
+		return true;
+	};
+
+	// Многострочный <script ...>: имя тега на первой строке.
+	QVERIFY(covers(formats(0), 2, 9));
+
+	// Строка с атрибутом подсвечивается обычными правилами HTML.
+	QVERIFY(!formats(1).isEmpty());
+
+	// Закрывающая скобка тега и завершающий тег.
+	const auto closing = formats(2);
+	QVERIFY(covers(closing, 2, 3));
+	QVERIFY(covers(closing, 3, 12));
 }
 
 void TestHighlighters::pluginWithoutRulesIsStillLoaded() {
