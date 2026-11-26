@@ -1,22 +1,35 @@
 #include "Content/SystemRouter/documents/system_router_node_properties_document.h"
+#include "Content/SystemRouter/documents/system_router_node_view_document.h"
 #include "Content/SystemRouter/documents/system_router_tree_document.h"
 #include "Content/SystemRouter/models/system_router_mime.h"
 #include "Content/SystemRouter/services/system_router_command_service.h"
 #include "Content/SystemRouter/services/system_router_service.h"
+#include "Content/SystemRouter/widgets/system_router_node_view_widget.h"
 #include "Content/SystemRouter/widgets/system_router_script_dialog.h"
 #include "Content/SystemRouter/widgets/system_router_tree_widget.h"
 #include "Libs/BaseWidgets/properties/properties_list_widget.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_node_glyph.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_view.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_widget.h"
+#include "Libs/Engine/scripting/command_context.h"
+#include "Libs/Engine/scripting/command_controller.h"
+#include "Libs/Engine/scripting/command_processor.h"
+#include "Libs/Engine/services/services_registry.h"
+#include "Libs/Engine/ui/main_window.h"
 #include "basewidgets/mock_lazy_tree_provider.h"
 
+#include <QApplication>
 #include <QCheckBox>
+#include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QPlainTextEdit>
+#include <QPushButton>
+#include <QScrollArea>
+#include <QScrollBar>
 #include <QStandardItemModel>
 #include <QToolButton>
+#include <QVBoxLayout>
 #include <QtTest/QtTest>
 
 #include <memory>
@@ -65,6 +78,42 @@ public:
 		return false;
 	}
 };
+
+/// Контроллер команд без процессора и сервисов: нужен только для контекста
+/// документов и оболочки MainWindow в тестах активации узла.
+class TestCommandController : public CommandController {
+public:
+	TestCommandController()
+		: CommandController(nullptr, nullptr) {
+	}
+
+	~TestCommandController() override = default;
+
+	CommandProcessor* commandProcessor() const override {
+		return nullptr;
+	}
+
+	ServicesRegistry* services() const override {
+		return nullptr;
+	}
+
+private:
+	void initContext() override {
+	}
+};
+
+/// Значение редактора PropertiesListWidget/просмотра по идентификатору
+/// свойства.
+template<typename T>
+T* findEditorByProperty(QWidget* root, const QString& propertyId) {
+	for (auto* child : root->findChildren<T*>()) {
+		if (child->property("propertyId").toString() == propertyId) {
+			return child;
+		}
+	}
+
+	return nullptr;
+}
 } // namespace
 
 class TestSystemRouter : public QObject {
@@ -83,6 +132,13 @@ private slots:
 	void codeEditorPropertyUsesButton();
 	void doubleClickEmitsNodeActivated();
 	void doubleClickWithoutCommandTogglesNode();
+	void doubleClickWithParametersOpensView();
+	void doubleClickWithHiddenParametersTogglesNode();
+	void nodeViewDocumentShowsSortedParameters();
+	void nodeViewCopyButtonsCopyNameAndValue();
+	void nodeViewKeepsRowsAtTopAndScrolls();
+	void nodeViewRefreshesOnNodeChange();
+	void scriptDialogOffersView();
 	void commandServiceCrud();
 	void rendersScriptParameters();
 	void previewsForNodeFindsCommands();
@@ -356,6 +412,333 @@ void TestSystemRouter::doubleClickWithoutCommandTogglesNode() {
 	QVERIFY(QMetaObject::invokeMethod(view, "activated", Qt::DirectConnection,
 		Q_ARG(QModelIndex, index)));
 	QVERIFY(!view->isExpanded(index));
+}
+
+void TestSystemRouter::doubleClickWithParametersOpensView() {
+	auto root = _service->createItem(QVariant(), QStringLiteral("Root"));
+	QVERIFY(root);
+	QVERIFY(root->setProperty(QStringLiteral("title"), QStringLiteral("Текст")));
+	QVERIFY(root->setPropertyMimeTypes(QStringLiteral("title"),
+		{ QStringLiteral("text/plain") }));
+	QVERIFY(_service->updateItem(root));
+	_provider->setChildren(QVariant(), { root });
+
+	// Оболочка нужна документу: он создаёт просмотр через MainWindow.
+	TestCommandController controller;
+	MainWindow window(controller.globalContext(), nullptr, false);
+
+	SystemRouterTreeDocument document(_service.get(), nullptr);
+	document.setContext(controller.globalContext()->createScopedContext(
+		QStringLiteral("system-router-view-test")));
+
+	auto* view = document.tree()->treeView();
+	auto* model = qobject_cast<QStandardItemModel*>(view->model());
+	QVERIFY(model);
+	const QModelIndex index = model->index(0, 0);
+	QVERIFY(index.isValid());
+
+	QVERIFY(QMetaObject::invokeMethod(view, "activated", Qt::DirectConnection,
+		Q_ARG(QModelIndex, index)));
+
+	const auto documentId = QStringLiteral("system-router-node-view-%1")
+		.arg(root->id().toString());
+	auto* viewDocument = qobject_cast<SystemRouterNodeViewDocument*>(window.document(documentId));
+	QVERIFY(viewDocument);
+	QCOMPARE(viewDocument->nodeId(), root->id());
+	QVERIFY(viewDocument->view());
+	QCOMPARE(viewDocument->view()->propertyNames(),
+		QStringList({ QStringLiteral("title") }));
+	QCOMPARE(viewDocument->title(), QStringLiteral("Просмотр: Root"));
+}
+
+void TestSystemRouter::doubleClickWithHiddenParametersTogglesNode() {
+	auto root = _service->createItem(QVariant(), QStringLiteral("Root"));
+	QVERIFY(root);
+	QVERIFY(root->setProperty(QStringLiteral("internal"), QStringLiteral("служебное")));
+	QVERIFY(root->setPropertyMimeTypes(QStringLiteral("internal"),
+		{ QString::fromLatin1(SystemRouterMime::kHidden), QStringLiteral("text/plain") }));
+	QVERIFY(_service->updateItem(root));
+
+	auto child = _service->createItem(root->id(), QStringLiteral("Child"));
+	QVERIFY(child);
+
+	// Узел ленивый: у него есть дочерний элемент для разворачивания.
+	root->setChildren(LazyTreeNodeList());
+	_provider->setChildren(QVariant(), { root });
+	_provider->setChildren(root->id(), { child });
+
+	SystemRouterTreeDocument document(_service.get(), nullptr);
+	auto* view = document.tree()->treeView();
+	auto* model = qobject_cast<QStandardItemModel*>(view->model());
+	QVERIFY(model);
+	const QModelIndex index = model->index(0, 0);
+	QVERIFY(index.isValid());
+
+	QVERIFY(!view->isExpanded(index));
+	QVERIFY(QMetaObject::invokeMethod(view, "activated", Qt::DirectConnection,
+		Q_ARG(QModelIndex, index)));
+	QVERIFY(view->isExpanded(index));
+}
+
+void TestSystemRouter::nodeViewDocumentShowsSortedParameters() {
+	auto item = _service->createItem(QVariant(), QStringLiteral("Узел"));
+	QVERIFY(item);
+	QVERIFY(item->setProperty(QStringLiteral("title"), QStringLiteral("Текст")));
+	QVERIFY(item->setPropertyMimeTypes(QStringLiteral("title"),
+		{ QStringLiteral("text/plain") }));
+	QVERIFY(item->setProperty(QStringLiteral("count"), 3));
+	QVERIFY(item->setPropertyMimeTypes(QStringLiteral("count"),
+		{ QStringLiteral("application/x-integer") }));
+	QVERIFY(item->setProperty(QStringLiteral("token"), QStringLiteral("секрет")));
+	QVERIFY(item->setPropertyMimeTypes(QStringLiteral("token"),
+		{ QString::fromLatin1(SystemRouterMime::kSecret), QStringLiteral("text/plain") }));
+	QVERIFY(item->setProperty(QStringLiteral("internal"), QStringLiteral("служебное")));
+	QVERIFY(item->setPropertyMimeTypes(QStringLiteral("internal"),
+		{ QString::fromLatin1(SystemRouterMime::kHidden), QStringLiteral("text/plain") }));
+	QVERIFY(item->setProperty(LazyTreeNodeGlyph::propertyName(), QStringLiteral("⚙")));
+	QVERIFY(item->setPropertyMimeTypes(LazyTreeNodeGlyph::propertyName(),
+		{ QStringLiteral("text/plain") }));
+	QVERIFY(item->setProperty(QStringLiteral("script"), kCommandId));
+	QVERIFY(item->setPropertyMimeTypes(QStringLiteral("script"),
+		{ QString::fromLatin1(SystemRouterMime::kCommand) }));
+	QVERIFY(_service->updateItem(item));
+
+	MockCommandsProvider commandProvider;
+	commandProvider.stored.append(SystemRouterCommand{ kCommandId, 2,
+		QStringLiteral("Авторизация"), QStringLiteral("authorize url={{url}}") });
+	SystemRouterCommandService commandService(&commandProvider);
+
+	SystemRouterNodeViewDocument document(_service.get(), &commandService, item->id());
+	auto* view = document.view();
+	QVERIFY(view);
+	QCOMPARE(view->propertyNames(), QStringList({ QStringLiteral("count"),
+		QStringLiteral("script"), QStringLiteral("title"), QStringLiteral("token") }));
+	QCOMPARE(document.title(), QStringLiteral("Просмотр: Узел"));
+
+	// Информация об узле: глиф, название и идентификатор — отдельными метками.
+	auto* glyphLabel = view->findChild<QLabel*>(QStringLiteral("SystemRouterNodeViewGlyph"));
+	QVERIFY(glyphLabel);
+	QCOMPARE(glyphLabel->text(), QStringLiteral("⚙"));
+
+	auto* nameLabel = view->findChild<QLabel*>(QStringLiteral("SystemRouterNodeViewNodeName"));
+	QVERIFY(nameLabel);
+	QCOMPARE(nameLabel->text(), QStringLiteral("Узел"));
+
+	auto* idLabel = view->findChild<QLabel*>(QStringLiteral("SystemRouterNodeViewNodeId"));
+	QVERIFY(idLabel);
+	QVERIFY(idLabel->text().contains(item->id().toString()));
+
+	// Число показывается редактором значения.
+	auto* countEditor = findEditorByProperty<QLineEdit>(view, QStringLiteral("count"));
+	QVERIFY(countEditor);
+	QCOMPARE(countEditor->text(), QStringLiteral("3"));
+
+	// Для ссылки на команду показывается текст скрипта, а не GUID блока.
+	auto* commandEditor = findEditorByProperty<QPlainTextEdit>(view, QStringLiteral("script"));
+	QVERIFY(commandEditor);
+	QCOMPARE(commandEditor->toPlainText(), QStringLiteral("authorize url={{url}}"));
+	QVERIFY(!commandEditor->toPlainText().contains(kCommandId));
+	QVERIFY(commandEditor->toolTip().contains(QStringLiteral("Авторизация")));
+
+	// Секретный параметр виден, но значение скрыто.
+	auto* secretLabel = findEditorByProperty<QLabel>(view, QStringLiteral("token"));
+	QVERIFY(secretLabel);
+	QVERIFY(secretLabel->text().contains(QStringLiteral("скрыто")));
+
+	// Скрытый параметр и глиф в просмотр не попадают.
+	QVERIFY(findEditorByProperty<QWidget>(view, QStringLiteral("internal")) == nullptr);
+	QVERIFY(findEditorByProperty<QWidget>(view, LazyTreeNodeGlyph::propertyName()) == nullptr);
+}
+
+void TestSystemRouter::nodeViewCopyButtonsCopyNameAndValue() {
+	auto item = _service->createItem(QVariant(), QStringLiteral("Узел"));
+	QVERIFY(item);
+	QVERIFY(item->setProperty(QStringLiteral("title"), QStringLiteral("Текст")));
+	QVERIFY(item->setPropertyMimeTypes(QStringLiteral("title"),
+		{ QStringLiteral("text/plain") }));
+	QVERIFY(item->setProperty(QStringLiteral("token"), QStringLiteral("секрет")));
+	QVERIFY(item->setPropertyMimeTypes(QStringLiteral("token"),
+		{ QString::fromLatin1(SystemRouterMime::kSecret), QStringLiteral("text/plain") }));
+	QVERIFY(item->setProperty(QStringLiteral("script"), kCommandId));
+	QVERIFY(item->setPropertyMimeTypes(QStringLiteral("script"),
+		{ QString::fromLatin1(SystemRouterMime::kCommand) }));
+	QVERIFY(_service->updateItem(item));
+
+	MockCommandsProvider commandProvider;
+	commandProvider.stored.append(SystemRouterCommand{ kCommandId, 2,
+		QStringLiteral("Авторизация"), QStringLiteral("authorize url={{url}}") });
+	SystemRouterCommandService commandService(&commandProvider);
+
+	SystemRouterNodeViewDocument document(_service.get(), &commandService, item->id());
+	auto* view = document.view();
+	QVERIFY(view);
+
+	// Сигнал виджета — контракт копирования: системный буфер обмена может быть
+	// недоступен в среде тестов, а подготовленный текст — всегда.
+	QSignalSpy spy(view, &SystemRouterNodeViewWidget::copied);
+
+	const auto findCopyButton = [view](const QString& objectName, const QString& name) -> QToolButton* {
+		for (auto* button : view->findChildren<QToolButton*>(objectName)) {
+			if (button->property("propertyId").toString() == name) {
+				return button;
+			}
+		}
+		return nullptr;
+	};
+
+	auto* copyName = findCopyButton(QStringLiteral("SystemRouterNodeViewCopyName"),
+		QStringLiteral("title"));
+	QVERIFY(copyName);
+	QVERIFY(copyName->isEnabled());
+	copyName->click();
+	QCOMPARE(spy.count(), 1);
+	QCOMPARE(spy.at(0).at(0).toString(), QStringLiteral("title"));
+
+	auto* copyValue = findCopyButton(QStringLiteral("SystemRouterNodeViewCopyValue"),
+		QStringLiteral("title"));
+	QVERIFY(copyValue);
+	QVERIFY(copyValue->isEnabled());
+	copyValue->click();
+	QCOMPARE(spy.count(), 2);
+	QCOMPARE(spy.at(1).at(0).toString(), QStringLiteral("Текст"));
+
+	// Значение секретного параметра скопировать нельзя.
+	auto* secretCopy = findCopyButton(QStringLiteral("SystemRouterNodeViewCopyValue"),
+		QStringLiteral("token"));
+	QVERIFY(secretCopy);
+	QVERIFY(!secretCopy->isEnabled());
+	secretCopy->click();
+	QCOMPARE(spy.count(), 2);
+
+	// Для параметра-команды копируется текст скрипта, а не GUID блока.
+	auto* scriptCopy = findCopyButton(QStringLiteral("SystemRouterNodeViewCopyValue"),
+		QStringLiteral("script"));
+	QVERIFY(scriptCopy);
+	QVERIFY(scriptCopy->isEnabled());
+	scriptCopy->click();
+	QCOMPARE(spy.count(), 3);
+	QCOMPARE(spy.at(2).at(0).toString(), QStringLiteral("authorize url={{url}}"));
+}
+
+void TestSystemRouter::nodeViewKeepsRowsAtTopAndScrolls() {
+	auto item = _service->createItem(QVariant(), QStringLiteral("Узел"));
+	QVERIFY(item);
+	for (int i = 0; i < 40; i++) {
+		const auto name = QStringLiteral("param%1").arg(i, 2, 10, QLatin1Char('0'));
+		QVERIFY(item->setProperty(name, i));
+		QVERIFY(item->setPropertyMimeTypes(name,
+			{ QStringLiteral("application/x-integer") }));
+	}
+	QVERIFY(_service->updateItem(item));
+
+	SystemRouterNodeViewDocument document(_service.get(), nullptr, item->id());
+	document.resize(420, 200);
+	document.show();
+	QApplication::processEvents();
+
+	auto* content = document.findChild<QWidget*>(
+		QStringLiteral("SystemRouterNodeViewContent"));
+	QVERIFY(content);
+	auto* contentLayout = qobject_cast<QVBoxLayout*>(content->layout());
+	QVERIFY(contentLayout);
+
+	// Свободное место по вертикали забирает распорка в конце списка:
+	// блоки параметров остаются компактными у верхнего края.
+	const auto lastItem = contentLayout->itemAt(contentLayout->count() - 1);
+	QVERIFY(lastItem);
+	QVERIFY(lastItem->spacerItem() != nullptr);
+
+	auto* scroll = document.findChild<QScrollArea*>(
+		QStringLiteral("SystemRouterNodeViewScroll"));
+	QVERIFY(scroll);
+	QVERIFY(scroll->verticalScrollBar()->maximum() > 0);
+
+	// Первый блок прижат к верхнему левому краю области просмотра,
+	// а не центрируется по её высоте.
+	QLabel* firstName = nullptr;
+	for (auto* label : content->findChildren<QLabel*>(
+		QStringLiteral("SystemRouterNodeViewParameterName"))) {
+		if (label->property("propertyName").toString() == QStringLiteral("param00")) {
+			firstName = label;
+			break;
+		}
+	}
+	QVERIFY(firstName);
+	const auto topLeft = firstName->mapTo(scroll->viewport(), QPoint(0, 0));
+	QVERIFY2(topLeft.y() >= 0 && topLeft.y() < 10,
+		qPrintable(QStringLiteral("первый параметр не у верхнего края: y=%1")
+			.arg(topLeft.y())));
+}
+
+void TestSystemRouter::nodeViewRefreshesOnNodeChange() {
+	auto item = _service->createItem(QVariant(), QStringLiteral("Узел"));
+	QVERIFY(item);
+	QVERIFY(item->setProperty(QStringLiteral("title"), QStringLiteral("Текст")));
+	QVERIFY(item->setPropertyMimeTypes(QStringLiteral("title"),
+		{ QStringLiteral("text/plain") }));
+	QVERIFY(_service->updateItem(item));
+
+	SystemRouterNodeViewDocument document(_service.get(), nullptr, item->id());
+	auto* view = document.view();
+	QVERIFY(view);
+	QCOMPARE(view->propertyNames(), QStringList({ QStringLiteral("title") }));
+
+	QVERIFY(_service->renameItem(item->id(), QStringLiteral("Новое имя")));
+	QCOMPARE(document.title(), QStringLiteral("Просмотр: Новое имя"));
+
+	QVERIFY(item->setProperty(QStringLiteral("count"), 5));
+	QVERIFY(item->setPropertyMimeTypes(QStringLiteral("count"),
+		{ QStringLiteral("application/x-integer") }));
+	QVERIFY(_service->updateItem(item));
+	QCOMPARE(view->propertyNames(), QStringList({ QStringLiteral("count"),
+		QStringLiteral("title") }));
+}
+
+void TestSystemRouter::scriptDialogOffersView() {
+	MockCommandsProvider provider;
+	provider.stored.append(SystemRouterCommand{ kCommandId, 1,
+		QStringLiteral("Описание"), QStringLiteral("run") });
+
+	auto item = _service->createItem(QVariant(), QStringLiteral("Узел"));
+	QVERIFY(item);
+	QVERIFY(item->setProperty(QStringLiteral("script"), kCommandId));
+	QVERIFY(item->setPropertyMimeTypes(QStringLiteral("script"),
+		{ QString::fromLatin1(SystemRouterMime::kCommand) }));
+
+	SystemRouterCommandService commandService(&provider);
+	const auto previews = commandService.previewsForNode(item);
+	QCOMPARE(previews.size(), 1);
+
+	SystemRouterScriptDialog dialog(previews);
+
+	auto* startButton = dialog.findChild<QPushButton*>(
+		QStringLiteral("SystemRouterScriptStartButton"));
+	QVERIFY(startButton);
+	QVERIFY(startButton->isEnabled());
+	QVERIFY(startButton->isDefault());
+
+	auto* viewButton = dialog.findChild<QPushButton*>(
+		QStringLiteral("SystemRouterScriptViewButton"));
+	QVERIFY(viewButton);
+	QVERIFY(viewButton->isEnabled());
+
+	auto* cancelButton = dialog.findChild<QPushButton*>(
+		QStringLiteral("SystemRouterScriptCancelButton"));
+	QVERIFY(cancelButton);
+
+	dialog.show();
+	QApplication::processEvents();
+
+	// «Запуск» и «Просмотр» — слева, «Отмена» — у правого края.
+	QVERIFY(startButton->x() < viewButton->x());
+	QVERIFY(viewButton->x() < cancelButton->x());
+	QCOMPARE(startButton->y(), viewButton->y());
+	QCOMPARE(viewButton->y(), cancelButton->y());
+	QVERIFY(startButton->x() < dialog.width() / 2);
+	QVERIFY(cancelButton->geometry().right() > dialog.width() * 3 / 4);
+
+	viewButton->click();
+	QCOMPARE(dialog.result(), SystemRouterScriptDialog::ViewResult);
 }
 
 void TestSystemRouter::commandServiceCrud() {

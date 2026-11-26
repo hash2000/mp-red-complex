@@ -44,8 +44,7 @@ QString primaryValueMimeType(const QStringList& mimeTypes) {
 
 /// Глиф узла редактируется отдельным полем, в общем списке свойств он не нужен.
 bool isGlyphProperty(const QString& name) {
-	return name.compare(LazyTreeNodeGlyph::propertyName(), Qt::CaseInsensitive) == 0
-		|| name.compare(LazyTreeNodeGlyph::legacyPropertyName(), Qt::CaseInsensitive) == 0;
+	return LazyTreeNodeGlyph::isProperty(name);
 }
 
 /// Служебные mime-типы маршрутизатора, которые диалог свойства показывает
@@ -53,7 +52,9 @@ bool isGlyphProperty(const QString& name) {
 QStringList additionalMimeTypes() {
 	return {
 		QString::fromLatin1(SystemRouterMime::kCommand),
-		QString::fromLatin1(SystemRouterMime::kCommandParameter)
+		QString::fromLatin1(SystemRouterMime::kCommandParameter),
+		QString::fromLatin1(SystemRouterMime::kSecret),
+		QString::fromLatin1(SystemRouterMime::kHidden)
 	};
 }
 

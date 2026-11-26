@@ -2,6 +2,7 @@
 #include "Libs/BaseWidgets/tree_view/lazy_load/i_lazy_tree_node.h"
 #include "Libs/Engine/ui/doc_widget.h"
 
+#include <functional>
 #include <memory>
 
 class LazyTreeWidget;
@@ -26,8 +27,11 @@ public:
 
 	LazyTreeWidget* tree() const;
 
-	/// Открыть документ параметров узла из контекстного меню.
+	/// Открыть документ параметров узла (редактирование) из контекстного меню.
 	void openNodeProperties(const LazyTreeNodePtr& node);
+
+	/// Открыть документ просмотра узла (только чтение).
+	void openNodeView(const LazyTreeNodePtr& node);
 
 	void refresh() override;
 	bool save() override;
@@ -46,6 +50,15 @@ private:
 	void toggleNodeExpansion(const LazyTreeNodePtr& node);
 	void executePreview(const LazyTreeNodePtr& node,
 		const SystemRouterScriptPreview& preview);
+
+	/// Есть ли у узла параметры для просмотра: свойства узла без служебного
+	/// глифа и без mime-типа `application/x-mp-hidden`.
+	bool hasDisplayedParameters(const LazyTreeNodePtr& node) const;
+
+	/// Создать документ узла заданного типа; ошибки печатаются в консоль.
+	void openNodeDocument(const LazyTreeNodePtr& node, const QString& documentId,
+		const QString& title, const QString& glyph, const QString& type,
+		const std::function<QWidget*()>& factory);
 
 	struct Private;
 	std::unique_ptr<Private> d;

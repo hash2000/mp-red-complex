@@ -1,11 +1,14 @@
 #include "Content/SystemRouter/documents/system_router_tree_document.h"
 #include "Content/SystemRouter/documents/system_router_node_properties_document.h"
+#include "Content/SystemRouter/documents/system_router_node_view_document.h"
 #include "Content/SystemRouter/models/system_router_mime.h"
 #include "Content/SystemRouter/services/system_router_blob_service.h"
 #include "Content/SystemRouter/services/system_router_command_service.h"
 #include "Content/SystemRouter/services/system_router_service.h"
 #include "Content/SystemRouter/widgets/system_router_script_dialog.h"
 #include "Content/SystemRouter/widgets/system_router_tree_widget.h"
+#include "Libs/BaseWidgets/properties/property_mime.h"
+#include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_node_glyph.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_view.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_widget.h"
 #include "Libs/Engine/scripting/command_context.h"
@@ -69,6 +72,8 @@ SystemRouterTreeDocument::SystemRouterTreeDocument(SystemRouterService* service,
 	});
 	connect(d->tree, &SystemRouterTreeWidget::propertiesRequested, this,
 		&SystemRouterTreeDocument::openNodeProperties);
+	connect(d->tree, &SystemRouterTreeWidget::viewRequested, this,
+		&SystemRouterTreeDocument::openNodeView);
 	connect(d->tree, &LazyTreeWidget::selectionChanged, this,
 		[this](const LazyTreeNodePtr& node) {
 			d->updatingVariable = true;
@@ -94,43 +99,94 @@ void SystemRouterTreeDocument::openNodeProperties(const LazyTreeNodePtr& node) {
 		return;
 	}
 
-	auto context = this->context();
-	auto* controller = context ? context->commandController() : nullptr;
-	auto* window = controller ? controller->mainWindow() : nullptr;
-	if (!window) {
-		if (controller) {
-			controller->printError(tr("Не удалось открыть параметры узла: окно приложения недоступно"));
-		}
-		emit errorOccurred(tr("Не удалось открыть параметры узла: окно приложения недоступно"));
+	auto* service = d->service;
+	auto* blobService = d->blobService;
+	openNodeDocument(node,
+		QStringLiteral("system-router-node-%1").arg(nodeId.toString()),
+		tr("Параметры: %1").arg(node->name()),
+		QStringLiteral("🛠"),
+		QStringLiteral("system-router-node-properties"),
+		[service, blobService, nodeId]() {
+			return new SystemRouterNodePropertiesDocument(service, blobService, nodeId);
+		});
+}
+
+void SystemRouterTreeDocument::openNodeView(const LazyTreeNodePtr& node) {
+	if (!d->service || !node) {
+		return;
+	}
+
+	const auto nodeId = node->id();
+	if (!nodeId.isValid() || nodeId.isNull()) {
 		return;
 	}
 
 	auto* service = d->service;
-	auto* blobService = d->blobService;
-	const auto title = tr("Параметры: %1").arg(node->name());
-	const auto documentId = QStringLiteral("system-router-node-%1").arg(nodeId.toString());
+	auto* commandService = d->commandService;
+	openNodeDocument(node,
+		QStringLiteral("system-router-node-view-%1").arg(nodeId.toString()),
+		tr("Просмотр: %1").arg(node->name()),
+		QStringLiteral("🔍"),
+		QStringLiteral("system-router-node-view"),
+		[service, commandService, nodeId]() {
+			return new SystemRouterNodeViewDocument(service, commandService, nodeId);
+		});
+}
+
+void SystemRouterTreeDocument::openNodeDocument(const LazyTreeNodePtr& node,
+	const QString& documentId, const QString& title, const QString& glyph,
+	const QString& type, const std::function<QWidget*()>& factory) {
+	auto context = this->context();
+	auto* controller = context ? context->commandController() : nullptr;
+	auto* window = controller ? controller->mainWindow() : nullptr;
+	if (!window) {
+		const auto message = tr("Не удалось открыть документ узла «%1»: окно приложения недоступно")
+			.arg(node->name());
+		if (controller) {
+			controller->printError(message);
+		}
+		emit errorOccurred(message);
+		return;
+	}
+
 	const QVariantMap variables = {
-		{ QStringLiteral("nodeId"), nodeId },
+		{ QStringLiteral("nodeId"), node->id() },
 		{ QStringLiteral("nodeName"), node->name() }
 	};
 
 	auto* document = window->createWidget(documentId, MainWindow::WidgetKind::Document,
-		title, QStringLiteral("🛠"),
-		[service, blobService, nodeId]() {
-			return new SystemRouterNodePropertiesDocument(service, blobService, nodeId);
-		},
-		tr("Параметры узла системного маршрутизатора"),
-		QStringLiteral("system-router-node-properties"),
-		context, variables);
+		title, glyph, factory, tr("Узел системного маршрутизатора"), type, context,
+		variables);
 
 	if (!document) {
+		const auto message = tr("Не удалось открыть документ узла «%1»").arg(node->name());
 		if (controller) {
-			controller->printError(tr("Не удалось открыть документ параметров узла «%1»")
-				.arg(node->name()));
+			controller->printError(message);
 		}
-		emit errorOccurred(tr("Не удалось открыть документ параметров узла «%1»")
-			.arg(node->name()));
+		emit errorOccurred(message);
 	}
+}
+
+bool SystemRouterTreeDocument::hasDisplayedParameters(const LazyTreeNodePtr& node) const {
+	if (!node) {
+		return false;
+	}
+
+	const auto names = node->properties().keys();
+	for (const auto& name : names) {
+		// Глиф — оформление узла, а не его параметр.
+		if (LazyTreeNodeGlyph::isProperty(name)) {
+			continue;
+		}
+
+		if (PropertyMime::isHidden(node->propertyMimeTypes(name))) {
+			continue;
+		}
+
+		return true;
+	}
+
+	return false;
 }
 
 void SystemRouterTreeDocument::onNodeActivated(const LazyTreeNodePtr& node) {
@@ -138,28 +194,33 @@ void SystemRouterTreeDocument::onNodeActivated(const LazyTreeNodePtr& node) {
 		return;
 	}
 
-	// Без сервиса команд или без привязанных скриптов узел ведёт себя как
-	// обычный элемент дерева: двойной щелчок разворачивает/сворачивает его.
-	if (!d->commandService) {
-		toggleNodeExpansion(node);
+	// Привязанные команды: диалог предлагает запустить скрипт или посмотреть
+	// параметры узла. Диалог показывается и для одной команды.
+	const auto previews = d->commandService
+		? d->commandService->previewsForNode(node)
+		: QList<SystemRouterScriptPreview>();
+	if (!previews.isEmpty()) {
+		SystemRouterScriptDialog dialog(previews, this);
+		const int result = dialog.exec();
+		if (result == SystemRouterScriptDialog::ViewResult) {
+			openNodeView(node);
+			return;
+		}
+		if (result == QDialog::Accepted) {
+			executePreview(node, dialog.selectedPreview());
+		}
 		return;
 	}
 
-	const auto previews = d->commandService->previewsForNode(node);
-	if (previews.isEmpty()) {
-		toggleNodeExpansion(node);
+	// Узел с параметрами: активация открывает документ просмотра.
+	if (hasDisplayedParameters(node)) {
+		openNodeView(node);
 		return;
 	}
 
-	if (previews.size() == 1) {
-		executePreview(node, previews.first());
-		return;
-	}
-
-	SystemRouterScriptDialog dialog(previews, this);
-	if (dialog.exec() == QDialog::Accepted) {
-		executePreview(node, dialog.selectedPreview());
-	}
+	// Без команд и параметров узел ведёт себя как обычный элемент дерева:
+	// двойной щелчок разворачивает/сворачивает его.
+	toggleNodeExpansion(node);
 }
 
 void SystemRouterTreeDocument::toggleNodeExpansion(const LazyTreeNodePtr& node) {

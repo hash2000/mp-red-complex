@@ -36,6 +36,12 @@ void SystemRouterTreeWidget::extendContextMenu(QMenu& menu, const LazyTreeNodePt
 	}
 
 	menu.addSeparator();
+	QAction* view = menu.addAction(tr("Просмотр…"));
+	view->setToolTip(tr("Показать параметры узла без возможности редактирования"));
+	connect(view, &QAction::triggered, this, [this, node] {
+		emit viewRequested(node);
+	});
+
 	QAction* properties = menu.addAction(tr("Свойства…"));
 	connect(properties, &QAction::triggered, this, [this, node] {
 		emit propertiesRequested(node);

@@ -11,6 +11,7 @@
 #include "Content/FetchApiModule/documents/fetch_api_document_metadata.h"
 #include "Content/FetchApiModule/services/fetch_service.h"
 #include "Content/SystemRouter/documents/system_router_node_properties_document.h"
+#include "Content/SystemRouter/documents/system_router_node_view_document.h"
 #include "Content/SystemRouter/documents/system_router_tree_document.h"
 #include "Content/SystemRouter/services/system_router_blob_service.h"
 #include "Content/SystemRouter/services/system_router_command_service.h"
@@ -251,6 +252,19 @@ void WidgetsBuilder::Private::registerAll() {
 			auto* blobService = requiredService<SystemRouterBlobService>(services, type,
 				"SystemRouterBlobService");
 			return service ? new SystemRouterNodePropertiesDocument(service, blobService, {},
+				handler.parent) : nullptr;
+		});
+
+	// Просмотр узла: только чтение параметров, один документ на узел.
+	registry->registerFactory({ "Content.SystemRouter.SystemRouterNodeView",
+		"system-router-node-view", /*singletone*/ false,
+		QStringLiteral("Просмотр узла") },
+		[](const QString& type, const WidgetBuildHandler& handler) -> QWidget* {
+			auto* services = servicesFor(type, handler);
+			auto* service = requiredService<SystemRouterService>(services, type, "SystemRouterService");
+			auto* commandService = requiredService<SystemRouterCommandService>(services, type,
+				"SystemRouterCommandService");
+			return service ? new SystemRouterNodeViewDocument(service, commandService, {},
 				handler.parent) : nullptr;
 		});
 

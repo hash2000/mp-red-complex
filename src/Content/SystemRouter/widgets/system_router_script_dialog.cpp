@@ -1,7 +1,5 @@
 #include "Content/SystemRouter/widgets/system_router_script_dialog.h"
 
-#include <QDialogButtonBox>
-#include <QFontDatabase>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QListWidget>
@@ -23,7 +21,9 @@ public:
 	QLabel* description = nullptr;
 	QPlainTextEdit* code = nullptr;
 	QLabel* warning = nullptr;
-	QDialogButtonBox* buttons = nullptr;
+	QPushButton* startButton = nullptr;
+	QPushButton* viewButton = nullptr;
+	QPushButton* cancelButton = nullptr;
 	int currentIndex = 0;
 
 	QString displayName(const SystemRouterScriptPreview& preview) const {
@@ -65,8 +65,11 @@ public:
 		warning->setText(messages.join(QStringLiteral("\n")));
 		warning->setVisible(!messages.isEmpty());
 
-		if (auto* button = buttons->button(QDialogButtonBox::Ok)) {
-			button->setEnabled(preview.commandFound);
+		if (startButton) {
+			startButton->setEnabled(preview.commandFound);
+		}
+		if (viewButton) {
+			viewButton->setEnabled(true);
 		}
 	}
 };
@@ -81,21 +84,20 @@ SystemRouterScriptDialog::SystemRouterScriptDialog(
 	setObjectName(QStringLiteral("SystemRouterScriptDialog"));
 	resize(820, 520);
 
-	auto* root = new QHBoxLayout(this);
+	auto* root = new QVBoxLayout(this);
+	auto* content = new QHBoxLayout();
+	root->addLayout(content, 1);
 
 	d->list = new QListWidget(this);
 	d->list->setObjectName(QStringLiteral("SystemRouterScriptList"));
 	d->list->setMinimumWidth(220);
-	root->addWidget(d->list, 1);
+	content->addWidget(d->list, 1);
 
 	auto* right = new QVBoxLayout();
-	root->addLayout(right, 3);
+	content->addLayout(right, 3);
 
 	d->title = new QLabel(this);
 	d->title->setObjectName(QStringLiteral("SystemRouterScriptTitle"));
-	auto titleFont = d->title->font();
-	titleFont.setBold(true);
-	d->title->setFont(titleFont);
 	right->addWidget(d->title);
 
 	d->version = new QLabel(this);
@@ -110,7 +112,6 @@ SystemRouterScriptDialog::SystemRouterScriptDialog(
 	d->code = new QPlainTextEdit(this);
 	d->code->setObjectName(QStringLiteral("SystemRouterScriptCode"));
 	d->code->setReadOnly(true);
-	d->code->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
 	right->addWidget(d->code, 1);
 
 	d->warning = new QLabel(this);
@@ -118,14 +119,36 @@ SystemRouterScriptDialog::SystemRouterScriptDialog(
 	d->warning->setWordWrap(true);
 	right->addWidget(d->warning);
 
-	d->buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
-	d->buttons->setObjectName(QStringLiteral("SystemRouterScriptButtons"));
-	d->buttons->button(QDialogButtonBox::Ok)->setText(tr("Запуск"));
-	d->buttons->button(QDialogButtonBox::Cancel)->setText(tr("Отмена"));
-	right->addWidget(d->buttons);
+	// Нижняя строка диалога: «Запуск» и «Просмотр» слева, «Отмена» справа.
+	// Цвета кнопок задаёт тема (system-router.qss).
+	auto* buttonsRow = new QHBoxLayout();
+	buttonsRow->setContentsMargins(0, 0, 0, 0);
+	buttonsRow->setSpacing(6);
 
-	connect(d->buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
-	connect(d->buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
+	d->startButton = new QPushButton(tr("Запуск"), this);
+	d->startButton->setObjectName(QStringLiteral("SystemRouterScriptStartButton"));
+	d->startButton->setDefault(true);
+
+	d->viewButton = new QPushButton(tr("Просмотр"), this);
+	d->viewButton->setObjectName(QStringLiteral("SystemRouterScriptViewButton"));
+	d->viewButton->setToolTip(tr("Открыть параметры узла без запуска скрипта"));
+	d->viewButton->setAutoDefault(false);
+
+	d->cancelButton = new QPushButton(tr("Отмена"), this);
+	d->cancelButton->setObjectName(QStringLiteral("SystemRouterScriptCancelButton"));
+	d->cancelButton->setAutoDefault(false);
+
+	buttonsRow->addWidget(d->startButton);
+	buttonsRow->addWidget(d->viewButton);
+	buttonsRow->addStretch(1);
+	buttonsRow->addWidget(d->cancelButton);
+	root->addLayout(buttonsRow);
+
+	connect(d->startButton, &QPushButton::clicked, this, &QDialog::accept);
+	connect(d->viewButton, &QPushButton::clicked, this, [this]() {
+		done(SystemRouterScriptDialog::ViewResult);
+	});
+	connect(d->cancelButton, &QPushButton::clicked, this, &QDialog::reject);
 	connect(d->list, &QListWidget::currentRowChanged, this, [this](int row) {
 		d->select(row);
 	});
@@ -142,7 +165,8 @@ SystemRouterScriptDialog::SystemRouterScriptDialog(
 		d->version->setText(tr("Версия обработчика: —"));
 		d->description->setText(tr("У узла нет привязанных команд"));
 		d->warning->setVisible(false);
-		d->buttons->button(QDialogButtonBox::Ok)->setEnabled(false);
+		d->startButton->setEnabled(false);
+		d->viewButton->setEnabled(false);
 	}
 	else {
 		d->list->setCurrentRow(0);

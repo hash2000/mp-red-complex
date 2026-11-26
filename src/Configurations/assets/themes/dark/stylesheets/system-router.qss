@@ -1,0 +1,158 @@
+/* ------------------------------------------------------------------
+   Модуль SystemRouter: просмотр узла и диалог запуска скриптов.
+
+   Заголовок документа просмотра собирается из трёх меток:
+     - SystemRouterNodeViewGlyph    — глиф узла (h3),
+     - SystemRouterNodeViewNodeName — название узла (h3),
+     - SystemRouterNodeViewNodeId   — идентификатор узла (h4).
+
+   Каждый параметр — блок SystemRouterNodeViewParameter: название (h3)
+   со значками копирования имени и значения, под ним виджет значения (h4).
+
+   h3 — 15px, h4 — 12px: размеры и цвета меняются только здесь, код
+   виджета задаёт лишь objectName.
+   ------------------------------------------------------------------ */
+
+/* ---------- Заголовок узла ---------- */
+
+QLabel#SystemRouterNodeViewGlyph {
+  color: #56b6c2;
+  font-size: 15px;
+}
+
+QLabel#SystemRouterNodeViewNodeName {
+  color: #e5c07b;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* Идентификатор — h4: серый, но читаемый на тёмном фоне. */
+QLabel#SystemRouterNodeViewNodeId {
+  color: #8f8f8f;
+  font-size: 12px;
+  font-family: monospace;
+}
+
+/* ---------- Параметры ---------- */
+
+QLabel#SystemRouterNodeViewParameterName {
+  color: #d4d4d4;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* Маленькие значки копирования рядом с названием параметра. */
+QToolButton#SystemRouterNodeViewCopyName,
+QToolButton#SystemRouterNodeViewCopyValue {
+  color: #8f8f8f;
+  font-size: 10px;
+  padding: 0px 2px;
+  min-width: 16px;
+  min-height: 16px;
+}
+
+QToolButton#SystemRouterNodeViewCopyName:hover,
+QToolButton#SystemRouterNodeViewCopyValue:hover {
+  color: #ffffff;
+  background: #3c3c3c;
+}
+
+QToolButton#SystemRouterNodeViewCopyName:disabled,
+QToolButton#SystemRouterNodeViewCopyValue:disabled {
+  color: #4a4a4a;
+  background: transparent;
+}
+
+/* Виджет значения — h4. */
+QLineEdit#SystemRouterNodeViewValue,
+QCheckBox#SystemRouterNodeViewValue {
+  font-size: 12px;
+}
+
+QPlainTextEdit#SystemRouterNodeViewValue {
+  background-color: #313131;
+  border: 1px solid #3c3c3c;
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+/* Секретный параметр: значение не показывается. */
+QLabel#SystemRouterNodeViewSecret {
+  color: #8f8f8f;
+  font-size: 12px;
+  font-style: italic;
+}
+
+/* ---------- Служебные сообщения ---------- */
+
+QLabel#SystemRouterNodeViewStatus {
+  color: #98c379;
+  font-size: 12px;
+}
+
+QLabel#SystemRouterNodeViewEmpty {
+  color: #6e6e6e;
+  font-size: 13px;
+}
+
+/* ------------------------------------------------------------------
+   Диалог запуска скриптов (SystemRouterScriptDialog):
+   «Запуск» и «Просмотр» — слева, «Отмена» — справа.
+   ------------------------------------------------------------------ */
+
+QLabel#SystemRouterScriptTitle {
+  color: #e5c07b;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+QLabel#SystemRouterScriptVersion,
+QLabel#SystemRouterScriptDescription {
+  color: #a0aec0;
+  font-size: 12px;
+}
+
+QLabel#SystemRouterScriptWarning {
+  color: #e06c75;
+  font-size: 12px;
+}
+
+QPlainTextEdit#SystemRouterScriptCode {
+  background-color: #313131;
+  border: 1px solid #3c3c3c;
+  border-radius: 3px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+}
+
+/* Запуск — зелёная кнопка. */
+QPushButton#SystemRouterScriptStartButton {
+  background-color: #10b981;
+  color: #0f172a;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 16px;
+  font-weight: 600;
+}
+QPushButton#SystemRouterScriptStartButton:hover { background-color: #0da271; }
+QPushButton#SystemRouterScriptStartButton:pressed { background-color: #0a8c62; }
+QPushButton#SystemRouterScriptStartButton:disabled {
+  background-color: #2d3748;
+  color: #5c6370;
+}
+
+/* Просмотр — синяя кнопка рядом с запуском. */
+QPushButton#SystemRouterScriptViewButton {
+  background-color: #0e639c;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 16px;
+  font-weight: 600;
+}
+QPushButton#SystemRouterScriptViewButton:hover { background-color: #1177bb; }
+QPushButton#SystemRouterScriptViewButton:pressed { background-color: #094771; }
+QPushButton#SystemRouterScriptViewButton:disabled {
+  background-color: #2d3748;
+  color: #5c6370;
+}

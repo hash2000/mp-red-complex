@@ -30,6 +30,8 @@ tabs:
     system-router: "#e06c75"
     Content.SystemRouter.SystemRouterNodeProperties: "#c678dd"
     system-router-node-properties: "#c678dd"
+    Content.SystemRouter.SystemRouterNodeView: "#56b6c2"
+    system-router-node-view: "#56b6c2"
 
     # DatabaseModule
     Content.Database.DatabaseBackup: "#4ec9b0"
@@ -78,6 +80,8 @@ tabs:
     system-router: "🗂"
     Content.SystemRouter.SystemRouterNodeProperties: "🛠"
     system-router-node-properties: "🛠"
+    Content.SystemRouter.SystemRouterNodeView: "🔍"
+    system-router-node-view: "🔍"
 
     # DatabaseModule
     Content.Database.DatabaseBackup: "💾"

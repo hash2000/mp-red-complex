@@ -6,3 +6,4 @@ items:
   - fetch-api # модуль FetchApi
   - users # вход, регистрация, карточка пользователя
   - database-backup # модуль DatabaseModule: резервное копирование
+  - system-router # модуль SystemRouter: просмотр узла

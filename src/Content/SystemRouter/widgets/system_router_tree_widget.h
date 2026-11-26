@@ -19,8 +19,10 @@ public:
 	SystemRouterService* service() const;
 
 signals:
-	/// Открыть параметры узла из контекстного меню.
+	/// Открыть параметры узла (редактирование) из контекстного меню.
 	void propertiesRequested(const LazyTreeNodePtr& node);
+	/// Открыть просмотр параметров узла из контекстного меню.
+	void viewRequested(const LazyTreeNodePtr& node);
 
 protected:
 	void extendContextMenu(QMenu& menu, const LazyTreeNodePtr& node) override;

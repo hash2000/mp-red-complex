@@ -25,6 +25,12 @@ inline QString defaultGlyph() {
 	return QStringLiteral("📄");
 }
 
+/// Является ли свойство узла свойством глифа (`glyph` или прежнее `icon`).
+inline bool isProperty(const QString& name) {
+	return name.compare(propertyName(), Qt::CaseInsensitive) == 0
+		|| name.compare(legacyPropertyName(), Qt::CaseInsensitive) == 0;
+}
+
 /// Назначенный узлу глиф; пустая строка — глиф не назначен.
 inline QString assigned(const LazyTreeNodePtr& node) {
 	if (!node) {

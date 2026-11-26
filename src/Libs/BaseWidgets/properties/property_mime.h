@@ -23,6 +23,10 @@ inline constexpr const char* kUriList = "text/uri-list";
 inline constexpr const char* kShared = "application/x-mp-shared";
 /// Значение свойства передаётся в CommandContext как переменная.
 inline constexpr const char* kContextVariable = "application/x-mp-context-variable";
+/// Секретные данные: свойство показывается, а его значение — нет.
+inline constexpr const char* kSecret = "application/x-mp-secret";
+/// Скрытое свойство: в документе просмотра оно не отображается вовсе.
+inline constexpr const char* kHidden = "application/x-mp-hidden";
 } // namespace PropertyMimeType
 
 namespace PropertyMime {
@@ -45,6 +49,14 @@ QStringList valueMimeTypes(const QStringList& mimeTypes,
 /// Основной mime-тип значения: первый после valueMimeTypes(), иначе text/plain.
 QString primaryValueMimeType(const QStringList& mimeTypes,
 	const QStringList& ignoredMimeTypes = QStringList());
+
+/// Свойство помечено как секретное (`application/x-mp-secret`): его значение
+/// не показывается в документах просмотра.
+bool isSecret(const QStringList& mimeTypes);
+
+/// Свойство помечено как скрытое (`application/x-mp-hidden`): в документе
+/// просмотра оно не отображается.
+bool isHidden(const QStringList& mimeTypes);
 
 /// Распространённые mime-типы для диалога выбора (пользователь может
 /// добавить произвольный).

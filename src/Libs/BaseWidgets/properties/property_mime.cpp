@@ -57,6 +57,10 @@ bool isServiceMimeType(const QString& mimeType) {
 	return mimeType.compare(QLatin1String(PropertyMimeType::kShared),
 			Qt::CaseInsensitive) == 0
 		|| mimeType.compare(QLatin1String(PropertyMimeType::kContextVariable),
+			Qt::CaseInsensitive) == 0
+		|| mimeType.compare(QLatin1String(PropertyMimeType::kSecret),
+			Qt::CaseInsensitive) == 0
+		|| mimeType.compare(QLatin1String(PropertyMimeType::kHidden),
 			Qt::CaseInsensitive) == 0;
 }
 
@@ -93,6 +97,14 @@ QStringList valueMimeTypes(const QStringList& mimeTypes,
 QString primaryValueMimeType(const QStringList& mimeTypes,
 	const QStringList& ignoredMimeTypes) {
 	return primaryMimeType(valueMimeTypes(mimeTypes, ignoredMimeTypes));
+}
+
+bool isSecret(const QStringList& mimeTypes) {
+	return containsMimeType(mimeTypes, QLatin1String(PropertyMimeType::kSecret));
+}
+
+bool isHidden(const QStringList& mimeTypes) {
+	return containsMimeType(mimeTypes, QLatin1String(PropertyMimeType::kHidden));
 }
 
 QStringList commonMimeTypes() {
