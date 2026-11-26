@@ -119,7 +119,8 @@ struct MainWindow::Private {
 	/// существующий). Возвращает документ либо nullptr.
 	QWidget* createDocumentOfType(const QString& type, const QString& requestedId,
 		const QString& title, const QString& glyph,
-		const QVariantMap& variables = QVariantMap());
+		const QVariantMap& variables = QVariantMap(),
+		const QMap<QString, QStringList>& variableMimeTypes = QMap<QString, QStringList>());
 	/// Открывает документ системных настроек (роль DocumentRule::SystemOptions).
 	void openSystemOptions();
 	void openFile(const QString& path);
@@ -340,11 +341,13 @@ void MainWindow::Private::newDocument() {
 	// Для singletone имя документа совпадает с xtype: повторный выбор
 	// того же типа активирует уже открытый документ.
 	createDocumentOfType(dialog.documentType(), dialog.documentName(),
-		dialog.documentTitle(), dialog.documentGlyph(), dialog.variables());
+		dialog.documentTitle(), dialog.documentGlyph(), dialog.variables(),
+		dialog.variableMimeTypes());
 }
 
 QWidget* MainWindow::Private::createDocumentOfType(const QString& type, const QString& requestedId,
-	const QString& title, const QString& glyph, const QVariantMap& variables) {
+	const QString& title, const QString& glyph, const QVariantMap& variables,
+	const QMap<QString, QStringList>& variableMimeTypes) {
 	auto* registry = controller ? controller->widgets() : nullptr;
 	if (!registry) {
 		q->log(MainWindow::tr("Реестр виджетов недоступен"));
@@ -373,7 +376,7 @@ QWidget* MainWindow::Private::createDocumentOfType(const QString& type, const QS
 	const auto id = registry->documentId(info->xtype, handler.name);
 	auto* document = q->createWidget(id, WidgetKind::Document, handler.title, glyph,
 		[registry, type = info->xtype, handler]() { return registry->build(type, handler); },
-		QString(), info->xtype, context, variables);
+		QString(), info->xtype, context, variables, variableMimeTypes);
 	if (!document) {
 		q->log(MainWindow::tr("Не удалось создать документ: %1").arg(info->xtype));
 	}
@@ -510,7 +513,7 @@ MainWindow::~MainWindow() {
 QWidget* MainWindow::createWidget(const QString& id, WidgetKind kind, const QString& title,
 	const QString& glyph, const WidgetFactory& factory, const QString& tooltip,
 	const QString& type, const std::shared_ptr<CommandContext>& creatorContext,
-	const QVariantMap& variables) {
+	const QVariantMap& variables, const QMap<QString, QStringList>& variableMimeTypes) {
 	if (QThread::currentThread() != thread() || id.isEmpty() ||
 		(kind != WidgetKind::Document && kind != WidgetKind::BottomPanel && kind != WidgetKind::SidePanel))
 		return nullptr;
@@ -555,6 +558,10 @@ QWidget* MainWindow::createWidget(const QString& id, WidgetKind kind, const QStr
 			// повторный вызов с path=... обновляет его состояние.
 			for (auto variable = variables.cbegin(); variable != variables.cend(); variable++) {
 				it->document->context()->setVariable(variable.key(), variable.value());
+			}
+			for (auto mime = variableMimeTypes.cbegin(); mime != variableMimeTypes.cend();
+				mime++) {
+				it->document->context()->setVariableMimeTypes(mime.key(), mime.value());
 			}
 		}
 		if (it != d->entries.cend() && creatorContext) {
@@ -602,6 +609,9 @@ QWidget* MainWindow::createWidget(const QString& id, WidgetKind kind, const QStr
 		// их в onContextAttached() и создаёт недостающие значения.
 		for (auto it = variables.cbegin(); it != variables.cend(); it++) {
 			documentContext->setVariable(it.key(), it.value());
+		}
+		for (auto it = variableMimeTypes.cbegin(); it != variableMimeTypes.cend(); it++) {
+			documentContext->setVariableMimeTypes(it.key(), it.value());
 		}
 		if (document->context() != documentContext) {
 			document->setContext(documentContext);

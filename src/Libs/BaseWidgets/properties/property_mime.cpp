@@ -51,6 +51,50 @@ QString primaryMimeType(const QStringList& mimeTypes) {
 	return QString::fromLatin1(PropertyMimeType::kText);
 }
 
+namespace {
+
+bool isServiceMimeType(const QString& mimeType) {
+	return mimeType.compare(QLatin1String(PropertyMimeType::kShared),
+			Qt::CaseInsensitive) == 0
+		|| mimeType.compare(QLatin1String(PropertyMimeType::kContextVariable),
+			Qt::CaseInsensitive) == 0;
+}
+
+bool containsMimeType(const QStringList& mimeTypes, const QString& mimeType) {
+	for (const auto& raw : mimeTypes) {
+		if (raw.trimmed().compare(mimeType, Qt::CaseInsensitive) == 0) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+} // namespace
+
+QStringList valueMimeTypes(const QStringList& mimeTypes,
+	const QStringList& ignoredMimeTypes) {
+	QStringList result;
+	for (const auto& raw : mimeTypes) {
+		const auto mime = raw.trimmed();
+		if (mime.isEmpty() || isServiceMimeType(mime)
+			|| containsMimeType(ignoredMimeTypes, mime)) {
+			continue;
+		}
+
+		if (!result.contains(mime, Qt::CaseInsensitive)) {
+			result.append(mime);
+		}
+	}
+
+	return result;
+}
+
+QString primaryValueMimeType(const QStringList& mimeTypes,
+	const QStringList& ignoredMimeTypes) {
+	return primaryMimeType(valueMimeTypes(mimeTypes, ignoredMimeTypes));
+}
+
 QStringList commonMimeTypes() {
 	return {
 		QString::fromLatin1(PropertyMimeType::kText),

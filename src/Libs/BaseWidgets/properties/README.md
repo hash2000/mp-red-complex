@@ -1,5 +1,17 @@
 ## Примеры использования
 
+# Диалог имени и набора mime-типов
+```cpp
+#include "Libs/BaseWidgets/properties/property_descriptor_dialog.h"
+
+const auto descriptor = PropertyDescriptorDialog::request(parent,
+    tr("Добавить свойство"), QString(), QStringList(),
+    /*nameEditable*/ true);
+if (descriptor) {
+    // descriptor->name, descriptor->mimeTypes: первый тип — основной
+}
+```
+
 # Комбобокс
 ```cpp
 props.append({

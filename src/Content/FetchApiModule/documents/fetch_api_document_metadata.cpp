@@ -2,12 +2,12 @@
 
 QList<DocumentVariable> FetchApiDocumentMetadata::variables() const {
 	return {
-		{ QStringLiteral("location"), QString::fromLatin1(DocumentVariableMime::kText) },
-		{ QStringLiteral("method"), QString::fromLatin1(DocumentVariableMime::kText) },
-		{ QStringLiteral("body"), QString::fromLatin1(DocumentVariableMime::kMultiline) },
-		{ QStringLiteral("params"), QString::fromLatin1(DocumentVariableMime::kMultiline) },
-		{ QStringLiteral("ssl-policy"), QString::fromLatin1(DocumentVariableMime::kText) },
-		{ QStringLiteral("handler"), QString::fromLatin1(DocumentVariableMime::kText) },
+		{ QStringLiteral("location"), { QString::fromLatin1(DocumentVariableMime::kText) } },
+		{ QStringLiteral("method"), { QString::fromLatin1(DocumentVariableMime::kText) } },
+		{ QStringLiteral("body"), { QString::fromLatin1(DocumentVariableMime::kMultiline) } },
+		{ QStringLiteral("params"), { QString::fromLatin1(DocumentVariableMime::kMultiline) } },
+		{ QStringLiteral("ssl-policy"), { QString::fromLatin1(DocumentVariableMime::kText) } },
+		{ QStringLiteral("handler"), { QString::fromLatin1(DocumentVariableMime::kText) } },
 	};
 }
 

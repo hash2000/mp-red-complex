@@ -1,6 +1,8 @@
 #pragma once
 #include <QColor>
 #include <QDialog>
+#include <QMap>
+#include <QStringList>
 #include <QVariant>
 
 #include <memory>
@@ -13,8 +15,8 @@ class CommandContext;
 /// (name, glyph, title) и обязательные переменные выбранного документа.
 ///
 /// Переменные берутся из IDocumentMetadata, зарегистрированных в WidgetRegistry
-/// для класса документа. По mime-типу переменной выбирается редактор значения
-/// в PropertiesListWidget.
+/// для класса документа. У переменной может быть несколько mime-типов;
+/// по основному из них выбирается редактор значения в PropertiesListWidget.
 ///
 /// Документ создаёт вызывающая сторона (MainWindow::Private::newDocument):
 /// диалог лишь возвращает выбранные значения. Для типа-синглтона имя
@@ -42,6 +44,11 @@ public:
 	/// записываются в его контекст до инициализации. Выбранный цвет вкладки
 	/// передаётся переменной `color`.
 	QVariantMap variables() const;
+
+	/// Mime-типы переменных документа (по имени). Передаются в контекст
+	/// создаваемого документа вместе со значениями; у переменной может быть
+	/// несколько mime-типов (например, тип значения и пометка shared).
+	QMap<QString, QStringList> variableMimeTypes() const;
 
 private:
 	class Private;

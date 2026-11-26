@@ -3,7 +3,7 @@
 QList<DocumentVariable> CodeEditorDocumentMetadata::variables() const {
 	// Путь к файлу: редактор открывает его при привязке контекста.
 	return {
-		{ QStringLiteral("path"), QString::fromLatin1(DocumentVariableMime::kFilePath) }
+		{ QStringLiteral("path"), { QString::fromLatin1(DocumentVariableMime::kFilePath) } }
 	};
 }
 

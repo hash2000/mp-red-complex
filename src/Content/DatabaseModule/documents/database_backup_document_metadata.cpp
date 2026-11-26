@@ -2,7 +2,7 @@
 
 QList<DocumentVariable> DatabaseBackupDocumentMetadata::variables() const {
 	return {
-		{ QStringLiteral("store"), QString::fromLatin1(DocumentVariableMime::kText) },
+		{ QStringLiteral("store"), { QString::fromLatin1(DocumentVariableMime::kText) } },
 	};
 }
 

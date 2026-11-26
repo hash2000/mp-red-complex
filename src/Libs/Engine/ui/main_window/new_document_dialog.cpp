@@ -1,5 +1,6 @@
 #include "Libs/Engine/ui/main_window/new_document_dialog.h"
 #include "Libs/BaseWidgets/properties/properties_list_widget.h"
+#include "Libs/BaseWidgets/properties/property_descriptor_dialog.h"
 #include "Libs/BaseWidgets/properties/tab_color_editor.h"
 #include "Libs/Engine/scripting/command_context.h"
 #include "Libs/Engine/scripting/command_controller.h"
@@ -18,7 +19,6 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
-#include <QPair>
 #include <QPushButton>
 #include <QSignalBlocker>
 #include <QSplitter>
@@ -56,6 +56,31 @@ QVariant normalizeValue(const QVariant& value, const QString& mimeType) {
 /// Ограничения редактора числа: целые и дробные значения.
 void applyNumberLimits(PropertyData& property, const QString& mimeType) {
 	PropertyMime::applyNumberLimits(property, mimeType);
+}
+
+/// Приводит набор mime-типов к непустому списку без пустых значений
+/// и дубликатов; пустой набор означает обычный текст.
+QStringList normalizedMimeTypes(const QStringList& mimeTypes) {
+	QStringList result;
+	for (const auto& raw : mimeTypes) {
+		const auto mime = raw.trimmed();
+		if (mime.isEmpty() || result.contains(mime, Qt::CaseInsensitive)) {
+			continue;
+		}
+
+		result.append(mime);
+	}
+
+	if (result.isEmpty()) {
+		result.append(QString::fromLatin1(DocumentVariableMime::kText));
+	}
+
+	return result;
+}
+
+/// Основной mime-тип переменной: служебные пометки не определяют редактор.
+QString primaryMimeType(const QStringList& mimeTypes) {
+	return PropertyMime::primaryValueMimeType(mimeTypes);
 }
 
 /// Тема приложения: из неё берутся стандартные глифы вкладок по типу.
@@ -106,6 +131,7 @@ public:
 
 	QToolButton* addVariableButton = nullptr;
 	QToolButton* removeVariableButton = nullptr;
+	QToolButton* mimeButton = nullptr;
 	QComboBox* variableSelector = nullptr;
 	PropertiesListWidget* variablesList = nullptr;
 	QDialogButtonBox* buttons = nullptr;
@@ -120,8 +146,10 @@ public:
 	void fillDocumentVariables();
 	void addDocumentVariable();
 	void removeSelectedDocumentVariable();
+	void editSelectedDocumentVariableMime();
+	void rebuildVariablesList();
 	void refreshVariableSelector(const QString& preferred = QString());
-	void updateRemoveVariableState();
+	void updateVariableActions();
 	bool hasDocumentVariable(const QString& name) const;
 	PropertyData propertyDataFor(const DocumentVariable& variable, const QVariant& value) const;
 	std::optional<DocumentVariable> requestDocumentVariable();
@@ -231,7 +259,7 @@ void NewDocumentDialog::Private::setupUi(NewDocumentDialog* q) {
 	paramsForm->addRow(NewDocumentDialog::tr("Цвет вкладки:"), colorEditor);
 
 	// Параметры документа: обязательные переменные типа и добавленные вручную.
-	// Редактор значения выбирается по mime-типу переменной.
+	// Редактор значения выбирается по основному mime-типу переменной.
 	auto* variablesTools = new QHBoxLayout;
 	variablesTools->setContentsMargins(0, 0, 0, 0);
 	variablesTools->setSpacing(4);
@@ -245,6 +273,11 @@ void NewDocumentDialog::Private::setupUi(NewDocumentDialog* q) {
 	removeVariableButton->setText(QStringLiteral("−"));
 	removeVariableButton->setToolTip(NewDocumentDialog::tr("Удалить выбранный параметр"));
 	removeVariableButton->setEnabled(false);
+	mimeButton = new QToolButton(right);
+	mimeButton->setObjectName(QStringLiteral("NewDocumentDialogEditVariableMime"));
+	mimeButton->setText(NewDocumentDialog::tr("Mime-типы…"));
+	mimeButton->setToolTip(NewDocumentDialog::tr("Изменить набор mime-типов параметра"));
+	mimeButton->setEnabled(false);
 
 	variableSelector = new QComboBox(right);
 	variableSelector->setObjectName(QStringLiteral("NewDocumentDialogVariableSelector"));
@@ -253,6 +286,7 @@ void NewDocumentDialog::Private::setupUi(NewDocumentDialog* q) {
 	variablesTools->addWidget(addVariableButton);
 	variablesTools->addWidget(removeVariableButton);
 	variablesTools->addWidget(variableSelector, 1);
+	variablesTools->addWidget(mimeButton);
 
 	variablesList = new PropertiesListWidget(right);
 	variablesList->setObjectName(QStringLiteral("NewDocumentDialogVariables"));
@@ -293,8 +327,11 @@ void NewDocumentDialog::Private::setupUi(NewDocumentDialog* q) {
 	QObject::connect(removeVariableButton, &QToolButton::clicked, q, [this] {
 		removeSelectedDocumentVariable();
 	});
+	QObject::connect(mimeButton, &QToolButton::clicked, q, [this] {
+		editSelectedDocumentVariableMime();
+	});
 	QObject::connect(variableSelector, &QComboBox::currentIndexChanged, q, [this](int) {
-		updateRemoveVariableState();
+		updateVariableActions();
 	});
 	QObject::connect(variablesList, &PropertiesListWidget::propertyChanged, q,
 		[this](const QString& id, const QVariant& value) {
@@ -349,13 +386,12 @@ void NewDocumentDialog::Private::fillDocumentVariables() {
 			if (variable.name.isEmpty() || hasDocumentVariable(variable.name)) {
 				continue;
 			}
-			if (variable.mimeType.trimmed().isEmpty()) {
-				variable.mimeType = QString::fromLatin1(DocumentVariableMime::kText);
-			}
 
+			variable.mimeTypes = normalizedMimeTypes(variable.mimeTypes);
 			variableEntries.append(VariableEntry{ variable, /*required*/ true });
 			const auto contextValue = context ? context->variable(variable.name) : QVariant();
-			const auto value = normalizeValue(contextValue, variable.mimeType);
+			const auto value = normalizeValue(contextValue,
+				primaryMimeType(variable.mimeTypes));
 			documentVariables.insert(variable.name, value);
 			properties.append(propertyDataFor(variable, value));
 		}
@@ -374,9 +410,8 @@ bool NewDocumentDialog::Private::hasDocumentVariable(const QString& name) const 
 
 PropertyData NewDocumentDialog::Private::propertyDataFor(const DocumentVariable& variable,
 	const QVariant& value) const {
-	const auto mimeType = variable.mimeType.trimmed().isEmpty()
-		? QString::fromLatin1(DocumentVariableMime::kText)
-		: variable.mimeType.trimmed();
+	const auto mimeTypes = normalizedMimeTypes(variable.mimeTypes);
+	const auto mimeType = primaryMimeType(mimeTypes);
 	const auto propertyType = propertyTypeForMime(mimeType);
 
 	PropertyData property;
@@ -385,7 +420,8 @@ PropertyData NewDocumentDialog::Private::propertyDataFor(const DocumentVariable&
 	property.type = propertyType;
 	property.value = value;
 	property.defaultValue = defaultValueForMime(mimeType);
-	property.tooltip = NewDocumentDialog::tr("Mime-тип: %1").arg(mimeType);
+	property.tooltip = NewDocumentDialog::tr("Mime-типы: %1")
+		.arg(mimeTypes.join(QStringLiteral(", ")));
 
 	if (propertyType == PropertyType::PathFile) {
 		property.fileFilter = NewDocumentDialog::tr("Все файлы (*.*)");
@@ -395,6 +431,19 @@ PropertyData NewDocumentDialog::Private::propertyDataFor(const DocumentVariable&
 	}
 
 	return property;
+}
+
+void NewDocumentDialog::Private::rebuildVariablesList() {
+	QList<PropertyData> properties;
+	for (const auto& entry : variableEntries) {
+		const auto name = entry.variable.name;
+		auto value = documentVariables.value(name);
+		value = normalizeValue(value, primaryMimeType(entry.variable.mimeTypes));
+		documentVariables.insert(name, value);
+		properties.append(propertyDataFor(entry.variable, value));
+	}
+
+	variablesList->setProperties(properties);
 }
 
 void NewDocumentDialog::Private::refreshVariableSelector(const QString& preferred) {
@@ -416,38 +465,70 @@ void NewDocumentDialog::Private::refreshVariableSelector(const QString& preferre
 		index = 0;
 	}
 	variableSelector->setCurrentIndex(index);
-	updateRemoveVariableState();
+	updateVariableActions();
 }
 
-void NewDocumentDialog::Private::updateRemoveVariableState() {
-	if (!removeVariableButton || !variableSelector) {
+void NewDocumentDialog::Private::updateVariableActions() {
+	if (!removeVariableButton || !mimeButton || !variableSelector) {
 		return;
 	}
 
 	const auto name = variableSelector->currentData().toString();
 	bool removable = false;
+	bool hasVariable = false;
 	for (const auto& entry : variableEntries) {
 		if (entry.variable.name == name) {
+			hasVariable = true;
 			removable = !entry.required;
 			break;
 		}
 	}
 
 	removeVariableButton->setEnabled(removable);
+	mimeButton->setEnabled(hasVariable);
 }
 
 void NewDocumentDialog::Private::addDocumentVariable() {
-	const auto variable = requestDocumentVariable();
+	auto variable = requestDocumentVariable();
 	if (!variable) {
 		return;
 	}
 
+	variable->mimeTypes = normalizedMimeTypes(variable->mimeTypes);
 	variableEntries.append(VariableEntry{ *variable, /*required*/ false });
 	const auto contextValue = context ? context->variable(variable->name) : QVariant();
-	const auto value = normalizeValue(contextValue, variable->mimeType);
+	const auto value = normalizeValue(contextValue, primaryMimeType(variable->mimeTypes));
 	documentVariables.insert(variable->name, value);
 	variablesList->addProperty(propertyDataFor(*variable, value));
 	refreshVariableSelector(variable->name);
+}
+
+void NewDocumentDialog::Private::editSelectedDocumentVariableMime() {
+	if (!variableSelector) {
+		return;
+	}
+
+	const auto name = variableSelector->currentData().toString();
+	if (name.isEmpty()) {
+		return;
+	}
+
+	for (auto& entry : variableEntries) {
+		if (entry.variable.name != name) {
+			continue;
+		}
+
+		const auto descriptor = PropertyDescriptorDialog::request(q,
+			NewDocumentDialog::tr("Mime-типы параметра"), name, entry.variable.mimeTypes,
+			/*nameEditable*/ false);
+		if (!descriptor) {
+			return;
+		}
+
+		entry.variable.mimeTypes = normalizedMimeTypes(descriptor->mimeTypes);
+		rebuildVariablesList();
+		return;
+	}
 }
 
 void NewDocumentDialog::Private::removeSelectedDocumentVariable() {
@@ -477,78 +558,17 @@ void NewDocumentDialog::Private::removeSelectedDocumentVariable() {
 }
 
 std::optional<DocumentVariable> NewDocumentDialog::Private::requestDocumentVariable() {
-	QDialog dialog(q);
-	dialog.setObjectName(QStringLiteral("NewDocumentVariableDialog"));
-	dialog.setWindowTitle(NewDocumentDialog::tr("Добавить параметр"));
-
-	auto* layout = new QVBoxLayout(&dialog);
-	auto* form = new QFormLayout;
-
-	auto* nameEdit = new QLineEdit(&dialog);
-	nameEdit->setObjectName(QStringLiteral("NewDocumentVariableName"));
-	auto* mimeCombo = new QComboBox(&dialog);
-	mimeCombo->setObjectName(QStringLiteral("NewDocumentVariableMime"));
-
-	// Пустой mime-тип трактуется как обычный текст; первый пункт — по умолчанию.
-	const QList<QPair<QString, QString>> mimeChoices = {
-		{ QString::fromLatin1(DocumentVariableMime::kText),
-			NewDocumentDialog::tr("Обычный текст") },
-		{ QString::fromLatin1(DocumentVariableMime::kMultiline),
-			NewDocumentDialog::tr("Многострочный текст") },
-		{ QString::fromLatin1(DocumentVariableMime::kFilePath),
-			NewDocumentDialog::tr("Путь к файлу") },
-		{ QString::fromLatin1(DocumentVariableMime::kDirectoryPath),
-			NewDocumentDialog::tr("Путь к каталогу") },
-		{ QString::fromLatin1(DocumentVariableMime::kBoolean),
-			NewDocumentDialog::tr("Логическое значение") },
-		{ QString::fromLatin1(DocumentVariableMime::kInteger),
-			NewDocumentDialog::tr("Целое число") },
-		{ QString::fromLatin1(DocumentVariableMime::kNumber),
-			NewDocumentDialog::tr("Число") },
-		{ QString::fromLatin1(DocumentVariableMime::kColor),
-			NewDocumentDialog::tr("Цвет") }
-	};
-	for (const auto& choice : mimeChoices) {
-		mimeCombo->addItem(choice.second, choice.first);
-	}
-
-	form->addRow(NewDocumentDialog::tr("Имя:"), nameEdit);
-	form->addRow(NewDocumentDialog::tr("Mime-тип:"), mimeCombo);
-	layout->addLayout(form);
-
-	auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
-	layout->addWidget(buttons);
-	QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
-	QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
-
-	auto* ok = buttons->button(QDialogButtonBox::Ok);
-	const auto updateOk = [this, nameEdit, ok]() {
-		const auto name = nameEdit->text().trimmed();
-		ok->setEnabled(!name.isEmpty() && !hasDocumentVariable(name));
-	};
-	QObject::connect(nameEdit, &QLineEdit::textChanged, &dialog,
-		[updateOk](const QString&) {
-			updateOk();
+	const auto descriptor = PropertyDescriptorDialog::request(q,
+		NewDocumentDialog::tr("Добавить параметр"), QString(), QStringList(),
+		/*nameEditable*/ true, QStringList(),
+		[this](const QString& name) {
+			return !hasDocumentVariable(name);
 		});
-	updateOk();
-	nameEdit->setFocus(Qt::OtherFocusReason);
-	dialog.adjustSize();
-
-	if (dialog.exec() != QDialog::Accepted) {
+	if (!descriptor) {
 		return std::nullopt;
 	}
 
-	const auto name = nameEdit->text().trimmed();
-	if (name.isEmpty() || hasDocumentVariable(name)) {
-		return std::nullopt;
-	}
-
-	auto mimeType = mimeCombo->currentData().toString();
-	if (mimeType.isEmpty()) {
-		mimeType = QString::fromLatin1(DocumentVariableMime::kText);
-	}
-
-	return DocumentVariable{ name, mimeType };
+	return DocumentVariable{ descriptor->name, descriptor->mimeTypes };
 }
 
 void NewDocumentDialog::Private::applyFilter(const QString& text) {
@@ -758,4 +778,13 @@ bool NewDocumentDialog::isSingletone() const {
 
 QVariantMap NewDocumentDialog::variables() const {
 	return d->variables();
+}
+
+QMap<QString, QStringList> NewDocumentDialog::variableMimeTypes() const {
+	QMap<QString, QStringList> result;
+	for (const auto& entry : d->variableEntries) {
+		result.insert(entry.variable.name, entry.variable.mimeTypes);
+	}
+
+	return result;
 }

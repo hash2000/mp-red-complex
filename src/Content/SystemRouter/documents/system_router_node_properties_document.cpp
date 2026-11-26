@@ -3,6 +3,7 @@
 #include "Content/SystemRouter/services/system_router_blob_service.h"
 #include "Content/SystemRouter/services/system_router_service.h"
 #include "Libs/BaseWidgets/properties/properties_list_widget.h"
+#include "Libs/BaseWidgets/properties/property_descriptor_dialog.h"
 #include "Libs/BaseWidgets/properties/property_mime.h"
 #include "Libs/BaseWidgets/tree_view/lazy_load/lazy_tree_node_glyph.h"
 #include "Libs/Engine/scripting/command_context.h"
@@ -12,19 +13,11 @@
 
 #include <QCheckBox>
 #include <QComboBox>
-#include <QCoreApplication>
-#include <QDialog>
-#include <QDialogButtonBox>
-#include <QFormLayout>
-#include <QGroupBox>
 #include <QHBoxLayout>
 #include <QJsonDocument>
 #include <QLabel>
 #include <QLineEdit>
-#include <QListWidget>
-#include <QListWidgetItem>
 #include <QPointer>
-#include <QPushButton>
 #include <QSet>
 #include <QSignalBlocker>
 #include <QStyle>
@@ -33,32 +26,16 @@
 #include <QVBoxLayout>
 
 #include <algorithm>
-#include <optional>
 
 namespace {
-
-struct PropertyDescriptor {
-	QString name;
-	QStringList mimeTypes;
-};
 
 /// Mime-типы, определяющие редактор значения: служебные mime-типы
 /// маршрутизатора (команда/параметр) не влияют на тип редактора.
 QStringList valueMimeTypes(const QStringList& mimeTypes) {
-	QStringList result;
-	for (const auto& raw : mimeTypes) {
-		const auto mime = raw.trimmed();
-		if (mime.compare(QLatin1String(SystemRouterMime::kCommand), Qt::CaseInsensitive) == 0
-			|| mime.compare(QLatin1String(SystemRouterMime::kCommandParameter),
-				Qt::CaseInsensitive) == 0
-			|| mime.compare(QLatin1String(SystemRouterMime::kShared), Qt::CaseInsensitive) == 0
-			|| mime.compare(QLatin1String(SystemRouterMime::kContextVariable),
-				Qt::CaseInsensitive) == 0) {
-			continue;
-		}
-		result.append(mime);
-	}
-	return result;
+	return PropertyMime::valueMimeTypes(mimeTypes, {
+		QString::fromLatin1(SystemRouterMime::kCommand),
+		QString::fromLatin1(SystemRouterMime::kCommandParameter)
+	});
 }
 
 QString primaryValueMimeType(const QStringList& mimeTypes) {
@@ -71,149 +48,13 @@ bool isGlyphProperty(const QString& name) {
 		|| name.compare(LazyTreeNodeGlyph::legacyPropertyName(), Qt::CaseInsensitive) == 0;
 }
 
-/// Диалог имени и набора mime-типов свойства.
-/// Поддерживает произвольные mime-типы: их можно ввести вручную.
-std::optional<PropertyDescriptor> requestPropertyDescriptor(QWidget* parent,
-	const QString& title, const QString& name, const QStringList& mimeTypes,
-	bool nameEditable) {
-	QDialog dialog(parent);
-	dialog.setObjectName(QStringLiteral("SystemRouterPropertyDialog"));
-	dialog.setWindowTitle(title);
-	dialog.resize(420, 460);
-
-	auto* layout = new QVBoxLayout(&dialog);
-
-	auto* nameEdit = new QLineEdit(name, &dialog);
-	nameEdit->setObjectName(QStringLiteral("SystemRouterPropertyName"));
-	nameEdit->setEnabled(nameEditable);
-
-	auto* form = new QFormLayout;
-	form->addRow(QCoreApplication::translate("SystemRouterNodePropertiesDocument", "Имя:"), nameEdit);
-	layout->addLayout(form);
-
-	auto* mimeGroup = new QGroupBox(
-		QCoreApplication::translate("SystemRouterNodePropertiesDocument", "Mime-типы"), &dialog);
-	auto* mimeLayout = new QVBoxLayout(mimeGroup);
-
-	auto* mimeList = new QListWidget(mimeGroup);
-	mimeList->setObjectName(QStringLiteral("SystemRouterPropertyMimeList"));
-
-	// Сначала текущие mime-типы (первый — основной), затем mime-типы
-	// маршрутизатора и распространённые.
-	QStringList ordered = mimeTypes;
-	for (const auto* routerMime : { SystemRouterMime::kCommand,
-		SystemRouterMime::kCommandParameter, SystemRouterMime::kShared,
-		SystemRouterMime::kContextVariable }) {
-		if (!ordered.contains(QLatin1String(routerMime), Qt::CaseInsensitive)) {
-			ordered.append(QLatin1String(routerMime));
-		}
-	}
-	for (const auto& common : PropertyMime::commonMimeTypes()) {
-		if (!ordered.contains(common, Qt::CaseInsensitive)) {
-			ordered.append(common);
-		}
-	}
-
-	QSet<QString> checked;
-	for (const auto& current : mimeTypes) {
-		checked.insert(current);
-	}
-
-	for (const auto& mimeType : ordered) {
-		auto* item = new QListWidgetItem(mimeType, mimeList);
-		item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-		bool isChecked = false;
-		for (const auto& current : checked) {
-			if (current.compare(mimeType, Qt::CaseInsensitive) == 0) {
-				isChecked = true;
-				break;
-			}
-		}
-		item->setCheckState(isChecked ? Qt::Checked : Qt::Unchecked);
-	}
-
-	auto* customRow = new QHBoxLayout;
-	auto* customEdit = new QLineEdit(mimeGroup);
-	customEdit->setObjectName(QStringLiteral("SystemRouterPropertyCustomMime"));
-	customEdit->setPlaceholderText(QCoreApplication::translate(
-		"SystemRouterNodePropertiesDocument", "Другой mime-тип"));
-	auto* customAdd = new QToolButton(mimeGroup);
-	customAdd->setText(QStringLiteral("+"));
-	customAdd->setToolTip(QCoreApplication::translate(
-		"SystemRouterNodePropertiesDocument", "Добавить mime-тип"));
-	customRow->addWidget(customEdit, 1);
-	customRow->addWidget(customAdd);
-
-	mimeLayout->addWidget(mimeList, 1);
-	mimeLayout->addLayout(customRow);
-	layout->addWidget(mimeGroup, 1);
-
-	auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
-	layout->addWidget(buttons);
-	QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
-	QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
-
-	const auto addCustomMime = [mimeList, customEdit]() {
-		const auto value = customEdit->text().trimmed();
-		if (value.isEmpty()) {
-			return;
-		}
-
-		for (int row = 0; row < mimeList->count(); row++) {
-			auto* item = mimeList->item(row);
-			if (item->text().compare(value, Qt::CaseInsensitive) == 0) {
-				item->setCheckState(Qt::Checked);
-				customEdit->clear();
-				return;
-			}
-		}
-
-		auto* item = new QListWidgetItem(value, mimeList);
-		item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-		item->setCheckState(Qt::Checked);
-		mimeList->scrollToItem(item);
-		customEdit->clear();
+/// Служебные mime-типы маршрутизатора, которые диалог свойства показывает
+/// помимо распространённых.
+QStringList additionalMimeTypes() {
+	return {
+		QString::fromLatin1(SystemRouterMime::kCommand),
+		QString::fromLatin1(SystemRouterMime::kCommandParameter)
 	};
-
-	QObject::connect(customAdd, &QToolButton::clicked, &dialog, addCustomMime);
-	QObject::connect(customEdit, &QLineEdit::returnPressed, &dialog, addCustomMime);
-
-	auto* okButton = buttons->button(QDialogButtonBox::Ok);
-	const auto updateOk = [nameEdit, okButton]() {
-		okButton->setEnabled(!nameEdit->text().trimmed().isEmpty());
-	};
-	QObject::connect(nameEdit, &QLineEdit::textChanged, &dialog,
-		[updateOk](const QString&) {
-			updateOk();
-		});
-	updateOk();
-
-	if (nameEditable) {
-		nameEdit->setFocus(Qt::OtherFocusReason);
-		nameEdit->selectAll();
-	}
-	else {
-		mimeList->setFocus(Qt::OtherFocusReason);
-	}
-
-	if (dialog.exec() != QDialog::Accepted) {
-		return std::nullopt;
-	}
-
-	PropertyDescriptor descriptor;
-	descriptor.name = nameEdit->text().trimmed();
-	if (descriptor.name.isEmpty()) {
-		return std::nullopt;
-	}
-
-	for (int row = 0; row < mimeList->count(); row++) {
-		auto* item = mimeList->item(row);
-		if (item->checkState() == Qt::Checked) {
-			descriptor.mimeTypes.append(item->text().trimmed());
-		}
-	}
-
-	return descriptor;
 }
 
 } // namespace
@@ -337,9 +178,9 @@ void SystemRouterNodePropertiesDocument::Private::setupUi() {
 	layout->addWidget(status);
 
 	QObject::connect(addButton, &QToolButton::clicked, q, [this]() {
-		const auto descriptor = requestPropertyDescriptor(q,
-			SystemRouterNodePropertiesDocument::tr("Добавить свойство"), {}, {},
-			/*nameEditable*/ true);
+		const auto descriptor = PropertyDescriptorDialog::request(q,
+			SystemRouterNodePropertiesDocument::tr("Добавить свойство"), QString(), QStringList(),
+			/*nameEditable*/ true, additionalMimeTypes());
 		if (!descriptor) {
 			return;
 		}
@@ -367,9 +208,9 @@ void SystemRouterNodePropertiesDocument::Private::setupUi() {
 			return;
 		}
 
-		const auto descriptor = requestPropertyDescriptor(q,
+		const auto descriptor = PropertyDescriptorDialog::request(q,
 			SystemRouterNodePropertiesDocument::tr("Mime-типы свойства"), name,
-			node->propertyMimeTypes(name), /*nameEditable*/ false);
+			node->propertyMimeTypes(name), /*nameEditable*/ false, additionalMimeTypes());
 		if (!descriptor) {
 			return;
 		}

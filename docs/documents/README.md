@@ -92,6 +92,7 @@ auto* document = window->createWidget(
 NewDocumentDialog dialog(registry, context);
 if (dialog.exec() == QDialog::Accepted) {
     const auto variables = dialog.variables();   // включает color, если выбран
+    const auto mimeTypes = dialog.variableMimeTypes(); // наборы типов переменных
     const auto color = dialog.documentColor();   // QColor(), если не выбран
 }
 ```
@@ -266,8 +267,9 @@ registry->registerDocumentMetadata(
 ```
 
 `MyDocumentMetadata::variables()` возвращает список `DocumentVariable`:
-имя переменной и mime-тип. Диалог создания документа использует эти данные,
-чтобы показать поля и выбрать редактор значения.
+имя переменной и набор mime-типов (`mimeTypes`). Диалог создания документа
+использует основной тип, чтобы показать поле и выбрать редактор значения;
+все выбранные типы записываются в контекст создаваемого документа.
 
 ## 7. Обмен состоянием
 

@@ -434,6 +434,33 @@ QString CommandContext::variableMimeType(const QString& name, const QString& def
 	return d->parentContext->variableMimeType(name, defaultValue);
 }
 
+void CommandContext::setVariableMimeTypes(const QString& name, const QStringList& mimeTypes) {
+	QStringList normalized;
+	for (const auto& raw : mimeTypes) {
+		const auto mime = raw.trimmed();
+		if (mime.isEmpty() || normalized.contains(mime, Qt::CaseInsensitive)) {
+			continue;
+		}
+
+		normalized.append(mime);
+	}
+
+	setVariableMimeType(name, normalized.join(QStringLiteral(", ")));
+}
+
+QStringList CommandContext::variableMimeTypes(const QString& name) const {
+	QStringList result;
+	const auto value = variableMimeType(name);
+	for (const auto& part : value.split(QLatin1Char(','), Qt::SkipEmptyParts)) {
+		const auto mime = part.trimmed();
+		if (!mime.isEmpty()) {
+			result.append(mime);
+		}
+	}
+
+	return result;
+}
+
 void CommandContext::registerContext(const QString& ns, std::weak_ptr<CommandContext> context) {
 	// Повторная регистрация после того, как прежний контекст был уничтожен
 	// (реестр хранит слабые ссылки), — это норма, а не конфликт.

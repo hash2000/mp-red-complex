@@ -929,7 +929,7 @@ void PagedTextDocument::onContextVariableChanged(const QString& name, const QVar
 
 QList<DocumentVariable> PagedTextDocumentMetadata::variables() const {
 	return {
-		{ QStringLiteral("path"), QString::fromLatin1(DocumentVariableMime::kFilePath) }
+		{ QStringLiteral("path"), { QString::fromLatin1(DocumentVariableMime::kFilePath) } }
 	};
 }
 

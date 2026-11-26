@@ -528,8 +528,8 @@ void TestCodeEditorSearch::documentMetadataDeclaresPath() {
 	const auto variables = metadata.variables();
 	QCOMPARE(variables.size(), 1);
 	QCOMPARE(variables.first().name, QStringLiteral("path"));
-	QCOMPARE(variables.first().mimeType,
-		QString::fromLatin1(DocumentVariableMime::kFilePath));
+	QCOMPARE(variables.first().mimeTypes,
+		QStringList({ QString::fromLatin1(DocumentVariableMime::kFilePath) }));
 }
 
 void TestCodeEditorSearch::newDocumentDialogShowsCodeEditorPath() {

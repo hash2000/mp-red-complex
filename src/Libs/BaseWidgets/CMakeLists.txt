@@ -12,6 +12,7 @@ set(BaseWidgets-Headers
 	${BaseWidgets-Sources}/editor/widgets/code_editor_search_panel.h
 	${BaseWidgets-Sources}/editor/widgets/paged_text_editor.h
 	${BaseWidgets-Sources}/editor/widgets/search_bar.h
+	${BaseWidgets-Sources}/properties/property_descriptor_dialog.h
 	${BaseWidgets-Sources}/widgets/background_tasks_indicator.h
 )
 

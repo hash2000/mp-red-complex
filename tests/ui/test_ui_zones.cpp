@@ -71,10 +71,10 @@ class TestDocumentMetadata final : public IDocumentMetadata {
 public:
 	QList<DocumentVariable> variables() const override {
 		return {
-			{ QStringLiteral("path"), QString::fromLatin1(DocumentVariableMime::kFilePath) },
-			{ QStringLiteral("count"), QString::fromLatin1(DocumentVariableMime::kInteger) },
-			{ QStringLiteral("enabled"), QString::fromLatin1(DocumentVariableMime::kBoolean) },
-			{ QStringLiteral("note"), QString::fromLatin1(DocumentVariableMime::kText) }
+			{ QStringLiteral("path"), { QString::fromLatin1(DocumentVariableMime::kFilePath) } },
+			{ QStringLiteral("count"), { QString::fromLatin1(DocumentVariableMime::kInteger) } },
+			{ QStringLiteral("enabled"), { QString::fromLatin1(DocumentVariableMime::kBoolean) } },
+			{ QStringLiteral("note"), { QString::fromLatin1(DocumentVariableMime::kText) } }
 		};
 	}
 };
@@ -135,6 +135,7 @@ private slots:
 	void commandUsesRegistryDefaults();
 	void documentStateIsStoredInContext();
 	void commandParametersBecomeDocumentVariables();
+	void createWidgetAppliesVariableMimeTypes();
 	void sharedVariablesCopiedToCreator();
 	void newDocumentDialogFiltersTypes();
 	void newDocumentDialogUsesDocumentMetadata();
@@ -657,6 +658,41 @@ void TestUiZones::commandParametersBecomeDocumentVariables() {
 	QVERIFY(!context->ownVariables().contains(QStringLiteral("target")));
 }
 
+void TestUiZones::createWidgetAppliesVariableMimeTypes() {
+	TestCommandController controller;
+	WidgetFixture fixture(controller);
+	MainWindow window(controller.globalContext(), nullptr, false);
+
+	QVariantMap variables;
+	variables.insert(QStringLiteral("path"), QStringLiteral("hello.txt"));
+	variables.insert(QStringLiteral("count"), 3);
+
+	// У переменной может быть несколько mime-типов: тип значения и пометка
+	// shared, по которой значение передаётся в контекст создателя документа.
+	QMap<QString, QStringList> variableMimeTypes;
+	variableMimeTypes.insert(QStringLiteral("path"),
+		{ QString::fromLatin1(DocumentVariableMime::kFilePath),
+			QString::fromLatin1(DocumentVariableMime::kShared) });
+	variableMimeTypes.insert(QStringLiteral("count"),
+		{ QString::fromLatin1(DocumentVariableMime::kInteger) });
+
+	QVERIFY(window.createWidget(QStringLiteral("mime"), MainWindow::WidgetKind::Document,
+		QStringLiteral("Mime"), QString(),
+		[&fixture] { return fixture.built++, new QLabel(QStringLiteral("mime")); },
+		QString(), QStringLiteral("test-widget"), controller.globalContext(),
+		variables, variableMimeTypes));
+
+	auto context = window.documentContext(QStringLiteral("mime"));
+	QVERIFY(context);
+	QCOMPARE(context->variableMimeTypes(QStringLiteral("path")),
+		QStringList({ QString::fromLatin1(DocumentVariableMime::kFilePath),
+			QString::fromLatin1(DocumentVariableMime::kShared) }));
+	QCOMPARE(context->variableMimeType(QStringLiteral("path")),
+		QStringLiteral("text/x-file-path, application/x-mp-shared"));
+	QCOMPARE(context->variableMimeTypes(QStringLiteral("count")),
+		QStringList({ QString::fromLatin1(DocumentVariableMime::kInteger) }));
+}
+
 void TestUiZones::sharedVariablesCopiedToCreator() {
 	TestCommandController controller;
 	WidgetFixture fixture(controller);
@@ -778,10 +814,13 @@ void TestUiZones::newDocumentDialogUsesDocumentMetadata() {
 	auto* addButton = dialog.findChild<QToolButton*>(QStringLiteral("NewDocumentDialogAddVariable"));
 	auto* removeButton = dialog.findChild<QToolButton*>(
 		QStringLiteral("NewDocumentDialogRemoveVariable"));
+	auto* mimeButton = dialog.findChild<QToolButton*>(
+		QStringLiteral("NewDocumentDialogEditVariableMime"));
 	auto* selector = dialog.findChild<QComboBox*>(
 		QStringLiteral("NewDocumentDialogVariableSelector"));
 	QVERIFY(addButton);
 	QVERIFY(removeButton);
+	QVERIFY(mimeButton);
 	QVERIFY(selector);
 	QCOMPARE(selector->count(), 4);
 
@@ -789,22 +828,23 @@ void TestUiZones::newDocumentDialogUsesDocumentMetadata() {
 	selector->setCurrentIndex(selector->findData(QStringLiteral("path")));
 	QVERIFY(!removeButton->isEnabled());
 
-	// Добавление параметра через диалог: имя и mime-тип.
-	const auto addVariable = [&](const QString& name, const QString& mimeType) {
-		QTimer::singleShot(0, [name, mimeType] {
+	// Добавление параметра через общий диалог: имя и набор mime-типов.
+	const auto addVariable = [&](const QString& name, const QStringList& mimeTypes) {
+		QTimer::singleShot(0, [name, mimeTypes] {
 			auto* addDialog = qobject_cast<QDialog*>(QApplication::activeModalWidget());
 			if (!addDialog) {
 				return;
 			}
 			if (auto* nameEdit = addDialog->findChild<QLineEdit*>(
-				QStringLiteral("NewDocumentVariableName"))) {
+				QStringLiteral("PropertyDescriptorName"))) {
 				nameEdit->setText(name);
 			}
-			if (auto* mimeCombo = addDialog->findChild<QComboBox*>(
-				QStringLiteral("NewDocumentVariableMime"))) {
-				const int index = mimeCombo->findData(mimeType);
-				if (index >= 0) {
-					mimeCombo->setCurrentIndex(index);
+			if (auto* mimeList = addDialog->findChild<QListWidget*>(
+				QStringLiteral("PropertyDescriptorMimeList"))) {
+				for (int row = 0; row < mimeList->count(); row++) {
+					auto* item = mimeList->item(row);
+					const bool checked = mimeTypes.contains(item->text(), Qt::CaseInsensitive);
+					item->setCheckState(checked ? Qt::Checked : Qt::Unchecked);
 				}
 			}
 			addDialog->accept();
@@ -812,9 +852,12 @@ void TestUiZones::newDocumentDialogUsesDocumentMetadata() {
 		addButton->click();
 	};
 
-	addVariable(QStringLiteral("extra"), QString::fromLatin1(DocumentVariableMime::kInteger));
+	addVariable(QStringLiteral("extra"),
+		{ QString::fromLatin1(DocumentVariableMime::kInteger) });
 	QVERIFY(dialog.variables().contains(QStringLiteral("extra")));
 	QCOMPARE(dialog.variables().value(QStringLiteral("extra")).toInt(), 0);
+	QCOMPARE(dialog.variableMimeTypes().value(QStringLiteral("extra")),
+		QStringList({ QString::fromLatin1(DocumentVariableMime::kInteger) }));
 	QVERIFY(selector->findData(QStringLiteral("extra")) >= 0);
 
 	auto* extraSpin = findPropertyEditor<QSpinBox>(properties, QStringLiteral("extra"));
@@ -822,13 +865,83 @@ void TestUiZones::newDocumentDialogUsesDocumentMetadata() {
 	extraSpin->setValue(5);
 	QCOMPARE(dialog.variables().value(QStringLiteral("extra")).toInt(), 5);
 
+	// У параметра может быть несколько mime-типов: служебная пометка shared
+	// сохраняется в наборе, но редактор выбирается по типу значения.
+	addVariable(QStringLiteral("shared-count"),
+		{ QString::fromLatin1(DocumentVariableMime::kShared),
+			QString::fromLatin1(DocumentVariableMime::kInteger) });
+	QCOMPARE(dialog.variableMimeTypes().value(QStringLiteral("shared-count")),
+		QStringList({ QString::fromLatin1(DocumentVariableMime::kShared),
+			QString::fromLatin1(DocumentVariableMime::kInteger) }));
+	auto* sharedCountSpin = findPropertyEditor<QSpinBox>(properties,
+		QStringLiteral("shared-count"));
+	QVERIFY(sharedCountSpin);
+	sharedCountSpin->setValue(3);
+	QCOMPARE(dialog.variables().value(QStringLiteral("shared-count")).toInt(), 3);
+
 	// Без выбора mime-типа параметр считается обычным текстом.
-	addVariable(QStringLiteral("plain"), QString());
+	addVariable(QStringLiteral("plain"), QStringList());
 	auto* plainEdit = findPropertyEditor<QLineEdit>(properties, QStringLiteral("plain"));
 	QVERIFY(plainEdit);
 	QTest::keyClicks(plainEdit, QStringLiteral("text"));
 	QCOMPARE(dialog.variables().value(QStringLiteral("plain")).toString(),
 		QStringLiteral("text"));
+	QCOMPARE(dialog.variableMimeTypes().value(QStringLiteral("plain")),
+		QStringList({ QString::fromLatin1(DocumentVariableMime::kText) }));
+
+	// Произвольный mime-тип добавляется в диалоге вручную.
+	QTimer::singleShot(0, [] {
+		auto* addDialog = qobject_cast<QDialog*>(QApplication::activeModalWidget());
+		if (!addDialog) {
+			return;
+		}
+		if (auto* nameEdit = addDialog->findChild<QLineEdit*>(
+			QStringLiteral("PropertyDescriptorName"))) {
+			nameEdit->setText(QStringLiteral("custom"));
+		}
+		if (auto* customEdit = addDialog->findChild<QLineEdit*>(
+			QStringLiteral("PropertyDescriptorCustomMime"))) {
+			customEdit->setText(QStringLiteral("application/x-custom"));
+		}
+		if (auto* addMime = addDialog->findChild<QToolButton*>(
+			QStringLiteral("PropertyDescriptorAddMime"))) {
+			addMime->click();
+		}
+		addDialog->accept();
+	});
+	addButton->click();
+	QCOMPARE(dialog.variableMimeTypes().value(QStringLiteral("custom")),
+		QStringList({ QStringLiteral("application/x-custom") }));
+
+	// Набор mime-типов существующего параметра правится тем же диалогом.
+	selector->setCurrentIndex(selector->findData(QStringLiteral("plain")));
+	QVERIFY(mimeButton->isEnabled());
+	QTimer::singleShot(0, [] {
+		auto* mimeDialog = qobject_cast<QDialog*>(QApplication::activeModalWidget());
+		if (!mimeDialog) {
+			return;
+		}
+		if (auto* mimeList = mimeDialog->findChild<QListWidget*>(
+			QStringLiteral("PropertyDescriptorMimeList"))) {
+			const QStringList checked = {
+				QString::fromLatin1(DocumentVariableMime::kText),
+				QString::fromLatin1(DocumentVariableMime::kShared)
+			};
+			for (int row = 0; row < mimeList->count(); row++) {
+				auto* item = mimeList->item(row);
+				item->setCheckState(checked.contains(item->text(), Qt::CaseInsensitive)
+					? Qt::Checked : Qt::Unchecked);
+			}
+		}
+		mimeDialog->accept();
+	});
+	mimeButton->click();
+	// Перестройка списка откладывает удаление старых редакторов:
+	// обрабатываем отложенные удаления до дальнейших проверок.
+	QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+	QCOMPARE(dialog.variableMimeTypes().value(QStringLiteral("plain")),
+		QStringList({ QString::fromLatin1(DocumentVariableMime::kText),
+			QString::fromLatin1(DocumentVariableMime::kShared) }));
 
 	// Удаление добавленного параметра.
 	selector->setCurrentIndex(selector->findData(QStringLiteral("extra")));

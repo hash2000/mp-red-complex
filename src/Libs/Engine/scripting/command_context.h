@@ -72,8 +72,16 @@ public:
 	QVariantMap ownVariables() const;
 
 	/// Mime-тип значения переменной (используется командами для разбора параметров).
+	/// Несколько mime-типов в строковом виде разделяются запятыми.
 	void setVariableMimeType(const QString& name, const QString& mimeType);
 	QString variableMimeType(const QString& name, const QString& defaultValue = QString()) const;
+
+	/// Mime-типы значения переменной: их может быть несколько (служебные
+	/// пометки shared/context-variable вместе с типом значения). Пустой
+	/// список снимает mime-тип.
+	void setVariableMimeTypes(const QString& name, const QStringList& mimeTypes);
+	/// Разобранный набор mime-типов переменной; пустой — mime-тип не задан.
+	QStringList variableMimeTypes(const QString& name) const;
 
 	// -------------------------------------------------------------------- события
 	/// Отправить событие контекста: на него подписаны документы.

@@ -4,8 +4,9 @@
 #include <QList>
 #include <QString>
 
-/// Mime-типы переменных документа. По mime-типу диалог создания выбирает
-/// редактор значения (текст, путь к файлу, число, флаг и т. п.).
+/// Mime-типы переменных документа. По основному mime-типу диалог создания
+/// выбирает редактор значения (текст, путь к файлу, число, флаг и т. п.);
+/// служебные пометки (shared, context variable) в редактор не попадают.
 /// Константы общие с mime-типами свойств (Libs/BaseWidgets/properties).
 namespace DocumentVariableMime {
 inline constexpr const char* kText = PropertyMimeType::kText;
@@ -22,8 +23,8 @@ inline constexpr const char* kContextVariable = PropertyMimeType::kContextVariab
 
 /// Обязательная переменная документа.
 struct DocumentVariable {
-	QString name;      ///< имя переменной контекста
-	QString mimeType;  ///< mime-тип значения (см. DocumentVariableMime)
+	QString name;          ///< имя переменной контекста
+	QStringList mimeTypes; ///< mime-типы значения (см. DocumentVariableMime)
 };
 
 /// Метаданные типа документа: перечень обязательных переменных контекста.

@@ -217,7 +217,7 @@ void SystemRouterTreeDocument::executePreview(const LazyTreeNodePtr& node,
 			}
 
 			executionContext->setVariable(it.key(), it.value());
-			executionContext->setVariableMimeType(it.key(), mimeTypes.join(QStringLiteral(", ")));
+			executionContext->setVariableMimeTypes(it.key(), mimeTypes);
 		}
 	}
 

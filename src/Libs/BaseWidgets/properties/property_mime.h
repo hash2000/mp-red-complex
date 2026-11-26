@@ -35,6 +35,17 @@ bool isInteger(const QString& mimeType);
 /// Основной mime-тип свойства: первый непустой из списка, иначе text/plain.
 QString primaryMimeType(const QStringList& mimeTypes);
 
+/// Mime-типы значения: убирает пустые строки и служебные пометки
+/// (`shared`, `context variable`), которые не определяют редактор.
+/// @param ignoredMimeTypes дополнительные служебные типы (например,
+///        типы команд маршрутизатора)
+QStringList valueMimeTypes(const QStringList& mimeTypes,
+	const QStringList& ignoredMimeTypes = QStringList());
+
+/// Основной mime-тип значения: первый после valueMimeTypes(), иначе text/plain.
+QString primaryValueMimeType(const QStringList& mimeTypes,
+	const QStringList& ignoredMimeTypes = QStringList());
+
 /// Распространённые mime-типы для диалога выбора (пользователь может
 /// добавить произвольный).
 QStringList commonMimeTypes();
